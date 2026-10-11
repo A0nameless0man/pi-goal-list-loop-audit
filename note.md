@@ -32,7 +32,7 @@ not supervised objs
 ## we ned progress indicator for audits cause cant tell if this is stuck or not 
 /home/dracon/Pictures/Screenshots/Screenshot_20261011_193429.png
 
-## we have quota but we didnt retry 
+## we have quota but we didnt retry, we need to be activley retrying and retry extra after the start of every hour
 /home/dracon/Pictures/Screenshots/Screenshot_20261011_211430.png
 
 
