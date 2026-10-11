@@ -8,6 +8,7 @@ import { sanitizeMainModelRecovery } from '../extensions/goal-loop-core.js';
 import { createGoalRecovery, parkMainModelAfterFailure, probeMainModelRecovery, scheduleMainModelRecoveryTimer } from '../extensions/goal-recovery.js';
 import { state, replaceState } from '../extensions/goal-state.js';
 import { globalSettingsPath } from '../extensions/goal-settings.js';
+import { buildWidgetLines } from '../extensions/goal-loop-display.js';
 
 const now = Date.parse('2026-10-11T14:00:00Z');
 test('count and time bound primary retries independently; no candidate preserves paced retry', () => {
@@ -18,6 +19,18 @@ test('count and time bound primary retries independently; no candidate preserves
   assert.equal(sameModelRetryPhaseActive({ sameModelRetries: 10 }, 10, true, now), false);
   assert.equal(sameModelRetryPhaseActive(undefined, 0, true, now), false);
   assert.equal(sameModelRetryDeadline({ firstFailureAt: new Date(now).toISOString() }), now + 120_000, 'legacy episode age anchors initial primary phase');
+});
+
+test('bounded recovery card states retry progress and fallback eligibility without claiming a successful switch', () => {
+  const fixture: any = { list: [], goal: { id: 'ui', objective: 'work', policy: 'goal', status: 'paused', pauseKind: 'wait', pauseSource: 'system', pauseReason: 'main model recovery', createdAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString(), usage: { tokensUsed: 0, tokensLimit: 1000000 } },
+    mainModelRecovery: { primary: 'provider/free', active: 'provider/free', attempted: ['provider/free'], attempts: 3, sameModelRetries: 2,
+      sameModelPhaseStartedAt: new Date(now - 180_000).toISOString(), kind: 'goal', owner: { kind: 'goal', id: 'ui' }, reason: 'provider error', retryAt: new Date(now + 1000).toISOString() } };
+  const extras = { uiStatusContext: { now }, mainModelSameModelRetries: 10, mainModelFallbacks: ['provider/forbidden', 'provider/backup'], modelProvenance: { skippedForbiddenRefs: ['provider/forbidden'] } };
+  const lines = buildWidgetLines(fixture, undefined, now, undefined, 200, extras)!;
+  assert.ok(lines.length <= 8);
+  assert.match(lines.join('\n'), /retry: same model 2\/10/);
+  assert.match(lines.join('\n'), /fallback: eligible now.*next candidate provider\/backup/);
+  assert.doesNotMatch(lines.join('\n'), /next candidate provider\/forbidden|switched to/);
 });
 
 test('real recovery clamps reset waits, rotates after slow failures, and restores old long waits', async () => {
