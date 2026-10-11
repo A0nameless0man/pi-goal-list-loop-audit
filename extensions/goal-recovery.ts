@@ -1654,7 +1654,7 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
     state.mainModelRecovery = {
       ...recovery,
       active: current,
-      attempted: [current],
+      attempted: recovery.attempted.some(ref => sameModelRef(ref, current)) ? recovery.attempted : [...recovery.attempted, current],
       primaryProbeAt: undefined,
       primaryProbeInFlight: undefined,
       retryAt: undefined,
@@ -1683,7 +1683,9 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
     const next: MainModelRecovery = {
       ...recovery,
       active: current,
-      attempted: [current],
+      // Keep known-failed predecessors visited. Erasing them here jumps
+      // back to the dead primary instead of advancing to the next backup.
+      attempted: recovery.attempted.some(ref => sameModelRef(ref, current)) ? recovery.attempted : [...recovery.attempted, current],
       sameModelRetries: nextRetries,
       // Failure parking owns the episode/cadence count. A probe is the retry
       // of that failure, not another failure: never advance it twice.
