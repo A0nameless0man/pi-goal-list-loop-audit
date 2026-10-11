@@ -1434,10 +1434,27 @@ function uiExecutionLabel(status: UiStatus): string {
   if (status.auditPhase === 'awaiting-verdict') return 'AUDIT REVIEW PENDING';
   return UI_HEALTH_LABEL[status.execution];
 }
+function projectAuditDisplay(loop: LoopState, now: number) {
+  const progress = getRespecAuditLive(loop.builder!);
+  const toolWait = respecAuditToolWait(progress, now);
+  const age = progress?.lastActivityAt !== undefined && Number.isFinite(progress.lastActivityAt) && progress.lastActivityAt <= now
+    ? now - progress.lastActivityAt : undefined;
+  const live = age !== undefined && age <= LIVE_ACTIVITY_MS && progress?.phase === 'running';
+  const phase: AuditorDisplayPhase = toolWait ? 'running' : age !== undefined && age > AUDITOR_STALLED_MS ? 'stalled'
+    : age !== undefined && age > AUDITOR_QUIET_MS ? 'quiet' : progress?.phase === 'starting' ? 'queued' : 'running';
+  return { progress, toolWait, live, phase, tone: toolWait ? 'accent' as const : auditorPhaseTone(phase, live) };
+}
 /** Detached activity must not inherit a busy parent host's RUNNING badge. */
 function projectDisplayStatus(state: State, audit: AuditDisplayProgress | null | undefined, context: UiStatusContext): UiStatus {
   const status = projectUiStatus(state, context);
   const goal = state.goal;
+  if (status.mode === 'project' && state.loop?.builder?.phase === 'auditing' && status.execution !== 'blocked') {
+    const observed = projectAuditDisplay(state.loop, context.now);
+    return { ...status, execution: observed.toolWait ? 'tool-wait' : observed.live ? 'running' : 'unconfirmed',
+      auditPhase: observed.phase, auditLive: observed.live,
+      actionability: observed.phase === 'stalled' || observed.phase === 'quiet' ? 'inspect' : 'automatic',
+      nextAction: '/loop status for audit activity and recovery details' };
+  }
   if (status.mode !== 'goal' && status.mode !== 'list' || goal?.status !== 'auditing' || status.execution === 'blocked') return status;
   if (!audit || auditRecoveryPending(goal) || durablePhaseOverride(goal.pendingCompletion, audit, context.now)) {
     return { ...status, execution: 'unconfirmed', actionability: 'inspect', nextAction: '/glla status to inspect the saved audit' };
@@ -2259,6 +2276,10 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
       }
     }
   }
+  // Tree structure is decoration, not an independent liveness signal.
+  // Normalize legacy plain prefixes after layout decisions, leaving already
+  // styled semantic text intact and ANSI-aware width handling unchanged.
+  lines = lines?.map(line => line.replace(/^([├└]─ |│\s*)/, prefix => paint(theme, 'dim', prefix)));
   if (lines && width !== undefined) {
     const contentWidth = Math.max(0, width - WIDGET_HORIZONTAL_MARGIN);
     return lines.map((line) => tuiTruncateToWidth(line, contentWidth, "…"));
@@ -3172,7 +3193,8 @@ function respecBuilderLines(loop: LoopState, now: number, theme?: DisplayTheme, 
   const builder = loop.builder!;
   const stopped = projectExplicitlyStopped(loop);
   const coverage = respecCoverage(builder);
-  const tone = !loop.active ? "warning" : "accent";
+  const observation = loop.active && builder.phase === 'auditing' ? projectAuditDisplay(loop, now) : undefined;
+  const tone = !loop.active ? 'warning' : observation?.tone ?? 'accent';
   const phase = !loop.active && builder.phase === "auditing" ? stopped ? "Audit stopped" : "Audit held" : builder.phase === "planning" ? "Planning" : builder.phase[0]!.toUpperCase() + builder.phase.slice(1);
   const current = builder.tasks.find(t => t.status === "pending") ?? builder.tasks.at(-1);
   const blocker = builder.requirements.find(r => r.status === "blocked");
@@ -3180,8 +3202,8 @@ function respecBuilderLines(loop: LoopState, now: number, theme?: DisplayTheme, 
   const evidence = [...builder.requirements].reverse().find(r => r.evidence)?.evidence?.report ?? builder.history?.at(-1)?.report;
   const action = stopped ? "Work stopped · /loop status · /loop respec starts a new project" : allBlocked ? "Blocked · /loop recheck to assess and continue repair work" : !loop.active ? "Work held · /loop status · /loop resume when ready" : builder.phase === "auditing" ? "Independent verification pending · no action needed" : "Work continues · /loop pause · /loop refine";
   const narrowAction = stopped ? "Work stopped · /loop status" : allBlocked ? "/loop recheck · assess blockers" : !loop.active ? "/loop resume when ready · /loop status" : builder.phase === "auditing" ? "Independent audit pending · no action" : "Work continues · /loop pause";
-  const progress = loop.active && builder.phase === "auditing" ? getRespecAuditLive(builder) : undefined;
-  const toolWait = respecAuditToolWait(progress, now);
+  const progress = observation?.progress;
+  const toolWait = observation?.toolWait;
   const auditLines = loop.active && builder.phase === "auditing" ? progress ? [
     `auditor: ${toolWait ?? progress.phase}${progress.round === 2 ? " · second pass" : ""} · ${progress.attemptStartedAt !== undefined ? `attempt ${fmtElapsed(now - progress.attemptStartedAt)} · ` : ""}total ${fmtElapsed(now - progress.startedAt)} · ${sanitizeDisplayText(progress.model ?? "model pending")}`,
     `last activity: ${progress.lastActivityAt !== undefined ? `${fmtElapsed(now - progress.lastActivityAt)} ago` : "not observed"}${progress.activity ? ` · ${sanitizeDisplayText(progress.activity)}` : ""}${progress.retryAt !== undefined ? ` · retry in ${fmtElapsed(Math.max(0, progress.retryAt - now))}` : ""}`,
@@ -3192,7 +3214,7 @@ function respecBuilderLines(loop: LoopState, now: number, theme?: DisplayTheme, 
     `├─ ${truncate(sanitizeDisplayText(builder.vision), budgetFor(width, 3, 75))}`,
     `├─ ${paint(theme, coverage.verified > 0 ? "success" : "dim", `verified ${coverage.verified}/${coverage.total}`)} · ${paint(theme, coverage.remaining > 0 ? "warning" : "dim", `remaining ${coverage.remaining} · blocked ${coverage.blocked}`)}`,
     ...(current ? [`├─ ${builder.phase === "auditing" ? "claim" : "task"}: ${truncate(sanitizeDisplayText(current.text), budgetFor(width, 10, 70))}`] : []),
-    ...auditLines.map(line => `├─ ${paint(theme, progress?.phase === "retrying" ? "warning" : "accent", truncate(line, budgetFor(width, 3, 90)))}`),
+    ...auditLines.map(line => `├─ ${paint(theme, tone, truncate(line, budgetFor(width, 3, 90)))}`),
     ...(!loop.active && loop.stopReason ? [`├─ ${paint(theme, "warning", `${stopped ? "stopped" : "held"}: ${truncate(sanitizeDisplayText(loop.stopReason), budgetFor(width, stopped ? 12 : 9, 90))}`)}`] : []),
     ...(blocker ? [`├─ ${paint(theme, "warning", "blocked")}: ${truncate(respecBlockerHeadline(blocker), budgetFor(width, 12, 70))}`, `├─ ${paint(theme, "accent", "action")}: ${truncate(sanitizeDisplayText(blocker.blockerAction?.nextAction || "Ask agent to clarify why it cannot fix this"), budgetFor(width, 11, 70))}`, `├─ ${paint(theme, "accent", "/loop blockers")} · full reasons and next action`] : []),
     ...(evidence ? [`├─ ${paint(theme, "dim", `evidence: ${truncate(sanitizeDisplayText(evidence), budgetFor(width, 13, 65))}`)}`] : []),
@@ -3222,7 +3244,7 @@ function loopLines(l: LoopState, now: number, theme?: DisplayTheme, width?: numb
   const targetBudget = width && width > 0
     ? Math.max(16, width - WIDGET_HORIZONTAL_MARGIN - 2 - 3 - visibleLen(segsText) - visibleLen(stallNote))
     : 44;
-  const lines = [`${icon} ${truncate(sanitizeDisplayText(l.target), targetBudget)} ${paint(theme, "dim", "·")} ${segsText}${stallNote}`];
+  const lines = [`${icon} LOOP ${truncate(sanitizeDisplayText(l.target), Math.max(1, targetBudget - 5))} ${paint(theme, "dim", "·")} ${segsText}${stallNote}`];
   // Loop-scoped twin of the v0.34.124 goal fix above: the ring is
   // process-global, so without scoping a live loop card wears the last
   // action of whatever ran before it. Same 5s activation grace, same
