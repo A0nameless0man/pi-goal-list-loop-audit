@@ -1536,6 +1536,10 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   };
   if (status.actionability === 'user') prose(`next: ${status.nextAction}`, 'dim');
   if (status.blocker) prose(`why: ${status.blocker}`, 'warning');
+  if (compact && status.actionability === 'user' && extras?.durableDeferRecommendation) {
+    const judgment = buildDurableDeferDecisionLines(extras.durableDeferRecommendation, width);
+    rows.push(row('├─ ', judgment[judgment.length - 1]!, 'dim'));
+  }
   if (status.workflowIssue) rows.push(row('├─ ', `workflow: ${status.workflowIssue}`, 'warning'));
   if (terminal && progress) rows.push(row('├─ ', progress));
   // Live audit rows already carry phase evidence + the user action — the
