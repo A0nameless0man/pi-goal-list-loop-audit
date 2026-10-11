@@ -418,15 +418,16 @@ export function isEmptyProviderResponse(raw: string | undefined): boolean {
  * OPEN (operator direction 2026-09-28: retry any error aggressively, most
  * are transient): unclassified prose retries eagerly too. What stays on
  * the ladder is exactly what hammering cannot help — auth failures,
- * user aborts and policy refusals (non-recoverable), context overflow —
- * plus anything carrying an explicit quota signal, hinted or not: when
- * the provider says "slow down", 5s probes would be backpressure
- * violation, not diligence. */
+ * user aborts and policy refusals (non-recoverable), context overflow.
+ * Hintless quota errors receive the same bounded eager window: a quota
+ * label alone is not evidence of a reset time. Explicit upstream reset
+ * hints still outrank eager retries in mainModelFailureDelayMs. */
 export function isEagerRetryFailure(failure: MainModelFailure | undefined): boolean {
   if (!failure) return false;
-  if (failure.kind !== "transient" && failure.kind !== "unknown" && !isEmptyProviderResponse(failure.raw)) return false;
-  if (quotaSignal(failure.raw)) return false;
-  return true;
+  if (["auth", "billing", "non-recoverable", "context-overflow"].includes(failure.kind)) return false;
+  const signal = quotaSignal(failure.raw);
+  if (signal === "rate-limit" || signal === "plan-quota") return quotaResetSleepMs(failure) === undefined;
+  return failure.kind === "transient" || failure.kind === "unknown" || isEmptyProviderResponse(failure.raw);
 }
 
 /** Post-eager cadence for transient failures. The rung rebases at the end
@@ -459,7 +460,7 @@ export function mainModelFailureDelayMs(failure: MainModelFailure, attempt: numb
   // short ladder — never the 15m-base wall ladder. Attempt 2 of a 503 used
   // to sleep 30m; the field reads that as "gave up on a blip".
   // v0.38.104: fails open to unclassified prose too (see
-  // isEagerRetryFailure); explicit quota signals still veto eager.
+  // isEagerRetryFailure); only an explicit upstream reset hint vetoes eager.
   if (isEagerRetryFailure(failure)) {
     if (attempt <= TRANSIENT_EAGER_ATTEMPTS) return 5_000;
     return transientRetryDelayMs(attempt, baseMinutes);
