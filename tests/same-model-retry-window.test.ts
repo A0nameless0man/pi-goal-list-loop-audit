@@ -62,6 +62,8 @@ test('real recovery clamps reset waits, rotates after slow failures, and restore
   const original = fs.existsSync(settingsPath) ? fs.readFileSync(settingsPath, 'utf8') : undefined;
   const calls: string[] = [], timers: number[] = [];
   let rejectIntent = false;
+  let rejectCommitTarget: string | undefined;
+  const dispatches: string[] = [];
   const ctx: any = { cwd, model: { provider: 'provider', id: 'free' },
     modelRegistry: { find: (provider: string, id: string) => ({ provider, id, reasoning: true }), hasConfiguredAuth: () => true },
     ui: { notify: () => {} }, abort: () => {} };
@@ -72,8 +74,9 @@ test('real recovery clamps reset waits, rotates after slow failures, and restore
     replaceState({ goal: { id: 'window', status: 'active', objective: 'work', tasks: [], startedAt: new Date().toISOString() }, loop: null } as any);
     createGoalRecovery(flags, { activeGoalSurfaceCommand: (c: string) => `/goal ${c}`, clearDetachedAuditRuntime: () => {},
       updateGoal: (patch: any) => { Object.assign(state.goal!, patch); return true; }, clearContinuationTimer: () => {},
-      freshCtxForGeneration: () => ctx, isSupervising: () => true, notifyExternal: () => {}, persistState: () => !(rejectIntent && state.mainModelRecovery?.pendingModelSwitch),
-      recoverySurfaceCommand: (_k: string, c: string) => `/goal ${c}`, scheduleContinuation: () => {},
+      freshCtxForGeneration: () => ctx, isSupervising: () => true, notifyExternal: () => {}, persistState: () => !(rejectIntent && state.mainModelRecovery?.pendingModelSwitch)
+        && !(rejectCommitTarget && state.mainModelRecovery?.active === rejectCommitTarget && !state.mainModelRecovery.pendingModelSwitch),
+      recoverySurfaceCommand: (_k: string, c: string) => `/goal ${c}`, scheduleContinuation: () => { dispatches.push('continuation'); },
       scheduleSessionTimeout: (_fn: () => void, ms: number) => { timers.push(ms); return null; } } as any);
     parkMainModelAfterFailure(ctx, classifyMainModelFailure('429 Rate limit exceeded. Retry-After: 14400'));
     assert.equal(state.goal?.status, 'paused');
@@ -119,6 +122,20 @@ test('real recovery clamps reset waits, rotates after slow failures, and restore
       assert.deepEqual(state.mainModelRecovery, before, 'failed intent restores its prior durable projection');
       assert.equal(flags.continuationDispatchStoodDown, true);
       rejectIntent = false;
+    }
+    for (const mode of ['immediate', 'delayed', 'preferred'] as const) {
+      ctx.model = { provider: 'provider', id: mode === 'preferred' ? 'backup' : 'free' };
+      state.mainModelRecovery = mode === 'preferred' ? { ...seed(), active: 'provider/backup', attempted: ['provider/free', 'provider/backup'], primaryProbeAt: new Date(Date.now() - 1).toISOString(), retryAt: undefined } : seed();
+      Object.assign(state.goal!, { status: mode === 'preferred' ? 'active' : 'paused', pauseKind: 'wait', pauseReason: 'main model recovery' });
+      const count = calls.length, sent = dispatches.length;
+      rejectCommitTarget = mode === 'preferred' ? 'provider/free' : 'provider/backup';
+      if (mode === 'immediate') await tryMainModelFallback(ctx, classifyMainModelFailure('429 TPM rate limit exceeded (1039)'));
+      else await probeMainModelRecovery(ctx);
+      assert.equal(calls.length, count + 1, `${mode}: host selection happened after successful intent persistence`);
+      assert.equal(state.mainModelRecovery!.pendingModelSwitch, rejectCommitTarget, 'failed accepted-selection commit retains durable intent for reconciliation');
+      assert.equal(dispatches.length, sent, 'no continuation may be dispatched when accepted selection cannot be committed');
+      assert.equal(flags.continuationDispatchStoodDown, true);
+      rejectCommitTarget = undefined;
     }
     ctx.model = { provider: 'provider', id: 'free' };
     state.mainModelRecovery = { ...seed(), sameModelRetries: 0, sameModelPhaseStartedAt: new Date().toISOString(), pendingModelSwitch: 'provider/backup', attempted: ['provider/free', 'provider/backup'] };
