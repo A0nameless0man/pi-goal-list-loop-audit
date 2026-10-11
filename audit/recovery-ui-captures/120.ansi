@@ -18,7 +18,7 @@
 [38;5;179m│  [0m[38;5;179mcount.[0m
 [38;5;179m├─ [0m[38;5;244mresume: /goal resume retries work after the prerequisite is resolved; it does not fix the blocker[0m
 [38;5;179m└─ [0m[38;5;244mdetails: /glla status[0m
-[38;5;244mglla:[0m [38;5;179m/goal tweak · Run /goal tweak "restate the verification contract test pi[0m…[0m[0m [38;5;244m· BLOCKED · goal paused (source unknown)[0m
+[38;5;244mglla:[0m [38;5;179m/goal tweak "restate the verification contract test pin from 1916 to 191[0m…[0m[0m [38;5;244m· BLOCKED · goal paused (source unknown)[0m
 
 [38;5;244m── Outcome-first completed summary[0m
 [38;5;147m[1mDone — Execution status is now truthful and actionable[0m[0m                                                                  
