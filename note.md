@@ -29,6 +29,8 @@ not supervised objs
 ## when we resume an objective manually we should update to the model i am retrying with 
 /home/dracon/Pictures/Screenshots/Screenshot_20261011_192005.png
 
+## we ned progress indicator for audits cause cant tell if this is stuck or not 
+/home/dracon/Pictures/Screenshots/Screenshot_20261011_193429.png
 
 # Testing
 
