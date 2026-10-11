@@ -194,7 +194,7 @@ test("integration: fresh recovery retries the current model instead of rotating"
     for (let retry = 2; retry <= 10; retry++) {
       parkMainModelAfterFailure(ctx, failure);
       assert.equal(state.mainModelRecovery?.sameModelRetries, retry - 1, 'parking never consumes the retry budget again');
-      const failures = state.mainModelRecovery!.attempts;
+      const failures: number = state.mainModelRecovery!.attempts;
       await probeMainModelRecovery(ctx);
       assert.equal(state.mainModelRecovery?.sameModelRetries, retry, 'one count per admitted retry');
       assert.equal(state.mainModelRecovery?.attempts, failures, 'probe does not advance failure cadence');
@@ -355,7 +355,7 @@ test("integration: legacy 0 budget preserves the immediate-rotation contract", a
   }
 });
 
-test("integration: parkMainModelAfterFailure increments the counter; rotation resets it", () => {
+test("integration: failure parking preserves the retry counter; rotation resets it", () => {
   const cwd = fs.mkdtempSync(path.join("/tmp", "glla-same-model-park-"));
   const settingsFile = globalSettingsPath();
   const original = fs.existsSync(settingsFile) ? fs.readFileSync(settingsFile, "utf8") : undefined;
