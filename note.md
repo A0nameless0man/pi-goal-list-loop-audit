@@ -26,7 +26,8 @@
 the point would be that we only ask qs if we really neeed to otheriwse we just exec, cause the idea that this is for long running 
 not supervised objs
 
-
+## when we resume an objective manually we should update to the model i am retrying with 
+/home/dracon/Pictures/Screenshots/Screenshot_20261011_192005.png
 
 
 # Testing
