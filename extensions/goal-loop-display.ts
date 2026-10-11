@@ -1550,7 +1550,9 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
       const spent = budget !== undefined && (recovery.sameModelRetries ?? 0) >= budget;
       const eligible = spent || (deadline !== undefined && now >= deadline) ? 'eligible now'
         : deadline !== undefined ? `eligible in ${fmtElapsed(deadline - now)} or when retries spent` : 'after retry budget';
-      rows.push(row('├─ ', candidate ? `fallback: ${eligible} · next candidate ${candidate}` : extras?.mainModelFallbacks ? 'fallback: no untried permitted candidate' : 'fallback: configuration not supplied to this view'));
+      rows.push(row('├─ ', candidate ? `fallback: ${eligible}` : extras?.mainModelFallbacks ? 'fallback: no untried permitted candidate' : 'fallback: configuration not supplied to this view'));
+      if (candidate) wrap(`backup: ${uiSafeText(candidate)}`, Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3), 32)
+        .forEach((line, index) => rows.push(row(index === 0 ? '├─ ' : '│  ', line, 'dim', true)));
     }
     const [lifecycle, transition] = pausedLifecycleLines(g, state, extras, now);
     const observedTransition = status.execution === 'retry-armed'
@@ -1580,7 +1582,11 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
     const judgment = buildDurableDeferDecisionLines(extras.durableDeferRecommendation, width);
     rows.push(row('├─ ', judgment[judgment.length - 1]!, 'dim'));
   }
-  if (status.resumeAction) prose('resume', status.resumeAction, 'dim');
+  if (status.resumeAction) {
+    const resumeCmd = status.resumeAction.match(/^\/(?:goal|list) resume\b/)?.[0];
+    const resumeText = compact && width < 80 && resumeCmd ? `${resumeCmd}; fix first` : status.resumeAction;
+    prose('resume', resumeText, 'dim');
+  }
   if (status.workflowIssue) rows.push(row('├─ ', `workflow: ${status.workflowIssue}`, 'warning'));
   if (terminal && progress) rows.push(row('├─ ', progress));
   // Live audit rows already carry phase evidence + the user action — the
@@ -1602,7 +1608,8 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   const provenance = terminal ? [] : modelProvenanceLines(extras?.modelProvenance, width);
   // Detailed status retains all model/owner facts. In the glance card these
   // give way to actionable blockers, never the other way round.
-  const tail = status.actionability === 'user' ? 'details: /glla status' : `next: ${status.nextAction}`;
+  const tail = status.actionability === 'user' || (g?.status === 'paused' && pauseKind(g) === 'wait' && state.mainModelRecovery)
+    ? 'details: /glla status' : `next: ${status.nextAction}`;
   const modelBudget = compact ? Math.max(0, 5 - rows.length) : provenance.length;
   provenance.slice(0, modelBudget).forEach(value => rows.push(row('├─ ', value)));
   if (!compact) {
@@ -2200,14 +2207,27 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
       if (max === 1) lines = [lines[0]!];
       else {
         const priority = [0];
-        for (const label of ['next:', 'why:', 'resume:', 'workflow:', 'retry:', 'fallback:']) {
+        for (const label of ['next:', 'why:', 'resume:', 'workflow:', 'retry:', 'fallback:', 'backup:']) {
           const at = lines.findIndex(line => sanitizeDisplayText(line).startsWith(`├─ ${label}`));
           if (at >= 0) priority.push(at);
         }
+        // A configured candidate must survive as a complete wrapped field
+        // before optional objective/history rows when the geometry permits.
+        const backup = lines.findIndex(line => sanitizeDisplayText(line).startsWith('├─ backup:'));
+        if (backup >= 0) for (let i = backup + 1; i < lines.length - 1 && sanitizeDisplayText(lines[i]!).startsWith('│  '); i++) priority.push(i);
         priority.push(1);
         for (let i = 2; i < lines.length - 1; i++) priority.push(i);
         const selected = [...new Set(priority)].filter(i => i < lines!.length - 1).slice(0, max - 1).sort((a, b) => a - b);
-        lines = [...selected.map(i => lines![i]!), footer];
+        const kept = new Set(selected);
+        const omitted = new Set<number>();
+        for (let start = 0; start < lines.length - 1; start++) {
+          if (!/^├─ (?:next|why|resume|backup):/.test(sanitizeDisplayText(lines[start]!))) continue;
+          let end = start + 1;
+          while (end < lines.length - 1 && sanitizeDisplayText(lines[end]!).startsWith('│  ')) end++;
+          const range = selected.filter(index => index >= start && index < end);
+          if (range.length && Array.from({ length: end - start }, (_, offset) => start + offset).some(index => !kept.has(index))) omitted.add(range[range.length - 1]!);
+        }
+        lines = [...selected.map(i => omitted.has(i) ? tuiTruncateToWidth(`${lines![i]} …`, Math.max(1, (width ?? 120) - WIDGET_HORIZONTAL_MARGIN), '…') : lines![i]!), footer];
       }
     }
   }
