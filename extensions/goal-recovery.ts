@@ -1659,7 +1659,7 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
       const previous = recovery;
       recovery = { ...recovery, pendingModelSwitch: undefined,
         attempted: forbidden ? recovery.attempted : recovery.attempted.filter(ref => !sameModelRef(ref, target)),
-        skipped: forbidden ? [...(recovery.skipped ?? []).filter(entry => !sameModelRef(entry.ref, target)), { ref: target, reason: 'forbidden' }].slice(-16)
+        skipped: forbidden ? [...(recovery.skipped ?? []).filter(entry => !sameModelRef(entry.ref, target)), { ref: target, reason: 'forbidden' as const }].slice(-16)
           : (recovery.skipped ?? []).filter(entry => !sameModelRef(entry.ref, target)) };
       state.mainModelRecovery = recovery;
       if (!persistRecoverySwitch(ctx, previous)) return;
