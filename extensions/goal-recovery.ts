@@ -1747,6 +1747,9 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
   // The primary is included at the front so a later cycle can return to it,
   // while the durable attempted list prevents a probe from jumping backward
   // through the chain after a reload.
+  // Cursor preparation is speculative until its pending intent lands.
+  // Do not mutate the live/durable predecessor through shared arrays.
+  recovery = { ...recovery, attempted: [...recovery.attempted], skipped: [...(recovery.skipped ?? [])] };
   const fallbackRefs = mainModelFallbackRefs(ctx);
   const selectorChain = [recovery.primary, ...fallbackRefs];
   const selector = sessionModelSelector(ctx, selectorChain);
