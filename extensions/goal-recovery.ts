@@ -684,9 +684,11 @@ export function mainModelSameModelRetryActive(ctx: ExtensionContext, recovery: M
   return sameModelRetryPhaseActive(recovery, budget, !!nextMainModelFallback(ctx, recovery));
 }
 function boundedSameModelDelay(ctx: ExtensionContext, recovery: MainModelRecovery, delayMs: number): number {
+  if (!nextMainModelFallback(ctx, recovery)) return delayMs;
+  const budget = normalizeMainModelSameModelRetries(loadSettings(ctx.cwd).mainModelSameModelRetries);
+  if (!mainModelSameModelRetryActive(ctx, recovery, budget)) return 1000;
   const deadline = sameModelRetryDeadline(recovery);
-  return nextMainModelFallback(ctx, recovery) && deadline !== undefined
-    ? Math.max(1000, Math.min(delayMs, deadline - Date.now())) : delayMs;
+  return deadline !== undefined ? Math.max(1000, Math.min(delayMs, deadline - Date.now())) : delayMs;
 }
 
 function mainModelFailbackEnabled(): boolean {
