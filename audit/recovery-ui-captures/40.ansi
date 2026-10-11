@@ -2,21 +2,21 @@
 [38;5;244m● [0m[38;5;244mRETRY ARMED[0m[38;5;244m · [0m[38;5;244mGOAL[0m [38;5;244mpaused by GLLA[0m
 [38;5;244m│  [0mMake execution evidence clear with[0m…[0m
 [38;5;244m├─ [0m[38;5;244mretry: same model 9/10 · minimax/M[0m…[0m
-[38;5;244m├─ [0m[38;5;244mfallback: eligible now · next cand[0m…[0m
-[38;5;244m├─ [0m[38;5;244mlifecycle: safely parked · owner: [0m…[0m
-[38;5;244m│  [0m[38;5;244mlast host activity not observed · [0m…[0m
+[38;5;244m├─ [0m[38;5;244mfallback: eligible now[0m
+[38;5;244m├─ [0m[38;5;244mbackup: opencode-go/muse-spark-1.3-[0m
+[38;5;244m│  [0m[38;5;244mcontributor[0m
 [38;5;244m├─ [0m[38;5;179mwhy: provider error[0m
-[38;5;244m└─ [0m[38;5;244mnext: Retry when recovery timer fi[0m…[0m
+[38;5;244m└─ more: /glla status[0m
 [38;5;244mglla:[0m [38;5;244mRETRY ARMED[0m [38;5;244m· goal paused by GLLA[0m…[0m
 
 [38;5;244m── Stale contract; legacy pause author unknown [0m
-[38;5;179m● [0m[38;5;179mBLOCKED[0m[38;5;244m · [0m[38;5;244mGOAL[0m [38;5;244mpaused (source unkno[0m…[0m
+[38;5;179m● [0m[38;5;179mBLOCKED[0m[38;5;244m · [0m[38;5;244mlist item[0m [38;5;244mpaused (source [0m…[0m
 [38;5;179m│  [0mCross-cutting legibility and acces[0m…[0m
 [38;5;179m├─ [0m[38;5;244mnext: Run /goal tweak "restate the[0m
 [38;5;179m│  [0m[38;5;244mverification contract test pin from[0m
-[38;5;179m│  [0m[38;5;244m1916 to 1918 pass / 0 fail[0m
-[38;5;179m├─ [0m[38;5;179mwhy: Audit disapproved solely on[0m
-[38;5;179m├─ [0m[38;5;244mresume: /goal resume retries work[0m
+[38;5;179m│  [0m[38;5;244m1916 to 1918 pass / 0 fail[0m …
+[38;5;179m├─ [0m[38;5;179mwhy: Audit disapproved solely on[0m …
+[38;5;179m├─ [0m[38;5;244mresume: /list resume; fix first[0m
 [38;5;244m└─ more: /glla status[0m
 [38;5;244mglla:[0m [38;5;179m/goal tweak "restate the verifica[0m…[0m
 
