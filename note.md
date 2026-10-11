@@ -22,6 +22,12 @@
 ## can have an option to accept suggestion
 /home/dracon/Pictures/Screenshots/Screenshot_20261011_175739.png
 
+## we seem to be asking too many qs after we are running
+the point would be that we only ask qs if we really neeed to otheriwse we just exec, cause the idea that this is for long running 
+not supervised objs
+
+
+
 
 # Testing
 
