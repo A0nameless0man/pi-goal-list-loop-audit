@@ -19,6 +19,7 @@ import { auditVerdictLabel, auditLifecycleLine, auditLifecycleProjection, auditP
 export { isMonitorGoal };
 import { HELD_ON_RESTORE, type LoopState } from "./goal-loop-forever.js";
 import { respecCoverage } from "./respec-builder.js";
+import { providerErrorPresentation } from "./quota-retry.js";
 import { normalizeFindingLead } from "./finding-lead.js";
 import { auditorSurfaceSuppressed } from "./loops/goal-auditor-surface.js";
 import { isCompactionRecoveryHold, compactionResumeAction } from "./compaction-resume.js";
@@ -1421,8 +1422,15 @@ function uiStatusTone(status: UiStatus): DisplayColor {
     default: return 'dim';
   }
 }
-function uiSafeText(value: string): string {
-  return compactDisplayText(sanitizeProviderDisplayText(sanitizeDisplayText(value)));
+function uiSafeText(value: string, prose = false): string {
+  const safe = sanitizeDisplayText(value);
+  // Ordinary blockers are not provider diagnostics. Their permission/action
+  // clauses must survive the diagnostic helper's short display cap. Retain
+  // provider redaction and bound prose before wrapping it into widget rows.
+  if (prose && !providerErrorPresentation(safe).sensitive) {
+    return compactDisplayText(safe.length > 4000 ? `${safe.slice(0, 3999)}…` : safe);
+  }
+  return compactDisplayText(sanitizeProviderDisplayText(safe));
 }
 export function buildUiStatusFooter(status: UiStatus, now: number, theme?: DisplayTheme, width?: number): string {
   const tone = uiStatusTone(status);
@@ -1462,8 +1470,8 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   const terminal = status.execution === 'complete' || status.execution === 'cancelled';
   const tone = uiStatusTone(status);
   const clipped = (value: string): string => tuiTruncateToWidth(value, Math.max(1, width), '…');
-  const row = (prefix: string, value: string, color: DisplayColor = 'dim'): string =>
-    clipped(`${paint(theme, tone, prefix)}${paint(theme, color, uiSafeText(value))}`);
+  const row = (prefix: string, value: string, color: DisplayColor = 'dim', prose = false): string =>
+    clipped(`${paint(theme, tone, prefix)}${paint(theme, color, uiSafeText(value, prose))}`);
   const loop = status.mode === 'project' || status.mode === 'loop' ? state.loop : undefined;
   const coverage = loop?.builder ? respecCoverage(loop.builder) : undefined;
   const progress = coverage ? `${coverage.verified}/${coverage.total} requirements verified${coverage.blocked ? ` · ${coverage.blocked} requirements blocked` : ''}`
@@ -1531,8 +1539,8 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   // the terminal from hiding the permission/alternative at the end. Detailed
   // status offers a larger bounded view; the compact card links to it.
   const prose = (value: string, color: DisplayColor): void => {
-    wrap(uiSafeText(value), Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3), compact ? 4 : 32)
-      .forEach((line, index) => rows.push(row(index === 0 ? '├─ ' : '│  ', line, color)));
+    wrap(uiSafeText(value, true), Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3), compact ? 4 : 32)
+      .forEach((line, index) => rows.push(row(index === 0 ? '├─ ' : '│  ', line, color, true)));
   };
   if (status.actionability === 'user') prose(`next: ${status.nextAction}`, 'dim');
   if (status.blocker) prose(`why: ${status.blocker}`, 'warning');
