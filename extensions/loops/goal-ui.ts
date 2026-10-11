@@ -911,6 +911,7 @@ function refreshUI(ctx: ExtensionContext, force = false): void {
       maxWidgetLines: widgetHeightBudget(process.stdout.rows || 24),
       uiStatusContext: currentUiStatusContext(ctx, now),
       mainModelFallbacks: fallbackRefs,
+      mainModelSameModelRetries: loadSettings(ctx.cwd).mainModelSameModelRetries,
       mainModelRecoveryRuntime: mainModelRecoveryRuntimeStatus(),
       modelProvenance,
       ...(durableDeferRecommendation ? { durableDeferRecommendation } : {}),
