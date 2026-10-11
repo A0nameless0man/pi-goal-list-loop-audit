@@ -9,6 +9,7 @@ import { createGoalRecovery, parkMainModelAfterFailure, probeMainModelRecovery, 
 import { state, replaceState } from '../extensions/goal-state.js';
 import { globalSettingsPath } from '../extensions/goal-settings.js';
 import { buildWidgetLines } from '../extensions/goal-loop-display.js';
+import { uiStatusOwnerKey } from '../extensions/ui-status.js';
 
 const now = Date.parse('2026-10-11T14:00:00Z');
 test('count and time bound primary retries independently; no candidate preserves paced retry', () => {
@@ -31,6 +32,12 @@ test('bounded recovery card states retry progress and fallback eligibility witho
   assert.match(lines.join('\n'), /retry: same model 2\/10/);
   assert.match(lines.join('\n'), /fallback: eligible now.*next candidate provider\/backup/);
   assert.doesNotMatch(lines.join('\n'), /next candidate provider\/forbidden|switched to/);
+  const runtime = { retryTimerArmed: true, hourlyTimerArmed: false, turnActive: false, turnQueued: false, switchInFlight: false };
+  const armed = buildWidgetLines(fixture, undefined, now, undefined, 200, { ...extras, mainModelRecoveryRuntime: runtime,
+    uiStatusContext: { now, generation: 1, evidence: { ownerKey: uiStatusOwnerKey(fixture)!, generation: 1, observedAt: now, session: 'open', recovery: runtime } } })!.join('\n');
+  assert.match(armed, /RETRY ARMED/);
+  assert.match(armed, /next: recovery timer armed/);
+  assert.doesNotMatch(armed, /next: retry scheduled \(unconfirmed\)/, 'the lifecycle row must not contradict the owner-fenced live timer evidence');
 });
 
 test('recovery order deduplicates the primary and repeated backups like the selector', () => {
