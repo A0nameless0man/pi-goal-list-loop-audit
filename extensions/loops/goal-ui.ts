@@ -242,7 +242,7 @@ import {
   textFingerprint,
   pushCapped as pushRepetitionCapped,
 } from "../goal-loop-repetition.js";
-import { buildStatusText, buildWidgetLines, type AuditDisplayProgress, type ModelProvenanceDisplay } from "../goal-loop-display.js";
+import { buildStatusText, buildWidgetLines, responsiveWidget, widgetHeightBudget, type AuditDisplayProgress, type ModelProvenanceDisplay } from "../goal-loop-display.js";
 import {
   defaultAgentDir,
   resolveEffectiveSubagentModel,
@@ -908,7 +908,7 @@ function refreshUI(ctx: ExtensionContext, force = false): void {
       auditorSilent: settings.auditorSilent !== false,
       auditorProgressSignals: settings.auditorProgressSignals !== false,
       compactAuditCard: true,
-      maxWidgetLines: Math.max(1, Math.min(12, Math.floor((process.stdout.rows || 24) / 3))),
+      maxWidgetLines: widgetHeightBudget(process.stdout.rows || 24),
       uiStatusContext: currentUiStatusContext(ctx, now),
       mainModelFallbacks: fallbackRefs,
       mainModelRecoveryRuntime: mainModelRecoveryRuntimeStatus(),
@@ -930,7 +930,15 @@ function refreshUI(ctx: ExtensionContext, force = false): void {
     if (statusChanged) ctx.ui.setStatus("pi-glla", statusText);
     // v0.38.23: pin the card to the below-chat stack (same zone as the
     // native fleet) so GLLA and fleet stop trading places across ticks.
-    if (widgetChanged) ctx.ui.setWidget("pi-glla", widgetLines, { placement: "belowEditor" });
+    if (widgetChanged) {
+      if (ctx.mode === "tui" && widgetLines) {
+        const snapshot = { ...state };
+        ctx.ui.setWidget("pi-glla", (tui, widgetTheme) => responsiveWidget(
+          (columns, maxWidgetLines) => buildWidgetLines(snapshot, latestAuditProgress, Date.now(), widgetTheme, columns, { ...extras, maxWidgetLines }),
+          () => tui.terminal.rows,
+        ), { placement: "belowEditor" });
+      } else ctx.ui.setWidget("pi-glla", widgetLines, { placement: "belowEditor" });
+    }
     lastUIRenderAt = now;
     lastUIRenderContext = ctx;
     lastUIStatusText = statusText;
