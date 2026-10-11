@@ -1317,6 +1317,8 @@ export interface MainModelRecovery {
   sameModelRetries?: number;
   /** Start of this model's bounded same-model phase, distinct from episode age. */
   sameModelPhaseStartedAt?: string;
+  /** Failure observations for this model; never inherit another model's rung. */
+  modelFailureSteps?: number;
   /** Candidates already tried in this recovery cycle. */
   attempted: string[];
   /** Next safe probe time; persisted so reloads do not forget the wait. */
@@ -1485,6 +1487,8 @@ export function sanitizeMainModelRecovery(value: unknown): MainModelRecovery | u
       ? { sameModelRetries: Math.min(raw.sameModelRetries, MAX_MAIN_MODEL_SAME_MODEL_RETRIES) }
       : {}),
     ...(date(raw.sameModelPhaseStartedAt) ? { sameModelPhaseStartedAt: date(raw.sameModelPhaseStartedAt) } : {}),
+    ...(typeof raw.modelFailureSteps === 'number' && Number.isSafeInteger(raw.modelFailureSteps) && raw.modelFailureSteps >= 0
+      ? { modelFailureSteps: Math.min(raw.modelFailureSteps, 1_000_000) } : {}),
     attempted: refs,
     attempts,
     reason: bounded(raw.reason, 600) ?? "main model recovery",

@@ -56,11 +56,14 @@ export function sameModelRetriesRemain(sameModelRetries: number | undefined, bud
  * hours. When another configured candidate remains, cap this model's phase
  * at two minutes; in-flight calls finish under the host's own timeout. */
 export const SAME_MODEL_RETRY_WINDOW_MS = 2 * 60_000;
-export function sameModelRetryDeadline(recovery: { sameModelPhaseStartedAt?: string; firstFailureAt?: string } | undefined): number | undefined {
+export function sameModelRetryDeadline(recovery: { sameModelPhaseStartedAt?: string; firstFailureAt?: string; primaryProbeAt?: string; primaryProbeInFlight?: boolean; retryAt?: string } | undefined): number | undefined {
+  // A healthy serving backup carries primary-failback history, not an
+  // ongoing failure phase of its own. Its next failure starts a fresh phase.
+  if (recovery?.primaryProbeAt && !recovery.retryAt && !recovery.primaryProbeInFlight) return undefined;
   const start = Date.parse(recovery?.sameModelPhaseStartedAt ?? recovery?.firstFailureAt ?? '');
   return Number.isFinite(start) ? start + SAME_MODEL_RETRY_WINDOW_MS : undefined;
 }
-export function sameModelRetryPhaseActive(recovery: { sameModelRetries?: number; sameModelPhaseStartedAt?: string; firstFailureAt?: string } | undefined, budget: number, hasFallback: boolean, now = Date.now()): boolean {
+export function sameModelRetryPhaseActive(recovery: { sameModelRetries?: number; sameModelPhaseStartedAt?: string; firstFailureAt?: string; primaryProbeAt?: string; primaryProbeInFlight?: boolean; retryAt?: string } | undefined, budget: number, hasFallback: boolean, now = Date.now()): boolean {
   if (!sameModelRetriesRemain(recovery?.sameModelRetries, budget)) return false;
   const deadline = sameModelRetryDeadline(recovery);
   return !hasFallback || deadline === undefined || now < deadline;
