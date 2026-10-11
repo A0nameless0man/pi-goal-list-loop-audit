@@ -1471,8 +1471,9 @@ export function buildUiStatusFooter(status: UiStatus, now: number, theme?: Displ
   // the verbatim action; command-first and commandless actions keep ordering.
   const nextAction = uiSafeText(status.nextAction);
   const command = nextAction.match(/\/(?:glla|goal|list|loop|review)(?:\s+[a-z][a-z-]*)?\b/i)?.[0];
-  const compactAction = command && !nextAction.startsWith(command)
-    ? `${command} · ${nextAction}` : nextAction;
+  const actionText = /^run\s+\//i.test(nextAction) ? nextAction.replace(/^run\s+/i, '') : nextAction;
+  const compactAction = command && !actionText.startsWith(command)
+    ? `${command} · ${actionText}` : actionText;
   const pauseContext = `· ${UI_HEALTH_LABEL[status.execution]} · ${phase}`;
   const actionBudget = width ? Math.max(1, width - visibleLen(pauseContext) - 7) : 160;
   const fittedAction = width && width >= 80 && status.workflow === 'paused'
@@ -1549,7 +1550,7 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
       const spent = budget !== undefined && (recovery.sameModelRetries ?? 0) >= budget;
       const eligible = spent || (deadline !== undefined && now >= deadline) ? 'eligible now'
         : deadline !== undefined ? `eligible in ${fmtElapsed(deadline - now)} or when retries spent` : 'after retry budget';
-      rows.push(row('├─ ', candidate ? `fallback: ${eligible} · next candidate ${candidate}` : extras?.mainModelFallbacks ? 'fallback: no untried permitted candidate' : 'fallback: configuration not supplied to this view')); 
+      rows.push(row('├─ ', candidate ? `fallback: ${eligible} · next candidate ${candidate}` : extras?.mainModelFallbacks ? 'fallback: no untried permitted candidate' : 'fallback: configuration not supplied to this view'));
     }
     const [lifecycle, transition] = pausedLifecycleLines(g, state, extras, now);
     rows.push(row('├─ ', lifecycle));
