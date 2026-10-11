@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Post-release audit: failure parking no longer double-consumes the same-model
+  retry budget; all ten configured retries precede fallback admission.
+- `pause_goal` refuses with an error when its durable pause transaction fails,
+  instead of claiming success and aborting an unpaused goal.
+- Fleet rejects malformed builder phases and filters workflow output so private
+  journal text and terminal controls cannot escape through status formatting.
+
 ## 0.39.27 — project audit recovery and diagnostics fixes (2026-10-11)
 
 ### Recovery and runtime paths

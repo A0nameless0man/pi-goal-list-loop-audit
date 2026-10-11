@@ -97,6 +97,9 @@ different provider's quota to solve a five-second problem.
   inside it: 5s for the eager transient window, then the short ladder;
   an explicit upstream reset hint still sleeps to reset; persistent walls
   ladder per `mainModelRetryMinutes`.
+- Same-model probes consume the retry budget once when admitted; failure
+  parking advances the separate failure/cadence count, not the retry budget.
+  The initial failure is not itself a retry.
 - A successful **rotation** resets the budget for the new model so the
   backup earns its own retries from zero.
 - A **cycle reset** (return to the current model after the chain was
