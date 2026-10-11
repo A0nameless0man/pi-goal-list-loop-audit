@@ -184,7 +184,11 @@ test("v0.34.16 — stale paths never inject terminal input", () => {
 });
 
 test("send paths short-circuit once stale (no retry-into-the-void)", () => {
-  assert.match(CONT, /if \(!flags\.extensionApi \|\| flags\.extensionApiStale\) return;/, "sendContinuation guard (decomposition step 5: moved + flags re-spelling)");
+  const refusal = /if \(!flags\.extensionApi \|\| flags\.extensionApiStale\) \{([\s\S]*?)\n  \}/.exec(CONT)?.[1];
+  assert.ok(refusal, "sendContinuation keeps its missing/stale API guard");
+  assert.match(refusal, /appendLedger\(ctx\.cwd, "goal_continuation_send_api_unavailable"/, "refusal is recorded");
+  assert.match(refusal, /return;/, "unavailable API still short-circuits");
+  assert.doesNotMatch(refusal, /sendMessage|scheduleSessionTimeout|dispatchPrepare/, "no send or retry into the void");
   assert.match(LOOP, /if \(!isLoopActive\(\) \|\| !flags\.extensionApi\) return;/, "sendLoopTurn guard (flag accessor re-spelling, decomposition step 2)");
 });
 
