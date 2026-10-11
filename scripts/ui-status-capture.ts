@@ -47,6 +47,7 @@ slowQuota.goal!.status = 'paused'; slowQuota.goal!.pauseKind = 'wait'; slowQuota
 slowQuota.mainModelRecovery!.sameModelRetries = 9; slowQuota.mainModelRecovery!.sameModelPhaseStartedAt = at;
 slowQuota.mainModelRecovery!.retryAt = new Date(now + 1000).toISOString();
 const stalePin = structuredClone(blocked);
+stalePin.goal!.policy = 'list';
 stalePin.goal!.objective = 'Cross-cutting legibility and accessibility sweep over every surface from the previous four items. Re-render each one at mobile and snapped desktop sizes.';
 stalePin.goal!.pauseReason = 'Audit disapproved solely on the stale 1916 pin: suite reports 1918/0, but the goal still records the old count.';
 stalePin.goal!.pauseSuggestedAction = 'Run /goal tweak "restate the verification contract test pin from 1916 to 1918 pass / 0 fail (operator-released; suite reports 1918/0, no tests added this pass)"';
