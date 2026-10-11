@@ -3,7 +3,7 @@
 [38;5;244m│  [0mMake execution evidence clear without losing the cohesive card
 [38;5;244m├─ [0m[38;5;244mretry: same model 9/10 · minimax/MiniMax-M3.1-Flash[0m
 [38;5;244m├─ [0m[38;5;244mfallback: eligible now[0m
-[38;5;244m├─ [0m[38;5;244mbackup: opencode-go/muse-spark-1.3-contributor[0m
+[38;5;244m├─ [0m[38;5;244mcandidate: opencode-go/muse-spark-1.3-contributor[0m
 [38;5;244m├─ [0m[38;5;244mlifecycle: safely parked · owner: main-model recovery · queue empty[0m
 [38;5;244m├─ [0m[38;5;179mwhy: provider error[0m
 [38;5;244m└─ more: /glla status[0m
