@@ -190,6 +190,17 @@ test("integration: fresh recovery retries the current model instead of rotating"
     // The ledger is observable evidence for /glla progress and audit.
     const ledger = fs.readFileSync(path.join(cwd, ".pi-glla", "active.jsonl"), "utf8");
     assert.match(ledger, /main_model_probe.*same-model-retry/, "the probe event carries the same-model-retry mode");
+    const failure = classifyMainModelFailure('429 Token Plan rate limit reached (2062)');
+    for (let retry = 2; retry <= 10; retry++) {
+      parkMainModelAfterFailure(ctx, failure);
+      assert.equal(state.mainModelRecovery?.sameModelRetries, retry - 1, 'parking never consumes the retry budget again');
+      const failures = state.mainModelRecovery!.attempts;
+      await probeMainModelRecovery(ctx);
+      assert.equal(state.mainModelRecovery?.sameModelRetries, retry, 'one count per admitted retry');
+      assert.equal(state.mainModelRecovery?.attempts, failures, 'probe does not advance failure cadence');
+      assert.equal(calls.length, 0, 'primary earns all ten retries before fallback');
+    }
+    assert.equal(sameModelRetriesRemain(state.mainModelRecovery?.sameModelRetries, 10), false);
   } finally {
     replaceState({ goal: null } as any);
     if (original === undefined) {
@@ -390,7 +401,7 @@ test("integration: parkMainModelAfterFailure increments the counter; rotation re
     replaceState({ goal: { id: "g", objective: "x", status: "active", policy: "goal", autoContinue: true, usage: { tokensUsed: 0, tokensLimit: 0 }, createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-01T00:00:00Z" } } as any);
     const transient = classifyMainModelFailure("503 service unavailable");
     parkMainModelAfterFailure(ctx, transient);
-    assert.equal(state.mainModelRecovery?.sameModelRetries, 1);
+    assert.equal(state.mainModelRecovery?.sameModelRetries, 0, 'initial failure is not a retry');
     // parkMainModelAfterFailure is a no-op while a recovery is ACTIVE
     // (retryAt set); in the real flow the timer fires, the probe re-arms
     // the surface, and the next failure re-enters via the orchestrator
@@ -399,7 +410,7 @@ test("integration: parkMainModelAfterFailure increments the counter; rotation re
     // existing counter intact.
     state.mainModelRecovery = { ...state.mainModelRecovery!, retryAt: undefined };
     parkMainModelAfterFailure(ctx, transient);
-    assert.equal(state.mainModelRecovery?.sameModelRetries, 2, "consecutive same-model failures extend the counter");
+    assert.equal(state.mainModelRecovery?.sameModelRetries, 0, "failure parking never consumes an undispatched retry");
     // The rotation-reset path is covered by the "budget exhausted" integration
     // test above: tryMainModelFallback success sets sameModelRetries=0 so the
     // backup earns its own budget from zero. The park path does not need to
