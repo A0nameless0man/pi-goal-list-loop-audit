@@ -1448,6 +1448,14 @@ async function probePreferredPrimary(ctx: ExtensionContext, recovery: MainModelR
   const primary = recovery.primary;
   const current = modelRef(ctx.model);
 
+  if (isForbiddenModel(primary, loadSettings(ctx.cwd).forbiddenModels)) {
+    clearMainModelRecoveryTimer();
+    state.mainModelRecovery = undefined;
+    if (!persistRecoverySwitch(ctx, recovery)) return;
+    appendLedger(ctx.cwd, "main_model_failback_cancelled", { primary, reason: "forbidden" });
+    ctx.ui.notify(`Main-model failback skipped ${primary} because forbiddenModels excludes it; current model ${current ?? 'unknown'} is unchanged.`, "warning");
+    return;
+  }
   // A host/session replacement may have committed the switch before the
   // replacement process rehydrated its durable marker. Treat that as the
   // same in-flight probe and wait for one real supervised turn before
@@ -1493,14 +1501,6 @@ async function probePreferredPrimary(ctx: ExtensionContext, recovery: MainModelR
     return;
   }
 
-  if (isForbiddenModel(primary, loadGlobalSettings().forbiddenModels)) {
-    clearMainModelRecoveryTimer();
-    state.mainModelRecovery = undefined;
-    persistState(ctx);
-    appendLedger(ctx.cwd, "main_model_failback_cancelled", { primary, reason: "forbidden" });
-    ctx.ui.notify(`Main-model failback skipped ${primary} because forbiddenModels excludes it; the current fallback remains selected.`, "warning");
-    return;
-  }
   const candidate = resolveMainModel(ctx, primary);
   if (!candidate) {
     const delay = mainModelPrimaryProbeDelay();
