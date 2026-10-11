@@ -88,10 +88,9 @@ test("walls keep the historical ladder; a reset hint outranks the eager window",
   const starved = classifyMainModelFailure("context compacted twice, still starved", { isContextOverflow: true });
   assert.equal(starved.kind, "context-overflow");
   assert.equal(mainModelFailureDelayMs(starved, 2, 15, nowMs), 30 * 60_000, "context overflow needs compaction, not retries");
-  assert.equal(mainModelFailureDelayMs(transient("429 usage limit"), 2, 15, nowMs), 30 * 60_000, "hintless quota still ladders");
-  // v0.38.104: explicit backpressure vetoes eager even for transient kinds —
-  // hammering a named rate limit is violation, not diligence.
-  assert.equal(mainModelFailureDelayMs(transient("503 rate limit exceeded"), 2, 15, nowMs), 30 * 60_000, "hintless signal + transient kind ladders");
+  assert.equal(mainModelFailureDelayMs(transient("429 usage limit"), 2, 15, nowMs), 5_000, "hintless quota retries eagerly");
+  // A named reset vetoes eager; hintless backpressure gets a bounded window.
+  assert.equal(mainModelFailureDelayMs(transient("503 rate limit exceeded"), 2, 15, nowMs), 5_000, "hintless signal + transient kind retries eagerly");
   const hinted = transient("503 rate limit exceeded, retry in 300 seconds");
   assert.equal(hinted.kind, "transient");
   assert.equal(mainModelFailureDelayMs(hinted, 2, 15, nowMs), 300_000, "an explicit reset hint beats eager even for transient");

@@ -425,7 +425,7 @@ test("main model recovery backs off without giving up", () => {
   // Every recoverable provider failure gets the same eager retry, then joins
   // the configured ladder.
   assert.equal(mainModelFailureDelayMs(classifyMainModelFailure("429 Too Many Requests"), 1, 15, nowMs), 5_000);
-  assert.equal(mainModelFailureDelayMs(classifyMainModelFailure("429 Too Many Requests"), 2, 15, nowMs), 30 * 60_000);
+  assert.equal(mainModelFailureDelayMs(classifyMainModelFailure("429 Too Many Requests"), 2, 15, nowMs), 5_000);
   for (const raw of [
     "insufficient credits — buy credits",
     "401 invalid API key",

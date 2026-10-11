@@ -42,9 +42,8 @@ test("later provider retries use one bounded configured ladder", () => {
   // v0.38.69 (Antigravity port): "429 retry in 4 hours" no longer ladders
   // here — a quota-class failure with an explicit upstream reset hint sleeps
   // exactly until reset (pinned in tests/quota-sleep-until-reset.test.ts).
-  // Hintless quota failures still ladder: "429 usage limit" below has no
-  // reset hint, so it stays on the blind 30m rung.
-  assert.equal(mainModelFailureDelayMs(classifyMainModelFailure("429 usage limit"), 2, 15, nowMs), 30 * 60_000);
+  // Hintless quota failures get a bounded eager window, not guessed hours.
+  assert.equal(mainModelFailureDelayMs(classifyMainModelFailure("429 usage limit"), 2, 15, nowMs), 5_000);
   assert.equal(mainModelFailureDelayMs(classifyMainModelFailure("503 unavailable"), 2, 45, nowMs), 5_000, "eager ignores the configured base");
 });
 

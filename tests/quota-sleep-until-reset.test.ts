@@ -51,9 +51,11 @@ test("quota sleep-until-reset: hint never widens the 5h envelope", () => {
   );
 });
 
-test("quota sleep-until-reset: hintless quota failures keep the blind ladder", () => {
+test("quota sleep-until-reset: hintless quota failures retry eagerly within a bounded window", () => {
   const failure = classifyMainModelFailure("429 Too Many Requests");
-  assert.equal(mainModelFailureDelayMs(failure, 2, 15), 30 * 60_000);
+  assert.equal(mainModelFailureDelayMs(failure, 2, 15), 5_000);
+  assert.equal(mainModelFailureDelayMs(failure, 10, 15), 5_000);
+  assert.equal(mainModelFailureDelayMs(failure, 11, 15), 60_000);
 });
 
 test("quota sleep-until-reset: non-quota signals ignore hints", () => {
