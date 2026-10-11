@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+## 0.39.27 — project audit recovery and diagnostics fixes (2026-10-11)
+
+### Recovery and runtime paths
+
+- Failed compaction clears a queued pressure attempt before other recovery
+  handling, preserving its durable budget and cancelling its admission/deadline
+  timers so it cannot initiate a second recovery.
+- Continuation sends record missing/stale API refusals in the ledger.
+  Self-heal exhaustion uses the fresh context and tolerates notification failures.
+- Compactor worker and prompt paths use `import.meta.url` instead of bare
+  `__dirname`, avoiding reliance on loader-provided CommonJS globals.
+
+### Diagnostics and regression coverage
+
+- Fleet inspection reports requested bounds clamped to safety ceilings.
+- Audit observations require a real event timestamp instead of an epoch fallback.
+- Decomposed loop modules identify their own responsibilities in source headers.
+- Added queued-pressure, fleet clamp and state-ownership regression guards.
+
 ## 0.39.26 — compaction diagnostics and semantic summaries (2026-10-10)
 
 ### Compaction status
