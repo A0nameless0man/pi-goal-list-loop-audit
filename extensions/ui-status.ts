@@ -42,6 +42,8 @@ export interface UiStatus {
   blocker?: string;
   workflowIssue?: string;
   nextAction: string;
+  pauseSource?: 'agent' | 'user' | 'system' | 'unknown';
+  resumeAction?: string;
   /** Durable queue depth, so the footer never drops waiting work (v0.35.61). */
   queueDepth?: number;
   /** Saved-recovery honesty note for unconfirmed retries (never an armed-timer claim). */
@@ -80,6 +82,10 @@ export function projectUiStatus(state: State, context: UiStatusContext): UiStatu
     objective: loop?.builder?.vision ?? loop?.target ?? goal?.objective,
     provenance: 'saved', workflowIssue: context.workflowIssue,
     nextAction: ownerKey ? '/glla status to inspect execution' : 'No saved work' };
+  if (goal?.status === 'paused') {
+    base.pauseSource = goal.pauseSource === 'agent' || goal.pauseSource === 'user' || goal.pauseSource === 'system'
+      ? goal.pauseSource : 'unknown';
+  }
   // v0.35.61: waiting work rides every footer — a queue beside live work
   // is durable context, not a second card. Set before any finish() so all
   // executions carry it.
@@ -111,6 +117,9 @@ export function projectUiStatus(state: State, context: UiStatusContext): UiStatu
   const legacyProviderPause = providerWait && goal?.pauseKind !== 'decision'
     && (goal?.pauseReason ?? '').startsWith('main model recovery');
   if (goal?.status === 'paused' && goal.pauseKind !== 'wait' && goal.pauseKind !== 'standby' && !legacyProviderPause) {
+    base.resumeAction = goal.pauseKind === 'decision'
+      ? `${mode === 'list' ? '/list decide' : '/goal decide'} resolves the pending choice`
+      : `${resume} retries work after the prerequisite is resolved; it does not fix the blocker`;
     return finish('blocked', 'user', goal.pauseSuggestedAction ?? (goal.pauseKind === 'decision' ? '/goal decide to resolve the pending choice' : `${resume} when the prerequisite is resolved`), goal.pauseReason ?? 'Work paused');
   }
   if (recoveryOwned && recovery?.manualResumeRequired) return finish('blocked', 'user', `${resume} after resolving the recovery prerequisite`, recovery.reason);
