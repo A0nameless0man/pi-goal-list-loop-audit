@@ -908,6 +908,7 @@ function refreshUI(ctx: ExtensionContext, force = false): void {
       auditorSilent: settings.auditorSilent !== false,
       auditorProgressSignals: settings.auditorProgressSignals !== false,
       compactAuditCard: true,
+      maxWidgetLines: Math.max(1, Math.min(12, Math.floor((process.stdout.rows || 24) / 3))),
       uiStatusContext: currentUiStatusContext(ctx, now),
       mainModelFallbacks: fallbackRefs,
       mainModelRecoveryRuntime: mainModelRecoveryRuntimeStatus(),
