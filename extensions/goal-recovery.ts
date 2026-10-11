@@ -1653,7 +1653,9 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
       active: current,
       attempted: [current],
       sameModelRetries: nextRetries,
-      attempts: recovery.attempts + 1,
+      // Failure parking owns the episode/cadence count. A probe is the retry
+      // of that failure, not another failure: never advance it twice.
+      attempts: recovery.attempts,
       retryAt: undefined,
       resumeCurrent: undefined,
       pendingModelSwitch: undefined,
@@ -1912,15 +1914,13 @@ export function parkMainModelAfterFailure(ctx: ExtensionContext, failure: MainMo
     kind: mainModelRecoveryKind(),
   } satisfies MainModelRecovery);
   const failureCopy = providerErrorPresentation(failure.raw, "main");
-  // v0.38.105: the same-model retry budget tracks consecutive failures on
-  // the currently selected model. A different `active` (a previous rotation
-  // to a backup that has now itself failed) starts a fresh budget for the
-  // new model; the same `active` extends the existing one. The first
-  // failure inside a new episode seeds the counter at 1.
+  // Same-model budget is consumed at retry admission in the probe branch,
+  // not again when that retry fails. Initial failure spends no retry; model
+  // rotation starts its own budget at zero. Episode attempts count failures.
   const sameModel = sameModelRef(existing.active, current);
   const nextSameModelRetries = sameModel
-    ? Math.min((existing.sameModelRetries ?? 0) + 1, MAX_MAIN_MODEL_SAME_MODEL_RETRIES)
-    : 1;
+    ? Math.min(existing.sameModelRetries ?? 0, MAX_MAIN_MODEL_SAME_MODEL_RETRIES)
+    : 0;
   const nextRecovery = withMainModelRecoveryWindow({
     ...existing,
     active: current,

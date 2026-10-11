@@ -2751,7 +2751,7 @@ function registerAgentTools(pi: any): void {
           };
         }
       }
-      updateGoal({
+      const pauseLanded = updateGoal({
         status: "paused",
         pauseReason: safePauseReason,
         pauseSuggestedAction: safePauseAction,
@@ -2770,6 +2770,13 @@ function registerAgentTools(pi: any): void {
           ? { midRunDecisionCount: (state.goal.midRunDecisionCount ?? 0) + 1 }
           : {}),
       }, ctx);
+      if (!pauseLanded) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "Pause could not be saved. No durable pause was admitted; repair .pi-glla storage before continuing or relying on resume." }],
+          details: { paused: false },
+        };
+      }
       if (p.kind === "decision" && p.options && p.options.length > 0) maybeDecisionPopup(ctx);
       // v0.34.70 — impossible list items auto-drop (note.md 2026-08-07:
       // "auto drop impossible ones i think or auto adjust instead of stopping").

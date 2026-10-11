@@ -878,3 +878,12 @@ Three parallel read-only scouts surveyed lifecycle/recovery/compaction, UI/summa
 - [x] FIX: LOW: No grep guard locks the in-place state-ownership invariant — goal-state.ts owns the object while goal-orchestrator.ts mutates it, so a future `state = …` outside goal-state.ts reintroduces the 2026-08-09 freeze with no failing test (extensions/goal-state.ts:1) — fixed in 7d68b12a (regression tests/state-ownership-guard.test.ts)
 
 Observations (reviewed, deliberately not filed): scout B1 "recovery-status-format.ts absent" — no stale source/doc reference exists (only the correctly named tests/recovery-status-format.test.ts plus audit mentions); test-process-registry.mjs is production-grade process tracking despite its name (rename churn exceeds benefit); writeGoalMd unlanded-path return is guarded by goalMarkdownLanded at the only caller (future-caller risk only); isVisualGoal overbreadth is prompt noise with fix risk exceeding benefit; summary-renderer quote-unaware splitting needs a bare structural word inside unquoted prose (rare cosmetic); tool-registration global indirection shows no breakage; summary-capture goldens remain manual visual checks.
+
+
+## Fresh post-release audit — 2026-10-11 (0.39.27)
+
+Three bounded parallel subsystem scouts completed in workflow e89a8cf0-d8c5-459f-b67e-3826ee8120c9. New candidates verified in production source; no DECIDE findings identified. One scout ran fixture-writing focused tests despite the read-only brief; repository remained unchanged, and the deviation is retained in the audit report.
+
+- [ ] FIX: MEDIUM: Failure parking and delayed probes both consume same-model and episode counters, admitting fallback after five actual retries with a configured budget of ten (extensions/goal-recovery.ts:1647,1920).
+- [ ] FIX: MEDIUM: pause_goal ignores failed updateGoal admission, reports a successful pause and aborts while durable/live goal remains active (extensions/loops/goal-tools.ts:2754).
+- [ ] FIX: MEDIUM: Fleet reader accepts arbitrary builder.phase and formatter prints it unsanitized, leaking private journal text and terminal controls from malformed snapshots (extensions/fleet-health.ts:49,203).
