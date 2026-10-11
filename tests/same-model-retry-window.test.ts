@@ -5,7 +5,7 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import { sameModelRetryDeadline, sameModelRetryPhaseActive, classifyMainModelFailure } from '../extensions/main-model-recovery.js';
 import { formatMainModelRecoveryStatus, sanitizeMainModelRecovery } from '../extensions/goal-loop-core.js';
-import { createGoalRecovery, parkMainModelAfterFailure, probeMainModelRecovery, scheduleMainModelRecoveryTimer } from '../extensions/goal-recovery.js';
+import { createGoalRecovery, parkMainModelAfterFailure, probeMainModelRecovery, scheduleMainModelRecoveryTimer, tryMainModelFallback } from '../extensions/goal-recovery.js';
 import { state, replaceState } from '../extensions/goal-state.js';
 import { globalSettingsPath } from '../extensions/goal-settings.js';
 import { buildWidgetLines } from '../extensions/goal-loop-display.js';
@@ -61,6 +61,7 @@ test('real recovery clamps reset waits, rotates after slow failures, and restore
   const settingsPath = globalSettingsPath();
   const original = fs.existsSync(settingsPath) ? fs.readFileSync(settingsPath, 'utf8') : undefined;
   const calls: string[] = [], timers: number[] = [];
+  let rejectIntent = false;
   const ctx: any = { cwd, model: { provider: 'provider', id: 'free' },
     modelRegistry: { find: (provider: string, id: string) => ({ provider, id, reasoning: true }), hasConfiguredAuth: () => true },
     ui: { notify: () => {} }, abort: () => {} };
@@ -71,7 +72,7 @@ test('real recovery clamps reset waits, rotates after slow failures, and restore
     replaceState({ goal: { id: 'window', status: 'active', objective: 'work', tasks: [], startedAt: new Date().toISOString() }, loop: null } as any);
     createGoalRecovery(flags, { activeGoalSurfaceCommand: (c: string) => `/goal ${c}`, clearDetachedAuditRuntime: () => {},
       updateGoal: (patch: any) => { Object.assign(state.goal!, patch); return true; }, clearContinuationTimer: () => {},
-      freshCtxForGeneration: () => ctx, isSupervising: () => true, notifyExternal: () => {}, persistState: () => {},
+      freshCtxForGeneration: () => ctx, isSupervising: () => true, notifyExternal: () => {}, persistState: () => !(rejectIntent && state.mainModelRecovery?.pendingModelSwitch),
       recoverySurfaceCommand: (_k: string, c: string) => `/goal ${c}`, scheduleContinuation: () => {},
       scheduleSessionTimeout: (_fn: () => void, ms: number) => { timers.push(ms); return null; } } as any);
     parkMainModelAfterFailure(ctx, classifyMainModelFailure('429 Rate limit exceeded. Retry-After: 14400'));
@@ -102,6 +103,44 @@ test('real recovery clamps reset waits, rotates after slow failures, and restore
     assert.deepEqual(calls, ['provider/backup', 'provider/backup2'], 'a failed first backup advances to the second, never jumping backward to the primary');
     const restored = sanitizeMainModelRecovery(state.mainModelRecovery);
     assert.equal(restored?.sameModelPhaseStartedAt, state.mainModelRecovery!.sameModelPhaseStartedAt);
+    const seed = () => ({ primary: 'provider/free', active: 'provider/free', primaryThinkingLevel: 'high' as const,
+      owner: { kind: 'goal' as const, id: 'window' }, kind: 'goal' as const, reason: 'provider error', attempted: ['provider/free'], attempts: 1,
+      sameModelRetries: 10, firstFailureAt: start, sameModelPhaseStartedAt: start, retryAt: new Date(Date.now() - 1).toISOString() });
+    for (const mode of ['immediate', 'delayed', 'preferred'] as const) {
+      ctx.model = { provider: 'provider', id: mode === 'preferred' ? 'backup' : 'free' };
+      state.mainModelRecovery = mode === 'preferred' ? { ...seed(), active: 'provider/backup', attempted: ['provider/free', 'provider/backup'], primaryProbeAt: new Date(Date.now() - 1).toISOString(), retryAt: undefined } : seed();
+      Object.assign(state.goal!, { status: mode === 'preferred' ? 'active' : 'paused', pauseKind: 'wait', pauseSource: 'system', pauseReason: 'main model recovery' });
+      const before = structuredClone(state.mainModelRecovery);
+      const count = calls.length;
+      rejectIntent = true;
+      if (mode === 'immediate') await tryMainModelFallback(ctx, classifyMainModelFailure('429 TPM rate limit exceeded (1039)'));
+      else await probeMainModelRecovery(ctx);
+      assert.equal(calls.length, count, `${mode} switch must not cross the host boundary after rejected intent persistence`);
+      assert.deepEqual(state.mainModelRecovery, before, 'failed intent restores its prior durable projection');
+      assert.equal(flags.continuationDispatchStoodDown, true);
+      rejectIntent = false;
+    }
+    ctx.model = { provider: 'provider', id: 'free' };
+    state.mainModelRecovery = { ...seed(), sameModelRetries: 0, sameModelPhaseStartedAt: new Date().toISOString(), pendingModelSwitch: 'provider/backup', attempted: ['provider/free', 'provider/backup'] };
+    const count = calls.length;
+    await probeMainModelRecovery(ctx);
+    assert.equal(calls[count], 'provider/backup', 'pending intent is re-driven even when a changed retry budget would otherwise keep the old model');
+    ctx.model = { provider: 'provider', id: 'free' };
+    state.mainModelRecovery = { ...seed(), pendingModelSwitch: 'provider/backup', attempted: ['provider/free', 'provider/backup'] };
+    fs.writeFileSync(settingsPath, JSON.stringify({ mainModelFallbacks: ['provider/backup', 'provider/backup2'], mainModelSameModelRetries: 10, hourlyRetryProbe: false, forbiddenModels: ['provider/backup'] }));
+    const forbiddenCount = calls.length;
+    await probeMainModelRecovery(ctx);
+    assert.equal(calls[forbiddenCount], 'provider/backup2', 'newly forbidden persisted target must advance to a permitted candidate');
+    assert.ok(state.mainModelRecovery!.skipped?.some(entry => entry.ref === 'provider/backup' && entry.reason === 'forbidden'));
+    fs.writeFileSync(settingsPath, JSON.stringify({ mainModelFallbacks: ['provider/backup', 'provider/backup2'], mainModelSameModelRetries: 10, hourlyRetryProbe: false }));
+    ctx.model = { provider: 'provider', id: 'backup' };
+    state.goal!.status = 'active';
+    state.mainModelRecovery = { ...seed(), active: 'provider/backup', sameModelRetries: 5, primaryProbeAt: new Date(Date.now() - 1).toISOString(), retryAt: undefined, attempted: ['provider/free', 'provider/backup'] };
+    const failbackAt = Date.now();
+    await probeMainModelRecovery(ctx);
+    assert.equal(state.mainModelRecovery!.active, 'provider/free');
+    assert.equal(state.mainModelRecovery!.sameModelRetries, 0);
+    assert.ok(Date.parse(state.mainModelRecovery!.sameModelPhaseStartedAt!) >= failbackAt, 'preferred primary receives its own new retry phase');
   } finally {
     replaceState({ goal: null, loop: null } as any);
     if (original === undefined) fs.rmSync(settingsPath, { force: true }); else fs.writeFileSync(settingsPath, original);
