@@ -24,7 +24,11 @@ const record = (event) => { trace.push({ at: new Date().toISOString(), ...event 
 let session;
 let work = false;
 let checkpointResolve;
-const checkpoint = new Promise(resolve => { checkpointResolve = resolve; });
+let checkpointReject;
+const checkpoint = new Promise((resolve, reject) => { checkpointResolve = resolve; checkpointReject = reject; });
+// Install an observer immediately; the driver still awaits the original
+// promise, including failures that arrive before its dependency barrier.
+checkpoint.catch(() => {});
 const server = http.createServer(async (req, res) => {
   try {
     let body = '';
@@ -33,6 +37,7 @@ const server = http.createServer(async (req, res) => {
     assert.equal(req.url, '/v1/chat/completions');
     assert.ok(['primary', 'backup'].includes(payload.model));
     record({ type: 'request', model: payload.model, messageCount: payload.messages.length });
+    assert.ok(trace.filter(event => event.type === 'request').length <= 12, 'fixture request budget exhausted');
     if (payload.model === 'primary') {
       // HTTP 400 deliberately avoids SDK HTTP retry: provider error body is
       // the same hintless Token Plan wording; GLLA owns every logical retry.
@@ -46,7 +51,7 @@ const server = http.createServer(async (req, res) => {
       send({}, 'tool_calls');
       res.end('data: [DONE]\n\n');
     }
-  } catch (error) { record({ type: 'server_error', error: String(error) }); res.writeHead(500); res.end('fixture failed'); }
+  } catch (error) { record({ type: 'server_error', error: String(error) }); checkpointReject(error); res.writeHead(500); res.end('fixture failed'); }
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const port = server.address().port;
@@ -62,7 +67,9 @@ try {
   const modelRuntime = await ModelRuntime.create({ authPath: path.join(agentDir, 'auth.json'), modelsPath: path.join(agentDir, 'models.json'), modelNetworkEnabled: false });
   const loader = new DefaultResourceLoader({ cwd, agentDir, settingsManager, noExtensions: true, noSkills: true, noContextFiles: true, noPromptTemplates: true, noThemes: true,
     additionalExtensionPaths: [path.join(repo, 'extensions/loops/goal.ts')],
-    extensionFactories: [pi => pi.registerTool({ name: 'fixture_checkpoint', label: 'Fixture checkpoint', description: 'Complete isolated fixture work', parameters: Type.Object({}),
+    extensionFactories: [pi => {
+      pi.on('session_start', () => pi.setActiveTools([...pi.getActiveTools(), 'fixture_checkpoint']));
+      pi.registerTool({ name: 'fixture_checkpoint', label: 'Fixture checkpoint', description: 'Complete isolated fixture work', parameters: Type.Object({}),
       async execute(_id, _args, _signal, _update, ctx) {
         const lines = fs.readFileSync(path.join(cwd, '.pi-glla', 'active.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
         const state = [...lines].reverse().find(line => line.type === 'state')?.value;
@@ -74,7 +81,7 @@ try {
         checkpointResolve();
         return { content: [{ type: 'text', text: 'Isolated work checkpoint reached.' }], details: {}, terminate: true };
       },
-    })],
+    }); }],
   });
   await loader.reload();
   assert.deepEqual(loader.getExtensions().errors, []);
@@ -103,6 +110,10 @@ try {
   session.subscribe(event => {
     if (['agent_start', 'agent_end', 'agent_settled', 'model_change', 'tool_execution_end'].includes(event.type)) record({ type: event.type, toolName: event.toolName });
     if (event.type === 'message_end' && event.message.role === 'assistant') record({ type: 'assistant_end', model: event.message.model, stopReason: event.message.stopReason, error: event.message.errorMessage });
+    if (event.type === 'tool_execution_end' && event.isError) {
+      record({ type: 'tool_error', toolName: event.toolName, result: event.result });
+      checkpointReject(new Error(`Fixture tool failed: ${event.toolName}`));
+    }
   });
   record({ type: 'session', sessionId: session.sessionManager.getSessionId(), sessionFile: session.sessionManager.getSessionFile(), root });
   await session.prompt('/goal start Verify isolated recovery and call fixture_checkpoint after recovery');
