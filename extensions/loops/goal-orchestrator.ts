@@ -1022,6 +1022,12 @@ function updateGoal(patch: Partial<Goal>, ctx: ExtensionContext): boolean {
   if (!state.goal) return false;
   const statusChanged = patch.status !== undefined && patch.status !== state.goal.status;
   const next: Goal = { ...state.goal, ...patch, updatedAt: nowIso() };
+  // Attribution belongs to this episode, not a previous stop. Runtime
+  // holds default to system; agent/user entrypoints explicitly name theirs.
+  if (next.status !== "paused") next.pauseSource = undefined;
+  else if (patch.status === "paused" || patch.pauseReason !== undefined) {
+    next.pauseSource = patch.pauseSource ?? "system";
+  }
   const file = goalMdPath(ctx.cwd, next.id);
   const nextGoal: Goal = { ...next, activePath: path.relative(ctx.cwd, file) || file };
   // v0.35.72: the transaction snapshot closes the crash window between the

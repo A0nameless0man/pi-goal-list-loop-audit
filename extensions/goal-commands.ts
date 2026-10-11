@@ -533,6 +533,7 @@ async function cmdPause(ctx: ExtensionContext): Promise<void> {
     status: "paused",
     pauseKind: "blocked",
     pauseReason: "paused by user",
+    pauseSource: "user",
     pauseSuggestedAction: `${resumeCommand} to continue`,
     pauseResumeAt: undefined,
   }, ctx)) return;
