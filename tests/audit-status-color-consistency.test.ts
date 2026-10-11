@@ -40,9 +40,12 @@ test('fresh audit heading, compact phase and footer all use live-success semanti
 
 test('busy parent cannot turn a missing or stale auditor into a running heading', () => {
   for (const progress of [undefined, { phase: 'thinking' as const, lastActivityAt: now - 40000, startedAt: now - 60000, elapsedMs: 60000 }]) {
-    const { card } = render(progress);
+    const { card, footer } = render(progress);
     assert.match(card, /EXECUTION UNCONFIRMED/);
     assert.doesNotMatch(card, /auditing · RUNNING|Audit running/);
+    assert.doesNotMatch(card, /last progress 0s.*runtime/, 'parent activity is not an auditor heartbeat');
+    assert.doesNotMatch(card + footer, /No action needed|review applies automatically|AUDIT RUNNING/);
+    assert.match(card, /\/(?:glla|goal) status/);
   }
 });
 

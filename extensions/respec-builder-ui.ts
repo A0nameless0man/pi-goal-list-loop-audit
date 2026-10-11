@@ -88,7 +88,7 @@ export function respecAuditObservation(builder: RespecBuilderState, now: number)
   const phase: 'queued' | 'running' | 'quiet' | 'stalled' = toolWait ? 'running' : age !== undefined && age > 60 * 60_000 ? 'stalled'
     : age !== undefined && age > 3 * 60_000 ? 'quiet' : progress?.phase === 'starting' ? 'queued' : 'running';
   const tone: 'accent' | 'error' | 'warning' | 'success' = toolWait ? 'accent' : phase === 'stalled' ? 'error'
-    : phase === 'quiet' ? 'warning' : live ? 'success' : 'accent';
+    : phase === 'quiet' ? 'warning' : live ? 'success' : phase === 'queued' ? 'accent' : 'warning';
   const label = toolWait ?? (phase === 'quiet' || phase === 'stalled' ? phase : live ? 'running'
     : phase === 'queued' ? 'starting · worker unconfirmed' : progress?.phase === 'retrying' ? 'retry waiting · execution unconfirmed' : 'execution unconfirmed');
   return { progress, toolWait, live, phase, tone, label, age };

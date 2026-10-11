@@ -50,7 +50,7 @@ export interface UiStatus {
   recoveryNote?: string;
   compaction?: CompactionStatus;
   /** Renderer-attributed detached audit facts, never dispatch permissions. */
-  auditPhase?: 'queued' | 'running' | 'quiet' | 'stalled' | 'blocked' | 'awaiting-verdict';
+  auditPhase?: 'queued' | 'running' | 'quiet' | 'stalled' | 'stopped' | 'blocked' | 'awaiting-verdict';
   auditLive?: boolean;
 }
 

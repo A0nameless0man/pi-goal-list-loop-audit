@@ -2,13 +2,13 @@
 
 ## Design checkpoint
 
-The requested Designer run failed before producing findings (provider quota error). This checkpoint is the explicitly authorized inline fallback, based on source inspection. Implementation and verification remain pending.
+The original Designer run failed before producing findings; its checkpoint was recorded inline. The current implementation and screenshot follow-up are documented in [the objective/audit status register](../audit/OBJECTIVE-AUDIT-STATUS-2026-10-11.md).
 
 ## Architecture
 
 `extensions/work-lifecycle.ts` owns lifecycle/control authority. Its `stateWorkView` distinguishes lifecycle from observed activity; it must not be changed to authorize dispatch based on display evidence.
 
-Add a pure presentation projection (`extensions/ui-status.ts`) alongside that authority. Inputs are durable workflow state plus explicitly supplied runtime observations. Outputs separate workflow, execution, actionability, provenance, blocker and next action. Render adapters must consume the same projection rather than infer execution independently.
+The pure presentation projection (`extensions/ui-status.ts`) sits alongside that authority. Inputs are durable workflow state plus explicitly supplied runtime observations. Outputs separate workflow, execution, actionability, provenance, blocker and next action. Render adapters must consume the same projection rather than infer execution independently.
 
 Reuse `extensions/audit-lifecycle.ts` for stored claim phase/settlement facts, not as proof that a worker survives. Reuse `mainModelRecoveryRuntimeStatus()` for observed timer/turn/hold facts. Durable `retryAt` alone means a saved schedule, not an armed timer. The runtime recovery adapter must additionally bind observations to the current owner and generation before advertising execution.
 
@@ -34,7 +34,7 @@ Represent independent workflow rejection and provider recovery together. Require
 
 ## Glance contract
 
-Four to six meaningful lines: actionability/workflow, objective/progress, runtime evidence, blocker, next action. Preserve the older cohesive rail (`●`, `│`, `├─`, `└─`), semantic color, primary/fallback model context and progress meter rather than flattening the card into independently labeled lines. Required actions precede historical diagnostics; automatic-work actions close the rail. Model/history detail yields to prerequisites when space is tight. Wide headers retain useful saved work-age, token and role facts without claiming active execution duration. Terminal outcomes omit unrelated worker uncertainty and duplicate terminal-phase labels. Glyph and color always have a text equivalent. `/glla status` retains details and provenance. Narrow painted rows use Pi's ANSI-aware width helper; uncertainty and actual action commands must survive clipping.
+Four to six meaningful lines for ordinary work; audit cards may use eight to retain tool budget, elapsed and activity facts. Actionability/workflow, objective/progress, runtime evidence, blocker and next action remain the priorities. Preserve the older cohesive rail (`●`, `│`, `├─`, `└─`), semantic color, primary/fallback model context and progress meter rather than flattening the card into independently labeled lines. Required actions precede historical diagnostics; automatic-work actions close the rail. Model/history detail yields to prerequisites when space is tight. Wide headers retain useful saved work-age, token and role facts without claiming active execution duration. Terminal outcomes omit unrelated worker uncertainty and duplicate terminal-phase labels. Glyph and color always have a text equivalent. `/glla status` retains details and provenance. Narrow painted rows use Pi's ANSI-aware width helper; uncertainty and actual action commands must survive clipping.
 
 ## Color semantics
 
@@ -44,9 +44,19 @@ Matches the established card/footer vocabulary — color emphasizes, never repla
 - `warning` (amber): needs the user — blocked, dormant, unconfirmed; blocker/reason rows. Required-action rows ride `dim` (position carries the emphasis; only hard errors shout), exactly like legacy pause actions.
 - `accent` (primary highlight): informational in-flight progress — tool waits, queued starts, decision prompts, recommended options.
 - `dim` (grey): everything secondary — mode/phase words, saved metrics, evidence lines, model provenance, closers, automatic background waits (`retry-armed`, standby, scheduled waits) that need no action.
-- `error` (red): failures that will not fix themselves — reserved for error pauses and dead-worker states, never for ordinary blocks.
+- `error` (red): error pauses and stalled audit observations beyond the silence bound, never ordinary blocks. Silence is not proof of process death; the UI says that no worker responds, not that a PID was verified dead.
 
 Headers and footers are segmented: only the execution word (and, in the footer, the required user action) carries the tone. Painting a whole line in the tone washed every blocked card orange (field 2026-10-10). Objectives render as plain body text; closers stay `dim`.
+
+## Objective and audit identity
+
+Cards explicitly identify Goal, List item, or Loop. Project builders are **Loop / Project**; project is a workflow within a loop, not an unrelated execution owner.
+
+Detached audit presentation uses worker activity, not a busy parent host's heartbeat. A saved/workerless claim clears inherited parent timestamps. Fresh audit activity is green; in-budget tool waits and queued starts are accent; unknown or quiet activity is amber; stalled observations are red. These tones agree across heading, phase row and footer. Tree branches are neutral decoration, never an extra liveness signal.
+
+Audit elapsed time, last activity and the complete tool elapsed/budget pair have dedicated rows where needed for narrow layouts. Unknown audit execution points to inspection rather than promising automatic review. Persistence and explicit admission holds, including an observed closed host, override cached live progress. An explicitly stopped project does not advertise an unavailable `/loop resume`; `/loop status` inspects it and `/loop respec` starts new work.
+
+Reproduce the narrow/wide audit fixtures with `timeout 30 bun scripts/audit-status-capture.ts` followed by `timeout 90 python3 scripts/capture-ui-status.py --audit-status`. Outputs are in `audit/audit-status-captures/`. They exercise production renderers on private xterm/Xvfb, not a full live Pi viewport or real provider execution.
 
 ## Fleet boundary
 

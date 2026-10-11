@@ -32,6 +32,7 @@ test('project is explicitly a loop, with visible clocks and bounded tool-wait ev
       assert.match(card.join('\n'), /Audit tool wait/);
       assert.match(card.join('\n'), /audit elapsed/);
       assert.match(card.join('\n'), /last activity:/);
+      assert.match(card.join('\n'), /677s \/ 900s budget/, 'complete tool budget must survive the narrow card');
       assert.ok(card.length <= 8);
       assert.ok(card.every(line => visibleWidth(line) <= width));
     }
@@ -60,8 +61,14 @@ test('stopped project excludes cached live worker and names the containing loop'
   setRespecAuditLive(builder, { phase: 'running', startedAt: now - 1000, lastActivityAt: now });
   state.loop!.active = false; state.loop!.stopReason = 'stopped by user (/loop stop)';
   try {
-    const card = buildWidgetLines(state, undefined, now, undefined, 120)!.join('\n');
-    assert.match(card, /Loop \/ Project · Audit stopped/);
-    assert.doesNotMatch(card, /auditor: running|no action needed|\/loop resume/i);
+    const legacy = buildWidgetLines(state, undefined, now, undefined, 120)!.join('\n');
+    assert.match(legacy, /Loop \/ Project · Audit stopped/);
+    for (const configuration of [undefined, extras(state)]) {
+      const card = buildWidgetLines(state, undefined, now, undefined, 120, configuration)!.join('\n');
+      const footer = buildStatusText(state, undefined, now, undefined, configuration, 160)!;
+      assert.doesNotMatch(card + footer, /auditor: running|no action needed|\/loop resume/i);
+      assert.match(card + footer, /\/loop respec/);
+      if (configuration) assert.match(card + footer, /AUDIT STOPPED/);
+    }
   } finally { setRespecAuditLive(builder); }
 });

@@ -14,6 +14,18 @@ function fixture(): State {
 const progress: AuditDisplayProgress = { phase: 'thinking', label: 'running', startedAt: now - 60000,
   elapsedMs: 60000, lastActivityAt: now - 1000 };
 
+test('closed host admission is not erased by cached live audit progress', () => {
+  const state = fixture();
+  const uiStatusContext = { now, generation: 1, evidence: { ownerKey: uiStatusOwnerKey(state)!, generation: 1,
+    session: 'closed' as const, observedAt: now, lastActivityAt: now - 1000, turnActive: true } };
+  const extras = { uiStatusContext, compactAuditCard: true };
+  const card = buildWidgetLines(state, progress, now, undefined, 120, extras)!.join('\n');
+  const footer = buildStatusText(state, progress, now, undefined, extras, 160)!;
+  assert.match(card + footer, /DORMANT/);
+  assert.match(card, /Reopen project/);
+  assert.doesNotMatch(card + footer, /Audit running|AUDIT RUNNING|No action needed|review applies automatically/);
+});
+
 test('persistence stop outranks cached live audit progress on compact and detailed surfaces', () => {
   for (const compactAuditCard of [true, false]) for (const width of [40, 120]) {
     const state = fixture();

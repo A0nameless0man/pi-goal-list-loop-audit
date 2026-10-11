@@ -29,7 +29,11 @@
 - Project observation and legacy status use `respecAuditObservation`, including future-timestamp rejection and in-budget tool-wait handling. Project elapsed and activity facts have separate rows so they survive narrow layouts.
 - Project builders are explicitly `Loop / Project`; plain legacy loops also show `LOOP`. Structural tree prefixes are neutral; semantic labels retain phase colors.
 - New tests: `audit-persistence-status-precedence.test.ts`, `audit-status-color-consistency.test.ts`, `project-audit-status-consistency.test.ts`.
-- Latest focused pass: 152 tests, zero failures across seven files (`/tmp/glla-audit-colors-green.log`); typecheck passed before the final label substitution. Capture inspection, wider validation, and independent rehearsal remain pending.
+- Independent fresh-context reviewer identified two blockers: the narrow project timeout was clipped, and stale worker snapshots retained an automatic-review action. Both were accepted and fixed: short dedicated tool budget row, prioritized audit facts, and explicit unconfirmed inspection action/footer.
+- Follow-up reviewer (`1fe62873-6f08-4f37-97d1-0cd1e0d866d3`) returned OK with notes, BLOCKERS none. It independently inspected current source, concrete regression assertions and regenerated 40/120 PNGs. Reviewer ran no commands; test evidence is parent-executed.
+- Closed-host admission also remains authoritative over cached live progress. Explicit project stops preserve inspection/new-project actions rather than offering unavailable resume, and the shared audit label explicitly says AUDIT STOPPED.
+- Reproducible captures: `timeout 30 bun scripts/audit-status-capture.ts` and `timeout 90 python3 scripts/capture-ui-status.py --audit-status`. Native visual inspection of both widths confirmed semantic tones, neutral branches, visible clocks and the full 677s / 900s project tool budget. Fixtures rasterize production builders in private xterm; they are not full live Pi screenshots.
+- Final regression evidence: 178 tests, zero failures across eleven files in `/tmp/glla-audit-claim-tests.log`; final typecheck passed (`/tmp/glla-audit-claim-types.log`), capture generation/rasterization passed, and runtime inventory regeneration/check passed. This includes the final explicit stopped label assertion. No release or whole-repository test-suite claim is made.
 
 ## Scope
 
