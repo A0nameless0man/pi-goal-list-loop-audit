@@ -996,6 +996,7 @@ export async function tryMainModelFallback(ctx: ExtensionContext, failure: MainM
         // for the backup — it has not yet earned a single retry, so the
         // primary's 10 attempts (if any) must not be inherited.
         sameModelRetries: 0,
+        modelFailureSteps: 0,
         sameModelPhaseStartedAt: nowIso(),
         pendingModelSwitch: undefined,
         retryAt: undefined,
@@ -1357,6 +1358,7 @@ export function manuallyResumeMainModelRecovery(ctx: ExtensionContext): boolean 
     attempted: current ? [current] : [],
     attempts: 0,
     firstFailureAt: new Date(now).toISOString(),
+    modelFailureSteps: 0,
     sameModelPhaseStartedAt: new Date(now).toISOString(),
     autoRetryUntil: undefined,
     retryAt: undefined,
@@ -1465,6 +1467,7 @@ async function probePreferredPrimary(ctx: ExtensionContext, recovery: MainModelR
       ...recovery,
       active: current,
       sameModelRetries: sameModelRef(recovery.active, current) ? recovery.sameModelRetries ?? 0 : 0,
+      modelFailureSteps: sameModelRef(recovery.active, current) ? recovery.modelFailureSteps ?? 0 : 0,
       sameModelPhaseStartedAt: sameModelRef(recovery.active, current) ? recovery.sameModelPhaseStartedAt ?? nowIso() : nowIso(),
       attempted: [primary],
       primaryProbeAt: undefined,
@@ -1487,6 +1490,7 @@ async function probePreferredPrimary(ctx: ExtensionContext, recovery: MainModelR
       ...recovery,
       active: current,
       sameModelRetries: 0,
+      modelFailureSteps: 0,
       sameModelPhaseStartedAt: nowIso(),
       attempted: [primary],
       primaryProbeAt: undefined,
@@ -1552,6 +1556,7 @@ async function probePreferredPrimary(ctx: ExtensionContext, recovery: MainModelR
       ...state.mainModelRecovery!,
       active: primary,
       sameModelRetries: 0,
+      modelFailureSteps: 0,
       sameModelPhaseStartedAt: nowIso(),
       attempted: [primary],
       primaryProbeAt: undefined,
@@ -1672,7 +1677,7 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
   // selection instead of being silently skipped as already attempted.
   if (recovery.pendingModelSwitch && current?.toLowerCase() === recovery.pendingModelSwitch.toLowerCase()) {
     appendLedger(ctx.cwd, "main_model_switch_reconciled", { ref: recovery.pendingModelSwitch, generation });
-    const reconciled = { ...recovery, active: current, sameModelRetries: 0, sameModelPhaseStartedAt: nowIso(), pendingModelSwitch: undefined, retryAt: undefined };
+    const reconciled = { ...recovery, active: current, sameModelRetries: 0, modelFailureSteps: 0, sameModelPhaseStartedAt: nowIso(), pendingModelSwitch: undefined, retryAt: undefined };
     state.mainModelRecovery = reconciled;
     if (persistState(ctx) === false) {
       state.mainModelRecovery = recovery;
@@ -1931,6 +1936,7 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
       // including the probe path — the backup that just won the selector
       // earns its own retries from zero.
       sameModelRetries: 0,
+      modelFailureSteps: 0,
       sameModelPhaseStartedAt: nowIso(),
       attempted,
       primaryProbeAt: undefined,
@@ -2001,11 +2007,14 @@ export function parkMainModelAfterFailure(ctx: ExtensionContext, failure: MainMo
   const nextSameModelRetries = sameModel
     ? Math.min(existing.sameModelRetries ?? 0, MAX_MAIN_MODEL_SAME_MODEL_RETRIES)
     : 0;
+  const previousSteps = existing.modelFailureSteps ?? existing.sameModelRetries ?? 0;
+  const modelFailureSteps = sameModel && Number.isSafeInteger(previousSteps) && previousSteps >= 0 ? Math.min(1_000_000, previousSteps + 1) : 1;
   const nextRecovery = withMainModelRecoveryWindow({
     ...existing,
     active: current,
     sameModelRetries: nextSameModelRetries,
-    sameModelPhaseStartedAt: sameModel ? existing.sameModelPhaseStartedAt ?? existing.firstFailureAt ?? nowIso() : nowIso(),
+    modelFailureSteps,
+    sameModelPhaseStartedAt: sameModel && !existing.primaryProbeAt ? existing.sameModelPhaseStartedAt ?? existing.firstFailureAt ?? nowIso() : nowIso(),
     attempts: existing.attempts + 1,
     reason: mainModelRecoveryReason(failure),
     providerErrorDiagnostic: failureCopy.diagnostic,
@@ -2019,7 +2028,7 @@ export function parkMainModelAfterFailure(ctx: ExtensionContext, failure: MainMo
   // probes regardless of the provider's wording. (A quota-class failure
   // with an explicit upstream reset hint sleeps until reset inside the
   // same 5h-capped envelope via mainModelFailureDelayMs.)
-  const delay = mainModelFailureDelayMs(failure, nextRecovery.attempts, loadGlobalSettings().mainModelRetryMinutes);
+  const delay = mainModelFailureDelayMs(failure, modelFailureSteps, loadGlobalSettings().mainModelRetryMinutes);
   if (!setMainModelRecoveryPause(ctx, nextRecovery, delay)) return;
   flags.mainModelAbortForRecovery = true;
   try { ctx.abort(); } catch { /* abort is best effort; the recovery guard prevents re-send storms */ }
@@ -2096,6 +2105,9 @@ export function mainModelRecoverySucceeded(ctx: ExtensionContext): void {
     const nextRecovery: MainModelRecovery = {
       ...recovery,
       active: current,
+      sameModelRetries: 0,
+      modelFailureSteps: 0,
+      sameModelPhaseStartedAt: undefined,
       primaryProbeAt: probeAt,
       primaryProbeInFlight: undefined,
       retryAt: undefined,
