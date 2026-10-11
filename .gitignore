@@ -24,8 +24,6 @@
 *.db-shm
 *.db-wal
 *.jsonl
-!audit/isolated-recovery/session.jsonl
-!audit/isolated-recovery/ledger.jsonl
 *.kra
 *.kra~
 *.sqlite

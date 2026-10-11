@@ -1639,7 +1639,8 @@ export function buildStatusText(state: State, audit?: AuditDisplayProgress | nul
   const interruptedActive = (state.goal?.status === "active" && state.goal.interruptedAt)
     ? interruptedActiveStatus(state.goal, theme, heldLoop(state) ? paint(theme, "warning", " · loop⏸held") : "") : undefined;
   const base = shared
-    ? backgroundStatus(state, theme) ?? waitingOnly ?? auditingLive ?? interruptedActive ?? buildUiStatusFooter(shared, now, theme, width)
+    ? shared.execution === 'blocked' ? buildUiStatusFooter(shared, now, theme, width)
+      : backgroundStatus(state, theme) ?? waitingOnly ?? auditingLive ?? interruptedActive ?? buildUiStatusFooter(shared, now, theme, width)
     : backgroundStatus(state, theme) ?? buildStatusTextBase(state, audit, now, theme, extras, width);
   // Audit 2026-09-07: the worker summary rides the status on EVERY branch
   // including auditing — suppressing it there hid hung/aborting children
@@ -2121,8 +2122,8 @@ export function responsiveWidget(renderRows: (width: number, maxRows: number) =>
 }
 
 export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | null, now = Date.now(), theme?: DisplayTheme, width?: number, extras?: WidgetExtras): string[] | undefined {
-  const background = backgroundWidget(state, theme, width);
   const shared = extras?.uiStatusContext ? projectUiStatus(state, { ...extras.uiStatusContext, now }) : undefined;
+  const background = shared?.execution === 'blocked' ? undefined : backgroundWidget(state, theme, width);
   const compact = extras?.compactAuditCard !== false;
   const rawInner = background
     ?? (shared && (shared.execution === 'blocked' || !needsLegacyWidget(state, audit, compact))
