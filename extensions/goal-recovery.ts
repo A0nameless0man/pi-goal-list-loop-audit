@@ -985,6 +985,7 @@ export async function tryMainModelFallback(ctx: ExtensionContext, failure: MainM
         // for the backup — it has not yet earned a single retry, so the
         // primary's 10 attempts (if any) must not be inherited.
         sameModelRetries: 0,
+        sameModelPhaseStartedAt: nowIso(),
         pendingModelSwitch: undefined,
         retryAt: undefined,
         reason: mainModelRecoveryReason(failure),
@@ -1342,6 +1343,7 @@ export function manuallyResumeMainModelRecovery(ctx: ExtensionContext): boolean 
     attempted: current ? [current] : [],
     attempts: 0,
     firstFailureAt: new Date(now).toISOString(),
+    sameModelPhaseStartedAt: new Date(now).toISOString(),
     autoRetryUntil: undefined,
     retryAt: undefined,
     primaryProbeAt: undefined,
@@ -1630,7 +1632,7 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
   // selection instead of being silently skipped as already attempted.
   if (recovery.pendingModelSwitch && current?.toLowerCase() === recovery.pendingModelSwitch.toLowerCase()) {
     appendLedger(ctx.cwd, "main_model_switch_reconciled", { ref: recovery.pendingModelSwitch, generation });
-    const reconciled = { ...recovery, active: current, sameModelRetries: 0, pendingModelSwitch: undefined, retryAt: undefined };
+    const reconciled = { ...recovery, active: current, sameModelRetries: 0, sameModelPhaseStartedAt: nowIso(), pendingModelSwitch: undefined, retryAt: undefined };
     state.mainModelRecovery = reconciled;
     if (persistState(ctx) === false) {
       state.mainModelRecovery = recovery;
