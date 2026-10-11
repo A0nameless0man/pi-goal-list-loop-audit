@@ -1461,7 +1461,9 @@ export function buildUiStatusFooter(status: UiStatus, now: number, theme?: Displ
   const compaction = status.compaction;
   const compactionSeg = compaction?.tokens !== undefined && compaction.tokens >= compaction.threshold
     ? ` ${paint(theme, 'dim', `· compact: ${compaction.reason}`)}` : '';
-  const text = `${head}${queueSeg}${recoverySeg} ${tail}${compactionSeg}`;
+  const text = status.recoveryNote && status.execution === 'unconfirmed'
+    ? `${paint(theme, 'dim', 'glla:')} ${paint(theme, tone, UI_HEALTH_LABEL[status.execution])}${recoverySeg} ${paint(theme, 'dim', `· ${phase}`)}${queueSeg} ${tail}${compactionSeg}`
+    : `${head}${queueSeg}${recoverySeg} ${tail}${compactionSeg}`;
   // Required actions outrank secondary context when the full footer cannot
   // fit. Commands can follow prerequisite prose (e.g. repair storage, then
   // /glla status for details). Reserve the complete command first without
