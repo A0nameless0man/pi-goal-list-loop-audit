@@ -1539,14 +1539,17 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   // Scoped to recovery waits — basic pauses keep the 6-line glance shape.
   if (g && g.status === 'paused' && pauseKind(g) === 'wait' && state.mainModelRecovery) {
     const recovery = state.mainModelRecovery;
-    if (!recovery.manualResumeRequired && (!recovery.owner || (recovery.owner.kind === 'goal' && recovery.owner.id === g.id))) {
+    if (recovery.kind === 'goal' && status.actionability !== 'user' && !recovery.manualResumeRequired && (!recovery.owner || (recovery.owner.kind === 'goal' && recovery.owner.id === g.id))) {
       const budget = extras?.mainModelSameModelRetries;
       const candidate = (extras?.mainModelFallbacks ?? []).find(ref => ref.toLowerCase() !== (recovery.active ?? recovery.primary).toLowerCase()
         && !recovery.attempted.some(tried => tried.toLowerCase() === ref.toLowerCase())
         && !(extras?.modelProvenance?.skippedForbiddenRefs ?? []).some(skipped => skipped.toLowerCase() === ref.toLowerCase()));
       const deadline = sameModelRetryDeadline(recovery);
       rows.push(row('├─ ', `retry: same model ${recovery.sameModelRetries ?? 0}${budget !== undefined ? `/${budget}` : ''} · ${recovery.active ?? recovery.primary}`));
-      rows.push(row('├─ ', candidate ? `fallback: next candidate ${candidate}${deadline !== undefined ? ` · eligible ${now >= deadline ? 'now' : `in ${fmtElapsed(deadline - now)}`}` : ''} (or retry budget spent)` : extras?.mainModelFallbacks ? 'fallback: no untried permitted candidate' : 'fallback: configuration not supplied to this view'));
+      const spent = budget !== undefined && (recovery.sameModelRetries ?? 0) >= budget;
+      const eligible = spent || (deadline !== undefined && now >= deadline) ? 'eligible now'
+        : deadline !== undefined ? `eligible in ${fmtElapsed(deadline - now)} or when retries spent` : 'after retry budget';
+      rows.push(row('├─ ', candidate ? `fallback: ${eligible} · next candidate ${candidate}` : extras?.mainModelFallbacks ? 'fallback: no untried permitted candidate' : 'fallback: configuration not supplied to this view')); 
     }
     const [lifecycle, transition] = pausedLifecycleLines(g, state, extras, now);
     rows.push(row('├─ ', lifecycle));
@@ -2194,7 +2197,7 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
       if (max === 1) lines = [lines[0]!];
       else {
         const priority = [0];
-        for (const label of ['next:', 'why:', 'resume:', 'workflow:']) {
+        for (const label of ['next:', 'why:', 'resume:', 'workflow:', 'retry:', 'fallback:']) {
           const at = lines.findIndex(line => sanitizeDisplayText(line).startsWith(`├─ ${label}`));
           if (at >= 0) priority.push(at);
         }
