@@ -1551,8 +1551,8 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
       const eligible = spent || (deadline !== undefined && now >= deadline) ? 'eligible now'
         : deadline !== undefined ? `in ${fmtElapsed(deadline - now)} or retry cap` : 'after retry budget';
       rows.push(row('├─ ', candidate ? `fallback: ${eligible}` : extras?.mainModelFallbacks ? 'fallback: no untried permitted candidate' : 'fallback: configuration not supplied to this view'));
-      if (candidate) wrap(uiSafeText(candidate), Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3 - 8), 32)
-        .forEach((line, index) => rows.push(row(index === 0 ? '├─ ' : '│  ', index === 0 ? `backup: ${line}` : line, 'dim', true)));
+      if (candidate) wrap(uiSafeText(candidate), Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3 - 11), 32)
+        .forEach((line, index) => rows.push(row(index === 0 ? '├─ ' : '│  ', index === 0 ? `candidate: ${line}` : line, 'dim', true)));
     }
     const [lifecycle, transition] = pausedLifecycleLines(g, state, extras, now);
     const observedTransition = status.execution === 'retry-armed'
@@ -2207,21 +2207,21 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
       if (max === 1) lines = [lines[0]!];
       else {
         const priority = [0];
-        for (const label of ['next:', 'why:', 'resume:', 'workflow:', 'retry:', 'fallback:', 'backup:']) {
+        for (const label of ['next:', 'why:', 'resume:', 'workflow:', 'retry:', 'fallback:', 'candidate:']) {
           const at = lines.findIndex(line => sanitizeDisplayText(line).startsWith(`├─ ${label}`));
           if (at >= 0) priority.push(at);
         }
         // A configured candidate must survive as a complete wrapped field
         // before optional objective/history rows when the geometry permits.
-        const backup = lines.findIndex(line => sanitizeDisplayText(line).startsWith('├─ backup:'));
-        if (backup >= 0) for (let i = backup + 1; i < lines.length - 1 && sanitizeDisplayText(lines[i]!).startsWith('│  '); i++) priority.push(i);
+        const candidate = lines.findIndex(line => sanitizeDisplayText(line).startsWith('├─ candidate:'));
+        if (candidate >= 0) for (let i = candidate + 1; i < lines.length - 1 && sanitizeDisplayText(lines[i]!).startsWith('│  '); i++) priority.push(i);
         priority.push(1);
         for (let i = 2; i < lines.length - 1; i++) priority.push(i);
         const selected = [...new Set(priority)].filter(i => i < lines!.length - 1).slice(0, max - 1).sort((a, b) => a - b);
         const kept = new Set(selected);
         const omitted = new Set<number>();
         for (let start = 0; start < lines.length - 1; start++) {
-          if (!/^├─ (?:next|why|resume|backup):/.test(sanitizeDisplayText(lines[start]!))) continue;
+          if (!/^├─ (?:next|why|resume|candidate):/.test(sanitizeDisplayText(lines[start]!))) continue;
           let end = start + 1;
           while (end < lines.length - 1 && sanitizeDisplayText(lines[end]!).startsWith('│  ')) end++;
           const range = selected.filter(index => index >= start && index < end);

@@ -31,13 +31,13 @@ test('bounded recovery card states retry progress and fallback eligibility witho
   assert.ok(lines.length <= 8);
   assert.match(lines.join('\n'), /retry: same model 2\/10/);
   assert.match(lines.join('\n'), /fallback: eligible now/);
-  assert.match(lines.join('\n'), /backup: provider\/backup/);
-  assert.doesNotMatch(lines.join('\n'), /backup: provider\/forbidden|switched to/);
+  assert.match(lines.join('\n'), /candidate: provider\/backup/);
+  assert.doesNotMatch(lines.join('\n'), /candidate: provider\/forbidden|switched to/);
   const narrowExtras = { ...extras, mainModelFallbacks: ['opencode-go/muse-spark-1.3-contributor'] };
   const narrow = buildWidgetLines(fixture, undefined, now, undefined, 40, narrowExtras)!;
-  const start = narrow.findIndex(line => line.startsWith('├─ backup:'));
+  const start = narrow.findIndex(line => line.startsWith('├─ candidate:'));
   assert.ok(start >= 0);
-  let name = narrow[start]!.replace('├─ backup: ', '');
+  let name = narrow[start]!.replace('├─ candidate: ', '');
   for (let i = start + 1; i < narrow.length && narrow[i]!.startsWith('│  '); i++) name += narrow[i]!.slice(3);
   assert.equal(name, 'opencode-go/muse-spark-1.3-contributor', 'the full next candidate survives narrow bounded geometry');
   assert.ok(narrow.length <= 8);
