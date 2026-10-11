@@ -1520,15 +1520,22 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   }
   // Durable-vs-defer judgment plaques render durable-first on every card
   // (production refreshUI contract) — same builder as the legacy card.
-  if (extras?.durableDeferRecommendation) {
+  if (extras?.durableDeferRecommendation && !(compact && status.actionability === 'user')) {
     buildDurableDeferDecisionLines(extras.durableDeferRecommendation, width).forEach((line) => rows.push(row('├─ ', line)));
   }
   // The rail is one visual unit, not a dump of independent labeled lines.
   // User prerequisites precede diagnostics; automatic-work actions close it.
   // The required action rides dim like legacy pause actions (only hard
   // errors shout); position — ahead of diagnostics — carries the emphasis.
-  if (status.actionability === 'user') rows.push(row('├─ ', `next: ${status.nextAction}`, 'dim'));
-  if (status.blocker) rows.push(row('├─ ', status.blocker, 'warning'));
+  // Prerequisites are prose, not single-line diagnostics: wrapping prevents
+  // the terminal from hiding the permission/alternative at the end. Detailed
+  // status offers a larger bounded view; the compact card links to it.
+  const prose = (value: string, color: DisplayColor): void => {
+    wrap(uiSafeText(value), Math.max(1, width - 3), compact ? 4 : 32)
+      .forEach((line, index) => rows.push(row(index === 0 ? '├─ ' : '│  ', line, color)));
+  };
+  if (status.actionability === 'user') prose(`next: ${status.nextAction}`, 'dim');
+  if (status.blocker) prose(`why: ${status.blocker}`, 'warning');
   if (status.workflowIssue) rows.push(row('├─ ', `workflow: ${status.workflowIssue}`, 'warning'));
   if (terminal && progress) rows.push(row('├─ ', progress));
   // Live audit rows already carry phase evidence + the user action — the
