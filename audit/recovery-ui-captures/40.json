@@ -6,10 +6,5 @@
     "Slow quota; backup eligible",
     "Stale contract; legacy pause author unknown"
   ],
-  "source": "production card/footer builders and pi-tui Markdown",
-  "capture": "real xterm on private Xvfb",
-  "pixels": [
-    380,
-    761
-  ]
+  "source": "production card/footer builders and pi-tui Markdown"
 }
