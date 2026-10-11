@@ -19,6 +19,9 @@
 ## cant tell that i am looping here so the type of obj should be obvioius
 /home/dracon/Pictures/Screenshots/Screenshot_20261011_165932.png
 
+## can have an option to accept suggestion
+/home/dracon/Pictures/Screenshots/Screenshot_20261011_175739.png
+
 
 # Testing
 
