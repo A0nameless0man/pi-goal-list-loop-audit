@@ -2904,7 +2904,7 @@ function registerAgentTools(pi: any): void {
           display: true,
           details: reminder.details,
         }, { triggerTurn: false });
-        ctx.ui.notify(`${goalNoun()} paused: ${safePauseReason}${safePauseAction ? `\n\n→ ${safePauseAction}` : ""}`, "info");
+        ctx.ui.notify(`${goalNoun()} paused by agent: ${safePauseReason}${safePauseAction ? `\n\n→ ${safePauseAction}` : ""}`, "info");
         notifyExternal(ctx, `${goalNoun()} paused: ${(safePauseAction ? `${safePauseReason} → ${safePauseAction}` : safePauseReason).slice(0, 200)}`);
       }
       if (!droppedImpossible && !redirect) {
