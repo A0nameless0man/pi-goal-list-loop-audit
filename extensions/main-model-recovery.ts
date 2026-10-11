@@ -427,6 +427,7 @@ export function isEagerRetryFailure(failure: MainModelFailure | undefined): bool
   if (["auth", "billing", "non-recoverable", "context-overflow"].includes(failure.kind)) return false;
   const signal = quotaSignal(failure.raw);
   if (signal === "rate-limit" || signal === "plan-quota") return quotaResetSleepMs(failure) === undefined;
+  if (signal) return false;
   return failure.kind === "transient" || failure.kind === "unknown" || isEmptyProviderResponse(failure.raw);
 }
 

@@ -486,22 +486,15 @@ test("actual numeric status fields and HTTP prefixes remain classification evide
   assert.equal(classifyMainModelFailure('Provider request_id=401').kind, "unknown");
 });
 
-test("operator direction 2026-10-09: hintless-429 wall ladder caps at the 5h coding-plan window", () => {
-  // Coding plans run in 5-hour windows: retrying across the full window
-  // lets the project continue in the next window instead of dying. The
-  // 300m/240m countdowns on hintless 429s are this ceiling working as
-  // designed — attempts keep advancing and timers re-arm across failed
-  // probes (field: web/games 5→7 with the timer re-armed), not a give-up.
-  // Change the cap only with a new operator direction; the hourly :00:30
-  // probe punctuates the wait.
+test("operator direction 2026-10-11: hintless-429 retries eagerly then uses the short capped ladder", () => {
+  // Screenshot/journal showed multi-hour waits before reaching fallbacks.
+  // No reset time was supplied: do not invent a coding-plan reset window.
   assert.equal(MAIN_MODEL_MAX_RETRY_DELAY_MS, 5 * 60 * 60_000);
   const diag = "429: Rate limit exceeded. Please try again later.";
   const nowMs = Date.parse("2026-10-09T14:00:00.000Z");
-  assert.equal(mainModelFailureDelayMs(classifyMainModelFailure(diag), 5, 15, nowMs), 240 * 60_000);
-  assert.equal(mainModelFailureDelayMs(classifyMainModelFailure(diag), 6, 15, nowMs), 300 * 60_000);
-  assert.equal(mainModelFailureDelayMs(classifyMainModelFailure(diag), 7, 15, nowMs), 300 * 60_000);
-  assert.equal(mainModelFailureDelayMs(classifyMainModelFailure(diag), 20, 15, nowMs), 300 * 60_000);
-  // Probes ride the same wall ladder for hintless quota diagnostics —
-  // never eager, never unbounded.
-  assert.equal(probeRetryDelayMs(diag, 7, 15, nowMs), 300 * 60_000);
+  assert.equal(mainModelFailureDelayMs(classifyMainModelFailure(diag), 5, 15, nowMs), 5_000);
+  assert.equal(mainModelFailureDelayMs(classifyMainModelFailure(diag), 6, 15, nowMs), 5_000);
+  assert.equal(mainModelFailureDelayMs(classifyMainModelFailure(diag), 11, 15, nowMs), 60_000);
+  assert.equal(mainModelFailureDelayMs(classifyMainModelFailure(diag), 20, 15, nowMs), 30 * 60_000);
+  assert.equal(probeRetryDelayMs(diag, 7, 15, nowMs), 5_000);
 });

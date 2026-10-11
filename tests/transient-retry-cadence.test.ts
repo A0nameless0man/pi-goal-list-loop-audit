@@ -151,7 +151,7 @@ test("describeSubagentTerminal: transient text is eager, walls and aborts are no
   assert.equal(opaque.eager, true);
 
   const childQuota = describeSubagentTerminal({ id: "run-cquota", hasError: true, error: "429 Too Many Requests" })!;
-  assert.equal(childQuota.eager, false, "explicit quota backpressure vetoes the child nudge too");
+  assert.equal(childQuota.eager, true, "hintless quota permits the child recovery nudge too");
 
   const clean = describeSubagentTerminal({ id: "run-clean", exitCode: 0 })!;
   assert.equal(clean.failed, false);
