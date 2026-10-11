@@ -50,20 +50,20 @@ test('busy parent cannot turn a missing or stale auditor into a running heading'
   }
 });
 
-test('detailed audits preserve owner, unconfirmed evidence and inspection across both widths', () => {
+test('compact and detailed audits preserve owner, unconfirmed evidence and inspection across both widths', () => {
   const stale: AuditDisplayProgress = { phase: 'thinking', lastActivityAt: now - 40000, startedAt: now - 60000, elapsedMs: 60000 };
-  for (const policy of ['goal', 'list'] as const) for (const width of [40, 120]) {
-    const { card, footer, colors } = render(stale, false, width, policy);
+  for (const compact of [true, false]) for (const policy of ['goal', 'list'] as const) for (const width of [40, 120]) {
+    const { card, footer, colors } = render(stale, compact, width, policy);
     assert.match(card.split('\n')[0]!, policy === 'goal' ? /GOAL/ : /list item/);
     assert.match(card, /EXECUTION UNCONFIRMED/);
     assert.match(card, /auditor: execution unconfirmed/);
-    assert.match(card, policy === 'goal' ? /next: \/goal status/ : /next: \/list show/);
+    assert.match(card, policy === 'goal' ? /\/goal status.*inspects/ : /\/list show.*inspects/);
     assert.match(card, /audit elapsed 1m 00s/);
-    assert.match(card, /last activity: 40s ago/);
+    assert.match(card, compact ? /activity 40s ago/ : /last activity: 40s ago/);
     assert.match(footer, /AUDIT UNCONFIRMED/);
     assert.match(footer, policy === 'goal' ? /\/goal status/ : /\/list show/);
     assert.doesNotMatch(footer, /thinking|reading source|auditor ▶/);
-    assert.doesNotMatch(card + footer, /review applies automatically|No action needed|AUDIT RUNNING|detached worker/);
+    assert.doesNotMatch(card + footer, /thinking|reading source|review applies automatically|No action needed|AUDIT RUNNING|detached worker/);
     assert.ok(colors.some(entry => entry.text === 'execution unconfirmed' && entry.color === 'warning'));
   }
 });

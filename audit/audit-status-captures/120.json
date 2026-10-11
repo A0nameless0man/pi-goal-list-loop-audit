@@ -1,6 +1,6 @@
 {
   "width": 120,
-  "rows": 94,
+  "rows": 116,
   "fixedNow": "2026-10-11T21:00:00.000Z",
   "compact": true,
   "fixtures": [
@@ -13,12 +13,14 @@
     "Goal / persistence stop",
     "Loop / project audit tool wait",
     "Loop / explicitly stopped project",
-    "Loop / plain objective"
+    "Loop / plain objective",
+    "Goal / stale worker",
+    "List item / stale worker"
   ],
   "source": "production card/footer fixtures; not a full live Pi viewport",
   "capture": "real xterm on private Xvfb",
   "pixels": [
     1100,
-    1844
+    2262
   ]
 }

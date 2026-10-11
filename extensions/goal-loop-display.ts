@@ -2636,13 +2636,14 @@ function compactAuditingCardRows(g: Goal, audit: AuditDisplayProgress | null | u
       const facts = [finished !== undefined ? `${finished} calls finished` : undefined,
         age !== undefined ? `activity ${fmtElapsed(age)} ago` : "no activity yet"].filter(Boolean);
       const toolWait = auditorToolWait(audit, phase, now);
-      const unconfirmed = phase === 'running' && !toolWait && !auditorHasLiveEvidence(audit, phase, now);
+      const live = auditorHasLiveEvidence(audit, phase, now);
+      const unconfirmed = phase === 'running' && !toolWait && !live;
       const inspectCommand = g.policy === 'list' ? '/list show' : '/goal status';
       const action = block.lead.find(line => line.startsWith("│ next:"));
       // No history or model plaques in the glance card: Pi clips its tail.
       // Keep state, real evidence and the user action ahead of all details.
-      const phaseLine = toolWait ? `├─ ${paint(theme, "accent", `Waiting on ${sanitizeDisplayText(audit!.currentTool!)}${audit?.round === 2 ? " · second audit pass" : ""} · detached auditor`)}` : needsRecovery ? (phase === "quiet" ? `├─ ${paint(theme, "warning", "Audit quiet — may be stuck")}` : block.lead[0]!)
-        : `├─ ${paint(theme, auditorPhaseTone(phase, auditorHasLiveEvidence(audit, phase, now)), phase === "running" ? `${auditorHasLiveEvidence(audit, phase, now) ? 'Audit running' : 'Audit execution unconfirmed'} · ${(extras?.auditorProgressSignals !== false ? auditorProgressPhaseLabel(audit) : undefined) ?? auditorPhaseForDisplay(audit, phase, auditorHasLiveEvidence(audit, phase, now), now)} · detached worker` : phase === "queued" ? "Audit starting · detached worker" : "Audit review pending · detached worker")}`;
+      const phaseLine = unconfirmed ? block.lead[0]! : toolWait ? `├─ ${paint(theme, "accent", `Waiting on ${sanitizeDisplayText(audit!.currentTool!)}${audit?.round === 2 ? " · second audit pass" : ""} · detached auditor`)}` : needsRecovery ? (phase === "quiet" ? `├─ ${paint(theme, "warning", "Audit quiet — may be stuck")}` : block.lead[0]!)
+        : `├─ ${paint(theme, auditorPhaseTone(phase, live), phase === "running" ? `Audit running · ${(extras?.auditorProgressSignals !== false ? auditorProgressPhaseLabel(audit) : undefined) ?? auditorPhaseForDisplay(audit, phase, live, now)} · detached worker` : phase === "queued" ? "Audit starting · detached worker" : "Audit review pending · detached worker")}`;
       const toolLine = block.lead.find(line => /^│ (?:last )?tool:/.test(line));
       const modelRef = auditorCardModelRef(audit, g.pendingCompletion);
       const compactToolLine = modelRef ? toolLine?.split(` · ${modelRef}`)[0] : toolLine;

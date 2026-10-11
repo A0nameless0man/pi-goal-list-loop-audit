@@ -48,6 +48,15 @@ The isolated audit initially approved the compact rendering but its challenge co
 - Capture commands above now produce compact and detailed `{40,120}[-detailed].{ansi,json,png}`. Native inspection at both widths confirms explicit owners, unknown inspection actions, visible clocks/budgets and phase-leading footers. These remain production fixtures, not live Pi/provider-session evidence.
 - Fresh-context read-only reviewer `df1d16db-c447-453b-9291-493dac29fe1a` inspected shared heading/evidence code, assertions and all four PNGs; verdict OK, BLOCKERS none. It executed no commands. A final small footer refinement also suppresses stale thinking text and prioritizes inspection commands, covered by the final matrix rerun.
 
+## Compact stale-worker challenge repair
+
+The latest audit correctly identified one remaining contradiction: compact stale-worker phase expansion still appended `thinking… · detached worker` despite an unconfirmed heading/footer. The earlier detailed repair is retained; the compact unknown branch now directly reuses the evidence-gated detailed phase row instead of independently expanding stale metadata.
+
+- The owner/width matrix now covers both compact booleans, Goal and List policies, and 40/120 widths. It rejects unsupported thinking/reading-source, detached-worker and automatic-review terms across the entire card/footer, while requiring unconfirmed status, inspection commands and timing facts.
+- Compact captures now include stale-worker Goal and List cases (40-second-old worker activity plus a busy parent), previously absent. Native inspection of both compact PNGs confirms unconfirmed amber phase rows with no thinking/detached-worker suffix, retained clocks and owner-specific inspection commands.
+- Focused reviewer follow-up `cb141e31-b7ea-4884-9f4d-9c95600b64b7` inspected both compact call sites, footer suppression, the complete layout/owner/width matrix, saved logs and both compact PNGs. Verdict OK, BLOCKERS none; no reviewer commands executed.
+- Final bounded tests: 180 pass, zero fail across eleven files (`/tmp/glla-audit-compact-final-tests.log`); typecheck passed (`/tmp/glla-audit-compact-final-types.log`); four fixture captures and inventory check passed. Fixture limitations remain unchanged: no live provider-session claim.
+
 ## Scope
 
 Only GLLA presentation and its public observation adapters are implementation targets. This item does not alter Pi core, repair the operating system, or implement the separately queued quota retry and manual-model-resume goals.

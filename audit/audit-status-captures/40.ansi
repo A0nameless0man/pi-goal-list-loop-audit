@@ -97,3 +97,25 @@ glla: [38;5;168mAUDIT STALLED — no worker respond[0m…[0m
 [38;5;244m└─ [0m[38;5;244mmetricless (no plateau) · /loop st[0m…[0m
 [38;5;244mglla:[0m [38;5;72mRUNNING[0m [38;5;244m· loop polishing[0m [38;5;244m· automa[0m…[0m
 
+[38;5;244m── Goal / stale worker[0m
+[38;5;179m● [0m[38;5;179mEXECUTION UNCONFIRMED[0m[38;5;244m · [0m[38;5;244mGOAL[0m [38;5;244mauditi[0m…[0m
+[38;5;244m│  [0mVerify objective labels and audit [0m…[0m
+[38;5;244m├─ [0mauditor: [38;5;179mexecution unconfirmed[0m · w[0m…[0m
+[38;5;244m│ [0m1 calls finished · activity 40s ago
+[38;5;244m│ [0maudit elapsed 1m 00s
+[38;5;244m│ [0mlast tool: read
+[38;5;244m│ [0m/goal status inspects unconfirmed a[0m…[0m
+[38;5;244m└─ more: /glla status[0m
+glla: [38;5;179mAUDIT UNCONFIRMED[0m · /goal status [0m…[0m
+
+[38;5;244m── List item / stale worker[0m
+[38;5;179m● [0m[38;5;179mEXECUTION UNCONFIRMED[0m[38;5;244m · [0m[38;5;244mlist item[0m [38;5;244ma[0m…[0m
+[38;5;244m│  [0mVerify objective labels and audit [0m…[0m
+[38;5;244m├─ [0mauditor: [38;5;179mexecution unconfirmed[0m · w[0m…[0m
+[38;5;244m│ [0m1 calls finished · activity 40s ago
+[38;5;244m│ [0maudit elapsed 1m 00s
+[38;5;244m│ [0mlast tool: read
+[38;5;244m│ [0m/list show inspects unconfirmed aud[0m…[0m
+[38;5;244m└─ more: /glla status[0m
+glla: [38;5;179mAUDIT UNCONFIRMED[0m · /list show · [0m…[0m
+

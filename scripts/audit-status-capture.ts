@@ -31,6 +31,7 @@ const project: State = { goal: null, list: [], loop: { active: true, builder, ta
   iteration: 1, maxIterations: 0, plateauWindow: 5, stallCount: 0, bestValue: null, lastValue: null, history: [] } };
 const loop = structuredClone(project); delete loop.loop!.builder;
 const stopped = structuredClone(project); stopped.loop!.active = false; stopped.loop!.stopReason = 'stopped by user (/loop stop)';
+const stale: AuditDisplayProgress = { ...fresh, startedAt: now - 60000, elapsedMs: 60000, lastActivityAt: now - 40000 };
 const fixtures: Array<{ name: string; state: State; audit?: AuditDisplayProgress; context?: UiStatusContext }> = [
   { name: 'Goal / live audit', state: goal(), audit: fresh },
   { name: 'List item / live audit', state: list, audit: fresh },
@@ -42,8 +43,9 @@ const fixtures: Array<{ name: string; state: State; audit?: AuditDisplayProgress
   { name: 'Loop / project audit tool wait', state: project },
   { name: 'Loop / explicitly stopped project', state: stopped },
   { name: 'Loop / plain objective', state: loop },
+  { name: 'Goal / stale worker', state: goal(), audit: stale },
+  { name: 'List item / stale worker', state: list, audit: stale },
 ];
-const stale: AuditDisplayProgress = { ...fresh, startedAt: now - 60000, elapsedMs: 60000, lastActivityAt: now - 40000 };
 const detailedFixtures = [fixtures[0], fixtures[1],
   { name: 'Goal / stale worker', state: goal(), audit: stale },
   { name: 'List item / stale worker', state: list, audit: stale },
