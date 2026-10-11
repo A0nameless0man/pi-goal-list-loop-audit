@@ -833,6 +833,14 @@ let modelSwitchOperationToken = 0;
 let activeModelSwitchToken = 0;
 let modelSwitchOperationGeneration: number | null = null;
 
+function persistRecoverySwitch(ctx: ExtensionContext, previous: MainModelRecovery | undefined): boolean {
+  if (persistState(ctx) !== false && !isPersistenceDegraded()) return true;
+  state.mainModelRecovery = previous;
+  flags.continuationDispatchStoodDown = true;
+  ctx.ui.notify('glla: model recovery held because its durable transition could not be saved. Repair storage before dispatch resumes.', 'warning');
+  return false;
+}
+
 export async function tryMainModelFallback(ctx: ExtensionContext, failure: MainModelFailure): Promise<boolean> {
   const generation = flags.sessionGeneration;
   // Every recoverable failure may walk the configured fallback chain. Error
@@ -880,6 +888,7 @@ export async function tryMainModelFallback(ctx: ExtensionContext, failure: MainM
   const failureCopy = providerErrorPresentation(failure.raw, "main");
   const recovery: MainModelRecovery = {
     ...baseRecovery,
+    attempted: [...baseRecovery.attempted],
     // A provider failure while serving a fallback returns to the normal
     // ordered recovery walk; the next successful fallback turn will arm a
     // fresh preferred-primary probe.
@@ -954,13 +963,14 @@ export async function tryMainModelFallback(ctx: ExtensionContext, failure: MainM
     // rung was already attempted and immediately retry it after reload. Keep
     // a short parked deadline so a crash cannot strand the episode with
     // retryAt undefined and no lifecycle callback to resume it.
+    const beforeIntent = state.mainModelRecovery;
     state.mainModelRecovery = {
       ...recovery,
       attempted,
       pendingModelSwitch: candidateRef,
       retryAt: new Date(Date.now() + 1_000).toISOString(),
     };
-    persistState(ctx);
+    if (!persistRecoverySwitch(ctx, beforeIntent)) return false;
     flags.mainModelSwitchInFlight = true;
     try {
       // Re-check immediately before crossing the host boundary. A session
@@ -968,7 +978,7 @@ export async function tryMainModelFallback(ctx: ExtensionContext, failure: MainM
       // never invoke setModel on that stale generation.
       if (generation !== flags.sessionGeneration || !freshCtxForGeneration(generation)) return false;
       const api = flags.extensionApi;
-      if (supervisorPaused(state)) return false;
+      if (supervisorPaused(state) || isForbiddenModel(candidateRef, loadSettings(ctx.cwd).forbiddenModels)) return false;
       const accepted = await api?.setModel(candidate);
       if (generation !== flags.sessionGeneration || !freshCtxForGeneration(generation) || supervisorPaused(state)) return false;
       if (!recoveryOperationStillCurrent(ctx, recovery) || state.mainModelRecovery?.pendingModelSwitch?.toLowerCase() !== candidateRef.toLowerCase()) return false;
@@ -993,8 +1003,9 @@ export async function tryMainModelFallback(ctx: ExtensionContext, failure: MainM
         providerErrorDiagnostic: failureCopy.diagnostic,
         kind: mainModelRecoveryKind(),
       };
+      const durablePending = state.mainModelRecovery;
       state.mainModelRecovery = nextRecovery;
-      persistState(ctx);
+      if (!persistRecoverySwitch(ctx, durablePending)) return false;
       appendLedger(ctx.cwd, "main_model_failover", { from: current, to: candidateRef, backupIndex, backupCount: refs.length, reason: failure.kind });
       ctx.ui.notify(`Main session model failover: ${current} → backup ${backupIndex}/${refs.length} ${candidateRef}. The next supervised turn tests it; a healthy fallback schedules a preferred-primary failback probe.`, "warning");
       return true;
@@ -1070,6 +1081,7 @@ export function setMainModelRecoveryPause(ctx: ExtensionContext, recovery: MainM
     landed = updateGoal({
       status: "paused",
       pauseKind: "wait",
+      pauseSource: "system",
       pauseResumeAt: retryAt,
       pauseReason: `main model recovery — retrying in ${minutes}m (${sanitizeProviderDisplayText(normalized.reason)})`,
       pauseSuggestedAction: recoveryAction,
@@ -1444,6 +1456,8 @@ async function probePreferredPrimary(ctx: ExtensionContext, recovery: MainModelR
     const reconciled = {
       ...recovery,
       active: current,
+      sameModelRetries: sameModelRef(recovery.active, current) ? recovery.sameModelRetries ?? 0 : 0,
+      sameModelPhaseStartedAt: sameModelRef(recovery.active, current) ? recovery.sameModelPhaseStartedAt ?? nowIso() : nowIso(),
       attempted: [primary],
       primaryProbeAt: undefined,
       primaryProbeInFlight: true,
@@ -1464,6 +1478,8 @@ async function probePreferredPrimary(ctx: ExtensionContext, recovery: MainModelR
     const inFlight = {
       ...recovery,
       active: current,
+      sameModelRetries: 0,
+      sameModelPhaseStartedAt: nowIso(),
       attempted: [primary],
       primaryProbeAt: undefined,
       primaryProbeInFlight: true,
@@ -1520,12 +1536,13 @@ async function probePreferredPrimary(ctx: ExtensionContext, recovery: MainModelR
     pendingModelSwitch: primary,
     retryAt: new Date(Date.now() + 1_000).toISOString(),
   };
+  const beforeIntent = state.mainModelRecovery;
   state.mainModelRecovery = pending;
-  persistState(ctx);
+  if (!persistRecoverySwitch(ctx, beforeIntent)) return;
   flags.mainModelSwitchInFlight = true;
   try {
     if (generation !== flags.sessionGeneration || !freshCtxForGeneration(generation)) return;
-    if (supervisorPaused(state)) return;
+    if (supervisorPaused(state) || isForbiddenModel(primary, loadSettings(ctx.cwd).forbiddenModels)) return;
     const accepted = await flags.extensionApi?.setModel(candidate);
     if (generation !== flags.sessionGeneration || !freshCtxForGeneration(generation) || supervisorPaused(state)) return;
     if (!recoveryOperationStillCurrent(ctx, recovery) || state.mainModelRecovery?.pendingModelSwitch?.toLowerCase() !== primary.toLowerCase()) return;
@@ -1534,14 +1551,17 @@ async function probePreferredPrimary(ctx: ExtensionContext, recovery: MainModelR
     const switched = {
       ...state.mainModelRecovery!,
       active: primary,
+      sameModelRetries: 0,
+      sameModelPhaseStartedAt: nowIso(),
       attempted: [primary],
       primaryProbeAt: undefined,
       primaryProbeInFlight: true,
       pendingModelSwitch: undefined,
       retryAt: undefined,
     };
+    const durablePending = state.mainModelRecovery;
     state.mainModelRecovery = switched;
-    persistState(ctx);
+    if (!persistRecoverySwitch(ctx, durablePending)) return;
     appendLedger(ctx.cwd, "main_model_failback", { from: current, to: primary });
     ctx.ui.notify(`Main session model failed back to ${primary} from ${current ?? "the fallback"}; the next supervised turn tests the primary.`, "info");
     scheduleSupervisedPrimaryProbe(ctx, switched);
@@ -1586,7 +1606,7 @@ function resumeSupervisedRecoverySurface(ctx: ExtensionContext, kind: "goal" | "
   let landed = true;
   let resumed: 'goal' | 'loop' | undefined;
   if (kind === "goal" && state.goal?.status === "paused" && (state.goal.pauseReason ?? "").startsWith("main model recovery")) {
-    landed = updateGoal({ status: "active", pauseKind: undefined, pauseResumeAt: undefined, pauseReason: undefined, pauseSuggestedAction: undefined, providerErrorDiagnostic: undefined, recoveryEpisodeKey: undefined, recoveryNoticeKeys: undefined }, ctx) !== false;
+    landed = updateGoal({ status: "active", pauseSource: undefined, pauseKind: undefined, pauseResumeAt: undefined, pauseReason: undefined, pauseSuggestedAction: undefined, providerErrorDiagnostic: undefined, recoveryEpisodeKey: undefined, recoveryNoticeKeys: undefined }, ctx) !== false;
     resumed = 'goal';
   } else if (kind === "loop" && state.loop && !state.loop.active && (state.loop.stopReason ?? "").startsWith("main model recovery")) {
     state.loop = { ...state.loop, active: true, stopReason: undefined };
@@ -1626,6 +1646,24 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
       recovery = { ...recovery, primaryThinkingLevel: thinking as FallbackThinkingLevel };
       state.mainModelRecovery = recovery;
       persistState(ctx);
+    }
+  }
+  // Persisted intent is not permission: configuration may change while a
+  // switch is interrupted. Reject removed/forbidden targets before either
+  // reconciliation or same-model admission can consume that intent.
+  if (recovery.pendingModelSwitch) {
+    const target = recovery.pendingModelSwitch;
+    const forbidden = isForbiddenModel(target, loadSettings(ctx.cwd).forbiddenModels);
+    const configured = [recovery.primary, ...mainModelFallbackRefs(ctx)].some(ref => sameModelRef(ref, target));
+    if (forbidden || !configured) {
+      const previous = recovery;
+      recovery = { ...recovery, pendingModelSwitch: undefined,
+        attempted: forbidden ? recovery.attempted : recovery.attempted.filter(ref => !sameModelRef(ref, target)),
+        skipped: forbidden ? [...(recovery.skipped ?? []).filter(entry => !sameModelRef(entry.ref, target)), { ref: target, reason: 'forbidden' }].slice(-16)
+          : (recovery.skipped ?? []).filter(entry => !sameModelRef(entry.ref, target)) };
+      state.mainModelRecovery = recovery;
+      if (!persistRecoverySwitch(ctx, previous)) return;
+      appendLedger(ctx.cwd, 'main_model_switch_stale_cleared', { ref: target, reason: forbidden ? 'forbidden' : 'removed from configured fallback chain' });
     }
   }
   // Reconcile an async model switch that crossed a session boundary. If the
@@ -1676,7 +1714,7 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
   // walls sleep to reset; transient/unknown/empty hammer at 5s; persistent
   // walls ladder per mainModelFailureDelayMs).
   const sameModelBudget = normalizeMainModelSameModelRetries(loadSettings(ctx.cwd).mainModelSameModelRetries);
-  if (current && mainModelSameModelRetryActive(ctx, recovery, sameModelBudget)) {
+  if (current && !recovery.pendingModelSwitch && mainModelSameModelRetryActive(ctx, recovery, sameModelBudget)) {
     const nextRetries = (typeof recovery.sameModelRetries === "number" && Number.isFinite(recovery.sameModelRetries) && recovery.sameModelRetries > 0
       ? Math.trunc(recovery.sameModelRetries)
       : 0) + 1;
@@ -1851,6 +1889,7 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
     if (setMainModelRecoveryPause(ctx, next, delay)) scheduleMainModelRecoveryTimer(ctx, delay);
     return;
   }
+  const beforeIntent = state.mainModelRecovery;
   state.mainModelRecovery = {
     ...recovery,
     active: current ?? recovery.active,
@@ -1858,7 +1897,7 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
     pendingModelSwitch: target,
     retryAt: new Date(Date.now() + 1_000).toISOString(),
   };
-  persistState(ctx);
+  if (!persistRecoverySwitch(ctx, beforeIntent)) return;
   if (flags.mainModelSwitchInFlight && modelSwitchOperationGeneration !== generation) {
     flags.mainModelSwitchInFlight = false;
     activeModelSwitchToken = 0;
@@ -1871,6 +1910,7 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
   flags.mainModelSwitchInFlight = true;
   try {
     if (generation !== flags.sessionGeneration || !freshCtxForGeneration(generation)) return;
+    if (supervisorPaused(state) || state.loadHoldAt || isPersistenceDegraded() || isForbiddenModel(target, loadSettings(ctx.cwd).forbiddenModels)) return;
     const accepted = await flags.extensionApi?.setModel(candidate);
     if (generation !== flags.sessionGeneration || !freshCtxForGeneration(generation)) return;
     if (!recoveryOperationStillCurrent(ctx, recovery) || state.mainModelRecovery?.pendingModelSwitch?.toLowerCase() !== target.toLowerCase()) return;
@@ -1880,6 +1920,7 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
     if (supervisorPaused(state) || state.loadHoldAt || isPersistenceDegraded()) return;
     if (!accepted) throw new Error(`no configured auth for ${target}`);
     applyRecoveryThinking(target, candidate, state.mainModelRecovery!);
+    const durablePending = state.mainModelRecovery;
     state.mainModelRecovery = {
       ...state.mainModelRecovery!,
       active: target,
@@ -1894,7 +1935,7 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
       pendingModelSwitch: undefined,
       retryAt: undefined,
     };
-    persistState(ctx);
+    if (!persistRecoverySwitch(ctx, durablePending)) return;
     appendLedger(ctx.cwd, "main_model_probe", { from: current, to: target, tryLabel: targetTryLabel, attempts: recovery.attempts });
     resumeSupervisedRecoverySurface(ctx, recovery.kind);
     ctx.ui.notify(`Main model recovery probe: ${targetTryLabel} ${target} selected; sending one supervised probe.`, "info");
