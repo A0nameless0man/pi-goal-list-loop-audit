@@ -26,6 +26,7 @@ import { isCompactionRecoveryHold, compactionResumeAction } from "./compaction-r
 import { stateWorkView, type WorkView, type WorkActivity } from "./work-lifecycle.js";
 import { projectUiStatus, type UiStatus, type UiStatusContext } from "./ui-status.js";
 import { compactionStatusText } from './compaction-status.js';
+import { sameModelRetryDeadline } from './main-model-recovery.js';
 
 /** v0.34.57 (OPEN-ISSUES bug #1.8 / tasklist item #2): the MAIN host is
  * NEVER detached — it is always SUPERVISING, regardless of any handle state.
@@ -240,6 +241,7 @@ export interface WidgetExtras {
   maxWidgetLines?: number;
   /** Effective global main-model backup order for truthful recovery HUDs. */
   mainModelFallbacks?: string[];
+  mainModelSameModelRetries?: number;
   /** Live ephemeral evidence; a durable retry timestamp is not a timer. */
   mainModelRecoveryRuntime?: import('./goal-loop-core.js').MainModelRecoveryRuntime;
   /** v0.38.44 (field 20260909_161057): precomputed status-tail version
@@ -1534,6 +1536,16 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   // next-transition name the durable facts the generic rail compresses.
   // Scoped to recovery waits — basic pauses keep the 6-line glance shape.
   if (g && g.status === 'paused' && pauseKind(g) === 'wait' && state.mainModelRecovery) {
+    const recovery = state.mainModelRecovery;
+    if (!recovery.manualResumeRequired && (!recovery.owner || (recovery.owner.kind === 'goal' && recovery.owner.id === g.id))) {
+      const budget = extras?.mainModelSameModelRetries;
+      const candidate = (extras?.mainModelFallbacks ?? []).find(ref => ref.toLowerCase() !== (recovery.active ?? recovery.primary).toLowerCase()
+        && !recovery.attempted.some(tried => tried.toLowerCase() === ref.toLowerCase())
+        && !(extras?.modelProvenance?.skippedForbiddenRefs ?? []).some(skipped => skipped.toLowerCase() === ref.toLowerCase()));
+      const deadline = sameModelRetryDeadline(recovery);
+      rows.push(row('├─ ', `retry: same model ${recovery.sameModelRetries ?? 0}${budget !== undefined ? `/${budget}` : ''} · ${recovery.active ?? recovery.primary}`));
+      rows.push(row('├─ ', candidate ? `fallback: next candidate ${candidate}${deadline !== undefined ? ` · eligible ${now >= deadline ? 'now' : `in ${fmtElapsed(deadline - now)}`}` : ''} (or retry budget spent)` : extras?.mainModelFallbacks ? 'fallback: no untried permitted candidate' : 'fallback: configuration not supplied to this view'));
+    }
     const [lifecycle, transition] = pausedLifecycleLines(g, state, extras, now);
     rows.push(row('├─ ', lifecycle));
     rows.push(row('│  ', transition));
