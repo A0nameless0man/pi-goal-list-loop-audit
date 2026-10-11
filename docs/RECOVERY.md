@@ -117,14 +117,14 @@ resume. Saved legacy recovery holds are supported from 0.39.8 onward.
 Main-model recovery retries with paced backoff for as long as the failure
 remains recoverable, in every mode. There is no 24h automatic-recovery
 horizon: legacy expiry metadata is discarded during normalization, while
-retry cadence (`mainModelRetryMinutes`, doubling per attempt, 5h cap),
-explicit upstream reset sleeps, eager-transient handling, and the
-same-model/fallback policy stay intact. The 5h cap is deliberate operator
-policy (2026-10-09): coding plans run in 5-hour windows, and retrying
-across the full window lets a project continue in the next window instead
-of dying. A `retrying in 300m` countdown on a hintless 429 is this ceiling
-working as designed — attempts advance and timers re-arm across failed
-probes, and the hourly :00:30 probe punctuates the wait. Explicit manual holds and
+explicit upstream reset sleeps and the same-model/fallback policy stay intact.
+As of 0.39.27, hintless rate-limit/Token Plan errors use ten eager 5-second
+scheduling slots, then a 1-minute doubling ladder capped at 30 minutes;
+actual provider request time is additional. They do not invent a coding-plan
+reset window or wait hours before reaching the configured fallback budget.
+Explicit upstream reset hints remain authoritative, bounded by the 5h envelope.
+Other account/auth failures retain the configured ladder; the optional hourly
+:00:30 probe adds a recovery opportunity. Explicit manual holds and
 deterministic client errors still stop. Failed recovery-wait persistence
 restores state, leaves dispatch held, and arms no timer.
 

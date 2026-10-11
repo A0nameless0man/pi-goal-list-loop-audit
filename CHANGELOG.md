@@ -6,6 +6,10 @@
 
 ### Recovery and runtime paths
 
+- Hintless 429/Token Plan errors receive the bounded eager retry window before
+  the short capped ladder, instead of multi-hour waits within the same-model
+  budget. Configured fallback selection remains intact; explicit upstream
+  Retry-After/reset hints still win over eager retries.
 - Failed compaction clears a queued pressure attempt before other recovery
   handling, preserving its durable budget and cancelling its admission/deadline
   timers so it cannot initiate a second recovery.
