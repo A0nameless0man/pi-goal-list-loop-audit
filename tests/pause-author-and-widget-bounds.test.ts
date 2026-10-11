@@ -47,6 +47,25 @@ test('actual pause entrypoints persist episode authors and resume clears the pri
   });
 });
 
+test('actual TUI refresh registers a responsive factory whose budget follows terminal rows', async () => {
+  await withPressureSession(async (pi, ctx) => {
+    ctx.mode = 'tui';
+    await pi.command('goal', 'pause', ctx);
+    const factory = ctx.ui.widgets['pi-glla'];
+    assert.equal(typeof factory, 'function', 'test the actual refreshUI registration, not just the pure component');
+    if (typeof factory !== 'function') throw new Error('responsive widget not registered');
+    const tui = { terminal: { rows: 24 } };
+    const component = factory(tui, { fg: (_color: string, text: string) => text }) as ReturnType<typeof responsiveWidget>;
+    for (const [columns, rows] of [[40, 24], [120, 18], [20, 12], [80, 30]]) {
+      tui.terminal.rows = rows!;
+      component.invalidate();
+      const rendered = component.render(columns!);
+      assert.ok(rendered.length <= widgetHeightBudget(rows!));
+      assert.ok(rendered.every(line => visibleWidth(line) <= columns!));
+    }
+  });
+});
+
 test('narrow bounded manual cards retain prerequisite-first resume semantics and mark omitted prose', () => {
   const state = fixture();
   const lines = buildWidgetLines(state, undefined, now, undefined, 40, { uiStatusContext: { now }, maxWidgetLines: 8 })!.map(sanitizeDisplayText);

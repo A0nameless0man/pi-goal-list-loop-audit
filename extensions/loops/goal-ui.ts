@@ -934,8 +934,13 @@ function refreshUI(ctx: ExtensionContext, force = false): void {
     if (widgetChanged) {
       if (ctx.mode === "tui" && widgetLines) {
         const snapshot = { ...state };
+        const auditSnapshot = latestAuditProgress;
         ctx.ui.setWidget("pi-glla", (tui, widgetTheme) => responsiveWidget(
-          (columns, maxWidgetLines) => buildWidgetLines(snapshot, latestAuditProgress, Date.now(), widgetTheme, columns, { ...extras, maxWidgetLines }),
+          (columns, maxWidgetLines) => {
+            const now = Date.now();
+            return buildWidgetLines(snapshot, auditSnapshot, now, widgetTheme, columns, { ...extras, maxWidgetLines,
+              uiStatusContext: extras.uiStatusContext ? { ...extras.uiStatusContext, now } : undefined });
+          },
           () => tui.terminal.rows,
         ), { placement: "belowEditor" });
       } else ctx.ui.setWidget("pi-glla", widgetLines, { placement: "belowEditor" });
