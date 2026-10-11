@@ -1,0 +1,1697 @@
+{
+  "sources": [
+    {
+      "file": "segment-1791599111132-2920052-r7fnoev6.jsonl",
+      "bytes": 8396840,
+      "sha256": "c0582c2dad994ae3086df573f71b711b7b83639c23b9840a3c6a0098b821a8d6"
+    },
+    {
+      "file": "segment-1791682533402-2191740-ziqjey47.jsonl",
+      "bytes": 8401006,
+      "sha256": "8b592d8e0fce9a79de2a70faf0af5fb2e1073f7e298b81c3d8980a2cae156052"
+    },
+    {
+      "file": "active.jsonl",
+      "bytes": 1190851,
+      "sha256": "1acc941b8dddf86ff70fe5462d881f4fa5e17d68f2a6137d40ee38d4ca28b8f2"
+    }
+  ],
+  "events": [
+    {
+      "at": "2026-10-10T05:00:30.001Z",
+      "type": "lifecycle",
+      "goalId": "20261010015853-b0kxxv",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791597603465
+    },
+    {
+      "at": "2026-10-10T05:00:30.005Z",
+      "type": "lifecycle",
+      "goalId": "20261010015853-b0kxxv",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791597603465
+    },
+    {
+      "at": "2026-10-10T05:11:14.703Z",
+      "type": "lifecycle",
+      "goalId": "20261010015853-b0kxxv",
+      "status": "auditing",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791597603465
+    },
+    {
+      "at": "2026-10-10T05:11:14.821Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010015853-b0kxxv",
+        "contextUsage": {
+          "tokens": 251719,
+          "contextWindow": 1000000,
+          "percent": 25.1719
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T05:37:07.747Z",
+      "type": "lifecycle",
+      "goalId": "20261010015853-b0kxxv",
+      "status": "complete",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791597603465
+    },
+    {
+      "at": "2026-10-10T05:37:07.756Z",
+      "type": "lifecycle",
+      "goalId": "20261010053707-pkj46m",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791597603465
+    },
+    {
+      "at": "2026-10-10T05:37:22.754Z",
+      "type": "compactor_transcript_firing",
+      "value": {
+        "tokens": 252717,
+        "reason": "between tasks at 252717 tokens (threshold 200000)"
+      }
+    },
+    {
+      "at": "2026-10-10T05:40:13.378Z",
+      "type": "session_compact",
+      "value": {}
+    },
+    {
+      "at": "2026-10-10T05:40:13.379Z",
+      "type": "lifecycle",
+      "goalId": "20261010053707-pkj46m",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T05:40:13.388Z",
+      "type": "compactor_transcript_done",
+      "value": {}
+    },
+    {
+      "at": "2026-10-10T05:40:15.605Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010053707-pkj46m",
+        "contextUsage": {
+          "tokens": null,
+          "contextWindow": 262144,
+          "percent": null
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T05:40:15.609Z",
+      "type": "lifecycle",
+      "goalId": "20261010053707-pkj46m",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T05:41:15.615Z",
+      "type": "lifecycle",
+      "goalId": "20261010053707-pkj46m",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T05:41:17.097Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010053707-pkj46m",
+        "contextUsage": {
+          "tokens": null,
+          "contextWindow": 262144,
+          "percent": null
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T05:41:17.099Z",
+      "type": "lifecycle",
+      "goalId": "20261010053707-pkj46m",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T05:42:17.103Z",
+      "type": "lifecycle",
+      "goalId": "20261010053707-pkj46m",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T05:42:23.218Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010053707-pkj46m",
+        "contextUsage": {
+          "tokens": null,
+          "contextWindow": 262144,
+          "percent": null
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T05:42:23.224Z",
+      "type": "lifecycle",
+      "goalId": "20261010053707-pkj46m",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T05:42:28.228Z",
+      "type": "lifecycle",
+      "goalId": "20261010053707-pkj46m",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T05:42:32.484Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010053707-pkj46m",
+        "contextUsage": {
+          "tokens": null,
+          "contextWindow": 262144,
+          "percent": null
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T05:42:32.489Z",
+      "type": "lifecycle",
+      "goalId": "20261010053707-pkj46m",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T05:43:00.492Z",
+      "type": "lifecycle",
+      "goalId": "20261010053707-pkj46m",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T05:43:15.649Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010053707-pkj46m",
+        "contextUsage": {
+          "tokens": 64301,
+          "contextWindow": 262144,
+          "percent": 24.528884887695312
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T05:43:15.651Z",
+      "type": "lifecycle",
+      "goalId": "20261010053707-pkj46m",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T05:44:15.660Z",
+      "type": "lifecycle",
+      "goalId": "20261010053707-pkj46m",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T05:44:17.492Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010053707-pkj46m",
+        "contextUsage": {
+          "tokens": 64313,
+          "contextWindow": 262144,
+          "percent": 24.533462524414062
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T05:48:31.904Z",
+      "type": "lifecycle",
+      "goalId": "20261010053707-pkj46m",
+      "status": "auditing",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T05:48:31.979Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010053707-pkj46m",
+        "contextUsage": {
+          "tokens": 65444,
+          "contextWindow": 1000000,
+          "percent": 6.5444
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T05:58:42.866Z",
+      "type": "lifecycle",
+      "goalId": "20261010053707-pkj46m",
+      "status": "complete",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T05:58:42.872Z",
+      "type": "lifecycle",
+      "goalId": "20261010055842-fq0gom",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T06:02:57.901Z",
+      "type": "lifecycle",
+      "goalId": "20261010055842-fq0gom",
+      "status": "auditing",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T06:02:57.991Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010055842-fq0gom",
+        "contextUsage": {
+          "tokens": 75367,
+          "contextWindow": 1000000,
+          "percent": 7.536700000000001
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T06:19:58.343Z",
+      "type": "lifecycle",
+      "goalId": "20261010055842-fq0gom",
+      "status": "complete",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T06:19:59.306Z",
+      "type": "lifecycle",
+      "goalId": null,
+      "status": null,
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T09:17:33.677Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T09:18:27.229Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010091733-26x720",
+        "contextUsage": {
+          "tokens": 71893,
+          "contextWindow": 1000000,
+          "percent": 7.1893
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T09:18:27.235Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T09:18:32.251Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T09:18:37.030Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010091733-26x720",
+        "contextUsage": {
+          "tokens": 78812,
+          "contextWindow": 1000000,
+          "percent": 7.8812
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T09:18:37.033Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T09:19:53.385Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T09:20:36.394Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010091733-26x720",
+        "contextUsage": {
+          "tokens": 24030,
+          "contextWindow": 1000000,
+          "percent": 2.403
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T09:20:36.400Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T10:00:30.019Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T10:01:05.904Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010091733-26x720",
+        "contextUsage": {
+          "tokens": 62954,
+          "contextWindow": 1000000,
+          "percent": 6.2954
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T10:01:05.909Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T10:15:54.945Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T10:16:39.754Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010091733-26x720",
+        "contextUsage": {
+          "tokens": 68983,
+          "contextWindow": 1000000,
+          "percent": 6.8983
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T10:16:39.826Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T10:26:40.914Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010091733-26x720",
+        "contextUsage": {
+          "tokens": 102135,
+          "contextWindow": 1000000,
+          "percent": 10.2135
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T10:26:46.752Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010091733-26x720",
+        "contextUsage": {
+          "tokens": 100590,
+          "contextWindow": 1000000,
+          "percent": 10.059
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T10:26:54.333Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010091733-26x720",
+        "contextUsage": {
+          "tokens": 100590,
+          "contextWindow": 1000000,
+          "percent": 10.059
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T10:27:05.969Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010091733-26x720",
+        "contextUsage": {
+          "tokens": 100590,
+          "contextWindow": 1000000,
+          "percent": 10.059
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T10:45:37.297Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010091733-26x720",
+        "contextUsage": {
+          "tokens": 141707,
+          "contextWindow": 1000000,
+          "percent": 14.1707
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T10:47:19.689Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T10:47:25.556Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "auditing",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T10:47:25.916Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010091733-26x720",
+        "contextUsage": {
+          "tokens": 154183,
+          "contextWindow": 1000000,
+          "percent": 15.418299999999999
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T10:47:25.917Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "auditing",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T10:59:02.570Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "paused",
+      "pauseKind": "blocked",
+      "recovery": false,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T10:59:05.077Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": false,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T11:00:05.100Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "auditing",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T11:04:41.090Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T11:06:36.516Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "auditing",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T11:06:36.645Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010091733-26x720",
+        "contextUsage": {
+          "tokens": 181577,
+          "contextWindow": 1000000,
+          "percent": 18.1577
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T11:33:17.099Z",
+      "type": "lifecycle",
+      "goalId": "20261010091733-26x720",
+      "status": "complete",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T11:33:19.581Z",
+      "type": "lifecycle",
+      "goalId": null,
+      "status": null,
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T12:48:58.924Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 261793,
+          "contextWindow": 1000000,
+          "percent": 26.1793
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T12:49:05.212Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 237735,
+          "contextWindow": 1000000,
+          "percent": 23.7735
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T12:49:13.394Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 237735,
+          "contextWindow": 1000000,
+          "percent": 23.7735
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T12:49:26.042Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 237735,
+          "contextWindow": 1000000,
+          "percent": 23.7735
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T12:49:46.677Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 237735,
+          "contextWindow": 1000000,
+          "percent": 23.7735
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T12:50:23.293Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 237735,
+          "contextWindow": 1000000,
+          "percent": 23.7735
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T12:51:27.974Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 237735,
+          "contextWindow": 1000000,
+          "percent": 23.7735
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T12:52:31.601Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 237735,
+          "contextWindow": 1000000,
+          "percent": 23.7735
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T12:53:35.162Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 237735,
+          "contextWindow": 1000000,
+          "percent": 23.7735
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T12:54:39.412Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 237735,
+          "contextWindow": 1000000,
+          "percent": 23.7735
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T12:55:43.903Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 237735,
+          "contextWindow": 1000000,
+          "percent": 23.7735
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T12:56:49.275Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 237735,
+          "contextWindow": 1000000,
+          "percent": 23.7735
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T12:57:53.600Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 237735,
+          "contextWindow": 1000000,
+          "percent": 23.7735
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T12:58:57.274Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 237735,
+          "contextWindow": 1000000,
+          "percent": 23.7735
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T13:00:01.925Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 237735,
+          "contextWindow": 1000000,
+          "percent": 23.7735
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T13:01:05.761Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 237735,
+          "contextWindow": 1000000,
+          "percent": 23.7735
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T14:12:10.489Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 273265,
+          "contextWindow": 1000000,
+          "percent": 27.3265
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T15:00:16.151Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 305709,
+          "contextWindow": 1000000,
+          "percent": 30.5709
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T15:51:46.598Z",
+      "type": "lifecycle",
+      "goalId": "20261010155146-13u7g9",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791610813379
+    },
+    {
+      "at": "2026-10-10T16:12:12.306Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010155146-13u7g9",
+        "contextUsage": {
+          "tokens": 344507,
+          "contextWindow": 1000000,
+          "percent": 34.4507
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T16:12:12.364Z",
+      "type": "context_pressure_recovery",
+      "value": {
+        "phase": "queued"
+      }
+    },
+    {
+      "at": "2026-10-10T16:12:12.391Z",
+      "type": "context_pressure_recovery",
+      "value": {
+        "phase": "started"
+      }
+    },
+    {
+      "at": "2026-10-10T16:13:44.846Z",
+      "type": "context_pressure_recovery",
+      "value": {
+        "phase": "success"
+      }
+    },
+    {
+      "at": "2026-10-10T16:13:44.859Z",
+      "type": "session_compact",
+      "value": {}
+    },
+    {
+      "at": "2026-10-10T16:13:44.859Z",
+      "type": "lifecycle",
+      "goalId": "20261010155146-13u7g9",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T17:14:09.881Z",
+      "type": "lifecycle",
+      "goalId": "20261010155146-13u7g9",
+      "status": "auditing",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T17:14:10.017Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010155146-13u7g9",
+        "contextUsage": {
+          "tokens": 156593,
+          "contextWindow": 1000000,
+          "percent": 15.659300000000002
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T17:15:51.440Z",
+      "type": "lifecycle",
+      "goalId": "20261010155146-13u7g9",
+      "status": "paused",
+      "pauseKind": "blocked",
+      "recovery": false,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T17:17:19.474Z",
+      "type": "lifecycle",
+      "goalId": "20261010155146-13u7g9",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": false,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T17:17:24.486Z",
+      "type": "lifecycle",
+      "goalId": "20261010155146-13u7g9",
+      "status": "auditing",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T17:51:07.865Z",
+      "type": "lifecycle",
+      "goalId": "20261010155146-13u7g9",
+      "status": "complete",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T17:51:09.388Z",
+      "type": "lifecycle",
+      "goalId": null,
+      "status": null,
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T19:13:51.173Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T19:42:07.868Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010191351-v37uto",
+        "contextUsage": {
+          "tokens": 215767,
+          "contextWindow": 1000000,
+          "percent": 21.5767
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T19:42:07.982Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T19:42:13.031Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T19:42:25.502Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010191351-v37uto",
+        "contextUsage": {
+          "tokens": 222686,
+          "contextWindow": 1000000,
+          "percent": 22.2686
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T19:42:25.594Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T20:00:30.008Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T20:00:36.269Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010191351-v37uto",
+        "contextUsage": {
+          "tokens": 229605,
+          "contextWindow": 1000000,
+          "percent": 22.9605
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T20:00:36.274Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T20:07:49.806Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T20:09:47.118Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010191351-v37uto",
+        "contextUsage": {
+          "tokens": 240537,
+          "contextWindow": 1000000,
+          "percent": 24.0537
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T20:09:47.123Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T20:09:52.135Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T20:10:29.876Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010191351-v37uto",
+        "contextUsage": {
+          "tokens": 244265,
+          "contextWindow": 1000000,
+          "percent": 24.4265
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T20:10:29.878Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T21:00:30.006Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T21:01:30.861Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010191351-v37uto",
+        "contextUsage": {
+          "tokens": 255587,
+          "contextWindow": 1000000,
+          "percent": 25.5587
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T21:01:30.867Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T21:19:39.068Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T21:24:00.478Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010191351-v37uto",
+        "contextUsage": {
+          "tokens": 300629,
+          "contextWindow": 1000000,
+          "percent": 30.0629
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T21:24:00.506Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T21:24:05.539Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T21:27:00.029Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010191351-v37uto",
+        "contextUsage": {
+          "tokens": 316213,
+          "contextWindow": 1000000,
+          "percent": 31.6213
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T21:27:00.040Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T21:44:23.522Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T21:44:31.010Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010191351-v37uto",
+        "contextUsage": {
+          "tokens": 34937,
+          "contextWindow": 200000,
+          "percent": 17.468500000000002
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T21:44:31.519Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T21:44:37.636Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T22:04:57.003Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010191351-v37uto",
+        "contextUsage": {
+          "tokens": 261878,
+          "contextWindow": 1000000,
+          "percent": 26.1878
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T22:05:03.507Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010191351-v37uto",
+        "contextUsage": {
+          "tokens": 246150,
+          "contextWindow": 1000000,
+          "percent": 24.615000000000002
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T22:05:03.514Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T23:00:30.097Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-10T23:00:36.616Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010191351-v37uto",
+        "contextUsage": {
+          "tokens": 253069,
+          "contextWindow": 1000000,
+          "percent": 25.3069
+        }
+      }
+    },
+    {
+      "at": "2026-10-10T23:00:36.628Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-11T00:00:30.014Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-11T00:31:20.852Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010191351-v37uto",
+        "contextUsage": {
+          "tokens": 391031,
+          "contextWindow": 1000000,
+          "percent": 39.103100000000005
+        }
+      }
+    },
+    {
+      "at": "2026-10-11T00:31:20.868Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-11T01:00:30.025Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-11T01:02:02.301Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010191351-v37uto",
+        "contextUsage": {
+          "tokens": 401044,
+          "contextWindow": 1000000,
+          "percent": 40.1044
+        }
+      }
+    },
+    {
+      "at": "2026-10-11T01:02:02.314Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-11T01:21:28.953Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-11T01:29:18.580Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "auditing",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-11T01:29:18.792Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010191351-v37uto",
+        "contextUsage": {
+          "tokens": 430173,
+          "contextWindow": 1000000,
+          "percent": 43.017300000000006
+        }
+      }
+    },
+    {
+      "at": "2026-10-11T01:35:16.378Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791648824859
+    },
+    {
+      "at": "2026-10-11T01:35:16.396Z",
+      "type": "compactor_transcript_firing",
+      "value": {
+        "tokens": 430173,
+        "reason": "between tasks at 430173 tokens (threshold 200000)"
+      }
+    },
+    {
+      "at": "2026-10-11T01:35:31.359Z",
+      "type": "session_compact",
+      "value": {}
+    },
+    {
+      "at": "2026-10-11T01:35:31.359Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791682531359
+    },
+    {
+      "at": "2026-10-11T01:35:31.373Z",
+      "type": "compactor_transcript_done",
+      "value": {}
+    },
+    {
+      "at": "2026-10-11T01:37:40.685Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "auditing",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791682531359
+    },
+    {
+      "at": "2026-10-11T01:37:40.799Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261010191351-v37uto",
+        "contextUsage": {
+          "tokens": 81796,
+          "contextWindow": 1000000,
+          "percent": 8.179599999999999
+        }
+      }
+    },
+    {
+      "at": "2026-10-11T01:45:41.535Z",
+      "type": "lifecycle",
+      "goalId": "20261010191351-v37uto",
+      "status": "complete",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791682531359
+    },
+    {
+      "at": "2026-10-11T01:45:42.552Z",
+      "type": "lifecycle",
+      "goalId": null,
+      "status": null,
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791682531359
+    },
+    {
+      "at": "2026-10-11T02:26:14.886Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 86961,
+          "contextWindow": 1000000,
+          "percent": 8.6961
+        }
+      }
+    },
+    {
+      "at": "2026-10-11T02:26:20.713Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": null,
+        "contextUsage": {
+          "tokens": 81401,
+          "contextWindow": 1000000,
+          "percent": 8.1401
+        }
+      }
+    },
+    {
+      "at": "2026-10-11T02:27:51.625Z",
+      "type": "lifecycle",
+      "goalId": "20261011022751-9qhsdq",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791682531359
+    },
+    {
+      "at": "2026-10-11T02:47:00.750Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261011022751-9qhsdq",
+        "contextUsage": {
+          "tokens": 156005,
+          "contextWindow": 1000000,
+          "percent": 15.6005
+        }
+      }
+    },
+    {
+      "at": "2026-10-11T02:47:00.761Z",
+      "type": "lifecycle",
+      "goalId": "20261011022751-9qhsdq",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791682531359
+    },
+    {
+      "at": "2026-10-11T02:47:05.775Z",
+      "type": "lifecycle",
+      "goalId": "20261011022751-9qhsdq",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791682531359
+    },
+    {
+      "at": "2026-10-11T02:47:10.316Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261011022751-9qhsdq",
+        "contextUsage": {
+          "tokens": 156017,
+          "contextWindow": 1000000,
+          "percent": 15.6017
+        }
+      }
+    },
+    {
+      "at": "2026-10-11T02:47:10.321Z",
+      "type": "lifecycle",
+      "goalId": "20261011022751-9qhsdq",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791682531359
+    },
+    {
+      "at": "2026-10-11T02:58:10.201Z",
+      "type": "lifecycle",
+      "goalId": "20261011022751-9qhsdq",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791682531359
+    },
+    {
+      "at": "2026-10-11T02:58:15.455Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261011022751-9qhsdq",
+        "contextUsage": {
+          "tokens": 156029,
+          "contextWindow": 1000000,
+          "percent": 15.6029
+        }
+      }
+    },
+    {
+      "at": "2026-10-11T02:58:15.459Z",
+      "type": "lifecycle",
+      "goalId": "20261011022751-9qhsdq",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791682531359
+    },
+    {
+      "at": "2026-10-11T03:00:30.010Z",
+      "type": "lifecycle",
+      "goalId": "20261011022751-9qhsdq",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791682531359
+    },
+    {
+      "at": "2026-10-11T03:00:34.612Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261011022751-9qhsdq",
+        "contextUsage": {
+          "tokens": 156041,
+          "contextWindow": 1000000,
+          "percent": 15.6041
+        }
+      }
+    },
+    {
+      "at": "2026-10-11T03:00:34.616Z",
+      "type": "lifecycle",
+      "goalId": "20261011022751-9qhsdq",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791682531359
+    },
+    {
+      "at": "2026-10-11T04:00:30.014Z",
+      "type": "lifecycle",
+      "goalId": "20261011022751-9qhsdq",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": true,
+      "lastCompactionAt": 1791682531359
+    },
+    {
+      "at": "2026-10-11T04:00:35.193Z",
+      "type": "context_usage_sample",
+      "value": {
+        "goalId": "20261011022751-9qhsdq",
+        "contextUsage": {
+          "tokens": 156053,
+          "contextWindow": 1000000,
+          "percent": 15.6053
+        }
+      }
+    },
+    {
+      "at": "2026-10-11T04:00:35.208Z",
+      "type": "lifecycle",
+      "goalId": "20261011022751-9qhsdq",
+      "status": "paused",
+      "pauseKind": "wait",
+      "recovery": true,
+      "lastCompactionAt": 1791682531359
+    },
+    {
+      "at": "2026-10-11T04:13:00.904Z",
+      "type": "lifecycle",
+      "goalId": "20261011022751-9qhsdq",
+      "status": "active",
+      "pauseKind": null,
+      "recovery": false,
+      "lastCompactionAt": 1791682531359
+    }
+  ]
+}
