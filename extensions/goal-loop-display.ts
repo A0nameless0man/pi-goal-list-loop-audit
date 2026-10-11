@@ -236,6 +236,8 @@ export interface WidgetExtras {
   auditorProgressSignals?: boolean;
   /** Compact live audit HUD; detailed history remains in /goal status. */
   compactAuditCard?: boolean;
+  /** Physical widget height budget; bounded independently from terminal width. */
+  maxWidgetLines?: number;
   /** Effective global main-model backup order for truthful recovery HUDs. */
   mainModelFallbacks?: string[];
   /** Live ephemeral evidence; a durable retry timestamp is not a timer. */
@@ -1432,11 +1434,17 @@ function uiSafeText(value: string, prose = false): string {
   }
   return compactDisplayText(sanitizeProviderDisplayText(safe));
 }
+function workflowLabel(status: UiStatus): string {
+  if (status.workflow !== 'paused') return status.workflow;
+  return status.pauseSource === 'agent' ? 'paused by agent'
+    : status.pauseSource === 'user' ? 'paused by you'
+    : status.pauseSource === 'system' ? 'paused by GLLA' : 'paused (source unknown)';
+}
 export function buildUiStatusFooter(status: UiStatus, now: number, theme?: DisplayTheme, width?: number): string {
   const tone = uiStatusTone(status);
   const action = status.actionability === 'user' ? 'needs your action'
     : status.actionability === 'inspect' ? 'inspect execution' : status.actionability === 'automatic' ? 'automatic' : 'no action';
-  const phase = status.workflow.toUpperCase() === UI_HEALTH_LABEL[status.execution] ? status.mode : `${status.mode} ${uiSafeText(status.workflow)}`;
+  const phase = status.workflow.toUpperCase() === UI_HEALTH_LABEL[status.execution] ? status.mode : `${status.mode} ${uiSafeText(workflowLabel(status))}`;
   // Segmented like every legacy footer: only the execution word (and, when
   // the user must act, the required action) carries the tone. Mode, phase
   // and filler stay dim so a blocked footer doesn't wash the whole line.
@@ -1489,7 +1497,7 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   // and hinted "/goal status", reading as a standalone goal. The blank-
   // restart contract pins the "list item" wording.
   const modeWord = paint(theme, 'dim', status.mode === 'list' ? 'list item' : status.mode.toUpperCase());
-  const flowWord = phase ? paint(theme, 'dim', status.workflow) : '';
+  const flowWord = phase ? paint(theme, 'dim', workflowLabel(status)) : '';
   const sep = paint(theme, 'dim', ' · ');
   const headerText = width < 60
     ? `${execWord}${sep}${modeWord}${flowWord ? ` ${flowWord}` : ''}`
@@ -1538,7 +1546,7 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   // Prerequisites are prose, not single-line diagnostics: wrapping prevents
   // the terminal from hiding the permission/alternative at the end. Detailed
   // status offers a larger bounded view; the compact card links to it.
-  const prose = (label: 'next' | 'why', value: string, color: DisplayColor): void => {
+  const prose = (label: 'next' | 'why' | 'resume', value: string, color: DisplayColor): void => {
     wrap(`${label}: ${uiSafeText(value, true)}`, Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3), compact ? 4 : 32)
       .forEach((line, index) => rows.push(row(index === 0 ? '├─ ' : '│  ', line, color, true)));
   };
@@ -1548,11 +1556,12 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
     const judgment = buildDurableDeferDecisionLines(extras.durableDeferRecommendation, width);
     rows.push(row('├─ ', judgment[judgment.length - 1]!, 'dim'));
   }
+  if (status.resumeAction) prose('resume', status.resumeAction, 'dim');
   if (status.workflowIssue) rows.push(row('├─ ', `workflow: ${status.workflowIssue}`, 'warning'));
   if (terminal && progress) rows.push(row('├─ ', progress));
   // Live audit rows already carry phase evidence + the user action — the
   // generic unconfirmed rail would contradict them on the same card.
-  if (!terminal && !auditingLive && (!compact || rows.length < 5)) {
+  if (!terminal && status.execution !== 'blocked' && !auditingLive && (!compact || rows.length < 5)) {
     const activity = status.workflow === 'settling' ? 'approval recorded · settlement owed'
       : status.lastActivityAt !== undefined ? `last progress ${fmtElapsed(now - status.lastActivityAt)} ago · ${status.provenance}`
       : status.execution === 'running' ? 'current-owner turn observed'
@@ -2138,6 +2147,29 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
   // paddingX=1 consumes one cell on each side. Keep every emitted line inside
   // that content width so long detail/status strings never wrap a trailing
   // segment (for example, `50s`) into a stray next line.
+  if (lines) {
+    const limit = extras?.maxWidgetLines;
+    const max = typeof limit === 'number' && Number.isFinite(limit)
+      ? Math.max(1, Math.min(32, Math.floor(limit))) : compact ? 8 : 32;
+    if (lines.length > max) {
+      // Keep the headline and explicit inspection path even on tiny screens.
+      // In larger budgets reserve field starts before wrapped continuations,
+      // judgment history, worker rows or secondary runtime diagnostics.
+      const footer = paint(theme, 'dim', '└─ more: /glla status');
+      if (max === 1) lines = [lines[0]!];
+      else {
+        const priority = [0];
+        for (const label of ['next:', 'why:', 'resume:']) {
+          const at = lines.findIndex(line => sanitizeDisplayText(line).startsWith(`├─ ${label}`));
+          if (at >= 0) priority.push(at);
+        }
+        priority.push(1);
+        for (let i = 2; i < lines.length - 1; i++) priority.push(i);
+        const selected = [...new Set(priority)].filter(i => i < lines!.length - 1).slice(0, max - 1).sort((a, b) => a - b);
+        lines = [...selected.map(i => lines![i]!), footer];
+      }
+    }
+  }
   if (lines && width !== undefined) {
     const contentWidth = Math.max(0, width - WIDGET_HORIZONTAL_MARGIN);
     return lines.map((line) => tuiTruncateToWidth(line, contentWidth, "…"));
