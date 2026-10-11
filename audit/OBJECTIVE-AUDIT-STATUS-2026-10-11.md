@@ -22,6 +22,15 @@
 5. Retain elapsed time, activity age, tool budget and inspection/action within bounded cards. No progress percentage based on unknown work volume.
 6. Regression tests must cover live, tool-wait, stale/stalled, workerless, and persistence-stopped states, plus narrow/wide production captures.
 
+## Implementation progress
+
+- Persistence/explicit blocked projections now outrank cached audit and background renderers on both card and footer. Regression exercises fresh cached worker progress alongside a persistence hold without mutating the saved claim.
+- `projectDisplayStatus` keeps detached audit liveness separate from busy parent-host activity. Goal and project audit heading/phase/footer now share running, tool-wait, quiet, stalled and unconfirmed semantics.
+- Project observation and legacy status use `respecAuditObservation`, including future-timestamp rejection and in-budget tool-wait handling. Project elapsed and activity facts have separate rows so they survive narrow layouts.
+- Project builders are explicitly `Loop / Project`; plain legacy loops also show `LOOP`. Structural tree prefixes are neutral; semantic labels retain phase colors.
+- New tests: `audit-persistence-status-precedence.test.ts`, `audit-status-color-consistency.test.ts`, `project-audit-status-consistency.test.ts`.
+- Latest focused pass: 152 tests, zero failures across seven files (`/tmp/glla-audit-colors-green.log`); typecheck passed before the final label substitution. Capture inspection, wider validation, and independent rehearsal remain pending.
+
 ## Scope
 
 Only GLLA presentation and its public observation adapters are implementation targets. This item does not alter Pi core, repair the operating system, or implement the separately queued quota retry and manual-model-resume goals.
