@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.39.29 — model-failure cadence isolation (2026-10-11)
+
+- Each active model now tracks its own `modelFailureSteps` rung; a freshly
+  selected backup never inherits the primary's retry phase. The same-model
+  phase deadline is suspended while a serving backup is healthy and resumes
+  only when the backup actually fails again.
+- `mainModelRecoverySucceeded` zeroes the rung and clears the phase so a
+  later failure on the same model starts fresh eager retries.
+- `audit/MODEL-CADENCE-2026-10-11.md` documents the durable fix; new tests
+  cover the post-success fresh phase and the eager boundary.
+
 ## 0.39.28 — verified retry budget and durable pause admission (2026-10-11)
 
 ### Recovery, durability and privacy

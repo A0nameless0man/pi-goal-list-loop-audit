@@ -108,6 +108,13 @@ different provider's quota to solve a five-second problem.
   The initial failure is not itself a retry.
 - A successful **rotation** resets the budget for the new model so the
   backup earns its own retries from zero and a fresh per-model phase clock.
+  The per-model `modelFailureSteps` counter (see
+  [audit/MODEL-CADENCE-2026-10-11.md](../audit/MODEL-CADENCE-2026-10-11.md))
+  tracks THIS model's own failures — a new backup never inherits the
+  primary's rung, and a successful backup session that later fails again
+  starts a fresh phase with eager retries. The same-model phase deadline
+  is suspended while a serving backup is healthy and only resumes once
+  the backup actually fails.
   Same-model retries preserve visited predecessors; they never erase the failed
   primary and accidentally select it ahead of the next backup. Phase clocks
   survive restart, and restored long waits are shortened to the fallback gate
