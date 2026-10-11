@@ -397,7 +397,7 @@ for (const scenario of [
         assert.equal(saved.goal?.pauseKind, 'wait', 'ordinary recovery owns a paced wait, not a compaction error hold');
         assert.equal(saved.goal?.objective, 'preserve work through context pressure');
         assert.equal(saved.mainModelRecovery?.active, 'provider/primary');
-        assert.equal(saved.mainModelRecovery?.sameModelRetries, 1);
+        assert.equal(saved.mainModelRecovery?.sameModelRetries ?? 0, 0, 'initial failure schedules a retry but does not consume an undispatched retry');
         assert.ok(Date.parse(saved.mainModelRecovery?.retryAt ?? '') > Date.now(), 'the first retry has a durable future deadline');
       }
     } finally {
