@@ -1469,8 +1469,12 @@ export function buildUiStatusFooter(status: UiStatus, now: number, theme?: Displ
   const command = nextAction.match(/\/(?:glla|goal|list|loop|review)(?:\s+[a-z][a-z-]*)?\b/i)?.[0];
   const compactAction = command && !nextAction.startsWith(command)
     ? `${command} · ${nextAction}` : nextAction;
+  const pauseContext = `· ${UI_HEALTH_LABEL[status.execution]} · ${phase}`;
+  const actionBudget = width ? Math.max(1, width - visibleLen(pauseContext) - 7) : 160;
+  const fittedAction = width && width >= 80 && status.workflow === 'paused'
+    ? tuiTruncateToWidth(compactAction, actionBudget, '…') : compactAction;
   const fitted = width && status.actionability === 'user' && visibleLen(text) > width
-    ? `${paint(theme, 'dim', 'glla:')} ${paint(theme, tone, compactAction)} ${paint(theme, 'dim', `· ${UI_HEALTH_LABEL[status.execution]} · ${phase}`)}${queueSeg}${recoverySeg}`
+    ? `${paint(theme, 'dim', 'glla:')} ${paint(theme, tone, fittedAction)} ${paint(theme, 'dim', pauseContext)}${queueSeg}${recoverySeg}`
     : text;
   return width ? tuiTruncateToWidth(fitted, Math.max(1, width), '…') : fitted;
 }
@@ -2172,7 +2176,7 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
       // Keep the headline and explicit inspection path even on tiny screens.
       // In larger budgets reserve field starts before wrapped continuations,
       // judgment history, worker rows or secondary runtime diagnostics.
-      const footer = paint(theme, 'dim', '└─ more: /glla status');
+      const footer = paint(theme, 'dim', width !== undefined && width < 24 ? '└─ /glla status' : '└─ more: /glla status');
       if (max === 1) lines = [lines[0]!];
       else {
         const priority = [0];

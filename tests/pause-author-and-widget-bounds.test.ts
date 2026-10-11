@@ -11,7 +11,7 @@ const now = Date.parse('2026-10-11T13:49:41Z');
 function fixture(): State {
   return { goal: { id: 'author', objective: 'Ship navigation', status: 'paused', policy: 'goal', autoContinue: true,
     createdAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString(), pauseKind: 'blocked',
-    pauseSource: 'agent', pauseReason: 'Missing current cover admissions; not proven artwork mismatches. '.repeat(40),
+    pauseSource: 'agent', usage: { tokensUsed: 0, tokensLimit: 1000000 }, pauseReason: 'Missing current cover admissions; not proven artwork mismatches. '.repeat(40),
     pauseSuggestedAction: 'Supply admissions or authorize remediation. '.repeat(40) }, list: [] };
 }
 
