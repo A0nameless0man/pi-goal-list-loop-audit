@@ -2,12 +2,26 @@
 
 ## Unreleased
 
+## 0.39.28 — verified retry budget and durable pause admission (2026-10-11)
+
+### Recovery, durability and privacy
+
 - Post-release audit: failure parking no longer double-consumes the same-model
   retry budget; all ten configured retries precede fallback admission.
 - `pause_goal` refuses with an error when its durable pause transaction fails,
   instead of claiming success and aborting an unpaused goal.
 - Fleet rejects malformed builder phases and filters workflow output so private
   journal text and terminal controls cannot escape through status formatting.
+
+### Isolated runtime and context evidence
+
+- Added a loopback-only real Pi SDK recovery verifier proving all ten retries,
+  configured fallback admission and resumed supervised work without touching
+  existing sessions or consuming provider quota.
+- New Freeport journal evidence confirms 430k context followed by automatic
+  compaction to 82k; a production admission regression covers safety holds and
+  subsequent firing. Missing historical safe-boundary evidence remains explicit:
+  the 200k target is not a hard cap, and no new lifecycle defect was demonstrated.
 
 ## 0.39.27 — project audit recovery and diagnostics fixes (2026-10-11)
 
