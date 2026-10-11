@@ -87,7 +87,7 @@ try {
   assert.deepEqual(loader.getExtensions().errors, []);
   record({ type: 'extensions_loaded', paths: loader.getExtensions().extensions.map(extension => extension.path), commands: loader.getExtensions().extensions.flatMap(extension => [...extension.commands.keys()]) });
   const model = modelRuntime.getModel('fixture', 'primary'); assert.ok(model);
-  const result = await createAgentSession({ cwd, agentDir, modelRuntime, model, thinkingLevel: 'off', resourceLoader: loader, settingsManager, sessionManager: SessionManager.create(cwd, path.join(root, 'sessions')), tools: [] });
+  const result = await createAgentSession({ cwd, agentDir, modelRuntime, model, thinkingLevel: 'off', resourceLoader: loader, settingsManager, sessionManager: SessionManager.create(cwd, path.join(root, 'sessions')), noTools: 'builtin' });
   session = result.session;
   // Supply a concrete, enumerable headless UI implementation. A proxy is
   // not suitable here: Pi copies UI methods when building each context.
@@ -115,6 +115,7 @@ try {
       checkpointReject(new Error(`Fixture tool failed: ${event.toolName}`));
     }
   });
+  assert.ok(session.getActiveToolNames().includes('fixture_checkpoint'), 'fixture work tool is callable, not suppressed by a hard SDK allowlist');
   record({ type: 'session', sessionId: session.sessionManager.getSessionId(), sessionFile: session.sessionManager.getSessionFile(), root });
   await session.prompt('/goal start Verify isolated recovery and call fixture_checkpoint after recovery');
   assert.ok(fs.existsSync(path.join(cwd, '.pi-glla', 'active.jsonl')), 'real goal command admitted a durable goal');
