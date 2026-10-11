@@ -1538,12 +1538,12 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   // Prerequisites are prose, not single-line diagnostics: wrapping prevents
   // the terminal from hiding the permission/alternative at the end. Detailed
   // status offers a larger bounded view; the compact card links to it.
-  const prose = (value: string, color: DisplayColor): void => {
-    wrap(uiSafeText(value, true), Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3), compact ? 4 : 32)
+  const prose = (label: 'next' | 'why', value: string, color: DisplayColor): void => {
+    wrap(`${label}: ${uiSafeText(value, true)}`, Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3), compact ? 4 : 32)
       .forEach((line, index) => rows.push(row(index === 0 ? '├─ ' : '│  ', line, color, true)));
   };
-  if (status.actionability === 'user') prose(`next: ${status.nextAction}`, 'dim');
-  if (status.blocker) prose(`why: ${status.blocker}`, 'warning');
+  if (status.actionability === 'user') prose('next', status.nextAction, 'dim');
+  if (status.blocker) prose('why', status.blocker, 'warning');
   if (compact && status.actionability === 'user' && extras?.durableDeferRecommendation) {
     const judgment = buildDurableDeferDecisionLines(extras.durableDeferRecommendation, width);
     rows.push(row('├─ ', judgment[judgment.length - 1]!, 'dim'));
