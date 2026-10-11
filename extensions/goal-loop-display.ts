@@ -1531,7 +1531,7 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   // the terminal from hiding the permission/alternative at the end. Detailed
   // status offers a larger bounded view; the compact card links to it.
   const prose = (value: string, color: DisplayColor): void => {
-    wrap(uiSafeText(value), Math.max(1, width - 3), compact ? 4 : 32)
+    wrap(uiSafeText(value), Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3), compact ? 4 : 32)
       .forEach((line, index) => rows.push(row(index === 0 ? '├─ ' : '│  ', line, color)));
   };
   if (status.actionability === 'user') prose(`next: ${status.nextAction}`, 'dim');
