@@ -38,8 +38,10 @@ test('blocked production card wraps the cause and action instead of cutting them
     assert.match(rows.join('\n'), /paused/);
     assert.match(rows.join('\n'), /why:/);
     assert.match(rows.join('\n'), /next:/);
-    assert.match(rows.at(-1)!, /details: \/glla status/);
-    if (!compactAuditCard || width >= 80) {
+    assert.match(rows.at(-1)!, /(?:details|more): \/glla status/);
+    assert.ok(rows.length <= (compactAuditCard ? 8 : 32));
+    assert.match(rows.join('\n'), /resume:/);
+    if (!compactAuditCard || width >= 200) {
       const plain = rows.slice(2, -1).map(row => row.slice(3)).join(' ');
       assert.ok(plain.includes('Do not bypass the release gate.'), plain);
       assert.ok(plain.includes('not 105 proven identity mismatches.'), plain);
