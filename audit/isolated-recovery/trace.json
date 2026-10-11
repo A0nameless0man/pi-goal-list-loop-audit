@@ -1,0 +1,437 @@
+[
+  {
+    "at": "2026-10-11T04:24:21.455Z",
+    "type": "extensions_loaded",
+    "paths": [
+      "/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/extensions/loops/goal.ts",
+      "<inline:1>"
+    ],
+    "commands": [
+      "goal",
+      "glla",
+      "review",
+      "list",
+      "loop"
+    ]
+  },
+  {
+    "at": "2026-10-11T04:24:21.470Z",
+    "type": "notification",
+    "message": "pi-goal-list-loop-audit: session provider \"fixture\" is not a known built-in. The auditor inherits the resolved model in-process, so this usually works — but if audits error with auth/provider failures, choose an explicit auditor model in /glla settings.",
+    "level": "info"
+  },
+  {
+    "at": "2026-10-11T04:24:21.476Z",
+    "type": "session",
+    "sessionId": "01a12934-62d0-73ad-850f-381a6bda7060",
+    "sessionFile": "/tmp/glla-isolated-recovery-Pax4Br/sessions/2026-10-11T04-24-21-456Z_01a12934-62d0-73ad-850f-381a6bda7060.jsonl",
+    "root": "/tmp/glla-isolated-recovery-Pax4Br"
+  },
+  {
+    "at": "2026-10-11T04:24:21.492Z",
+    "type": "notification",
+    "message": "Goal started: Verify isolated recovery and call fixture_checkpoint after recovery — the auditor will verify on completion.",
+    "level": "info"
+  },
+  {
+    "at": "2026-10-11T04:24:21.505Z",
+    "type": "agent_start"
+  },
+  {
+    "at": "2026-10-11T04:24:21.658Z",
+    "type": "request",
+    "model": "primary",
+    "messageCount": 1
+  },
+  {
+    "at": "2026-10-11T04:24:21.663Z",
+    "type": "assistant_end",
+    "model": "primary",
+    "stopReason": "error",
+    "error": "400: {\"message\":\"429 Token Plan rate limit reached (2062)\",\"type\":\"fixture_error\",\"code\":\"2062\"}"
+  },
+  {
+    "at": "2026-10-11T04:24:21.673Z",
+    "type": "notification",
+    "message": "Main model recovery: main model unknown — provider error. Trying again in 1m; work is saved and will not be abandoned. The agent can retry now with resume_goal.",
+    "level": "warning"
+  },
+  {
+    "at": "2026-10-11T04:24:21.678Z",
+    "type": "agent_end"
+  },
+  {
+    "at": "2026-10-11T04:24:21.680Z",
+    "type": "agent_settled"
+  },
+  {
+    "at": "2026-10-11T04:24:26.683Z",
+    "type": "notification",
+    "message": "Main model recovery: retrying fixture/primary (same-model retry 1/10) before switching to a configured backup.",
+    "level": "info"
+  },
+  {
+    "at": "2026-10-11T04:24:27.687Z",
+    "type": "agent_start"
+  },
+  {
+    "at": "2026-10-11T04:24:27.694Z",
+    "type": "request",
+    "model": "primary",
+    "messageCount": 2
+  },
+  {
+    "at": "2026-10-11T04:24:27.695Z",
+    "type": "assistant_end",
+    "model": "primary",
+    "stopReason": "error",
+    "error": "400: {\"message\":\"429 Token Plan rate limit reached (2062)\",\"type\":\"fixture_error\",\"code\":\"2062\"}"
+  },
+  {
+    "at": "2026-10-11T04:24:27.698Z",
+    "type": "agent_end"
+  },
+  {
+    "at": "2026-10-11T04:24:27.698Z",
+    "type": "agent_settled"
+  },
+  {
+    "at": "2026-10-11T04:24:32.706Z",
+    "type": "notification",
+    "message": "Main model recovery: retrying fixture/primary (same-model retry 2/10) before switching to a configured backup.",
+    "level": "info"
+  },
+  {
+    "at": "2026-10-11T04:24:33.708Z",
+    "type": "agent_start"
+  },
+  {
+    "at": "2026-10-11T04:24:33.716Z",
+    "type": "request",
+    "model": "primary",
+    "messageCount": 2
+  },
+  {
+    "at": "2026-10-11T04:24:33.717Z",
+    "type": "assistant_end",
+    "model": "primary",
+    "stopReason": "error",
+    "error": "400: {\"message\":\"429 Token Plan rate limit reached (2062)\",\"type\":\"fixture_error\",\"code\":\"2062\"}"
+  },
+  {
+    "at": "2026-10-11T04:24:33.720Z",
+    "type": "agent_end"
+  },
+  {
+    "at": "2026-10-11T04:24:33.720Z",
+    "type": "agent_settled"
+  },
+  {
+    "at": "2026-10-11T04:24:38.728Z",
+    "type": "notification",
+    "message": "Main model recovery: retrying fixture/primary (same-model retry 3/10) before switching to a configured backup.",
+    "level": "info"
+  },
+  {
+    "at": "2026-10-11T04:24:39.734Z",
+    "type": "agent_start"
+  },
+  {
+    "at": "2026-10-11T04:24:39.743Z",
+    "type": "request",
+    "model": "primary",
+    "messageCount": 2
+  },
+  {
+    "at": "2026-10-11T04:24:39.744Z",
+    "type": "assistant_end",
+    "model": "primary",
+    "stopReason": "error",
+    "error": "400: {\"message\":\"429 Token Plan rate limit reached (2062)\",\"type\":\"fixture_error\",\"code\":\"2062\"}"
+  },
+  {
+    "at": "2026-10-11T04:24:39.749Z",
+    "type": "agent_end"
+  },
+  {
+    "at": "2026-10-11T04:24:39.750Z",
+    "type": "agent_settled"
+  },
+  {
+    "at": "2026-10-11T04:24:44.760Z",
+    "type": "notification",
+    "message": "Main model recovery: retrying fixture/primary (same-model retry 4/10) before switching to a configured backup.",
+    "level": "info"
+  },
+  {
+    "at": "2026-10-11T04:24:45.763Z",
+    "type": "agent_start"
+  },
+  {
+    "at": "2026-10-11T04:24:45.770Z",
+    "type": "request",
+    "model": "primary",
+    "messageCount": 2
+  },
+  {
+    "at": "2026-10-11T04:24:45.771Z",
+    "type": "assistant_end",
+    "model": "primary",
+    "stopReason": "error",
+    "error": "400: {\"message\":\"429 Token Plan rate limit reached (2062)\",\"type\":\"fixture_error\",\"code\":\"2062\"}"
+  },
+  {
+    "at": "2026-10-11T04:24:45.774Z",
+    "type": "agent_end"
+  },
+  {
+    "at": "2026-10-11T04:24:45.774Z",
+    "type": "agent_settled"
+  },
+  {
+    "at": "2026-10-11T04:24:50.785Z",
+    "type": "notification",
+    "message": "Main model recovery: retrying fixture/primary (same-model retry 5/10) before switching to a configured backup.",
+    "level": "info"
+  },
+  {
+    "at": "2026-10-11T04:24:51.789Z",
+    "type": "agent_start"
+  },
+  {
+    "at": "2026-10-11T04:24:51.794Z",
+    "type": "request",
+    "model": "primary",
+    "messageCount": 2
+  },
+  {
+    "at": "2026-10-11T04:24:51.795Z",
+    "type": "assistant_end",
+    "model": "primary",
+    "stopReason": "error",
+    "error": "400: {\"message\":\"429 Token Plan rate limit reached (2062)\",\"type\":\"fixture_error\",\"code\":\"2062\"}"
+  },
+  {
+    "at": "2026-10-11T04:24:51.798Z",
+    "type": "agent_end"
+  },
+  {
+    "at": "2026-10-11T04:24:51.798Z",
+    "type": "agent_settled"
+  },
+  {
+    "at": "2026-10-11T04:24:56.802Z",
+    "type": "notification",
+    "message": "Main model recovery: retrying fixture/primary (same-model retry 6/10) before switching to a configured backup.",
+    "level": "info"
+  },
+  {
+    "at": "2026-10-11T04:24:57.806Z",
+    "type": "agent_start"
+  },
+  {
+    "at": "2026-10-11T04:24:57.813Z",
+    "type": "request",
+    "model": "primary",
+    "messageCount": 2
+  },
+  {
+    "at": "2026-10-11T04:24:57.814Z",
+    "type": "assistant_end",
+    "model": "primary",
+    "stopReason": "error",
+    "error": "400: {\"message\":\"429 Token Plan rate limit reached (2062)\",\"type\":\"fixture_error\",\"code\":\"2062\"}"
+  },
+  {
+    "at": "2026-10-11T04:24:57.819Z",
+    "type": "agent_end"
+  },
+  {
+    "at": "2026-10-11T04:24:57.819Z",
+    "type": "agent_settled"
+  },
+  {
+    "at": "2026-10-11T04:25:02.828Z",
+    "type": "notification",
+    "message": "Main model recovery: retrying fixture/primary (same-model retry 7/10) before switching to a configured backup.",
+    "level": "info"
+  },
+  {
+    "at": "2026-10-11T04:25:03.831Z",
+    "type": "agent_start"
+  },
+  {
+    "at": "2026-10-11T04:25:03.837Z",
+    "type": "request",
+    "model": "primary",
+    "messageCount": 2
+  },
+  {
+    "at": "2026-10-11T04:25:03.838Z",
+    "type": "assistant_end",
+    "model": "primary",
+    "stopReason": "error",
+    "error": "400: {\"message\":\"429 Token Plan rate limit reached (2062)\",\"type\":\"fixture_error\",\"code\":\"2062\"}"
+  },
+  {
+    "at": "2026-10-11T04:25:03.841Z",
+    "type": "agent_end"
+  },
+  {
+    "at": "2026-10-11T04:25:03.841Z",
+    "type": "agent_settled"
+  },
+  {
+    "at": "2026-10-11T04:25:08.854Z",
+    "type": "notification",
+    "message": "Main model recovery: retrying fixture/primary (same-model retry 8/10) before switching to a configured backup.",
+    "level": "info"
+  },
+  {
+    "at": "2026-10-11T04:25:09.858Z",
+    "type": "agent_start"
+  },
+  {
+    "at": "2026-10-11T04:25:09.864Z",
+    "type": "request",
+    "model": "primary",
+    "messageCount": 2
+  },
+  {
+    "at": "2026-10-11T04:25:09.865Z",
+    "type": "assistant_end",
+    "model": "primary",
+    "stopReason": "error",
+    "error": "400: {\"message\":\"429 Token Plan rate limit reached (2062)\",\"type\":\"fixture_error\",\"code\":\"2062\"}"
+  },
+  {
+    "at": "2026-10-11T04:25:09.868Z",
+    "type": "agent_end"
+  },
+  {
+    "at": "2026-10-11T04:25:09.868Z",
+    "type": "agent_settled"
+  },
+  {
+    "at": "2026-10-11T04:25:14.882Z",
+    "type": "notification",
+    "message": "Main model recovery: retrying fixture/primary (same-model retry 9/10) before switching to a configured backup.",
+    "level": "info"
+  },
+  {
+    "at": "2026-10-11T04:25:15.887Z",
+    "type": "agent_start"
+  },
+  {
+    "at": "2026-10-11T04:25:15.896Z",
+    "type": "request",
+    "model": "primary",
+    "messageCount": 2
+  },
+  {
+    "at": "2026-10-11T04:25:15.898Z",
+    "type": "assistant_end",
+    "model": "primary",
+    "stopReason": "error",
+    "error": "400: {\"message\":\"429 Token Plan rate limit reached (2062)\",\"type\":\"fixture_error\",\"code\":\"2062\"}"
+  },
+  {
+    "at": "2026-10-11T04:25:15.902Z",
+    "type": "agent_end"
+  },
+  {
+    "at": "2026-10-11T04:25:15.903Z",
+    "type": "agent_settled"
+  },
+  {
+    "at": "2026-10-11T04:25:20.912Z",
+    "type": "notification",
+    "message": "Main model recovery: retrying fixture/primary (same-model retry 10/10) before switching to a configured backup.",
+    "level": "info"
+  },
+  {
+    "at": "2026-10-11T04:25:21.917Z",
+    "type": "agent_start"
+  },
+  {
+    "at": "2026-10-11T04:25:21.924Z",
+    "type": "request",
+    "model": "primary",
+    "messageCount": 2
+  },
+  {
+    "at": "2026-10-11T04:25:21.925Z",
+    "type": "assistant_end",
+    "model": "primary",
+    "stopReason": "error",
+    "error": "400: {\"message\":\"429 Token Plan rate limit reached (2062)\",\"type\":\"fixture_error\",\"code\":\"2062\"}"
+  },
+  {
+    "at": "2026-10-11T04:25:21.932Z",
+    "type": "notification",
+    "message": "Main session model failover: fixture/primary → backup 1/1 fixture/backup. The next supervised turn tests it; a healthy fallback schedules a preferred-primary failback probe.",
+    "level": "warning"
+  },
+  {
+    "at": "2026-10-11T04:25:21.933Z",
+    "type": "agent_end"
+  },
+  {
+    "at": "2026-10-11T04:25:21.934Z",
+    "type": "agent_settled"
+  },
+  {
+    "at": "2026-10-11T04:25:24.440Z",
+    "type": "agent_start"
+  },
+  {
+    "at": "2026-10-11T04:25:24.446Z",
+    "type": "request",
+    "model": "backup",
+    "messageCount": 2
+  },
+  {
+    "at": "2026-10-11T04:25:24.449Z",
+    "type": "assistant_end",
+    "model": "backup",
+    "stopReason": "toolUse"
+  },
+  {
+    "at": "2026-10-11T04:25:24.451Z",
+    "type": "work_checkpoint",
+    "model": "backup",
+    "goalStatus": "active"
+  },
+  {
+    "at": "2026-10-11T04:25:24.452Z",
+    "type": "tool_execution_end",
+    "toolName": "fixture_checkpoint"
+  },
+  {
+    "at": "2026-10-11T04:25:24.455Z",
+    "type": "notification",
+    "message": "Main session fallback fixture/backup is healthy; the preferred primary fixture/primary will be probed automatically.",
+    "level": "info"
+  },
+  {
+    "at": "2026-10-11T04:25:24.457Z",
+    "type": "agent_end"
+  },
+  {
+    "at": "2026-10-11T04:25:24.459Z",
+    "type": "agent_settled"
+  },
+  {
+    "at": "2026-10-11T04:25:24.462Z",
+    "type": "notification",
+    "message": "Goal \"Verify isolated recovery and call fixture_checkpoint after recovery\" paused. /goal resume to continue.",
+    "level": "info"
+  },
+  {
+    "at": "2026-10-11T04:25:24.462Z",
+    "type": "verified",
+    "primaryRequests": 11,
+    "fallback": "fixture/backup",
+    "workResumed": true
+  }
+]
