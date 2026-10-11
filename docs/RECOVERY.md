@@ -86,22 +86,32 @@ upload, purchase, or other gated action.
 
 ## Same-model phase (v0.38.105)
 
-Before rotating to a configured backup, GLLA spends its **same-model retry
-budget** on the currently selected model (default 10; setting
-`mainModelSameModelRetries`, 0..100, 0 = legacy immediate rotation). The
+Before rotating to a configured backup, GLLA allows **up to** its same-model
+retry budget on the currently selected model (default 10; setting
+`mainModelSameModelRetries`, 0..100, 0 = legacy immediate rotation). When an
+untried, permitted configured backup remains, this phase also expires after
+**two minutes**. Whichever limit is reached first allows fallback selection.
+An in-flight provider call still finishes under the host's timeout; the phase
+limit does not claim to interrupt a running request. The
 phase exists because most provider failures are transient: a 429 "rate limit
 exceeded" rotating the session to a backup on the first turn spends a
 different provider's quota to solve a five-second problem.
 
 - The budget is **reason-agnostic** — the existing envelope cadence applies
   inside it: 5s for the eager transient window, then the short ladder;
-  an explicit upstream reset hint still sleeps to reset; persistent walls
-  ladder per `mainModelRetryMinutes`.
+  an explicit upstream reset hint still controls retries of that provider;
+  persistent walls ladder per `mainModelRetryMinutes`. Neither may postpone
+  eligibility to test an independent configured backup past the phase deadline.
+  With no untried permitted backup, normal paced recovery remains in force.
 - Same-model probes consume the retry budget once when admitted; failure
   parking advances the separate failure/cadence count, not the retry budget.
   The initial failure is not itself a retry.
 - A successful **rotation** resets the budget for the new model so the
-  backup earns its own retries from zero.
+  backup earns its own retries from zero and a fresh per-model phase clock.
+  Same-model retries preserve visited predecessors; they never erase the failed
+  primary and accidentally select it ahead of the next backup. Phase clocks
+  survive restart, and restored long waits are shortened to the fallback gate
+  when another permitted configured candidate remains.
 - A **cycle reset** (return to the current model after the chain was
   visited) re-seeds the budget at 1.
 - The status card shows the live counter (`Same-model retries: N`) so an
