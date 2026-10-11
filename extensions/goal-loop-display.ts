@@ -2171,7 +2171,7 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
   if (lines) {
     const limit = extras?.maxWidgetLines;
     const max = typeof limit === 'number' && Number.isFinite(limit)
-      ? Math.max(1, Math.min(32, Math.floor(limit))) : compact ? 8 : 32;
+      ? Math.max(1, Math.min(32, Math.floor(limit))) : shared ? (compact ? 8 : 32) : Number.MAX_SAFE_INTEGER;
     if (lines.length > max) {
       // Keep the headline and explicit inspection path even on tiny screens.
       // In larger budgets reserve field starts before wrapped continuations,

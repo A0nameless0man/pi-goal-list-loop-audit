@@ -2375,7 +2375,9 @@ test("v0.36.2: live UI repaint has a bounded cadence and diff guard", () => {
   assert.match(ui, /!force && !contextChanged && lastUIRenderAt > 0 && now - lastUIRenderAt < UI_RENDER_MIN_INTERVAL_MS/);
   assert.match(ui, /const widgetKey = widgetLines\?\.join\("\\n"\)/);
   assert.match(ui, /if \(statusChanged\) ctx\.ui\.setStatus/);
-  assert.match(ui, /if \(widgetChanged\) ctx\.ui\.setWidget/);
+  assert.match(ui, /if \(widgetChanged\) \{/);
+  assert.match(ui, /ctx\.ui\.setWidget\("pi-glla", \(tui, widgetTheme\) => responsiveWidget/);
+  assert.match(ui, /else ctx\.ui\.setWidget\("pi-glla", widgetLines/);
   assert.match(ui, /\}, UI_TICK_INTERVAL_MS\);/);
 });
 
