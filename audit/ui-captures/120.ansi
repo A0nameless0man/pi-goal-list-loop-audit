@@ -10,35 +10,33 @@
 [38;5;244m── Quota recovery ──────────────────────────────────────────────────────────────────────────────────────────────────────[0m
 [38;5;244m● [0m[38;5;244mGOAL[0m[38;5;244m · [0m[38;5;244mworking[0m[38;5;244m · [0m[38;5;244mRETRY ARMED[0m[38;5;244m · [0m[38;5;244mage 10m 00s[0m
 [38;5;244m│  [0mMake execution evidence clear without losing the cohesive card
-[38;5;244m├─ [0m[38;5;179mprovider error[0m
+[38;5;244m├─ [0m[38;5;179mwhy: provider error[0m
 [38;5;244m├─ [0m[38;5;244mrecovery timer armed · in 5m 00s[0m
 [38;5;244m├─ [0m[38;5;244mmodel: primary minimax/MiniMax-M3.1-Flash · inherited from session[0m
 [38;5;244m└─ [0m[38;5;244mnext: Retry when recovery timer fires[0m
 [38;5;244mglla:[0m [38;5;244mRETRY ARMED[0m [38;5;244m· goal working[0m [38;5;244m· automatic[0m
 
 [38;5;244m── Workflow rejection ──────────────────────────────────────────────────────────────────────────────────────────────────[0m
-[38;5;72m● [0m[38;5;244mPROJECT[0m[38;5;244m · [0m[38;5;244mreplanning[0m[38;5;244m · [0m[38;5;72mRUNNING[0m[38;5;244m · [0m[38;5;244m0/1 requirements verified[0m
-[38;5;72m│  [0mBuild a truthful project UI
-[38;5;72m├─ [0m[38;5;179mworkflow: Audit rejected: plan the next increment[0m
-[38;5;72m├─ [0m[38;5;244mlast progress 1s ago · runtime[0m
-[38;5;72m├─ [0m[38;5;244mmodel: primary openai-codex/gpt-6.1-sol · inherited from session[0m
-[38;5;72m└─ [0m[38;5;244mnext: Plan the next increment; scope unchanged[0m
+[38;5;147mProject · Replanning[0m · increment 0
+├─ Build a truthful project UI
+├─ [38;5;244mverified 0/1[0m · [38;5;179mremaining 1 · blocked 0[0m
+└─ [38;5;147mWork continues · /loop pause · /loop refine[0m
 [38;5;244mglla:[0m [38;5;72mRUNNING[0m [38;5;244m· project replanning[0m [38;5;244m· automatic[0m
 
 [38;5;244m── Blocked prerequisite ────────────────────────────────────────────────────────────────────────────────────────────────[0m
-[38;5;179m● [0m[38;5;244mGOAL[0m[38;5;244m · [0m[38;5;244mworking[0m[38;5;244m · [0m[38;5;179mBLOCKED[0m[38;5;244m · [0m[38;5;244mage 10m 00s[0m
+[38;5;179m● [0m[38;5;244mGOAL[0m[38;5;244m · [0m[38;5;244mpaused (source unknown)[0m[38;5;244m · [0m[38;5;179mBLOCKED[0m[38;5;244m · [0m[38;5;244mage 10m 00s[0m
 [38;5;179m│  [0mMake execution evidence clear without losing the cohesive card
 [38;5;179m├─ [0m[38;5;244mnext: Paste AAV version[0m
-[38;5;179m├─ [0m[38;5;179mVersion evidence missing[0m
-[38;5;179m├─ [0m[38;5;244mexecution unconfirmed · saved work retained[0m
+[38;5;179m├─ [0m[38;5;179mwhy: Version evidence missing[0m
+[38;5;179m├─ [0m[38;5;244mresume: /goal resume retries work after the prerequisite is resolved; it does not fix the blocker[0m
 [38;5;179m└─ [0m[38;5;244mdetails: /glla status[0m
-[38;5;244mglla:[0m [38;5;179mBLOCKED[0m [38;5;244m· goal working[0m [38;5;244m·[0m [38;5;179mPaste AAV version[0m
+[38;5;244mglla:[0m [38;5;179mBLOCKED[0m [38;5;244m· goal paused (source unknown)[0m [38;5;244m·[0m [38;5;179mPaste AAV version[0m
 
 [38;5;244m── Dormant audit ───────────────────────────────────────────────────────────────────────────────────────────────────────[0m
 [38;5;179m● [0m[38;5;244mGOAL[0m[38;5;244m · [0m[38;5;244mauditing[0m[38;5;244m · [0m[38;5;179mDORMANT[0m[38;5;244m · [0m[38;5;244mage 10m 00s[0m
 [38;5;179m│  [0mMake execution evidence clear without losing the cohesive card
 [38;5;179m├─ [0m[38;5;244mnext: Reopen project; /glla status[0m
-[38;5;179m├─ [0m[38;5;179mSession observed closed[0m
+[38;5;179m├─ [0m[38;5;179mwhy: Session observed closed[0m
 [38;5;179m├─ [0m[38;5;244mlast progress 1s ago · runtime[0m
 [38;5;179m└─ [0m[38;5;244mdetails: /glla status[0m
 [38;5;244mglla:[0m [38;5;179mDORMANT[0m [38;5;244m· goal auditing[0m [38;5;244m·[0m [38;5;179mReopen project; /glla status[0m
@@ -62,17 +60,15 @@
 [38;5;244mglla:[0m [38;5;179mEXECUTION UNCONFIRMED[0m [38;5;244m· goal settling[0m [38;5;244m· inspect execution[0m
 
 [38;5;244m── Completed project ───────────────────────────────────────────────────────────────────────────────────────────────────[0m
-[38;5;72m✓ [0m[38;5;244mPROJECT[0m[38;5;244m · [0m[38;5;72mCOMPLETE[0m
-[38;5;72m│  [0mBuild a truthful project UI
-[38;5;72m├─ [0m[38;5;244m1/1 requirements verified[0m
-[38;5;72m└─ [0m[38;5;244mnext: No action needed[0m
+[38;5;147m∞[0m Build a truthful project UI [38;5;244m·[0m iter 3/50 [38;5;244m▰▱▱▱▱[0m [38;5;244m·[0m 10m 00s
+└─ [38;5;244mmetricless (no plateau) · /loop stop · /loop refine[0m
 [38;5;244mglla:[0m [38;5;72mCOMPLETE[0m [38;5;244m· project[0m [38;5;244m· no action[0m
 
 [38;5;244m── Outcome-first completed summary[0m
 [38;5;147m[1mDone — Execution status is now truthful and actionable[0m[0m                                                                  
                                                                                                                         
 What Changed                                                                                                            
-[38;5;72m1. [0m[1mCards share owner-fenced execution evidence.[0m                                                                         
+[38;5;72m1. [0mCards share owner-fenced execution evidence.                                                                         
                                                                                                                         
 Remaining                                                                                                               
 [38;5;72m- [0mSaved journals cannot prove a live session.                                                                           
