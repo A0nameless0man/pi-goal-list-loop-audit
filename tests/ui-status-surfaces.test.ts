@@ -47,7 +47,7 @@ test('actual prerequisite precedes evidence and remains visible at narrow width'
   const lines = buildWidgetLines(state, undefined, NOW, undefined, 40, { uiStatusContext: context(state) })!;
   assert.match(lines[0]!, /BLOCKED/);
   assert.match(lines[2]!, /├─ next: Paste AAV version/);
-  assert.ok(lines.length <= 6);
+  assert.ok(lines.length <= 8, 'paused card includes bounded resume semantics');
   assert.ok(lines.every(line => visibleWidth(line) <= 40));
   assert.doesNotMatch(lines.join('\n'), /resume to continue|No action needed/);
 });
@@ -110,7 +110,7 @@ test('simultaneous holds and workflow issues remain cohesive and bounded', () =>
   state.goal!.pauseReason = 'Missing prerequisite'; state.goal!.pauseSuggestedAction = 'Supply evidence';
   const uiStatusContext = { ...context(state), workflowIssue: 'Audit rejected; replan required' };
   const lines = buildWidgetLines(state, undefined, NOW, undefined, 80, { uiStatusContext })!;
-  assert.ok(lines.length <= 6);
+  assert.ok(lines.length <= 8, 'both holds and resume instructions fit the height budget');
   assert.match(lines.join('\n'), /next: Supply evidence/);
   assert.match(lines.join('\n'), /workflow: Audit rejected/);
 });
