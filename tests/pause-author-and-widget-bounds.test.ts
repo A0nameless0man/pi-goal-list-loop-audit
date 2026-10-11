@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { visibleWidth } from '@earendil-works/pi-tui';
 import type { State } from '../extensions/goal-loop-core.js';
-import { readState } from '../extensions/goal-loop-core.js';
+import { readState, sanitizeDisplayText } from '../extensions/goal-loop-core.js';
 import { buildWidgetLines, buildStatusText, responsiveWidget, widgetHeightBudget } from '../extensions/goal-loop-display.js';
 import { projectUiStatus } from '../extensions/ui-status.js';
 import { withPressureSession, providerError } from './harness/context-pressure.js';
@@ -45,6 +45,15 @@ test('actual pause entrypoints persist episode authors and resume clears the pri
     await pi.fire('agent_end', providerError('429 Token Plan rate limit reached (2062)'), ctx);
     assert.equal(readState(cwd).goal?.pauseSource, 'system', 'runtime provider wait cannot inherit a user or agent attribution');
   });
+});
+
+test('narrow bounded manual cards retain prerequisite-first resume semantics and mark omitted prose', () => {
+  const state = fixture();
+  const lines = buildWidgetLines(state, undefined, now, undefined, 40, { uiStatusContext: { now }, maxWidgetLines: 8 })!.map(sanitizeDisplayText);
+  assert.ok(lines.length <= 8);
+  assert.match(lines.join('\n'), /resume: \/goal resume; fix first/);
+  assert.match(lines.join('\n'), /\/glla status/);
+  assert.ok(lines.some(line => line.startsWith('├─ why:') && line.endsWith('…')), lines.join('\n'));
 });
 
 test('responsive production card obeys both dimensions on each resize and preserves inspection path', () => {
