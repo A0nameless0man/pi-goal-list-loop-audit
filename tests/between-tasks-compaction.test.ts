@@ -187,6 +187,37 @@ test("v0.38.105 quiet boundaries: below threshold, busy, unsupervised, audit, pa
   }
 });
 
+test("Freeport 401k/430k field samples defer unsafe contacts, then compact at an eligible boundary", async () => {
+  const cwd = mkBoundaryCwd();
+  try {
+    __testOnlySetSpawnWorker(async () => ({ ok: true, brief: "Synthetic field replay; preserve current work." }));
+    // Replay observed counts and lifecycle gates, not an invented historical
+    // host-idleness observation: the journal does not contain that evidence.
+    for (const [tokens, flags, opts] of [
+      [401044, { ...LIVE_FLAGS, paused: true }, {}],
+      [430173, { ...LIVE_FLAGS, auditInFlight: true }, {}],
+      [430173, LIVE_FLAGS, { idle: false }],
+      [430173, LIVE_FLAGS, { pending: true }],
+    ] as const) {
+      const held = boundaryCtx(cwd, { tokens, ...opts });
+      assert.equal(maybeCompactTranscriptAtBoundary(held.ctx, flags), false);
+      assert.equal(held.compacts.length, 0);
+      assert.equal(fs.existsSync(compactorBoundaryMarkerPath(cwd)), false, "a refusal must not consume the later safe opportunity");
+    }
+    const eligible = boundaryCtx(cwd, { tokens: 430173 });
+    assert.equal(maybeCompactTranscriptAtBoundary(eligible.ctx, LIVE_FLAGS), true);
+    assert.equal(eligible.compacts.length, 1);
+    (eligible.compacts[0] as { onComplete(): void }).onComplete();
+    assert.ok(ledgerTypes(cwd).includes("compactor_transcript_done"));
+    const shrunk = boundaryCtx(cwd, { tokens: 81796 });
+    assert.equal(maybeCompactTranscriptAtBoundary(shrunk.ctx, LIVE_FLAGS), false);
+    assert.equal(fs.existsSync(compactorBoundaryMarkerPath(cwd)), false, "observed post-compaction count rearms through hysteresis");
+  } finally {
+    await settleBrief();
+    fs.rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
 test("v0.38.105 the boundary never re-arms the starvation path's brief one-shot", async () => {
   // A starvation fire at 190k sits below the 200k boundary threshold. The
   // boundary must not clear that marker while evaluating — doing so would
