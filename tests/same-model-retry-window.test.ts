@@ -44,7 +44,7 @@ test('real recovery clamps reset waits, rotates after slow failures, and restore
   const flags: any = { sessionGeneration: 1, mainModelRecoveryTimer: null, hourlyProbeTimer: null, hourlyProbeFireAt: null,
     extensionApi: { setModel: async (model: any) => { calls.push(`${model.provider}/${model.id}`); ctx.model = model; return true; }, getThinkingLevel: () => 'high', setThinkingLevel: () => {} } };
   try {
-    fs.writeFileSync(settingsPath, JSON.stringify({ mainModelFallbacks: ['provider/backup'], mainModelSameModelRetries: 10, hourlyRetryProbe: false }));
+    fs.writeFileSync(settingsPath, JSON.stringify({ mainModelFallbacks: ['provider/backup', 'provider/backup2'], mainModelSameModelRetries: 10, hourlyRetryProbe: false }));
     replaceState({ goal: { id: 'window', status: 'active', objective: 'work', tasks: [], startedAt: new Date().toISOString() }, loop: null } as any);
     createGoalRecovery(flags, { activeGoalSurfaceCommand: (c: string) => `/goal ${c}`, clearDetachedAuditRuntime: () => {},
       updateGoal: (patch: any) => { Object.assign(state.goal!, patch); return true; }, clearContinuationTimer: () => {},
@@ -71,6 +71,12 @@ test('real recovery clamps reset waits, rotates after slow failures, and restore
     assert.equal(state.mainModelRecovery?.sameModelRetries, 0);
     assert.ok(Date.parse(state.mainModelRecovery!.sameModelPhaseStartedAt!) >= previous, 'backup owns a fresh phase, not primary age');
     assert.equal(state.goal!.status, 'active');
+    parkMainModelAfterFailure(ctx, classifyMainModelFailure('429 Upstream request failed: Endpoint is unavailable.'));
+    await probeMainModelRecovery(ctx);
+    assert.deepEqual(state.mainModelRecovery!.attempted, ['provider/free', 'provider/backup'], 'retry admission must not forget the already-failed primary');
+    state.mainModelRecovery!.sameModelPhaseStartedAt = new Date(Date.now() - 180_000).toISOString();
+    await probeMainModelRecovery(ctx);
+    assert.deepEqual(calls, ['provider/backup', 'provider/backup2'], 'a failed first backup advances to the second, never jumping backward to the primary');
     const restored = sanitizeMainModelRecovery(state.mainModelRecovery);
     assert.equal(restored?.sameModelPhaseStartedAt, state.mainModelRecovery!.sameModelPhaseStartedAt);
   } finally {
