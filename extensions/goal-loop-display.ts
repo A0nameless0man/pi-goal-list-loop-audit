@@ -1549,10 +1549,10 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
       rows.push(row('├─ ', `retry: same model ${recovery.sameModelRetries ?? 0}${budget !== undefined ? `/${budget}` : ''} · ${recovery.active ?? recovery.primary}`));
       const spent = budget !== undefined && (recovery.sameModelRetries ?? 0) >= budget;
       const eligible = spent || (deadline !== undefined && now >= deadline) ? 'eligible now'
-        : deadline !== undefined ? `eligible in ${fmtElapsed(deadline - now)} or when retries spent` : 'after retry budget';
+        : deadline !== undefined ? `in ${fmtElapsed(deadline - now)} or retry cap` : 'after retry budget';
       rows.push(row('├─ ', candidate ? `fallback: ${eligible}` : extras?.mainModelFallbacks ? 'fallback: no untried permitted candidate' : 'fallback: configuration not supplied to this view'));
-      if (candidate) wrap(`backup: ${uiSafeText(candidate)}`, Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3), 32)
-        .forEach((line, index) => rows.push(row(index === 0 ? '├─ ' : '│  ', line, 'dim', true)));
+      if (candidate) wrap(uiSafeText(candidate), Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3 - 8), 32)
+        .forEach((line, index) => rows.push(row(index === 0 ? '├─ ' : '│  ', index === 0 ? `backup: ${line}` : line, 'dim', true)));
     }
     const [lifecycle, transition] = pausedLifecycleLines(g, state, extras, now);
     const observedTransition = status.execution === 'retry-armed'

@@ -30,10 +30,20 @@ test('bounded recovery card states retry progress and fallback eligibility witho
   const lines = buildWidgetLines(fixture, undefined, now, undefined, 200, extras)!;
   assert.ok(lines.length <= 8);
   assert.match(lines.join('\n'), /retry: same model 2\/10/);
-  assert.match(lines.join('\n'), /fallback: eligible now.*next candidate provider\/backup/);
-  assert.doesNotMatch(lines.join('\n'), /next candidate provider\/forbidden|switched to/);
+  assert.match(lines.join('\n'), /fallback: eligible now/);
+  assert.match(lines.join('\n'), /backup: provider\/backup/);
+  assert.doesNotMatch(lines.join('\n'), /backup: provider\/forbidden|switched to/);
+  const narrowExtras = { ...extras, mainModelFallbacks: ['opencode-go/muse-spark-1.3-contributor'] };
+  const narrow = buildWidgetLines(fixture, undefined, now, undefined, 40, narrowExtras)!;
+  const start = narrow.findIndex(line => line.startsWith('├─ backup:'));
+  assert.ok(start >= 0);
+  let name = narrow[start]!.replace('├─ backup: ', '');
+  for (let i = start + 1; i < narrow.length && narrow[i]!.startsWith('│  '); i++) name += narrow[i]!.slice(3);
+  assert.equal(name, 'opencode-go/muse-spark-1.3-contributor', 'the full next candidate survives narrow bounded geometry');
+  assert.ok(narrow.length <= 8);
+  assert.match(narrow.join('\n'), /\/glla status/);
   const runtime = { retryTimerArmed: true, hourlyTimerArmed: false, turnActive: false, turnQueued: false, switchInFlight: false };
-  const armed = buildWidgetLines(fixture, undefined, now, undefined, 200, { ...extras, mainModelRecoveryRuntime: runtime,
+  const armed = buildWidgetLines(fixture, undefined, now, undefined, 200, { ...extras, maxWidgetLines: 12, mainModelRecoveryRuntime: runtime,
     uiStatusContext: { now, generation: 1, evidence: { ownerKey: uiStatusOwnerKey(fixture)!, generation: 1, observedAt: now, session: 'open', recovery: runtime } } })!.join('\n');
   assert.match(armed, /RETRY ARMED/);
   assert.match(armed, /next: recovery timer armed/);
