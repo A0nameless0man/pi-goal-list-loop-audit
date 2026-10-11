@@ -763,6 +763,8 @@ export interface Goal {
   /** Original claim for this objective; survives disapproval and reload. */
   completionRecap?: { objective: string; summary: string };
   pauseReason?: string;
+  /** Recorded author of this pause episode; absent for legacy observations. */
+  pauseSource?: "agent" | "user" | "system";
   pauseSuggestedAction?: string;
   /** v0.28.22: pause classification — drives the widget/status rendering
    * (a decision pause, an operational failure, a time-gated wait, and a

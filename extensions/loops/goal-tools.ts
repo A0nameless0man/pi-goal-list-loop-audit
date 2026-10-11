@@ -2754,6 +2754,7 @@ function registerAgentTools(pi: any): void {
       const pauseLanded = updateGoal({
         status: "paused",
         pauseReason: safePauseReason,
+        pauseSource: "agent",
         pauseSuggestedAction: safePauseAction,
         pauseKind: effectiveKind,
         pauseOptions: p.kind === "decision" && p.options && p.options.length > 0 ? p.options : undefined,
