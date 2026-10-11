@@ -4,7 +4,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { sameModelRetryDeadline, sameModelRetryPhaseActive, classifyMainModelFailure } from '../extensions/main-model-recovery.js';
-import { sanitizeMainModelRecovery } from '../extensions/goal-loop-core.js';
+import { formatMainModelRecoveryStatus, sanitizeMainModelRecovery } from '../extensions/goal-loop-core.js';
 import { createGoalRecovery, parkMainModelAfterFailure, probeMainModelRecovery, scheduleMainModelRecoveryTimer } from '../extensions/goal-recovery.js';
 import { state, replaceState } from '../extensions/goal-state.js';
 import { globalSettingsPath } from '../extensions/goal-settings.js';
@@ -31,6 +31,12 @@ test('bounded recovery card states retry progress and fallback eligibility witho
   assert.match(lines.join('\n'), /retry: same model 2\/10/);
   assert.match(lines.join('\n'), /fallback: eligible now.*next candidate provider\/backup/);
   assert.doesNotMatch(lines.join('\n'), /next candidate provider\/forbidden|switched to/);
+});
+
+test('recovery order deduplicates the primary and repeated backups like the selector', () => {
+  const text = formatMainModelRecoveryStatus({ primary: 'provider/free', active: 'provider/backup', attempted: ['provider/free'], attempts: 1, reason: 'provider error', kind: 'goal' }, ['provider/free', 'provider/backup', 'PROVIDER/BACKUP']).join('\n');
+  assert.match(text, /backup 1\/1 selected/);
+  assert.match(text, /Order: provider\/free → provider\/backup\n/);
 });
 
 test('real recovery clamps reset waits, rotates after slow failures, and restores old long waits', async () => {
