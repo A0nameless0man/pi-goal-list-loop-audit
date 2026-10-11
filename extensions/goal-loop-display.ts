@@ -1520,7 +1520,7 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   // Live audit objects own phase/recovery rows: embed the same compact
   // glance the legacy card renders (v0.34.22 "Audit starting"). Without an
   // object the generic unconfirmed rail below stays (saved-claim contract).
-  const auditingLive = g && g.status === 'auditing' && audit && compact
+  const auditingLive = g && g.status === 'auditing' && audit && compact && status.execution !== 'blocked'
     ? compactAuditingCardRows(g, audit, auditingCardBlock(g, audit, now, theme, extras), now, theme, extras).map(line => line.replace(/^└─/, '├─'))
     : undefined;
   if (auditingLive) rows.push(...auditingLive.map(line => clipped(line)));
@@ -1635,7 +1635,7 @@ export function buildStatusText(state: State, audit?: AuditDisplayProgress | nul
   // (behavioral pins) — disjoint states, so the renderers never contradict.
   // Everything else rides the shared projection footer.
   const waitingOnly = (!state.goal && (state.list?.length ?? 0) > 0) ? waitingListStatus(state, now, theme, width) : undefined;
-  const auditingLive = (state.goal?.status === "auditing" && audit) ? auditingStatusText(state, state.goal, audit, now, theme, extras, width) : undefined;
+  const auditingLive = (state.goal?.status === "auditing" && audit && shared?.execution !== 'blocked') ? auditingStatusText(state, state.goal, audit, now, theme, extras, width) : undefined;
   const interruptedActive = (state.goal?.status === "active" && state.goal.interruptedAt)
     ? interruptedActiveStatus(state.goal, theme, heldLoop(state) ? paint(theme, "warning", " · loop⏸held") : "") : undefined;
   const base = shared
@@ -2125,7 +2125,7 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
   const shared = extras?.uiStatusContext ? projectUiStatus(state, { ...extras.uiStatusContext, now }) : undefined;
   const compact = extras?.compactAuditCard !== false;
   const rawInner = background
-    ?? (shared && !needsLegacyWidget(state, audit, compact)
+    ?? (shared && (shared.execution === 'blocked' || !needsLegacyWidget(state, audit, compact))
       ? buildUiStatusCard(state, shared, now, theme, width, compact, extras, audit)
       : buildWidgetLinesInner(state, audit, now, theme, width, extras));
   const view = stateWorkView(state, observedWorkActivity(extras, now));
