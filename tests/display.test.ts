@@ -2193,7 +2193,7 @@ test("v0.33.0: slim card — meter rounding guard, folded status segments, last-
     active: true, target: "endless-td audit", iteration: 12, maxIterations: 100,
     stallCount: 0, plateauWindow: 5, startedAt: "2026-07-21T11:57:00Z", history: [],
   } as any }, null, NOW, undefined, 120, { recent: [{ name: "read", arg: "tiles.ts", ms: 8_000, ok: true }] })!;
-  assert.match(loopLines[0]!, /^∞ endless-td audit · iter 12\/100 ▰▱▱▱▱ · /);
+  assert.match(loopLines[0]!, /^∞ LOOP endless-td audit · iter 12\/100 ▰▱▱▱▱ · /);
   assert.match(loopLines[1]!, /^├─ ✓ read tiles\.ts \(8s\)/);
   assert.match(loopLines[2]!, /^└─ metricless \(no plateau\) · \/loop stop · \/loop refine/); // v0.33.2: /loop refine is a real verb now
   // Loop-scoped twin of the v0.34.124 goal fix: the ring is

@@ -79,13 +79,28 @@ export function respecAuditToolWait(progress: RespecAuditLive | undefined, now: 
     || now - progress.currentToolStartedAt! >= progress.toolTimeoutMs!) return undefined;
   return `waiting on ${sanitizeDisplayText(progress.currentTool)} · ${seconds(now - progress.currentToolStartedAt!)} / ${seconds(progress.toolTimeoutMs!)} timeout`;
 }
-export function respecAuditStatus(builder: RespecBuilderState, now: number): string {
+export function respecAuditObservation(builder: RespecBuilderState, now: number) {
   const progress = getRespecAuditLive(builder);
+  const toolWait = respecAuditToolWait(progress, now);
+  const age = progress?.lastActivityAt !== undefined && Number.isFinite(progress.lastActivityAt) && progress.lastActivityAt <= now
+    ? now - progress.lastActivityAt : undefined;
+  const live = age !== undefined && age <= 15_000 && progress?.phase === 'running';
+  const phase: 'queued' | 'running' | 'quiet' | 'stalled' = toolWait ? 'running' : age !== undefined && age > 60 * 60_000 ? 'stalled'
+    : age !== undefined && age > 3 * 60_000 ? 'quiet' : progress?.phase === 'starting' ? 'queued' : 'running';
+  const tone: 'accent' | 'error' | 'warning' | 'success' = toolWait ? 'accent' : phase === 'stalled' ? 'error'
+    : phase === 'quiet' ? 'warning' : live ? 'success' : 'accent';
+  const label = toolWait ?? (phase === 'quiet' || phase === 'stalled' ? phase : live ? 'running'
+    : phase === 'queued' ? 'starting · worker unconfirmed' : progress?.phase === 'retrying' ? 'retry waiting · execution unconfirmed' : 'execution unconfirmed');
+  return { progress, toolWait, live, phase, tone, label, age };
+}
+export function respecAuditStatus(builder: RespecBuilderState, now: number): string {
+  const observation = respecAuditObservation(builder, now);
+  const { progress } = observation;
   if (!progress) return "auditor: waiting for dispatch · no live worker observed";
-  return `auditor: ${respecAuditToolWait(progress, now) ?? progress.phase}${progress.round === 2 ? " · second pass" : ""} · ${sanitizeDisplayText(progress.model ?? "model pending")}`
+  return `auditor: ${observation.label}${progress.round === 2 ? " · second pass" : ""} · ${sanitizeDisplayText(progress.model ?? "model pending")}`
     + (progress.attemptStartedAt !== undefined ? ` · attempt ${seconds(now - progress.attemptStartedAt)}` : "")
     + ` · total ${seconds(now - progress.startedAt)}`
-    + (progress.lastActivityAt !== undefined ? ` · last activity ${seconds(now - progress.lastActivityAt)} ago` : " · worker activity not observed")
+    + (observation.age !== undefined ? ` · last activity ${seconds(observation.age)} ago` : " · worker activity not observed")
     + (progress.activity ? ` · ${sanitizeDisplayText(progress.activity)}` : "")
     + (progress.retryAt !== undefined ? ` · retry in ${seconds(progress.retryAt - now)}` : "");
 }

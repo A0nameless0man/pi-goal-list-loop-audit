@@ -67,7 +67,8 @@ test("project tool waits show a ticking deadline and separate attempt/total cloc
   try {
     setRespecAuditLive(builder, progress);
     const card = stripTerminalSequences(buildWidgetLines(state, null, now, undefined, 250)!.join("\n"));
-    assert.match(card, /waiting on bash.*90s \/ 300s timeout.*second pass.*attempt 3m.*total 15m/);
+    assert.match(card, /waiting on bash.*90s \/ 300s timeout.*second pass/);
+    assert.match(card, /audit elapsed 15m.*attempt 3m/);
     assert.match(card, /timeout recovery is automatic/);
     assert.match(buildStatusText(state, null, now)!, /waiting on bash.*90s \/ 300s timeout/);
     assert.match(buildStatusText(state, null, now + 10000)!, /100s \/ 300s timeout/);

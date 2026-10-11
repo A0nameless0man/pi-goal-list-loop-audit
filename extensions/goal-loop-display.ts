@@ -1,4 +1,4 @@
-import { getRespecAuditLive, respecAuditStatus, respecAuditToolWait, respecBlockerHeadline } from "./respec-builder-ui.js";
+import { respecAuditObservation, respecAuditStatus, respecBlockerHeadline } from "./respec-builder-ui.js";
 /**
  * pi-goal-list-loop-audit — v0.9.0
  * extensions/goal-loop-display.ts
@@ -1434,25 +1434,15 @@ function uiExecutionLabel(status: UiStatus): string {
   if (status.auditPhase === 'awaiting-verdict') return 'AUDIT REVIEW PENDING';
   return UI_HEALTH_LABEL[status.execution];
 }
-function projectAuditDisplay(loop: LoopState, now: number) {
-  const progress = getRespecAuditLive(loop.builder!);
-  const toolWait = respecAuditToolWait(progress, now);
-  const age = progress?.lastActivityAt !== undefined && Number.isFinite(progress.lastActivityAt) && progress.lastActivityAt <= now
-    ? now - progress.lastActivityAt : undefined;
-  const live = age !== undefined && age <= LIVE_ACTIVITY_MS && progress?.phase === 'running';
-  const phase: AuditorDisplayPhase = toolWait ? 'running' : age !== undefined && age > AUDITOR_STALLED_MS ? 'stalled'
-    : age !== undefined && age > AUDITOR_QUIET_MS ? 'quiet' : progress?.phase === 'starting' ? 'queued' : 'running';
-  return { progress, toolWait, live, phase, tone: toolWait ? 'accent' as const : auditorPhaseTone(phase, live) };
-}
 /** Detached activity must not inherit a busy parent host's RUNNING badge. */
 function projectDisplayStatus(state: State, audit: AuditDisplayProgress | null | undefined, context: UiStatusContext): UiStatus {
   const status = projectUiStatus(state, context);
   const goal = state.goal;
   if (status.mode === 'project' && state.loop?.builder?.phase === 'auditing' && status.execution !== 'blocked') {
-    const observed = projectAuditDisplay(state.loop, context.now);
+    const observed = respecAuditObservation(state.loop.builder, context.now);
     return { ...status, execution: observed.toolWait ? 'tool-wait' : observed.live ? 'running' : 'unconfirmed',
       auditPhase: observed.phase, auditLive: observed.live,
-      actionability: observed.phase === 'stalled' || observed.phase === 'quiet' ? 'inspect' : 'automatic',
+      actionability: !observed.live && !observed.toolWait && observed.phase !== 'queued' ? 'inspect' : 'automatic',
       nextAction: '/loop status for audit activity and recovery details' };
   }
   if (status.mode !== 'goal' && status.mode !== 'list' || goal?.status !== 'auditing' || status.execution === 'blocked') return status;
@@ -1494,7 +1484,7 @@ export function buildUiStatusFooter(status: UiStatus, now: number, theme?: Displ
   // Segmented like every legacy footer: only the execution word (and, when
   // the user must act, the required action) carries the tone. Mode, phase
   // and filler stay dim so a blocked footer doesn't wash the whole line.
-  const head = `${paint(theme, 'dim', 'glla:')} ${paint(theme, tone, UI_HEALTH_LABEL[status.execution])} ${paint(theme, 'dim', `· ${phase}`)}`;
+  const head = `${paint(theme, 'dim', 'glla:')} ${paint(theme, tone, uiExecutionLabel(status))} ${paint(theme, 'dim', `· ${phase}`)}`;
   // v0.35.61 queue depth and the saved-recovery honesty note ride the
   // footer as dim segments — durable context, never tone claims.
   const queueSeg = status.queueDepth ? ` ${paint(theme, 'dim', `· ${status.queueDepth} queued`)}` : '';
@@ -1506,7 +1496,7 @@ export function buildUiStatusFooter(status: UiStatus, now: number, theme?: Displ
   const compactionSeg = compaction?.tokens !== undefined && compaction.tokens >= compaction.threshold
     ? ` ${paint(theme, 'dim', `· compact: ${compaction.reason}`)}` : '';
   const text = status.recoveryNote && status.execution === 'unconfirmed'
-    ? `${paint(theme, 'dim', 'glla:')} ${paint(theme, tone, UI_HEALTH_LABEL[status.execution])}${recoverySeg} ${paint(theme, 'dim', `· ${phase}`)}${queueSeg} ${tail}${compactionSeg}`
+    ? `${paint(theme, 'dim', 'glla:')} ${paint(theme, tone, uiExecutionLabel(status))}${recoverySeg} ${paint(theme, 'dim', `· ${phase}`)}${queueSeg} ${tail}${compactionSeg}`
     : `${head}${queueSeg}${recoverySeg} ${tail}${compactionSeg}`;
   // Required actions outrank secondary context when the full footer cannot
   // fit. Commands can follow prerequisite prose (e.g. repair storage, then
@@ -1518,7 +1508,7 @@ export function buildUiStatusFooter(status: UiStatus, now: number, theme?: Displ
   const actionText = /^run\s+\//i.test(nextAction) ? nextAction.replace(/^run\s+/i, '') : nextAction;
   const compactAction = command && !actionText.startsWith(command)
     ? `${command} · ${actionText}` : actionText;
-  const pauseContext = `· ${UI_HEALTH_LABEL[status.execution]} · ${phase}`;
+  const pauseContext = `· ${uiExecutionLabel(status)} · ${phase}`;
   const actionBudget = width ? Math.max(1, width - visibleLen(pauseContext) - 7) : 160;
   const fittedAction = width && width >= 80 && status.workflow === 'paused'
     ? tuiTruncateToWidth(compactAction, actionBudget, '…') : compactAction;
@@ -1537,7 +1527,7 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   const coverage = loop?.builder ? respecCoverage(loop.builder) : undefined;
   const progress = coverage ? `${coverage.verified}/${coverage.total} requirements verified${coverage.blocked ? ` · ${coverage.blocked} requirements blocked` : ''}`
     : state.goal?.taskList ? buildTaskProgressText(state.goal) : loop ? `iteration ${loop.iteration}` : '';
-  const phase = status.workflow.toUpperCase() === UI_HEALTH_LABEL[status.execution] ? '' : `${status.workflow} · `;
+  const phase = status.workflow.toUpperCase() === uiExecutionLabel(status) ? '' : `${status.workflow} · `;
   const metrics = !terminal && width >= 80 && (status.mode === 'goal' || status.mode === 'list') && state.goal
     ? [state.goal.agentRole ? `${state.goal.agentRole} role` : '',
       Number.isFinite(Date.parse(state.goal.createdAt)) ? `age ${fmtElapsed(now - Date.parse(state.goal.createdAt))}` : '',
@@ -3193,20 +3183,22 @@ function respecBuilderLines(loop: LoopState, now: number, theme?: DisplayTheme, 
   const builder = loop.builder!;
   const stopped = projectExplicitlyStopped(loop);
   const coverage = respecCoverage(builder);
-  const observation = loop.active && builder.phase === 'auditing' ? projectAuditDisplay(loop, now) : undefined;
+  const observation = loop.active && builder.phase === 'auditing' ? respecAuditObservation(builder, now) : undefined;
   const tone = !loop.active ? 'warning' : observation?.tone ?? 'accent';
-  const phase = !loop.active && builder.phase === "auditing" ? stopped ? "Audit stopped" : "Audit held" : builder.phase === "planning" ? "Planning" : builder.phase[0]!.toUpperCase() + builder.phase.slice(1);
+  const phase = !loop.active && builder.phase === "auditing" ? stopped ? "Audit stopped" : "Audit held" : observation?.toolWait ? 'Audit tool wait' : observation?.phase === 'quiet' ? 'Audit quiet' : observation?.phase === 'stalled' ? 'Audit stalled' : builder.phase === "planning" ? "Planning" : builder.phase[0]!.toUpperCase() + builder.phase.slice(1);
   const current = builder.tasks.find(t => t.status === "pending") ?? builder.tasks.at(-1);
   const blocker = builder.requirements.find(r => r.status === "blocked");
   const allBlocked = !loop.active && !stopped && coverage.blocked > 0 && coverage.blocked === coverage.remaining;
   const evidence = [...builder.requirements].reverse().find(r => r.evidence)?.evidence?.report ?? builder.history?.at(-1)?.report;
-  const action = stopped ? "Work stopped · /loop status · /loop respec starts a new project" : allBlocked ? "Blocked · /loop recheck to assess and continue repair work" : !loop.active ? "Work held · /loop status · /loop resume when ready" : builder.phase === "auditing" ? "Independent verification pending · no action needed" : "Work continues · /loop pause · /loop refine";
-  const narrowAction = stopped ? "Work stopped · /loop status" : allBlocked ? "/loop recheck · assess blockers" : !loop.active ? "/loop resume when ready · /loop status" : builder.phase === "auditing" ? "Independent audit pending · no action" : "Work continues · /loop pause";
+  const auditNeedsInspection = !!observation && !observation.live && !observation.toolWait && observation.phase !== 'queued';
+  const action = stopped ? "Work stopped · /loop status · /loop respec starts a new project" : allBlocked ? "Blocked · /loop recheck to assess and continue repair work" : !loop.active ? "Work held · /loop status · /loop resume when ready" : auditNeedsInspection ? 'Audit execution unconfirmed · /loop status for activity and recovery details' : builder.phase === "auditing" ? "Independent verification pending · no action needed" : "Work continues · /loop pause · /loop refine";
+  const narrowAction = stopped ? "Work stopped · /loop status" : allBlocked ? "/loop recheck · assess blockers" : !loop.active ? "/loop resume when ready · /loop status" : auditNeedsInspection ? 'Inspect audit · /loop status' : builder.phase === "auditing" ? "Independent audit pending · no action" : "Work continues · /loop pause";
   const progress = observation?.progress;
   const toolWait = observation?.toolWait;
   const auditLines = loop.active && builder.phase === "auditing" ? progress ? [
-    `auditor: ${toolWait ?? progress.phase}${progress.round === 2 ? " · second pass" : ""} · ${progress.attemptStartedAt !== undefined ? `attempt ${fmtElapsed(now - progress.attemptStartedAt)} · ` : ""}total ${fmtElapsed(now - progress.startedAt)} · ${sanitizeDisplayText(progress.model ?? "model pending")}`,
-    `last activity: ${progress.lastActivityAt !== undefined ? `${fmtElapsed(now - progress.lastActivityAt)} ago` : "not observed"}${progress.activity ? ` · ${sanitizeDisplayText(progress.activity)}` : ""}${progress.retryAt !== undefined ? ` · retry in ${fmtElapsed(Math.max(0, progress.retryAt - now))}` : ""}`,
+    `auditor: ${observation!.label}${progress.round === 2 ? " · second pass" : ""} · ${sanitizeDisplayText(progress.model ?? "model pending")}`,
+    `audit elapsed ${Number.isFinite(progress.startedAt) && progress.startedAt <= now ? fmtElapsed(now - progress.startedAt) : 'unknown'}${progress.attemptStartedAt !== undefined && Number.isFinite(progress.attemptStartedAt) && progress.attemptStartedAt <= now ? ` · attempt ${fmtElapsed(now - progress.attemptStartedAt)}` : ''}`, 
+    `last activity: ${observation?.age !== undefined ? `${fmtElapsed(observation.age)} ago` : "not observed"}${progress.activity ? ` · ${sanitizeDisplayText(progress.activity)}` : ""}${progress.retryAt !== undefined ? ` · retry in ${fmtElapsed(Math.max(0, progress.retryAt - now))}` : ""}`,
   ] : ["auditor: waiting for dispatch · no live worker observed"] : [];
   const title = paint(theme, tone, `Loop / Project · ${phase}`);
   return [
@@ -3214,7 +3206,7 @@ function respecBuilderLines(loop: LoopState, now: number, theme?: DisplayTheme, 
     `├─ ${truncate(sanitizeDisplayText(builder.vision), budgetFor(width, 3, 75))}`,
     `├─ ${paint(theme, coverage.verified > 0 ? "success" : "dim", `verified ${coverage.verified}/${coverage.total}`)} · ${paint(theme, coverage.remaining > 0 ? "warning" : "dim", `remaining ${coverage.remaining} · blocked ${coverage.blocked}`)}`,
     ...(current ? [`├─ ${builder.phase === "auditing" ? "claim" : "task"}: ${truncate(sanitizeDisplayText(current.text), budgetFor(width, 10, 70))}`] : []),
-    ...auditLines.map(line => `├─ ${paint(theme, tone, truncate(line, budgetFor(width, 3, 90)))}`),
+    ...auditLines.map((line, index) => `├─ ${paint(theme, index === 0 ? tone : 'dim', truncate(line, budgetFor(width, 3, 90)))}`),
     ...(!loop.active && loop.stopReason ? [`├─ ${paint(theme, "warning", `${stopped ? "stopped" : "held"}: ${truncate(sanitizeDisplayText(loop.stopReason), budgetFor(width, stopped ? 12 : 9, 90))}`)}`] : []),
     ...(blocker ? [`├─ ${paint(theme, "warning", "blocked")}: ${truncate(respecBlockerHeadline(blocker), budgetFor(width, 12, 70))}`, `├─ ${paint(theme, "accent", "action")}: ${truncate(sanitizeDisplayText(blocker.blockerAction?.nextAction || "Ask agent to clarify why it cannot fix this"), budgetFor(width, 11, 70))}`, `├─ ${paint(theme, "accent", "/loop blockers")} · full reasons and next action`] : []),
     ...(evidence ? [`├─ ${paint(theme, "dim", `evidence: ${truncate(sanitizeDisplayText(evidence), budgetFor(width, 13, 65))}`)}`] : []),
