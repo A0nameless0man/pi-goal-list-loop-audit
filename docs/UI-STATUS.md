@@ -52,11 +52,11 @@ Headers and footers are segmented: only the execution word (and, in the footer, 
 
 Cards explicitly identify Goal, List item, or Loop. Project builders are **Loop / Project**; project is a workflow within a loop, not an unrelated execution owner.
 
-Detached audit presentation uses worker activity, not a busy parent host's heartbeat. A saved/workerless claim clears inherited parent timestamps. Fresh audit activity is green; in-budget tool waits and queued starts are accent; unknown or quiet activity is amber; stalled observations are red. These tones agree across heading, phase row and footer. Tree branches are neutral decoration, never an extra liveness signal.
+Compact and detailed audit cards share the same owner/status heading. Both use worker activity, not a busy parent host's heartbeat. Footer phase and unknown-worker inspection commands precede host decoration so narrow layouts cannot hide execution uncertainty. A saved/workerless claim clears inherited parent timestamps. Fresh audit activity is green; in-budget tool waits and queued starts are accent; unknown or quiet activity is amber; stalled observations are red. These tones agree across heading, phase row and footer. Tree branches are neutral decoration, never an extra liveness signal.
 
 Audit elapsed time, last activity and the complete tool elapsed/budget pair have dedicated rows where needed for narrow layouts. Unknown audit execution points to inspection rather than promising automatic review. Persistence and explicit admission holds, including an observed closed host, override cached live progress. An explicitly stopped project does not advertise an unavailable `/loop resume`; `/loop status` inspects it and `/loop respec` starts new work.
 
-Reproduce the narrow/wide audit fixtures with `timeout 30 bun scripts/audit-status-capture.ts` followed by `timeout 90 python3 scripts/capture-ui-status.py --audit-status`. Outputs are in `audit/audit-status-captures/`. They exercise production renderers on private xterm/Xvfb, not a full live Pi viewport or real provider execution.
+Reproduce the narrow/wide audit fixtures with `timeout 30 bun scripts/audit-status-capture.ts` followed by `timeout 90 python3 scripts/capture-ui-status.py --audit-status`. Compact `40`/`120` and detailed `40-detailed`/`120-detailed` PNG/ANSI/JSON outputs are in `audit/audit-status-captures/`. They exercise production renderers on private xterm/Xvfb, not a full live Pi viewport or real provider execution.
 
 ## Fleet boundary
 

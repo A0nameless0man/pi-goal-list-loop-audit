@@ -88,10 +88,10 @@ test("stalled: card names the death, drops the live-worker claim, offers the ret
   const audit = auditProgress({ lastActivityAt: NOW - 61 * 60_000 });
   const lines = buildWidgetLines({ goal: g, list: [] }, audit, NOW, undefined, 120)!;
   const text = lines.join("\n");
-  assert.match(lines[1]!, /auditor: stalled · no worker responds · last progress 1h 01m/, `stalled lead:\n${text}`);
-  assert.doesNotMatch(lines[1]!, /detached worker/, "no live worker is claimed");
-  assert.match(lines[2]!, /next: \/goal resume retries the claim/, "stalled next action names the retry, not the discard");
-  assert.match(lines[3]!, /auditor stalled 1h 01m — no worker activity/, "closer keeps the stalled wording");
+  assert.match(lines[2]!, /auditor: stalled · no worker responds · last progress 1h 01m/, `stalled lead:\n${text}`);
+  assert.doesNotMatch(text, /detached worker/, "no live worker is claimed");
+  assert.match(text, /next: \/goal resume retries the claim/, "stalled next action names the retry, not the discard");
+  assert.match(lines.at(-1)!, /auditor stalled 1h 01m — no worker activity/, "closer keeps the stalled wording");
   const footer = buildStatusText({ goal: g, list: [] }, audit, NOW)!;
   assert.match(footer, /auditor ✖ stalled/, "footer names the same stalled phase");
 });
@@ -125,7 +125,7 @@ test("stalled: the seo shape reads in days and never claims a worker", () => {
   const audit = auditProgress({ lastActivityAt: NOW - 15 * 24 * 60 * 60_000 });
   const lines = buildWidgetLines({ goal: g, list: [] }, audit, NOW, undefined, 120)!;
   const text = lines.join("\n");
-  assert.match(lines[1]!, /last progress 15d 00h/, `day granularity past 24h:\n${text}`);
+  assert.match(lines[2]!, /last progress 15d 00h/, `day granularity past 24h:\n${text}`);
   assert.doesNotMatch(text, /detached worker/, "a 15-day-dead audit claims no worker anywhere");
 });
 

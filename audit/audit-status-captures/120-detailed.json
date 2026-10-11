@@ -1,0 +1,23 @@
+{
+  "width": 120,
+  "rows": 105,
+  "fixedNow": "2026-10-11T21:00:00.000Z",
+  "compact": false,
+  "fixtures": [
+    "Goal / live audit",
+    "List item / live audit",
+    "Goal / stale worker",
+    "List item / stale worker",
+    "Goal / bounded tool wait",
+    "List item / bounded tool wait",
+    "Goal / quiet audit",
+    "Goal / stalled audit",
+    "Goal / persistence stop"
+  ],
+  "source": "production card/footer fixtures; not a full live Pi viewport",
+  "capture": "real xterm on private Xvfb",
+  "pixels": [
+    1100,
+    2053
+  ]
+}

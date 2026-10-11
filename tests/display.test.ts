@@ -520,8 +520,8 @@ test("widget lines reserve pi-tui's horizontal padding", () => {
   )!;
   // pi wraps string-array widget lines inside Text(paddingX=1), so the
   // extension must keep every source line within width - 2.
-  assert.ok(lines.every((line) => line.length <= 78), lines.join("\\n"));
-  assert.match(lines[0]!, / · list item · auditing · total 50s/);
+  assert.ok(lines.every((line) => visibleWidth(line) <= 78), lines.join("\\n"));
+  assert.match(lines[0]!, /list item · auditing · EXECUTION UNCONFIRMED · age 50s/);
   assert.ok(!lines.includes("50s"), "elapsed segment must not wrap onto its own line");
 });
 
@@ -871,7 +871,7 @@ test("v0.38.70: paused action card leads with the action, history rides after (f
 test("auditing keeps the footer compact while the widget shows the auditor's current tool", () => {
   const g = goalOf({ status: "auditing" });
   const s = buildStatusText({ goal: g, list: [] }, { currentTool: "read" }, NOW)!;
-  assert.match(s, /auditor ▶ running/);
+  assert.match(s, /AUDIT UNCONFIRMED.*\/goal status.*auditor \? execution unconfirmed/);
   assert.doesNotMatch(s, /read|evidence:|elapsed|worker activity/);
   const widget = buildWidgetLines({ goal: g, list: [] }, { currentTool: "read" }, NOW)!.join("\\n");
   assert.match(widget, /last tool: read/);
@@ -1072,11 +1072,14 @@ test("widget: paused goal shows reason + suggestion", () => {
 test("widget: auditing shows auditor progress", () => {
   const g = goalOf({ status: "auditing", pendingCompletion: { at: "2026-07-21T11:59:00Z", phase: "running", attemptId: "audit-1" } });
   const lines = buildWidgetLines({ goal: g, list: [] }, { label: "verifying contract", currentTool: "grep", elapsedMs: 42_000 }, NOW)!;
-  assert.ok(lines.some((l) => l.includes("verifying contract")));
+  assert.ok(lines.some((l) => l.includes('execution unconfirmed')));
+  assert.ok(lines.some((l) => l.includes('last tool: grep')));
+  assert.ok(lines.some((l) => l.includes('/goal status')));
+  assert.ok(!lines.some((l) => l.includes('review applies automatically')));
   assert.ok(lines.some((l) => l.includes("grep")));
   assert.ok(lines.some((l) => l.includes("42s")));
   const status = buildStatusText({ goal: g, list: [] }, { currentTool: "grep" }, NOW)!;
-  assert.match(status, /auditor ▶ running/);
+  assert.match(status, /AUDIT UNCONFIRMED.*\/goal status.*auditor \? execution unconfirmed/);
   assert.doesNotMatch(status, /grep|evidence:|elapsed|worker activity/);
 });
 
@@ -1124,10 +1127,10 @@ test("auditor progress phases are explicit and retain worker activity", () => {
     elapsedMs: 42_000,
     lastActivityAt: NOW - 30_000,
   }, NOW)!;
-  assert.ok(running.some((l) => l.includes("auditor: last observed tool")));
+  assert.ok(running.some((l) => l.includes("auditor: execution unconfirmed")));
   assert.doesNotMatch(running.join("\\n"), /MAIN HOST/);
   assert.ok(running.some((l) => l.includes("tool: grep")));
-  assert.ok(running.some((l) => l.includes("worker activity 30s ago")));
+  assert.ok(running.some((l) => l.includes("last activity: 30s ago")));
 
   const quiet = buildWidgetLines({ goal: g, list: [] }, {
     phase: "thinking",
@@ -1210,10 +1213,11 @@ test("detached auditor elapsed time keeps ticking between worker progress events
     lastActivityAt: NOW - 20_000,
   };
   const status = buildStatusText({ goal: g, list: [] }, audit, NOW)!;
-  assert.match(status, /auditor ▶ (?:thinking|thinking…)/);
+  assert.match(status, /AUDIT UNCONFIRMED.*\/goal status.*auditor \? execution unconfirmed/);
   assert.doesNotMatch(status, /elapsed 2m 00s|worker activity|evidence:/);
   const lines = buildWidgetLines({ goal: g, list: [] }, audit, NOW)!;
-  assert.ok(lines.some((line) => line.includes("2m 00s in detached worker")), lines.join("\\n"));
+  assert.ok(lines.some((line) => line.includes("audit elapsed 2m 00s")), lines.join("\\n"));
+  assert.match(lines.join('\n'), /EXECUTION UNCONFIRMED/);
 });
 
 test("detached recent auditor output is sanitized in live and awaiting-verdict widget paths", () => {
@@ -1539,7 +1543,8 @@ test("stale auditor snapshots show the last tool, not a fake current tool", () =
     lastActivityAt: NOW - 20_000,
   }, NOW)!;
   const joined = lines.join("\n");
-  assert.match(joined, /auditor: last observed tool/);
+  assert.match(joined, /auditor: execution unconfirmed/);
+  assert.match(joined, /next: \/goal status/);
   assert.match(joined, /last tool: read/);
   assert.doesNotMatch(joined, /tool: read → README\.md/);
   assert.doesNotMatch(joined, /READ-ONLY · LIVE/);
@@ -1549,9 +1554,11 @@ test("auditor startup does not claim worker activity before the first RPC event"
   const g = goalOf({ status: "auditing", pendingCompletion: { at: "2026-07-21T11:59:00Z", phase: "running", attemptId: "audit-starting" } });
   const lines = buildWidgetLines({ goal: g, list: [] }, { phase: "starting", elapsedMs: 2_000 }, NOW)!;
   const joined = lines.join("\n");
-  assert.match(joined, /auditor: starting/);
+  assert.match(joined, /auditor: execution unconfirmed/);
+  assert.match(joined, /next: \/goal status/);
   assert.match(joined, /waiting for first worker event/);
-  assert.doesNotMatch(joined, /last activity|worker activity/);
+  assert.match(joined, /last activity: unconfirmed/);
+  assert.doesNotMatch(joined, /(?:last activity|worker activity).*\d+s ago/);
 });
 
 test("widget: loop lines include measure + metric state", () => {

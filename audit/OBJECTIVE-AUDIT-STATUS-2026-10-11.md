@@ -36,6 +36,18 @@
 - Recovered native verification of the original `Screenshot_20261011_165932.png` via a small bottom crop: old card says Project / Auditing with a 677s / 900s bash wait and 11m17s activity, while footer says execution unconfirmed. This independently confirms the project identity and card/footer contradiction; the original screenshot was not modified.
 - Final regression evidence: 178 tests, zero failures across eleven files in `/tmp/glla-audit-claim-tests.log`; final typecheck passed (`/tmp/glla-audit-claim-types.log`), capture generation/rasterization passed, and runtime inventory regeneration/check passed. This includes the final explicit stopped label assertion. No release or whole-repository test-suite claim is made.
 
+## Detailed-layout falsification repair
+
+The isolated audit initially approved the compact rendering but its challenge correctly rejected `compactAuditCard: false`: 40-second-old worker activity still displayed thinking/detached-worker text and an automatic-review action, and the heading lacked Goal identity. This was a production path gap, not an auditor false positive.
+
+- Extracted `uiStatusCardHead` for shared owner/status headings in both layouts. Detailed Goal and List item cards use the same evidence projection as compact cards; the objective remains on its own row.
+- Detailed phase, next action and closing line explicitly identify unconfirmed worker execution. They retain the completion claim, point to `/goal status` or `/list show`, and do not promise automatic review. The footer likewise suppresses unsupported fine-grained thinking and places the state and inspection command before host decoration.
+- Detailed audit clocks have short elapsed/activity rows. In-budget tool timing precedes optional target/model detail, preserving the complete elapsed/budget pair at 40 columns.
+- New matrix assertions cover both owners at 40/120 columns with `compactAuditCard: false`, stale worker plus busy parent, inspection commands, absence of automatic-review/live-worker claims, and tool budget. Existing legacy assertions were updated to verify truthful unknown state and actual terminal-cell bounds rather than obsolete inline headings or live-worker wording.
+- Final bounded validation: 180 pass, zero failures across eleven files (`/tmp/glla-audit-detailed-final-tests.log`), typecheck pass (`/tmp/glla-audit-detailed-final-types.log`), inventory check pass. Same focused test command as the earlier claim, plus the two new detailed matrix tests.
+- Capture commands above now produce compact and detailed `{40,120}[-detailed].{ansi,json,png}`. Native inspection at both widths confirms explicit owners, unknown inspection actions, visible clocks/budgets and phase-leading footers. These remain production fixtures, not live Pi/provider-session evidence.
+- Fresh-context read-only reviewer `df1d16db-c447-453b-9291-493dac29fe1a` inspected shared heading/evidence code, assertions and all four PNGs; verdict OK, BLOCKERS none. It executed no commands. A final small footer refinement also suppresses stale thinking text and prioritizes inspection commands, covered by the final matrix rerun.
+
 ## Scope
 
 Only GLLA presentation and its public observation adapters are implementation targets. This item does not alter Pi core, repair the operating system, or implement the separately queued quota retry and manual-model-resume goals.

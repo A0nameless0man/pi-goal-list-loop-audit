@@ -2,6 +2,7 @@
   "width": 120,
   "rows": 94,
   "fixedNow": "2026-10-11T21:00:00.000Z",
+  "compact": true,
   "fixtures": [
     "Goal / live audit",
     "List item / live audit",

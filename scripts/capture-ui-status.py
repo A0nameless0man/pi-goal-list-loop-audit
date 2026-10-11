@@ -44,7 +44,7 @@ try:
     display = ':' + os.read(read_fd, 32).decode().strip()
     env = {**os.environ, 'DISPLAY': display}
     with tempfile.TemporaryDirectory(prefix='glla-capture-') as temporary:
-        stems = [f'{appearance}-{width}' for appearance in ['dark', 'light'] for width in [40, 120]] if summaries else ['40', '120']
+        stems = [f'{appearance}-{width}' for appearance in ['dark', 'light'] for width in [40, 120]] if summaries else ['40', '120', '40-detailed', '120-detailed'] if '--audit-status' in sys.argv else ['40', '120']
         for stem in stems:
             metadata = json.loads((out / f'{stem}.json').read_text())
             width = metadata['width']

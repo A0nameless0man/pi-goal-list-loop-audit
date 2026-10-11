@@ -43,20 +43,27 @@ const fixtures: Array<{ name: string; state: State; audit?: AuditDisplayProgress
   { name: 'Loop / explicitly stopped project', state: stopped },
   { name: 'Loop / plain objective', state: loop },
 ];
+const stale: AuditDisplayProgress = { ...fresh, startedAt: now - 60000, elapsedMs: 60000, lastActivityAt: now - 40000 };
+const detailedFixtures = [fixtures[0], fixtures[1],
+  { name: 'Goal / stale worker', state: goal(), audit: stale },
+  { name: 'List item / stale worker', state: list, audit: stale },
+  fixtures[2], { name: 'List item / bounded tool wait', state: list, audit: tool }, fixtures[3], fixtures[4], fixtures[6]];
 const directory = path.resolve('audit/audit-status-captures'); fs.mkdirSync(directory, { recursive: true });
 setRespecAuditLive(builder, { phase: 'running', workerPhase: 'tool_executing', startedAt: now - 800000,
   currentTool: 'bash', currentToolStartedAt: now - 677000, toolTimeoutMs: 900000, lastActivityAt: now - 677000 });
 try {
-  for (const width of [40, 120]) {
+  for (const compact of [true, false]) for (const width of [40, 120]) {
+    const selected = compact ? fixtures : detailedFixtures;
+    const stem = `${width}${compact ? '' : '-detailed'}`;
     const rows: string[] = [];
-    for (const fixture of fixtures) {
+    for (const fixture of selected) {
       rows.push(theme.fg('dim', `── ${fixture.name}`));
-      const extras = { compactAuditCard: true, maxWidgetLines: 8, uiStatusContext: fixture.context ?? context(fixture.state) };
+      const extras = { compactAuditCard: compact, maxWidgetLines: compact ? 8 : 12, uiStatusContext: fixture.context ?? context(fixture.state) };
       rows.push(...(buildWidgetLines(fixture.state, fixture.audit, now, theme, width, extras) ?? []));
       rows.push(buildStatusText(fixture.state, fixture.audit, now, theme, extras, width) ?? '', '');
     }
-    fs.writeFileSync(path.join(directory, `${width}.ansi`), rows.join('\r\n') + '\r\n');
-    fs.writeFileSync(path.join(directory, `${width}.json`), JSON.stringify({ width, rows: rows.length, fixedNow: new Date(now).toISOString(),
-      fixtures: fixtures.map(fixture => fixture.name), source: 'production card/footer fixtures; not a full live Pi viewport' }, null, 2) + '\n');
+    fs.writeFileSync(path.join(directory, `${stem}.ansi`), rows.join('\r\n') + '\r\n');
+    fs.writeFileSync(path.join(directory, `${stem}.json`), JSON.stringify({ width, rows: rows.length, fixedNow: new Date(now).toISOString(),
+      compact, fixtures: selected.map(fixture => fixture.name), source: 'production card/footer fixtures; not a full live Pi viewport' }, null, 2) + '\n');
   }
 } finally { setRespecAuditLive(builder); }

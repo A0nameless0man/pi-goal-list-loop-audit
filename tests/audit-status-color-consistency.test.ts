@@ -10,15 +10,16 @@ function fixture(): State {
     createdAt: new Date(now - 60000).toISOString(), updatedAt: new Date(now).toISOString(), usage: { tokensUsed: 0, tokensLimit: 1000000 },
     pendingCompletion: { phase: 'running', at: new Date(now - 60000).toISOString(), completionSummary: 'Saved claim' } }, list: [] };
 }
-function render(progress?: AuditDisplayProgress) {
+function render(progress?: AuditDisplayProgress, compact = true, width = 120, policy: 'goal' | 'list' = 'goal') {
   const state = fixture();
+  state.goal!.policy = policy;
   const colors: Array<{ color: string; text: string }> = [];
   const theme: DisplayTheme = { fg: (color, text) => { colors.push({ color, text }); return text; } };
   const uiStatusContext = { now, generation: 1, evidence: { ownerKey: uiStatusOwnerKey(state)!, generation: 1,
     session: 'open' as const, observedAt: now, turnActive: true, lastActivityAt: now } };
-  const extras = { uiStatusContext, compactAuditCard: true, maxWidgetLines: 12 };
-  const card = buildWidgetLines(state, progress, now, theme, 120, extras)!.join('\n');
-  const footer = buildStatusText(state, progress, now, theme, extras, 120)!;
+  const extras = { uiStatusContext, compactAuditCard: compact, maxWidgetLines: 12 };
+  const card = buildWidgetLines(state, progress, now, theme, width, extras)!.join('\n');
+  const footer = buildStatusText(state, progress, now, theme, extras, width)!;
   return { colors, card, footer };
 }
 
@@ -46,6 +47,38 @@ test('busy parent cannot turn a missing or stale auditor into a running heading'
     assert.doesNotMatch(card, /last progress 0s.*runtime/, 'parent activity is not an auditor heartbeat');
     assert.doesNotMatch(card + footer, /No action needed|review applies automatically|AUDIT RUNNING/);
     assert.match(card, /\/(?:glla|goal) status/);
+  }
+});
+
+test('detailed audits preserve owner, unconfirmed evidence and inspection across both widths', () => {
+  const stale: AuditDisplayProgress = { phase: 'thinking', lastActivityAt: now - 40000, startedAt: now - 60000, elapsedMs: 60000 };
+  for (const policy of ['goal', 'list'] as const) for (const width of [40, 120]) {
+    const { card, footer, colors } = render(stale, false, width, policy);
+    assert.match(card.split('\n')[0]!, policy === 'goal' ? /GOAL/ : /list item/);
+    assert.match(card, /EXECUTION UNCONFIRMED/);
+    assert.match(card, /auditor: execution unconfirmed/);
+    assert.match(card, policy === 'goal' ? /next: \/goal status/ : /next: \/list show/);
+    assert.match(card, /audit elapsed 1m 00s/);
+    assert.match(card, /last activity: 40s ago/);
+    assert.match(footer, /AUDIT UNCONFIRMED/);
+    assert.match(footer, policy === 'goal' ? /\/goal status/ : /\/list show/);
+    assert.doesNotMatch(footer, /thinking|reading source|auditor ▶/);
+    assert.doesNotMatch(card + footer, /review applies automatically|No action needed|AUDIT RUNNING|detached worker/);
+    assert.ok(colors.some(entry => entry.text === 'execution unconfirmed' && entry.color === 'warning'));
+  }
+});
+
+test('detailed audit retains complete tool timing and explicit owners at both widths', () => {
+  const progress: AuditDisplayProgress = { phase: 'tool_executing', currentTool: 'bash', currentToolArgs: '{"command":"sleep 677"}',
+    currentToolStartedAt: now - 677000, toolTimeoutMs: 900000, lastActivityAt: now - 677000,
+    startedAt: now - 800000, elapsedMs: 800000 };
+  for (const policy of ['goal', 'list'] as const) for (const width of [40, 120]) {
+    const { card } = render(progress, false, width, policy);
+    assert.match(card.split('\n')[0]!, policy === 'goal' ? /GOAL/ : /list item/);
+    assert.match(card, /TOOL WAIT/);
+    assert.match(card, /11m 17s \/ 15m 00s/);
+    assert.match(card, /audit elapsed 13m 20s/);
+    assert.match(card, /last activity: 11m 17s ago/);
   }
 });
 
