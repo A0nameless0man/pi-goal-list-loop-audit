@@ -176,7 +176,7 @@ test("context overflow compacts instead of retrying", async () => {
   assert.equal(sentRetries().length, 0);
 });
 
-test("hinted quota sleeps until the provider reset; hintless quota ladders", async () => {
+test("hinted quota sleeps until the provider reset; hintless quota retries eagerly", async () => {
   const ctx = await boot();
   // No delay override: the scheduled delayMs must be the uniform cadence.
   await pi.fire("agent_end", errTurn("429 Too Many Requests — retry in 2 hours"), ctx);
@@ -185,7 +185,7 @@ test("hinted quota sleeps until the provider reset; hintless quota ladders", asy
   await pi.fire("agent_end", errTurn("429 usage limit"), ctx);
   const laddered = ledger().filter((e) => e.type === "unsupervised_error_retry_scheduled").at(-1)!;
   assert.equal(laddered.value.attempt, 2);
-  assert.equal(laddered.value.delayMs, 30 * 60_000, "hintless quota climbs the wall ladder, never eager");
+  assert.equal(laddered.value.delayMs, 5_000, "hintless quota uses the same bounded eager cadence as supervised recovery");
 });
 
 test("an active goal owns error turns — the unsupervised lane stays silent", async () => {
