@@ -2007,7 +2007,7 @@ export function parkMainModelAfterFailure(ctx: ExtensionContext, failure: MainMo
   const nextSameModelRetries = sameModel
     ? Math.min(existing.sameModelRetries ?? 0, MAX_MAIN_MODEL_SAME_MODEL_RETRIES)
     : 0;
-  const previousSteps = existing.modelFailureSteps ?? existing.sameModelRetries ?? 0;
+  const previousSteps = existing.modelFailureSteps ?? (sameModelRef(existing.active, existing.primary) ? existing.attempts : existing.sameModelRetries ?? 0);
   const modelFailureSteps = sameModel && Number.isSafeInteger(previousSteps) && previousSteps >= 0 ? Math.min(1_000_000, previousSteps + 1) : 1;
   const nextRecovery = withMainModelRecoveryWindow({
     ...existing,
