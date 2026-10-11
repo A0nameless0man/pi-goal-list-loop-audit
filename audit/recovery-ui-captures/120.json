@@ -1,0 +1,15 @@
+{
+  "width": 120,
+  "rows": 33,
+  "fixedNow": "2026-10-10T12:00:00.000Z",
+  "fixtures": [
+    "Slow quota; backup eligible",
+    "Stale contract; legacy pause author unknown"
+  ],
+  "source": "production card/footer builders and pi-tui Markdown",
+  "capture": "real xterm on private Xvfb",
+  "pixels": [
+    1100,
+    685
+  ]
+}

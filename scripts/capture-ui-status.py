@@ -32,7 +32,7 @@ def stop(process):
 
 root = Path(__file__).resolve().parents[1]
 summaries = '--summaries' in sys.argv
-out = root / 'audit' / ('summary-captures' if summaries else 'ui-captures')
+out = root / 'audit' / ('summary-captures' if summaries else 'recovery-ui-captures' if '--recovery-followup' in sys.argv else 'ui-captures')
 xvfb = terminal = None
 read_fd, write_fd = os.pipe()
 try:
