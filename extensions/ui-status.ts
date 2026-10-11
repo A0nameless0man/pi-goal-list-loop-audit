@@ -49,6 +49,9 @@ export interface UiStatus {
   /** Saved-recovery honesty note for unconfirmed retries (never an armed-timer claim). */
   recoveryNote?: string;
   compaction?: CompactionStatus;
+  /** Renderer-attributed detached audit facts, never dispatch permissions. */
+  auditPhase?: 'queued' | 'running' | 'quiet' | 'stalled' | 'blocked' | 'awaiting-verdict';
+  auditLive?: boolean;
 }
 
 export const UI_OBSERVATION_FRESH_MS = 30_000;

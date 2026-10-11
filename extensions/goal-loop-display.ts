@@ -1415,6 +1415,7 @@ const UI_HEALTH_LABEL: Record<UiStatus['execution'], string> = {
 // settled/terminal-neutral (retry-armed, idle, cancelled). Glyph AND text
 // always carry the state — color never does alone.
 function uiStatusTone(status: UiStatus): DisplayColor {
+  if (status.auditPhase) return status.execution === 'tool-wait' ? 'accent' : auditorPhaseTone(status.auditPhase, !!status.auditLive);
   switch (status.execution) {
     case 'running':
     case 'complete': return 'success';
@@ -1425,6 +1426,31 @@ function uiStatusTone(status: UiStatus): DisplayColor {
     case 'queued': return 'accent';
     default: return 'dim';
   }
+}
+function uiExecutionLabel(status: UiStatus): string {
+  if (status.auditPhase === 'stalled') return 'AUDIT STALLED';
+  if (status.auditPhase === 'quiet') return 'AUDIT QUIET';
+  if (status.auditPhase === 'blocked') return 'AUDIT BLOCKED';
+  if (status.auditPhase === 'awaiting-verdict') return 'AUDIT REVIEW PENDING';
+  return UI_HEALTH_LABEL[status.execution];
+}
+/** Detached activity must not inherit a busy parent host's RUNNING badge. */
+function projectDisplayStatus(state: State, audit: AuditDisplayProgress | null | undefined, context: UiStatusContext): UiStatus {
+  const status = projectUiStatus(state, context);
+  const goal = state.goal;
+  if (status.mode !== 'goal' && status.mode !== 'list' || goal?.status !== 'auditing' || status.execution === 'blocked') return status;
+  if (!audit || auditRecoveryPending(goal) || durablePhaseOverride(goal.pendingCompletion, audit, context.now)) {
+    return { ...status, execution: 'unconfirmed', actionability: 'inspect', nextAction: '/glla status to inspect the saved audit' };
+  }
+  const phase = auditorDisplayPhase(goal, audit, context.now);
+  const live = auditorHasLiveEvidence(audit, phase, context.now);
+  const toolWait = !!auditorToolWait(audit, phase, context.now);
+  const execution = phase === 'blocked' ? 'blocked' : toolWait ? 'tool-wait'
+    : phase === 'queued' ? 'queued' : phase === 'running' && live ? 'running' : 'unconfirmed';
+  return { ...status, execution, auditPhase: phase, auditLive: live,
+    lastActivityAt: audit.lastActivityAt !== undefined && audit.lastActivityAt <= context.now ? audit.lastActivityAt : undefined,
+    actionability: phase === 'blocked' || phase === 'stalled' ? 'user' : phase === 'quiet' ? 'inspect' : 'automatic',
+    nextAction: auditorNextAction(phase) };
 }
 function uiSafeText(value: string, prose = false): string {
   const safe = sanitizeDisplayText(value);
@@ -1446,7 +1472,8 @@ export function buildUiStatusFooter(status: UiStatus, now: number, theme?: Displ
   const tone = uiStatusTone(status);
   const action = status.actionability === 'user' ? 'needs your action'
     : status.actionability === 'inspect' ? 'inspect execution' : status.actionability === 'automatic' ? 'automatic' : 'no action';
-  const phase = status.workflow.toUpperCase() === UI_HEALTH_LABEL[status.execution] ? status.mode : `${status.mode} ${uiSafeText(workflowLabel(status))}`;
+  const modeLabel = status.mode === 'project' ? 'loop / project' : status.mode === 'list' ? 'list item' : status.mode;
+  const phase = status.workflow.toUpperCase() === uiExecutionLabel(status) ? modeLabel : `${modeLabel} ${uiSafeText(workflowLabel(status))}`;
   // Segmented like every legacy footer: only the execution word (and, when
   // the user must act, the required action) carries the tone. Mode, phase
   // and filler stay dim so a blocked footer doesn't wash the whole line.
@@ -1488,7 +1515,7 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   const tone = uiStatusTone(status);
   const clipped = (value: string): string => tuiTruncateToWidth(value, Math.max(1, width), '…');
   const row = (prefix: string, value: string, color: DisplayColor = 'dim', prose = false): string =>
-    clipped(`${paint(theme, tone, prefix)}${paint(theme, color, uiSafeText(value, prose))}`);
+    clipped(`${paint(theme, 'dim', prefix)}${paint(theme, color, uiSafeText(value, prose))}`);
   const loop = status.mode === 'project' || status.mode === 'loop' ? state.loop : undefined;
   const coverage = loop?.builder ? respecCoverage(loop.builder) : undefined;
   const progress = coverage ? `${coverage.verified}/${coverage.total} requirements verified${coverage.blocked ? ` · ${coverage.blocked} requirements blocked` : ''}`
@@ -1501,11 +1528,11 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   // Segmented header: icon + execution word carry the tone, mode/phase and
   // saved metrics stay dim. Painting the whole header in the tone washed
   // every blocked card orange (field 2026-10-10 125409).
-  const execWord = paint(theme, tone, UI_HEALTH_LABEL[status.execution]);
+  const execWord = paint(theme, tone, uiExecutionLabel(status));
   // v0.24.7: a list item is named as such — the widget called it "active"
   // and hinted "/goal status", reading as a standalone goal. The blank-
   // restart contract pins the "list item" wording.
-  const modeWord = paint(theme, 'dim', status.mode === 'list' ? 'list item' : status.mode.toUpperCase());
+  const modeWord = paint(theme, 'dim', status.mode === 'list' ? 'list item' : status.mode === 'project' ? 'LOOP / PROJECT' : status.mode.toUpperCase());
   const flowWord = phase ? paint(theme, 'dim', workflowLabel(status)) : '';
   const sep = paint(theme, 'dim', ' · ');
   const headerText = width < 60
@@ -1515,7 +1542,7 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   const metricsWord = metrics ? `${sep}${paint(theme, 'dim', uiSafeText(metrics))}` : '';
   const rows = [clipped(`${paint(theme, tone, terminal ? '✓ ' : '● ')}${headerText}${progressWord}${metricsWord}`)];
   // Objective is plain body text (legacy heads never painted it accent).
-  if (status.objective) rows.push(clipped(`${paint(theme, tone, '│  ')}${uiSafeText(status.objective)}`));
+  if (status.objective) rows.push(clipped(`${paint(theme, 'dim', '│  ')}${uiSafeText(status.objective)}`));
   const g = state.goal && !loop ? state.goal : undefined;
   // Live audit objects own phase/recovery rows: embed the same compact
   // glance the legacy card renders (v0.34.22 "Audit starting"). Without an
@@ -1629,7 +1656,7 @@ function buildTaskProgressText(goal: Goal): string {
 }
 
 export function buildStatusText(state: State, audit?: AuditDisplayProgress | null, now = Date.now(), theme?: DisplayTheme, extras?: WidgetExtras, width?: number): string | undefined {
-  const shared = extras?.uiStatusContext ? projectUiStatus(state, { ...extras.uiStatusContext, now }) : undefined;
+  const shared = extras?.uiStatusContext ? projectDisplayStatus(state, audit, { ...extras.uiStatusContext, now }) : undefined;
   // Adapter boundary: background waits, waiting-only queues, live audit
   // objects and stale-handle interruptions keep their exact legacy lines
   // (behavioral pins) — disjoint states, so the renderers never contradict.
@@ -1739,10 +1766,10 @@ function auditingStatusText(state: State, g: Goal, audit: AuditDisplayProgress |
     // v0.35.15: leading phase glyph + draining activity meter — a glance
     // answers "is the audit alive?" without reading the sentence.
     const phaseText = `auditor ${auditorPhaseGlyph(phase)} ${observed}`;
-    const color = phase === "stalled" ? "error" : phase === "blocked" || phase === "quiet" ? "warning" : live ? "success" : "accent";
+    const color = toolWait ? 'accent' : auditorPhaseTone(phase, live);
     const activityMeter = auditorActivityMeter(audit, phase, now);
     const label = live
-      ? `${paint(theme, "success", phaseText)} ${paint(theme, "accent", activityMeter)} ${activityBadge("AUDITOR · DETACHED · LIVE", now, theme)}`
+      ? `${paint(theme, color, phaseText)} ${paint(theme, "accent", activityMeter)} ${activityBadge("AUDITOR · DETACHED · LIVE", now, theme)}`
       : `${paint(theme, color, phaseText)} ${paint(theme, color === "warning" || color === "error" ? color : "dim", activityMeter)}`;
     // The persistent footer is the liveness surface only: host, phase, and
     // freshness. The auditor card above already owns the transition hint
@@ -2122,7 +2149,7 @@ export function responsiveWidget(renderRows: (width: number, maxRows: number) =>
 }
 
 export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | null, now = Date.now(), theme?: DisplayTheme, width?: number, extras?: WidgetExtras): string[] | undefined {
-  const shared = extras?.uiStatusContext ? projectUiStatus(state, { ...extras.uiStatusContext, now }) : undefined;
+  const shared = extras?.uiStatusContext ? projectDisplayStatus(state, audit, { ...extras.uiStatusContext, now }) : undefined;
   const background = shared?.execution === 'blocked' ? undefined : backgroundWidget(state, theme, width);
   const compact = extras?.compactAuditCard !== false;
   const rawInner = background
@@ -2569,7 +2596,7 @@ function compactAuditingCardRows(g: Goal, audit: AuditDisplayProgress | null | u
       // No history or model plaques in the glance card: Pi clips its tail.
       // Keep state, real evidence and the user action ahead of all details.
       const phaseLine = toolWait ? `├─ ${paint(theme, "accent", `Waiting on ${sanitizeDisplayText(audit!.currentTool!)}${audit?.round === 2 ? " · second audit pass" : ""} · detached auditor`)}` : needsRecovery ? (phase === "quiet" ? `├─ ${paint(theme, "warning", "Audit quiet — may be stuck")}` : block.lead[0]!)
-        : `├─ ${paint(theme, "accent", phase === "running" ? `Audit running · ${(extras?.auditorProgressSignals !== false ? auditorProgressPhaseLabel(audit) : undefined) ?? auditorPhaseForDisplay(audit, phase, auditorHasLiveEvidence(audit, phase, now), now)} · detached worker` : phase === "queued" ? "Audit starting · detached worker" : "Audit review pending · detached worker")}`;
+        : `├─ ${paint(theme, auditorPhaseTone(phase, auditorHasLiveEvidence(audit, phase, now)), phase === "running" ? `${auditorHasLiveEvidence(audit, phase, now) ? 'Audit running' : 'Audit execution unconfirmed'} · ${(extras?.auditorProgressSignals !== false ? auditorProgressPhaseLabel(audit) : undefined) ?? auditorPhaseForDisplay(audit, phase, auditorHasLiveEvidence(audit, phase, now), now)} · detached worker` : phase === "queued" ? "Audit starting · detached worker" : "Audit review pending · detached worker")}`;
       const toolLine = block.lead.find(line => /^│ (?:last )?tool:/.test(line));
       const modelRef = auditorCardModelRef(audit, g.pendingCompletion);
       const compactToolLine = modelRef ? toolLine?.split(` · ${modelRef}`)[0] : toolLine;
@@ -3159,7 +3186,7 @@ function respecBuilderLines(loop: LoopState, now: number, theme?: DisplayTheme, 
     `auditor: ${toolWait ?? progress.phase}${progress.round === 2 ? " · second pass" : ""} · ${progress.attemptStartedAt !== undefined ? `attempt ${fmtElapsed(now - progress.attemptStartedAt)} · ` : ""}total ${fmtElapsed(now - progress.startedAt)} · ${sanitizeDisplayText(progress.model ?? "model pending")}`,
     `last activity: ${progress.lastActivityAt !== undefined ? `${fmtElapsed(now - progress.lastActivityAt)} ago` : "not observed"}${progress.activity ? ` · ${sanitizeDisplayText(progress.activity)}` : ""}${progress.retryAt !== undefined ? ` · retry in ${fmtElapsed(Math.max(0, progress.retryAt - now))}` : ""}`,
   ] : ["auditor: waiting for dispatch · no live worker observed"] : [];
-  const title = paint(theme, tone, `Project · ${phase}`);
+  const title = paint(theme, tone, `Loop / Project · ${phase}`);
   return [
     `${theme?.bold ? theme.bold(title) : title}${loop.active || builder.phase === "auditing" ? "" : stopped ? " · stopped" : " · held"} · increment ${builder.cycle}`,
     `├─ ${truncate(sanitizeDisplayText(builder.vision), budgetFor(width, 3, 75))}`,
