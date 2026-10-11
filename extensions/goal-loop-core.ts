@@ -1383,8 +1383,8 @@ export interface MainModelRecoveryRuntime {
 /** Runtime evidence is optional: saved deadlines alone never prove execution. */
 export function formatMainModelRecoveryStatus(recovery: MainModelRecovery | undefined, configuredBackups: string[] = [], nowMs: number = Date.now(), runtime?: MainModelRecoveryRuntime): string[] {
   if (!recovery) return [];
-  const safeBackups = configuredBackups.filter((ref) => typeof ref === "string" && ref.trim()).slice(0, MAX_MAIN_MODEL_FALLBACKS);
-  const chain = [recovery.primary, ...safeBackups];
+  const safeBackups = configuredBackups.filter((ref) => typeof ref === "string" && ref.trim()).map(ref => ref.trim()).slice(0, MAX_MAIN_MODEL_FALLBACKS);
+  const chain = [recovery.primary, ...safeBackups].filter((ref, index, refs) => refs.findIndex(other => other.toLowerCase() === ref.toLowerCase()) === index);
   const current = recovery.active ?? recovery.primary;
   const currentIndex = chain.findIndex((ref) => ref.toLowerCase() === current.toLowerCase());
   const attempted = recovery.attempted.length ? recovery.attempted.join(", ") : "none";
@@ -1406,7 +1406,7 @@ export function formatMainModelRecoveryStatus(recovery: MainModelRecovery | unde
     ? ["  Cause: deterministic client error — identical retries cannot succeed"]
     : [];
   const lines = [
-    `Main-model recovery: ${currentIndex >= 0 ? `${currentIndex === 0 ? "primary" : `backup ${currentIndex}/${safeBackups.length}`} selected` : "active model selected"}`,
+    `Main-model recovery: ${currentIndex >= 0 ? `${currentIndex === 0 ? "primary" : `backup ${currentIndex}/${chain.length - 1}`} selected` : "active model selected"}`,
     `  Order: ${chain.join(" → ")}`,
     `  Current: ${current}`,
     ...(recovery.pendingModelSwitch ? [`  Pending switch: ${recovery.pendingModelSwitch}`] : []),

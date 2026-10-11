@@ -41,12 +41,23 @@ const fixtures: [string, State, UiStatusContext][] = [
   ['Blocked prerequisite', blocked, observed(blocked)], ['Dormant audit', dormant, dormantContext],
   ['Unconfirmed audit', unconfirmed, { now }], ['Approved settlement owed', settling, { now }], ['Completed project', completed, { now }],
 ];
-const directory = path.resolve('audit/ui-captures'); fs.mkdirSync(directory, { recursive: true });
+const followup = process.argv.includes('--recovery-followup');
+const slowQuota = structuredClone(quota);
+slowQuota.goal!.status = 'paused'; slowQuota.goal!.pauseKind = 'wait'; slowQuota.goal!.pauseSource = 'system'; slowQuota.goal!.pauseReason = 'main model recovery — provider error';
+slowQuota.mainModelRecovery!.sameModelRetries = 9; slowQuota.mainModelRecovery!.sameModelPhaseStartedAt = at;
+slowQuota.mainModelRecovery!.retryAt = new Date(now + 1000).toISOString();
+const stalePin = structuredClone(blocked);
+stalePin.goal!.objective = 'Cross-cutting legibility and accessibility sweep over every surface from the previous four items. Re-render each one at mobile and snapped desktop sizes.';
+stalePin.goal!.pauseReason = 'Audit disapproved solely on the stale 1916 pin: suite reports 1918/0, but the goal still records the old count.';
+stalePin.goal!.pauseSuggestedAction = 'Run /goal tweak "restate the verification contract test pin from 1916 to 1918 pass / 0 fail (operator-released; suite reports 1918/0, no tests added this pass)"';
+const renderedFixtures: [string, State, UiStatusContext][] = followup
+  ? [['Slow quota; backup eligible', slowQuota, quotaContext], ['Stale contract; legacy pause author unknown', stalePin, { now }]] : fixtures;
+const directory = path.resolve(followup ? 'audit/recovery-ui-captures' : 'audit/ui-captures'); fs.mkdirSync(directory, { recursive: true });
 for (const width of [40, 120]) {
   const rows: string[] = [];
-  for (const [label, state, uiStatusContext] of fixtures) {
+  for (const [label, state, uiStatusContext] of renderedFixtures) {
     rows.push(ansi(244, `── ${label} ${'─'.repeat(Math.max(0, width - label.length - 4))}`));
-    const extras = { uiStatusContext, compactAuditCard: true, modelProvenance: { primary: state.mainModelRecovery?.primary ?? 'openai-codex/gpt-6.1-sol', primarySource: 'inherited' as const, fallbackRefs: state.mainModelRecovery ? ['openai-codex/gpt-6.1-sol'] : ['minimax/MiniMax-M3.1-Flash'] } };
+    const extras = { uiStatusContext, compactAuditCard: true, mainModelSameModelRetries: 10, mainModelFallbacks: ['minimax/MiniMax-M3.1-Flash', 'opencode-go/muse-spark-1.3-contributor'], modelProvenance: { primary: state.mainModelRecovery?.primary ?? 'openai-codex/gpt-6.1-sol', primarySource: 'inherited' as const, fallbackRefs: state.mainModelRecovery ? ['openai-codex/gpt-6.1-sol'] : ['minimax/MiniMax-M3.1-Flash'] } };
     rows.push(...(buildWidgetLines(state, null, now, theme, width, extras) ?? []));
     rows.push(buildStatusText(state, null, now, theme, extras, width) ?? '', '');
   }
@@ -57,5 +68,5 @@ for (const width of [40, 120]) {
   })).join('\n');
   rows.push(...new Markdown(summary, 0, 0, mdTheme).render(width));
   fs.writeFileSync(path.join(directory, `${width}.ansi`), rows.join('\r\n') + '\r\n');
-  fs.writeFileSync(path.join(directory, `${width}.json`), JSON.stringify({ width, rows: rows.length, fixedNow: new Date(now).toISOString(), fixtures: fixtures.map(([name]) => name), source: 'production card/footer builders and pi-tui Markdown' }, null, 2) + '\n');
+  fs.writeFileSync(path.join(directory, `${width}.json`), JSON.stringify({ width, rows: rows.length, fixedNow: new Date(now).toISOString(), fixtures: renderedFixtures.map(([name]) => name), source: 'production card/footer builders and pi-tui Markdown' }, null, 2) + '\n');
 }
