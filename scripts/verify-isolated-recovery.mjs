@@ -82,16 +82,31 @@ try {
   const model = modelRuntime.getModel('fixture', 'primary'); assert.ok(model);
   const result = await createAgentSession({ cwd, agentDir, modelRuntime, model, thinkingLevel: 'off', resourceLoader: loader, settingsManager, sessionManager: SessionManager.create(cwd, path.join(root, 'sessions')), tools: [] });
   session = result.session;
-  await session.bindExtensions({ mode: 'json', uiContext: new Proxy(session._extensionUIContext ?? {}, { get(target, key) {
-    if (key === 'notify') return (message, level) => record({ type: 'notification', message, level });
-    return target[key] ?? (() => {});
-  } }), onError: error => record({ type: 'extension_error', error: String(error.message ?? error) }) });
+  // Supply a concrete, enumerable headless UI implementation. A proxy is
+  // not suitable here: Pi copies UI methods when building each context.
+  const noop = () => {};
+  const uiContext = {
+    select: async () => undefined, confirm: async () => false, input: async () => undefined,
+    notify: (message, level) => record({ type: 'notification', message, level }),
+    onTerminalInput: () => noop, setStatus: noop, setWorkingMessage: noop,
+    setWorkingVisible: noop, setWorkingIndicator: noop, setHiddenThinkingLabel: noop,
+    setWidget: noop, setFooter: noop, setHeader: noop, setTitle: noop,
+    custom: async () => undefined, pasteToEditor: noop, setEditorText: noop,
+    getEditorText: () => '', editor: async () => undefined,
+    addAutocompleteProvider: noop, setEditorComponent: noop, getEditorComponent: () => undefined,
+    getAllThemes: () => [], getTheme: () => undefined,
+    setTheme: () => ({ success: false, error: 'Headless fixture' }),
+    getToolsExpanded: () => false, setToolsExpanded: noop,
+  };
+  await session.bindExtensions({ mode: 'json', uiContext,
+    onError: error => record({ type: 'extension_error', error: JSON.stringify(error) }) });
   session.subscribe(event => {
     if (['agent_start', 'agent_end', 'agent_settled', 'model_change', 'tool_execution_end'].includes(event.type)) record({ type: event.type, toolName: event.toolName });
     if (event.type === 'message_end' && event.message.role === 'assistant') record({ type: 'assistant_end', model: event.message.model, stopReason: event.message.stopReason, error: event.message.errorMessage });
   });
   record({ type: 'session', sessionId: session.sessionManager.getSessionId(), sessionFile: session.sessionManager.getSessionFile(), root });
   await session.prompt('/goal start Verify isolated recovery and call fixture_checkpoint after recovery');
+  assert.ok(fs.existsSync(path.join(cwd, '.pi-glla', 'active.jsonl')), 'real goal command admitted a durable goal');
   await Promise.race([checkpoint, new Promise((_, reject) => { deadline = setTimeout(() => reject(new Error('isolated recovery deadline exceeded')), 90000); })]);
   await session.prompt('/goal pause');
   await session.abort();
