@@ -127,10 +127,10 @@ test('real recovery clamps reset waits, rotates after slow failures, and restore
     assert.equal(calls[count], 'provider/backup', 'pending intent is re-driven even when a changed retry budget would otherwise keep the old model');
     ctx.model = { provider: 'provider', id: 'free' };
     state.mainModelRecovery = { ...seed(), pendingModelSwitch: 'provider/backup', attempted: ['provider/free', 'provider/backup'] };
-    fs.writeFileSync(settingsPath, JSON.stringify({ mainModelFallbacks: ['provider/backup', 'provider/backup2'], mainModelSameModelRetries: 10, hourlyRetryProbe: false, forbiddenModels: ['provider/backup'] }));
+    fs.writeFileSync(settingsPath, JSON.stringify({ mainModelFallbacks: ['provider/backup', 'provider/other'], mainModelSameModelRetries: 10, hourlyRetryProbe: false, forbiddenModels: ['provider/backup'] }));
     const forbiddenCount = calls.length;
     await probeMainModelRecovery(ctx);
-    assert.equal(calls[forbiddenCount], 'provider/backup2', 'newly forbidden persisted target must advance to a permitted candidate');
+    assert.equal(calls[forbiddenCount], 'provider/other', 'newly forbidden persisted target must advance to a permitted candidate (forbidden matching is substring-based)');
     assert.ok(state.mainModelRecovery!.skipped?.some(entry => entry.ref === 'provider/backup' && entry.reason === 'forbidden'));
     fs.writeFileSync(settingsPath, JSON.stringify({ mainModelFallbacks: ['provider/backup', 'provider/backup2'], mainModelSameModelRetries: 10, hourlyRetryProbe: false }));
     ctx.model = { provider: 'provider', id: 'backup' };
