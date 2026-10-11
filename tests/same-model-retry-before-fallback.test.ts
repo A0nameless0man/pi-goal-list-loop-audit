@@ -95,7 +95,7 @@ test("source: orchestrator gates the immediate rotation on the same-model budget
   // wiring so a future refactor cannot silently restore immediate rotation.
   const block = ORCH_SRC.slice(ORCH_SRC.indexOf("if (failure.kind !== \"non-recoverable\")"));
   assert.match(block, /sameModelBudget/, "the generic recoverable branch must consult the budget");
-  assert.match(block, /sameModelRetriesRemain/, "the gate must call sameModelRetriesRemain");
+  assert.match(block, /mainModelSameModelRetryActive/, "the gate must consult count and elapsed-time limits");
   assert.match(block, /rotationsAllowed\s*\?\s*await\s+tryMainModelFallback/, "tryMainModelFallback runs only when rotationsAllowed");
   assert.doesNotMatch(
     ORCH_SRC.match(/if \(failure\.kind !== "non-recoverable"\)[\s\S]*?tryMainModelFallback\(ctx, failure\)/)?.[0] ?? "",
@@ -111,7 +111,7 @@ test("source: probe path emits a same-model-retry branch before the selector wal
   // agent_end gate would have parked on the current model. The branch keeps
   // the agent_end and probe paths consistent.
   const probe = RECOVERY_SRC.slice(RECOVERY_SRC.indexOf("async function probeMainModelRecoveryImpl"));
-  assert.match(probe, /sameModelRetriesRemain/, "probe impl must consult the same-model budget");
+  assert.match(probe, /mainModelSameModelRetryActive/, "probe impl must consult the same count/time gate");
   assert.match(probe, /mode:\s*"same-model-retry"/, "the same-model branch must emit a mode that distinguishes it from cycle-reset and resume-backup");
   assert.match(probe, /Main model recovery: retrying.*same-model retry/i, "operator-visible notify must name the phase and the budget");
 });
