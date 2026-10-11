@@ -32,5 +32,9 @@ not supervised objs
 ## we ned progress indicator for audits cause cant tell if this is stuck or not 
 /home/dracon/Pictures/Screenshots/Screenshot_20261011_193429.png
 
+## we have quota but we didnt retry 
+/home/dracon/Pictures/Screenshots/Screenshot_20261011_211430.png
+
+
 # Testing
 
