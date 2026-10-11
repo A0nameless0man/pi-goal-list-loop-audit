@@ -21,7 +21,7 @@ export interface FleetReport {
   directories: number; bytesRead: number; complete: boolean; elapsedMs: number;
 }
 const builderPhases = new Set(['drafting', 'planning', 'building', 'auditing', 'replanning', 'complete']);
-const workflows = new Set([...builderPhases, 'polishing', 'cancelled', 'settling', 'working', 'idle']);
+const workflows = new Set([...builderPhases, 'polishing', 'cancelled', 'settling', 'working', 'paused', 'idle']);
 const excluded = new Set(['.git', '.pi', 'node_modules', '.pi-glla', 'vendor']);
 const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 class Deadline extends Error {}

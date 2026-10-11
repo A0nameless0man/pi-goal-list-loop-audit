@@ -13,6 +13,13 @@ const state: State = { goal: { id: 'readability', objective: 'Ship Studio naviga
   pauseKind: 'blocked', pauseReason: reason, pauseSuggestedAction: action,
   usage: { tokensUsed: 0, tokensLimit: 1000000 } }, list: [] };
 
+test('wrapped blocker prose still redacts provider payloads before line splitting', () => {
+  const privateState: State = { ...state, goal: { ...state.goal!, pauseReason: `${reason} ${reason} 429 request-id PRIVATE-PROVIDER-IDENTIFIER api_key=PRIVATE-CREDENTIAL` } };
+  const rows = buildWidgetLines(privateState, undefined, now, undefined, 200, { uiStatusContext: { now }, compactAuditCard: false })!;
+  assert.match(rows.join('\n'), /why: provider error/);
+  assert.doesNotMatch(rows.join('\n'), /PRIVATE-PROVIDER|PRIVATE-CREDENTIAL|api_key/);
+});
+
 test('paused workflow does not claim working, even with stale running evidence', () => {
   const context = { now, generation: 1, evidence: { ownerKey: 'goal:readability', generation: 1, session: 'open' as const, observedAt: now, turnActive: true } };
   const status = projectUiStatus(state, context);
@@ -25,7 +32,7 @@ test('paused workflow does not claim working, even with stale running evidence',
 });
 
 test('blocked production card wraps the cause and action instead of cutting them horizontally', () => {
-  for (const width of [40, 80, 120]) for (const compactAuditCard of [false, true]) {
+  for (const width of [40, 80, 120, 200]) for (const compactAuditCard of [false, true]) {
     const rows = buildWidgetLines(state, undefined, now, undefined, width, { uiStatusContext: { now }, compactAuditCard })!;
     assert.ok(rows.every(row => visibleWidth(row) <= width), `${width}: bounded terminal rows`);
     assert.match(rows.join('\n'), /paused/);
