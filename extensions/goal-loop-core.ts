@@ -1315,6 +1315,8 @@ export interface MainModelRecovery {
    * (see DEFAULT_MAIN_MODEL_SAME_MODEL_RETRIES); a rotation resets it to 0 so
    * the backup earns its own budget instead of inheriting the primary's. */
   sameModelRetries?: number;
+  /** Start of this model's bounded same-model phase, distinct from episode age. */
+  sameModelPhaseStartedAt?: string;
   /** Candidates already tried in this recovery cycle. */
   attempted: string[];
   /** Next safe probe time; persisted so reloads do not forget the wait. */
@@ -1482,6 +1484,7 @@ export function sanitizeMainModelRecovery(value: unknown): MainModelRecovery | u
     ...(typeof raw.sameModelRetries === "number" && Number.isSafeInteger(raw.sameModelRetries) && raw.sameModelRetries > 0
       ? { sameModelRetries: Math.min(raw.sameModelRetries, MAX_MAIN_MODEL_SAME_MODEL_RETRIES) }
       : {}),
+    ...(date(raw.sameModelPhaseStartedAt) ? { sameModelPhaseStartedAt: date(raw.sameModelPhaseStartedAt) } : {}),
     attempted: refs,
     attempts,
     reason: bounded(raw.reason, 600) ?? "main model recovery",
