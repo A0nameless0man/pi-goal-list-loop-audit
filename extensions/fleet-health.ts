@@ -20,6 +20,8 @@ export interface FleetReport {
   roots: string[]; bounds: FleetBounds; projects: FleetProject[]; issues: FleetIssue[];
   directories: number; bytesRead: number; complete: boolean; elapsedMs: number;
 }
+const builderPhases = new Set(['drafting', 'planning', 'building', 'auditing', 'replanning', 'complete']);
+const workflows = new Set([...builderPhases, 'polishing', 'cancelled', 'settling', 'working', 'idle']);
 const excluded = new Set(['.git', '.pi', 'node_modules', '.pi-glla', 'vendor']);
 const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 class Deadline extends Error {}
@@ -46,7 +48,8 @@ function validState(value: unknown): value is State {
   }
   if (value.loop !== undefined && value.loop !== null) {
     if (!object(value.loop) || typeof value.loop.active !== 'boolean' || typeof value.loop.startedAt !== 'string' || typeof value.loop.target !== 'string') return false;
-    if (value.loop.builder !== undefined && (!object(value.loop.builder) || typeof value.loop.builder.phase !== 'string')) return false;
+    if (value.loop.builder !== undefined && (!object(value.loop.builder) || typeof value.loop.builder.phase !== 'string'
+      || !builderPhases.has(value.loop.builder.phase))) return false;
   }
   if (value.mainModelRecovery !== undefined && value.mainModelRecovery !== null) {
     if (!object(value.mainModelRecovery) || typeof value.mainModelRecovery.reason !== 'string') return false;
@@ -200,10 +203,10 @@ export function formatFleetHealth(report: FleetReport): string[] {
     `Read-only · ${report.projects.length} projects · ${report.directories} directories · ${report.bytesRead} bytes · ${report.elapsedMs}ms`,
     `Bounds: depth ${report.bounds.maxDepth}, projects ${report.bounds.maxProjects}, directories ${report.bounds.maxDirectories}, ${report.bounds.maxMs}ms`,
     ...report.projects.flatMap(project => [
-      `${safe(project.path)} — ${project.status ? `${project.status.mode} ${project.status.workflow} · ${project.status.execution}` : 'UNREADABLE/UNCONFIRMED'} · ${project.provenance}${project.partial ? ' (partial)' : ''}`,
+      `${safe(project.path)} — ${project.status ? `${safe(project.status.mode)} ${workflows.has(project.status.workflow) ? project.status.workflow : 'unconfirmed'} · ${safe(project.status.execution)}` : 'UNREADABLE/UNCONFIRMED'} · ${project.provenance}${project.partial ? ' (partial)' : ''}`,
       `  saved ${safe(project.savedAt ?? 'unknown')} · observed ${new Date(project.observedAt).toISOString()} · ${project.status ? 'Open this project and use /glla status for local prerequisites and execution details' : 'Inspect unreadable runtime artifacts in this project'}`,
     ]),
-    ...report.issues.map(issue => `${issue.kind}: ${safe(issue.path)} — ${issue.detail}`),
+    ...report.issues.map(issue => `${issue.kind}: ${safe(issue.path)} — ${safe(issue.detail)}`),
     'Saved workflow is not a running session. Open the project and use /glla status to inspect or continue.',
   ];
 }
