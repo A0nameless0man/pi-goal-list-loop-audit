@@ -13,6 +13,8 @@ import { registerOwnedTestProcess } from "../scripts/test-process-registry.mjs";
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 import { spawn as nodeSpawn } from "node:child_process";
 
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -515,7 +517,7 @@ async function runGoalCompaction(
     // Resolver already ledgered compactor_skipped_no_model; the ladder covers.
     return { fired: true };
   }
-  const workerScript = path.resolve(__dirname, "..", "scripts", "goal-compactor-worker.mjs");
+  const workerScript = path.resolve(HERE, "..", "scripts", "goal-compactor-worker.mjs");
   const spawnWorker = deps.spawnWorker ?? testSpawnWorker ?? defaultSpawnWorker;
   pruneOldJobDirs(ctx.cwd);
   const packet = buildPacketFromDisk(ctx.cwd);

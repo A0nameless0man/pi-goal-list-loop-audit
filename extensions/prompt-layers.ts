@@ -23,6 +23,8 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 const LAYER_START_RE = /^\s*<!--\s*glla-layer:\s*detail\s+([A-Za-z0-9_-]+)\s*-->\s*$/;
 const LAYER_END_RE = /^\s*<!--\s*glla-layer:\s*end\s*-->\s*$/;
@@ -36,7 +38,7 @@ export interface PromptSegment {
 }
 
 export function promptFilePath(name: string): string {
-  return path.resolve(__dirname, "..", "prompts", name);
+  return path.resolve(HERE, "..", "prompts", name);
 }
 
 /** Parse one prompt source into ordered segments. Throws naming the file

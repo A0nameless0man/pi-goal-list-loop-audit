@@ -23,14 +23,19 @@ export interface FleetReport {
 const excluded = new Set(['.git', '.pi', 'node_modules', '.pi-glla', 'vendor']);
 const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 class Deadline extends Error {}
-/** Clamp settings to safety ceilings; zero is useful for proving read bounds. */
-function boundsFor(input: Partial<FleetBounds>): FleetBounds {
+/** Clamp settings to safety ceilings; zero is useful for proving read bounds.
+ * Keys clamped DOWN from a larger request are reported so a caller raising a
+ * budget is never silently ignored. */
+function boundsFor(input: Partial<FleetBounds>): { bounds: FleetBounds; clamped: (keyof FleetBounds)[] } {
   const result = { ...FLEET_DEFAULT_BOUNDS };
+  const clamped: (keyof FleetBounds)[] = [];
   for (const key of Object.keys(result) as (keyof FleetBounds)[]) {
     const value = input[key];
-    if (typeof value === 'number' && Number.isFinite(value) && value >= 0) result[key] = Math.min(result[key], Math.floor(value));
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) continue;
+    if (Math.floor(value) > result[key]) clamped.push(key);
+    result[key] = Math.min(result[key], Math.floor(value));
   }
-  return result;
+  return { bounds: result, clamped };
 }
 function validState(value: unknown): value is State {
   if (!object(value) || !Array.isArray(value.list)) return false;
@@ -53,7 +58,7 @@ function validState(value: unknown): value is State {
 /** Read-only, explicit invocation only. No state loader, journal replay,
  * process probing, callbacks into dispatch, conversation reads or mutations. */
 export async function inspectFleetHealth(roots: readonly string[], input: Partial<FleetBounds> = {}): Promise<FleetReport> {
-  const start = Date.now(), bounds = boundsFor(input), deadline = start + bounds.maxMs;
+  const start = Date.now(), fitted = boundsFor(input), bounds = fitted.bounds, deadline = start + bounds.maxMs;
   const report: FleetReport = { roots: [], bounds, projects: [], issues: [], directories: 0, bytesRead: 0, complete: true, elapsedMs: 0 };
   const issue = (file: string, kind: FleetIssue['kind'], detail: string): void => {
     report.complete = false;
@@ -61,6 +66,7 @@ export async function inspectFleetHealth(roots: readonly string[], input: Partia
     if (report.issues.length < 200) report.issues.push({ path: file, kind, detail });
     else report.issues[199] = { path: '', kind: 'partial', detail: 'Additional diagnostics omitted (200-entry limit)' };
   };
+  for (const key of fitted.clamped) issue('', 'partial', `Requested fleet bound ${key} exceeds the safety ceiling and was clamped to ${bounds[key]}`);
   async function bounded<T>(operation: Promise<T>, cleanup?: (value: T) => void): Promise<T> {
     const remaining = deadline - Date.now();
     if (remaining <= 0) { void operation.then(value => cleanup?.(value), () => {}); throw new Deadline(); }

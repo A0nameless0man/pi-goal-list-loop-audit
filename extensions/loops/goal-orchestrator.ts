@@ -1,6 +1,6 @@
 /**
  * pi-goal-list-loop-audit — v0.1.0
- * extensions/loops/goal.ts
+ * extensions/loops/goal-orchestrator.ts — goal lifecycle + settlement.
  *
  * The goal loop. The agent continues working, and on complete_goal,
  * an isolated auditor verifies the work.

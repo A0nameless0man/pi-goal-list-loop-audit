@@ -807,9 +807,14 @@ export function currentUiStatusContext(ctx: ExtensionContext, now = Date.now()):
   try { turnActive = ctx.isIdle() === false; turnQueued = ctx.hasPendingMessages() === true; } catch { return { now }; }
   const activity = displayActivityFor(ctx);
   const progress = latestAuditProgress;
+  // An audit observation without a real event timestamp is not evidence: omit
+  // it (the auditing card renders unconfirmed) instead of poisoning freshness
+  // with an epoch fallback that hides a live host.
+  const auditEventAt = progress?.lastEventAt;
   const audit: UiAuditObservation | undefined = progress?.ownerKey && progress.attemptId && progress.generation !== undefined
+    && typeof auditEventAt === 'number' && Number.isFinite(auditEventAt)
     ? { ownerKey: progress.ownerKey, generation: progress.generation, attemptId: progress.attemptId,
-      observedAt: progress.lastEventAt ?? 0, lastActivityAt: progress.lastActivityAt,
+      observedAt: auditEventAt, lastActivityAt: progress.lastActivityAt,
       ...(progress.currentTool && progress.currentToolStartedAt !== undefined && progress.toolTimeoutMs !== undefined
         ? { tool: { name: progress.currentTool, startedAt: progress.currentToolStartedAt, budgetMs: progress.toolTimeoutMs } } : {}) }
     : undefined;

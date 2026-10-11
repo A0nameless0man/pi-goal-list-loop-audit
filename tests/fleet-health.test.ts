@@ -172,3 +172,17 @@ test('a saved retry is not an armed timer in fleet output', async () => {
     assert.doesNotMatch(formatFleetHealth(report).join('\n'), /retry-armed/);
   } finally { f.cleanup(); }
 });
+
+test('bounds raised above the safety ceiling are clamped and reported, never silently ignored', async () => {
+  const f = setup();
+  try {
+    const p = f.project('one');
+    const report = await inspectFleetHealth([p], { maxMs: 60_000, maxProjects: 10_000 });
+    assert.equal(report.bounds.maxMs, 2000);
+    assert.equal(report.bounds.maxProjects, 100);
+    assert.ok(report.issues.some((i) => i.kind === 'partial' && i.detail.includes('maxMs')),
+      `clamp-down is surfaced: ${JSON.stringify(report.issues)}`);
+    assert.ok(report.issues.some((i) => i.kind === 'partial' && i.detail.includes('maxProjects')),
+      `clamp-down is surfaced: ${JSON.stringify(report.issues)}`);
+  } finally { f.cleanup(); }
+});

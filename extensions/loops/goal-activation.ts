@@ -2,7 +2,7 @@ import { respecBuilderContext } from "../respec-builder-context.js";
 import { replayRespecCompletionSummary } from "../respec-builder-runtime.js";
 /**
  * pi-goal-list-loop-audit — v0.1.0
- * extensions/loops/goal.ts
+ * extensions/loops/goal-activation.ts — event wiring + session restore.
  *
  * The goal loop. The agent continues working, and on complete_goal,
  * an isolated auditor verifies the work.
@@ -147,7 +147,7 @@ import {
   transitionDispatch,
   type ContinuationDispatch,
 } from "../goal-loop-dispatch.js";
-import { clearPressureAttempt, flushPressureAttempt, settlePressureAttempt, pressureAttemptPending, pressureAttemptPhase, retireSettledPressureAttempt } from '../context-pressure-attempt.js';
+import { abortQueuedPressureAttempt, clearPressureAttempt, flushPressureAttempt, settlePressureAttempt, pressureAttemptPending, pressureAttemptPhase, retireSettledPressureAttempt } from '../context-pressure-attempt.js';
 import { clearBoundaryCompactionAttempt, settleBoundaryCompactionFailure, maybeCompactTranscriptAtBoundary, readHandoffBriefExcerpt, runGoalCompactionIfDue } from "../goal-compactor.js";
 import {
   createGoalContinuation,
@@ -1397,6 +1397,10 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
     // Our threshold is opportunistic. Its event may omit fromExtension;
     // bind it to the actual pending attempt rather than guessing from text.
     if (settlePressureAttempt(ctx, failure.kind === 'retry-owned' ? 'retry-owned' : failure.kind === 'aborted' ? 'aborted' : 'failure')) return;
+    // A queued pressure attempt never owned a compaction: the failure belongs
+    // to another lane, so consume the queued attempt (stopping its deadline)
+    // and let the boundary path below own the failure — never double-recover.
+    abortQueuedPressureAttempt(ctx);
     if (settleBoundaryCompactionFailure(ctx, safe, failure.kind !== "retry-owned" && failure.kind !== "aborted")) return;
     if (failure.kind === "retry-owned" || failure.kind === "aborted" || failure.kind === "from-extension" || !isSupervising()) return;
 

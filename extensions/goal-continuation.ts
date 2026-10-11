@@ -914,8 +914,10 @@ function armContinuationStartSelfHeal(ctx: ExtensionContext, record: Continuatio
     if (probe > continuationStartSelfHealMaxProbes) {
       appendLedger(live.cwd, "continuation_start_self_heal_exhausted", { id: dispatchId, probes: continuationStartSelfHealProbes });
       const msg = `glla: the continuation lane spent its self-heal budget (${continuationStartSelfHealMaxProbes} bounded re-probes) without a turn start. The work is safe in .pi-glla; ${record.kind === "loop" ? "/loop resume" : activeGoalSurfaceCommand("resume")} retries it explicitly, or start a fresh session.`;
-      ctx.ui.notify(msg, "warning");
-      notifyExternal(ctx, sanitizeDisplayText(msg));
+      try {
+        live.ui.notify(msg, "warning");
+        notifyExternal(live, sanitizeDisplayText(msg));
+      } catch { /* A stale host UI must not crash the self-heal timer. */ }
       return;
     }
     continuationStartSelfHealProbes = probe;
@@ -1596,7 +1598,15 @@ export function sendContinuation(goalId: string): void {
       return;
     }
   }
-  if (!flags.extensionApi || flags.extensionApiStale) return;
+  if (!flags.extensionApi || flags.extensionApiStale) {
+    appendLedger(ctx.cwd, "goal_continuation_send_api_unavailable", {
+      goalId,
+      generation: flags.sessionGeneration,
+      missing: !flags.extensionApi,
+      stale: !!flags.extensionApiStale,
+    });
+    return;
+  }
   // Queue advancement may happen after the previous host has settled, with
   // no further agent_end event before this send. Use the idle dispatch
   // boundary too, so every new work turn yields to a due compaction.

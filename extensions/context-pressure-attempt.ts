@@ -116,6 +116,17 @@ export function clearPressureAttempt(ctx: PressureContext, resetBudget = false):
   }
   attempts.delete(key);
 }
+/** Consume an attempt that never left `queued`: the failed compaction belongs
+ * to another lane (pressure never flushed), so the boundary path owns the
+ * failure. Clearing stops the live deadline/admission timers from firing a
+ * second park + abort later. The durable budget stays claimed. */
+export function abortQueuedPressureAttempt(ctx: PressureContext): boolean {
+  const attempt = attempts.get(owner(ctx));
+  if (!attempt || attempt.phase !== 'queued') return false;
+  try { attempt.record('aborted'); } catch { /* transcript is best-effort */ }
+  clearPressureAttempt(ctx);
+  return true;
+}
 export function settlePressureAttempt(ctx: PressureContext, outcome: 'success' | 'failure' | 'aborted' | 'retry-owned'): boolean {
   const attempt = attempts.get(owner(ctx));
   if (!attempt || attempt.phase === 'queued') return false;
