@@ -119,6 +119,7 @@ try {
   await session.prompt('/goal start Verify isolated recovery and call fixture_checkpoint after recovery');
   assert.ok(fs.existsSync(path.join(cwd, '.pi-glla', 'active.jsonl')), 'real goal command admitted a durable goal');
   await Promise.race([checkpoint, new Promise((_, reject) => { deadline = setTimeout(() => reject(new Error('isolated recovery deadline exceeded')), 90000); })]);
+  await session.waitForIdle();
   await session.prompt('/goal pause');
   await session.abort();
   const requests = trace.filter(event => event.type === 'request');
