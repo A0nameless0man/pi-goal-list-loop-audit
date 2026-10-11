@@ -1553,8 +1553,10 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
       rows.push(row('├─ ', candidate ? `fallback: ${eligible} · next candidate ${candidate}` : extras?.mainModelFallbacks ? 'fallback: no untried permitted candidate' : 'fallback: configuration not supplied to this view'));
     }
     const [lifecycle, transition] = pausedLifecycleLines(g, state, extras, now);
+    const observedTransition = status.execution === 'retry-armed'
+      ? `${pausedLastActivity(g, extras, now)} · next: ${status.retryKind === 'hourly' ? 'hourly recovery probe armed' : `recovery timer armed${status.retryAt ? ` · ${Date.parse(status.retryAt) > now ? `in ${fmtElapsed(Date.parse(status.retryAt) - now)}` : 'deadline due'}` : ''}`}` : transition;
     rows.push(row('├─ ', lifecycle));
-    rows.push(row('│  ', transition));
+    rows.push(row('│  ', observedTransition));
   }
   // Durable-vs-defer judgment plaques render durable-first on every card
   // (production refreshUI contract) — same builder as the legacy card.
