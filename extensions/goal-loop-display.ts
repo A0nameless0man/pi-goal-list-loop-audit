@@ -2072,6 +2072,23 @@ function needsLegacyWidget(state: State, audit?: AuditDisplayProgress | null, co
   if (g.status === "paused" && (isCompletionAuditNoVerdict(g) || latestAuditFeedback(g))) return true;
   return false;
 }
+export function widgetHeightBudget(rows: number): number {
+  return Number.isFinite(rows) && rows > 0 ? Math.max(1, Math.min(12, Math.floor(rows / 3))) : 8;
+}
+
+/** Width/height are read on every paint, including resize, not cached at the
+ * last agent event. This component is observational and owns no timers. */
+export function responsiveWidget(renderRows: (width: number, maxRows: number) => string[] | undefined, terminalRows: () => number) {
+  return {
+    render(width: number): string[] {
+      const max = widgetHeightBudget(terminalRows());
+      return (renderRows(width, max) ?? []).slice(0, max)
+        .map(line => tuiTruncateToWidth(line, Math.max(0, width), '…'));
+    },
+    invalidate(): void {},
+  };
+}
+
 export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | null, now = Date.now(), theme?: DisplayTheme, width?: number, extras?: WidgetExtras): string[] | undefined {
   const background = backgroundWidget(state, theme, width);
   const shared = extras?.uiStatusContext ? projectUiStatus(state, { ...extras.uiStatusContext, now }) : undefined;
