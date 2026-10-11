@@ -45,7 +45,6 @@ import {
   MAX_MAIN_MODEL_SAME_MODEL_RETRIES,
   normalizeMainModelSameModelRetries,
   requiresMainModelRecovery,
-  sameModelRetriesRemain,
   sameModelRetryPhaseActive,
   sameModelRetryDeadline,
   splitModelRef,
@@ -1121,7 +1120,8 @@ export function scheduleMainModelRecoveryTimer(ctx: ExtensionContext, delayMs: n
       if (!setMainModelRecoveryPause(ctx, recovery, bounded)) return;
       delayMs = bounded;
     }
-    delayMs = Math.min(delayMs, Math.max(1000, Date.parse(state.mainModelRecovery?.retryAt ?? '') - Date.now()));
+    const durableAt = Date.parse(state.mainModelRecovery?.retryAt ?? '');
+    if (Number.isFinite(durableAt)) delayMs = Math.min(delayMs, Math.max(1000, durableAt - Date.now()));
   }
   flags.mainModelRecoveryTimer = scheduleSessionTimeout(() => {
     flags.mainModelRecoveryTimer = null;
