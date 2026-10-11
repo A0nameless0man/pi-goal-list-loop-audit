@@ -46,6 +46,8 @@ import {
   normalizeMainModelSameModelRetries,
   requiresMainModelRecovery,
   sameModelRetriesRemain,
+  sameModelRetryPhaseActive,
+  sameModelRetryDeadline,
   splitModelRef,
   type MainModelFailure,
 } from "./main-model-recovery.js";
@@ -672,6 +674,22 @@ export function mainModelFallbackRefs(ctx: ExtensionContext): string[] {
   try { return normalizeMainModelFallbackRefs(loadGlobalSettings().mainModelFallbacks); } catch { return []; }
 }
 
+export function nextMainModelFallback(ctx: ExtensionContext, recovery = state.mainModelRecovery): string | undefined {
+  const settings = loadSettings(ctx.cwd);
+  const current = recovery?.active ?? modelRef(ctx.model);
+  return mainModelFallbackRefs(ctx).find(ref => !sameModelRef(ref, current)
+    && !(recovery?.attempted ?? []).some(tried => sameModelRef(tried, ref))
+    && !isForbiddenModel(ref, settings.forbiddenModels));
+}
+export function mainModelSameModelRetryActive(ctx: ExtensionContext, recovery: MainModelRecovery | undefined, budget: number): boolean {
+  return sameModelRetryPhaseActive(recovery, budget, !!nextMainModelFallback(ctx, recovery));
+}
+function boundedSameModelDelay(ctx: ExtensionContext, recovery: MainModelRecovery, delayMs: number): number {
+  const deadline = sameModelRetryDeadline(recovery);
+  return nextMainModelFallback(ctx, recovery) && deadline !== undefined
+    ? Math.max(1000, Math.min(delayMs, deadline - Date.now())) : delayMs;
+}
+
 function mainModelFailbackEnabled(): boolean {
   try { return isMainModelFailbackAuto(loadGlobalSettings().mainModelFailback); } catch { return true; }
 }
@@ -1020,7 +1038,7 @@ export function setMainModelRecoveryPause(ctx: ExtensionContext, recovery: MainM
     holdMainModelRecovery(ctx, normalized, "the provider refused the request itself (deterministic client error — e.g. too many images for this model). Switch model or trim the request, then resume");
     return false;
   }
-  const requestedDelayMs = Math.max(1_000, delayMs);
+  const requestedDelayMs = Math.max(1_000, boundedSameModelDelay(ctx, normalized, delayMs));
   if (normalized.manualResumeRequired) {
     holdMainModelRecovery(ctx, normalized, "an explicit recovery hold requires manual action");
     return false;
@@ -1094,6 +1112,16 @@ export function setMainModelRecoveryPause(ctx: ExtensionContext, recovery: MainM
 export function scheduleMainModelRecoveryTimer(ctx: ExtensionContext, delayMs: number): void {
   const generation = flags.sessionGeneration;
   clearMainModelRecoveryTimer();
+  const recovery = state.mainModelRecovery;
+  if (recovery?.retryAt && !recovery.manualResumeRequired
+    && recoveryOwnership(recovery.owner, recovery.kind, state, true) === 'retained') {
+    const bounded = boundedSameModelDelay(ctx, recovery, delayMs);
+    if (bounded < delayMs) {
+      if (!setMainModelRecoveryPause(ctx, recovery, bounded)) return;
+      delayMs = bounded;
+    }
+    delayMs = Math.min(delayMs, Math.max(1000, Date.parse(state.mainModelRecovery?.retryAt ?? '') - Date.now()));
+  }
   flags.mainModelRecoveryTimer = scheduleSessionTimeout(() => {
     flags.mainModelRecoveryTimer = null;
     // v0.35.15: `/glla pause` freezes automatic recovery probes — the
@@ -1644,7 +1672,7 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
   // walls sleep to reset; transient/unknown/empty hammer at 5s; persistent
   // walls ladder per mainModelFailureDelayMs).
   const sameModelBudget = normalizeMainModelSameModelRetries(loadSettings(ctx.cwd).mainModelSameModelRetries);
-  if (current && sameModelRetriesRemain(recovery.sameModelRetries, sameModelBudget)) {
+  if (current && mainModelSameModelRetryActive(ctx, recovery, sameModelBudget)) {
     const nextRetries = (typeof recovery.sameModelRetries === "number" && Number.isFinite(recovery.sameModelRetries) && recovery.sameModelRetries > 0
       ? Math.trunc(recovery.sameModelRetries)
       : 0) + 1;
@@ -1784,6 +1812,7 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
       // re-seeds the same-model budget so the retry cadence reflects a
       // fresh attempt, not the dead ladder rung it inherited.
       sameModelRetries: 1,
+      sameModelPhaseStartedAt: nowIso(),
       retryAt: undefined,
       resumeCurrent: undefined,
       pendingModelSwitch: undefined,
@@ -1852,6 +1881,7 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
       // including the probe path — the backup that just won the selector
       // earns its own retries from zero.
       sameModelRetries: 0,
+      sameModelPhaseStartedAt: nowIso(),
       attempted,
       primaryProbeAt: undefined,
       primaryProbeInFlight: undefined,
@@ -1925,6 +1955,7 @@ export function parkMainModelAfterFailure(ctx: ExtensionContext, failure: MainMo
     ...existing,
     active: current,
     sameModelRetries: nextSameModelRetries,
+    sameModelPhaseStartedAt: sameModel ? existing.sameModelPhaseStartedAt ?? existing.firstFailureAt ?? nowIso() : nowIso(),
     attempts: existing.attempts + 1,
     reason: mainModelRecoveryReason(failure),
     providerErrorDiagnostic: failureCopy.diagnostic,
