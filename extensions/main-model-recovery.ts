@@ -253,6 +253,18 @@ export function classifyMainModelFailure(error: string | undefined, opts?: { isC
   if (/^(?:auditor aborted\.?$|user (?:interrupt|abort)|cancelled by user)/i.test(evidence) || /user interrupt/.test(text)) {
     return { kind: "non-recoverable", raw };
   }
+  // v0.39.31 (incident Screenshot_20261012_111955): pi emits "This operation
+  // was aborted" for user-Escape / context-cancel aborts. The existing
+  // "user (?:interrupt|abort)" / "cancelled by user" regex does not match
+  // that phrasing, so the failure fell through to the transient ladder
+  // and the recovery loop auto-retried AFTER the agent had already
+  // issued pause_goal kind="blocked" with "do NOT continue working".
+  // The user intent is unambiguous: the operation was aborted. A blind
+  // retry cannot heal an abort — classify as non-recoverable and let the
+  // explicit user hold (supervisor / blocked goal) own the surface.
+  if (/this operation was aborted|operation was aborted/i.test(evidence)) {
+    return { kind: "non-recoverable", raw, nonRecoverableReason: "user-abort" };
+  }
   if (isPromptPolicyRejection(evidence)) {
     return { kind: "non-recoverable", raw, nonRecoverableReason: "prompt-policy" };
   }

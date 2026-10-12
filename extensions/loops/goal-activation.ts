@@ -780,6 +780,18 @@ function maybeScheduleUnsupervisedErrorRetry(
     appendLedger(ctx.cwd, "unsupervised_error_retry_refused", { reason: "non-recoverable", kind: failure.kind, display });
     return;
   }
+  // v0.39.31 (incident Screenshot_20261012_111955): a blocked-paused goal
+  // is an explicit user hold ("do NOT continue working"). The existing
+  // supervisorPaused gate is a separate surface; this fence catches the
+  // case where the agent called pause_goal kind="blocked" and the next
+  // turn hits a transient error. Without this gate, the recovery loop
+  // re-armed a timer and the user saw `glla: provider error (...) —
+  // retrying automatically` despite the explicit hold. Refuse with a
+  // durable reason so the audit trail records the hold, not a retry.
+  if (state.goal?.status === "paused" && state.goal.pauseKind === "blocked") {
+    appendLedger(ctx.cwd, "unsupervised_error_retry_refused", { reason: "goal-blocked-paused", display });
+    return;
+  }
   // Carve-out: a deterministic 400 can never succeed on an identical retry.
   if (isDeterministicProviderError(raw)) {
     appendLedger(ctx.cwd, "unsupervised_error_retry_refused", { reason: "deterministic", kind: failure.kind, display });
