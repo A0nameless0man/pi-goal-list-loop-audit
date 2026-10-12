@@ -14,7 +14,7 @@ import { respecAuditObservation, respecAuditStatus, respecBlockerHeadline } from
 import { truncateToWidth as tuiTruncateToWidth, visibleWidth as tuiVisibleWidth, sliceByColumn as tuiSliceByColumn } from "@earendil-works/pi-tui";
 
 import type { DurableDeferRecommendationInput, Goal, MainModelRecovery, PendingCompletion, State } from "./goal-loop-core.js";
-import { auditVerdictLabel, auditLifecycleLine, auditLifecycleProjection, auditPhaseOwnsAttempt, bucketSilentMs, buildDurableDeferRecommendation, compactDisplayText, fmtDuration, formatMainModelRecoveryStatus, headLifesign, isMonitorGoal, isPersistenceDegraded, lastPersistenceFailure, sanitizeDisplayText, sanitizeProviderAuditReport, sanitizeProviderDisplayText, stripThinkBlocks, type LifesignRow } from "./goal-loop-core.js";
+import { auditVerdictLabel, auditLifecycleLine, auditLifecycleProjection, auditPhaseOwnsAttempt, bucketSilentMs, buildDurableDeferRecommendation, compactDisplayText, fmtDuration, formatMainModelRecoveryStatus, headLifesign, isMonitorGoal, isPersistenceDegraded, isSettlingClaim, lastPersistenceFailure, sanitizeDisplayText, sanitizeProviderAuditReport, sanitizeProviderDisplayText, stripThinkBlocks, type LifesignRow } from "./goal-loop-core.js";
 
 export { isMonitorGoal };
 import { HELD_ON_RESTORE, type LoopState } from "./goal-loop-forever.js";
@@ -1945,6 +1945,16 @@ function buildStatusTextBase(state: State, audit?: AuditDisplayProgress | null, 
       // followed by a duplicated lifecycle/owner/queue report that Pi clips.
       const resume = g.policy === "list" ? "/list resume" : "/goal resume";
       return `glla: ${paint(theme, "warning", resume)} · compaction stopped`;
+    }
+    // v0.39.31 (incident Screenshot_20261012_110844/111046): a settling
+    // claim is settled — the verdict is durable, the archive is owed. Name
+    // the state on the footer so the user does not read a parked
+    // settlement as "auto-retry" / "action needed". A retry that races
+    // the archive is fenced upstream in retryStoredCompletionAudit; this
+    // branch names the durable fact for the surface.
+    if (isSettlingClaim(g.pendingCompletion)) {
+      const resume = g.policy === "list" ? "/list resume" : "/goal resume";
+      return `glla: ${paint(theme, "accent", "⏸ settled")} · ${paint(theme, "dim", "verdict applied · awaiting archive")} · ${resume}${pausedStatusSuffix(g, state, extras, now, true)}${heldSuffix}`;
     }
     if (kind === "error") return `glla: ${paint(theme, "error", `⏸ action needed — ${truncate(displayPauseReason(g.pauseReason ?? ""), 30)}`)}${pausedStatusSuffix(g, state, extras, now, false, true)}${heldSuffix}`;
     // v0.38.64 (021655): standby joins this gate so its waiting label

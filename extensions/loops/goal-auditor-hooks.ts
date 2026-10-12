@@ -1311,6 +1311,25 @@ async function retryStoredCompletionAudit(origin: CompletionAuditOrigin = "provi
   if (origin !== "manual" && supervisorPaused(state) && !exemptLoadHold) return;
   const goal = state.goal;
   if (!goal?.pendingCompletion) return;
+  // v0.39.31 (incident Screenshot_20261012_110844/111046): a settling
+  // claim is owed an archive, not a new audit. The settlement driver
+  // (settleApprovedCompletion via resumeSettlingCompletionAudit) is the
+  // only authority that owns the call — re-auditing would overwrite the
+  // previous auditor's durable approval with a fresh attemptId. Automatic
+  // origins (provider-retry, session-recovery, hourly backstop) fence
+  // here. Manual/agent origins fall through: the user/agent explicitly
+  // asked to re-audit a settled claim, which is a legitimate override
+  // (verify path is also fenced at the higher level via
+  // resumeStoredCompletionOrSettlement; this is the last-line guard).
+  if (origin !== "manual" && origin !== "agent" && isSettlingClaim(goal.pendingCompletion)) {
+    appendLedger(ctx.cwd, "stale_settling_retry_refused", {
+      goalId: goal.id,
+      attemptId: goal.pendingCompletion.attemptId,
+      phase: goal.pendingCompletion.phase,
+      origin,
+    });
+    return;
+  }
   const goalId = goal.id;
   if (completionAuditInFlight) return;
   const generation = sessionGeneration;
