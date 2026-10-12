@@ -208,8 +208,8 @@ export interface SuggestionPromotion {
   unattendedDefault: number;
 }
 
-/** Build the Accept-first option set for a command-carrying suggestion:
- * accept the exact command (recommended), continue without it, or cancel.
+/** Build the request-first option set for a command-carrying suggestion:
+ * request execution (not proof of success), continue without it, or cancel. 
  * Decline paths use the policy-correct surface verbs. */
 /** v0.39.31 (incident Screenshot_20261012_111955): an explicit
  * verification-contract amendment — a textual "amend item N to
@@ -233,9 +233,9 @@ export interface SuggestionPromotion {
  *    no Accept option. The user must hand-fix the proposal before
  *    GLLA can surface it as a decision.
  *
- * The Accept option, when safe, carries a `/goal tweak` command
- * with the proposed verification contract replacement so the user
- * can review the exact surface text before consent.
+ * The Accept option displays the exact old/new item and classifies syntax
+ * equivalence versus substantive change. A snapshot-bound host decision
+ * transaction persists the replacement only after explicit selection.
  */
 export interface ContractAmendment {
   /** 1-based item number named in the proposal. */
