@@ -19,6 +19,8 @@ irrespective we need to update the ui to see actual progress for hte audit
 
 # bit bad ui 
 i needed clearer idea what to do 
+/home/dracon/Pictures/Screenshots/Screenshot_20261012_111955.png
+
 
 
 # Testing
