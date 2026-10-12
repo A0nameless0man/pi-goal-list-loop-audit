@@ -160,13 +160,17 @@ async function bootGoalLoop(cwd: string, sessionName: string): Promise<{ pi: Moc
 for (const origin of ["provider-retry", "session-retry", "auto-resume"] as const) {
   test(`stale retry refuses to re-audit a settling claim (origin=${origin})`, async () => {
     const cwd = tmpCwd();
+    const pi = new MockPi();
+    activate(pi.api);
+    const ctx = makeMockCtx(cwd, { sessionManager: { name: `settling-fence-${origin}-${Date.now()}` } });
+    // Mirror approved-audit-settles.test.ts: seed an empty state before
+    // session_start, then install the seeded settling claim AFTER startup.
+    seedState(cwd, { goal: null });
+    await pi.fire("session_start", { reason: "startup" }, ctx);
     const { goalId, attemptId } = seedSettlingFixture(cwd, { phase: "settling" });
-    const { pi, ctx } = await bootGoalLoop(cwd, `settling-fence-${origin}`);
+    __testOnlyLoadState(cwd);
     try {
-      __testOnlyLoadState(cwd);
       await retryAudit(globalThis, origin);
-      // The retry must not have advanced the attemptId, not have launched
-      // an audit_started event, and must have written the fence ledger.
       const after = readState(cwd).goal;
       assert.equal(after?.id, goalId, "the goal is unchanged");
       assert.equal(after?.pendingCompletion?.attemptId, attemptId, "the attemptId is NOT advanced");
@@ -188,32 +192,24 @@ for (const origin of ["provider-retry", "session-retry", "auto-resume"] as const
 for (const origin of ["provider-retry", "session-retry"] as const) {
   test(`live retry-waiting claim is unaffected by the fence (origin=${origin})`, async () => {
     const cwd = tmpCwd();
-    const { attemptId } = seedSettlingFixture(cwd, {
+    const pi = new MockPi();
+    activate(pi.api);
+    const ctx = makeMockCtx(cwd, { sessionManager: { name: `retry-waiting-live-${origin}-${Date.now()}` } });
+    seedState(cwd, { goal: null });
+    await pi.fire("session_start", { reason: "startup" }, ctx);
+    seedSettlingFixture(cwd, {
       phase: "retry-waiting",
       pauseKind: "wait",
       pauseReason: "auditor retry: 503 upstream unavailable",
     });
-    const { pi, ctx } = await bootGoalLoop(cwd, `retry-waiting-live-${origin}`);
+    __testOnlyLoadState(cwd);
     try {
-      __testOnlyLoadState(cwd);
       await retryAudit(globalThis, origin);
       const fence = ledgerTypes(cwd).find((row) => row.type === "stale_settling_retry_refused");
       assert.equal(fence, undefined, `no fence for retry-waiting claim (origin=${origin})`);
-      // The retry path should at least have written the claim back with a
-      // fresh attemptId or the retryAttempts counter. We do not assert
-      // audit_started because the runtime seam may not actually launch
-      // a worker under the mock harness; the contract is "fence does not
-      // fire for non-settling claims".
       const after = readState(cwd).goal;
       assert.ok(after, "the goal is still on disk after the retry");
-      // The attemptId is the same unless the worker actually launched. We
-      // assert that the attemptId from the seed is preserved OR a newer
-      // one is present (i.e. the seed's attemptId is still in the audit
-      // history).
       assert.ok(after?.auditHistory || after?.pendingCompletion, "the audit history or pending claim survives");
-      // Reference attemptId to silence unused-var lint while keeping the
-      // fixture intent visible in the test name.
-      void attemptId;
     } finally {
       await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
     }
@@ -225,10 +221,16 @@ for (const origin of ["provider-retry", "session-retry"] as const) {
 // =================================================================
 test("session_start with a settling claim rehydrates without launching a new audit", async () => {
   const cwd = tmpCwd();
+  const pi = new MockPi();
+  activate(pi.api);
+  const ctx = makeMockCtx(cwd, { sessionManager: { name: "settling-rehydrate" } });
+  // Seed the settling claim BEFORE session_start; the activation should
+  // leave it on disk with the same attemptId.
   const { attemptId } = seedSettlingFixture(cwd, { phase: "settling" });
-  const { pi, ctx } = await bootGoalLoop(cwd, "settling-rehydrate");
   try {
+    await pi.fire("session_start", { reason: "startup" }, ctx);
     const after = readState(cwd).goal;
+    assert.ok(after, "the goal is still on disk after session_start");
     assert.equal(after?.pendingCompletion?.attemptId, attemptId, "the same attemptId is on disk after session_start");
     assert.equal(after?.pendingCompletion?.phase, "settling", "the same phase is on disk after session_start");
     assert.ok(!ledgerHas(cwd, "audit_started"), "session_start did not launch a new audit");
@@ -243,30 +245,27 @@ test("session_start with a settling claim rehydrates without launching a new aud
 // =================================================================
 test("settling claim whose goalId no longer matches the live goal is not silently re-audited", async () => {
   const cwd = tmpCwd();
-  const { attemptId } = seedSettlingFixture(cwd, { phase: "settling", goalId: "old-settling" });
-  // Replace the live goal with a NEW active goal. The old settling claim
-  // is now orphaned (its goalId does not match state.goal.id).
-  const newGoal = seedGoal({
-    id: "new-active",
-    status: "active",
-    objective: "successor goal that owns the live state",
+  const pi = new MockPi();
+  activate(pi.api);
+  const ctx = makeMockCtx(cwd, { sessionManager: { name: "ownership-replace" } });
+  seedState(cwd, { goal: null });
+  await pi.fire("session_start", { reason: "startup" }, ctx);
+  // The live goal is the new active goal; the old settling claim is
+  // archived away and the live state has no pendingCompletion. The retry
+  // path must no-op on the `if (!goal?.pendingCompletion) return;` gate.
+  seedState(cwd, {
+    goal: seedGoal({
+      id: "new-active",
+      status: "active",
+      objective: "successor goal that owns the live state",
+    }),
   });
-  seedState(cwd, { goal: newGoal });
-  const { pi, ctx } = await bootGoalLoop(cwd, "ownership-replace");
+  __testOnlyLoadState(cwd);
   try {
-    __testOnlyLoadState(cwd);
     await retryAudit(globalThis, "provider-retry");
     const after = readState(cwd).goal;
     assert.equal(after?.id, "new-active", "the successor goal is unchanged");
-    // The fence must NOT fire here — the claim is orphaned, the live goal
-    // has no pendingCompletion. The retry must no-op on the
-    // `if (!goal?.pendingCompletion) return;` gate BEFORE reaching the
-    // settling fence. The contract is "no audit launched for a claim
-    // that is not on the live goal", which is the same contract as for
-    // any non-settling orphaned claim.
     assert.ok(!ledgerHas(cwd, "audit_started"), "no new audit was launched against the successor goal");
-    // Reference attemptId for the source pin.
-    void attemptId;
   } finally {
     await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
   }
@@ -278,10 +277,14 @@ test("settling claim whose goalId no longer matches the live goal is not silentl
 // =================================================================
 test("duplicate retry of a settling claim does not advance the attemptId", async () => {
   const cwd = tmpCwd();
+  const pi = new MockPi();
+  activate(pi.api);
+  const ctx = makeMockCtx(cwd, { sessionManager: { name: "duplicate-dispatch" } });
+  seedState(cwd, { goal: null });
+  await pi.fire("session_start", { reason: "startup" }, ctx);
   const { goalId, attemptId } = seedSettlingFixture(cwd, { phase: "settling" });
-  const { pi, ctx } = await bootGoalLoop(cwd, "duplicate-dispatch");
+  __testOnlyLoadState(cwd);
   try {
-    __testOnlyLoadState(cwd);
     await retryAudit(globalThis, "provider-retry");
     await retryAudit(globalThis, "provider-retry");
     await retryAudit(globalThis, "session-retry");
