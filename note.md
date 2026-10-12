@@ -21,7 +21,7 @@ irrespective we need to update the ui to see actual progress for hte audit
 i needed clearer idea what to do 
 /home/dracon/Pictures/Screenshots/Screenshot_20261012_111955.png
 
-
+we can have suggested resolution like we can has a question here with the suggestion
 
 # Testing
 
