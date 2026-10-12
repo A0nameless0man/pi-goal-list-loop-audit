@@ -2751,6 +2751,7 @@ function registerAgentTools(pi: any): void {
       // Accept — track the promotion so the budget path below declines
       // instead (promotionUnattendedDefault), preserving consent.
       let promotedCommand: string | undefined;
+      let pauseContractAmendment: Goal["pauseContractAmendment"];
       let promotedUnattendedDefault = 0;
       if ((p.kind === undefined || p.kind === "blocked" || p.kind === "error")
         && (!p.options || p.options.length === 0)
@@ -2784,6 +2785,7 @@ function registerAgentTools(pi: any): void {
             state.goal.policy,
           );
           if (contractPromotion) {
+            pauseContractAmendment = { baseContract: state.goal.verificationContract!, baseRevision: state.goal.revision ?? 0, amendment: contractPromotion.amendment };
             p.kind = "decision";
             p.options = contractPromotion.options;
             p.recommended = contractPromotion.recommended;
@@ -2888,6 +2890,7 @@ function registerAgentTools(pi: any): void {
         pauseKind: effectiveKind,
         pauseOptions: p.kind === "decision" && p.options && p.options.length > 0 ? p.options : undefined,
         pauseRecommended: p.kind === "decision" && p.recommended && p.recommended >= 1 ? Math.floor(p.recommended) : undefined,
+        pauseContractAmendment,
         pauseResumeAt: storedResumeAt,
         // Quota reroute only: the wait is supervised (auto-retry card +
         // backstop) and the consumed evidence cannot reroute a later,
