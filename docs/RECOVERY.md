@@ -184,7 +184,12 @@ actual provider request time is additional. They do not invent a coding-plan
 reset window or wait hours before reaching the configured fallback budget.
 Explicit upstream reset hints remain authoritative, bounded by the 5h envelope.
 Other account/auth failures retain the configured ladder; the optional hourly
-:00:30 probe adds a recovery opportunity. Explicit manual holds and
+:00:30 probe adds a recovery opportunity. An exhausted single-model chain keeps
+that model's failure cadence when starting another cycle: revisiting a failing
+model is not success and does not reset backoff. Goal/list and loop provider
+errors enter the same durable wait immediately, including loops with no backups.
+A recovery-held loop keeps ownership across reload; queued list work does not
+replace it while its provider retry is pending. Explicit manual holds and
 deterministic client errors still stop. Failed recovery-wait persistence
 restores state, leaves dispatch held, and arms no timer.
 
@@ -225,7 +230,15 @@ no timer, fallback, or model switch overrides them.
 
 The saved `attempts` counter counts GLLA backoff steps, not provider
 requests. Status labels it **Recovery steps** with **episode age**, and
-explicitly denies that age proves continuous failure. A durable `retryAt`
+explicitly denies that age proves continuous failure. A screenshot saying
+“Retry failed after 15 attempts” or showing IDLE does not confirm the actual
+session state: inspect the saved goal/list/loop identity, recovery owner, holds
+and host error events. No supplied screenshot/session journal has confirmed
+objective loss. Pi's public extension hook is `agent_end` with assistant
+`stopReason="error"` and error text; its `auto_retry_end` notification is not an
+ExtensionAPI event. GLLA does not infer a durable owner from notification prose.
+Ordinary unsupervised chat retries remain process-local, not a persistent
+GLLA objective or reloadable retry contract. A durable `retryAt`
 alone renders execution as unconfirmed (`retry scheduled (unconfirmed)`);
 live snapshots distinguish armed regular timers, hourly-only timers,
 in-flight selections, active/queued host turns, absent timers, and
