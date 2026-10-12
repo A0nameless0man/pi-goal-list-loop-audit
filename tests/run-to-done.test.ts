@@ -131,27 +131,26 @@ test("run-to-done: batch drafts refuse the flag instead of dropping it", async (
   }
 });
 
-test("run-to-done: decisions auto-default immediately with no budget set", async () => {
+test("run-to-done: classified reversible work continues without adopting a decision option", async () => {
   const cwd = tmpCwd();
   setSettings({});
   const { pi, ctx } = await boot(cwd, { goal: seedGoal({ status: "active", policy: "goal", runToDone: true }) });
   try {
     const res = await pi.runTool("pause_goal", {
       reason: "choose the build strategy",
+      interruption: {reason:"reversible-work",evidence:"Both approaches preserve the confirmed interface; local patch is reversible",nextStep:"Patch the existing implementation and run its tests"},
       suggestedAction: "Pick an option to continue.",
       kind: "decision",
       options: ["rebuild from scratch", "patch the existing build"],
       recommended: 2,
     }, ctx) as { content: Array<{ text: string }> };
     const g = readState(cwd).goal as GoalView;
-    assert.equal(g.status, "active", "run-to-done never pauses for decisions");
-    assert.equal(g.midRunDecisionCount, 1, "the durable counter still advances");
-    assert.equal(g.autoDefaultLog?.length, 1);
-    assert.equal(g.autoDefaultLog![0]!.chosen, "patch the existing build");
-    assert.match(res.content[0]!.text, /Run-to-done decision/);
-    assert.match(res.content[0]!.text, /Left out/i);
-    assert.ok(ledgerTypes(cwd).includes("run_to_done_auto_default"));
-    assert.ok(!ledgerTypes(cwd).includes("decision_budget_auto_default"), "distinct event from the budget path");
+    assert.equal(g.status, "active", "known reversible work does not pause");
+    assert.equal(g.midRunDecisionCount ?? 0, 0, "no human decision admitted");
+    assert.equal(g.autoDefaultLog?.length ?? 0, 0);
+    assert.match(res.content[0]!.text, /Not paused: continue/);
+    assert.ok(!ledgerTypes(cwd).includes("run_to_done_auto_default"));
+    assert.ok(!ledgerTypes(cwd).includes("decision_budget_auto_default"));
   } finally {
     await shutdown(pi, ctx);
   }
