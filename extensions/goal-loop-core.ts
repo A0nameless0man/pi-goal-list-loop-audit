@@ -174,7 +174,7 @@ export function extractSuggestedCommand(suggestedAction: string | undefined): st
       if (firstWord === "resume" || firstWord === "cancel" || firstWord === "verify") continue;
       if (firstWord === "tweak") {
         const replacement = tail.slice(0, lastClose + 1).trim().match(/^tweak\s+(["'])([\s\S]+)\1$/i)?.[2];
-        if (!replacement || /^(?:Done when|Verification contract)\s*:/i.test(replacement.trim())) continue;
+        if (!replacement || /^(?:Done when\s*:|Verification[ -]+contract\b)/i.test(replacement.trim())) continue;
       }
       return `${verb} ${tail.slice(0, lastClose + 1).trim()}`.trim();
     }
