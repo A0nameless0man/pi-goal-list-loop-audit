@@ -1096,10 +1096,6 @@ export async function cmdTweak(
   if (raw.length >= 2 && ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'")))) {
     raw = raw.slice(1, -1).trim();
   }
-  if (/^(?:verification[ -]+contract\b|--(?:verification[-_]?contract|contract)\b)/i.test(raw)) {
-    ctx.ui.notify("Nothing changed: tweak has no standalone verification-contract subcommand or flag. To amend criteria, provide the full existing objective followed by 'Done when: <full revised contract>'. This requires explicit confirmation; omitting the clause preserves the old contract.", "warning");
-    return false;
-  }
   if (!raw) {
     // v0.34.69 (note.md 2026-08-07: "list tweak seems too literal, doesnt
     // work, it should launcher into a what we update into"): a bare tweak
@@ -1150,6 +1146,10 @@ export async function cmdTweak(
       guidance += ` It could mean: ${replacement.candidates.slice(0, 2).map((c) => `"${displaySlice(c, 100)}"`).join(" / ")} — re-run with one in full.`;
     }
     ctx.ui.notify(guidance, "info");
+    return false;
+  }
+  if (/^(?:verification[ -]+contract\b|--(?:verification[-_]?contract|contract)\b)/i.test(adopted)) {
+    ctx.ui.notify("Nothing changed: tweak has no standalone verification-contract subcommand or flag. To amend criteria, provide the full existing objective followed by 'Done when: <full revised contract>'. This requires explicit confirmation; omitting the clause preserves the old contract.", "warning");
     return false;
   }
   // Now 184316: strip the trailing procedural tail BEFORE contract
