@@ -2250,6 +2250,8 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
   const shared = extras?.uiStatusContext ? projectDisplayStatus(state, audit, { ...extras.uiStatusContext, now }) : undefined;
   const background = shared?.execution === 'blocked' || shared?.execution === 'dormant' ? undefined : backgroundWidget(state, theme, width);
   const compact = extras?.compactAuditCard !== false;
+  // Admission/storage stops own the card even when cached audit progress
+  // would otherwise select the detailed legacy renderer.
   const rawInner = background
     ?? (shared && (shared.execution === 'blocked' || shared.execution === 'dormant' || !needsLegacyWidget(state, audit, compact))
       ? buildUiStatusCard(state, shared, now, theme, width, compact, extras, audit)
