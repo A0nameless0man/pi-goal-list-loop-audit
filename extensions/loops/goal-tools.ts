@@ -2917,10 +2917,12 @@ function registerAgentTools(pi: any): void {
       // suggestedAction, so only an agent-authored blocked pause that offers
       // no way forward reaches this branch. The list then DROPS the item
       // (ledgered, both the detection and the drop) and ADVANCES to the next
-      // item instead of stopping on it.
+      // item instead of stopping on it. A supported material exception is
+      // a supervised hold, never proof of impossibility or permission to skip.
       let droppedImpossible = false;
       if (
         state.goal.policy === "list"
+        && !materialInterruption
         && effectiveKind === "blocked"
         && !(p.suggestedAction && p.suggestedAction.trim())
       ) {
