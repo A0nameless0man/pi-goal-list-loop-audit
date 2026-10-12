@@ -9,7 +9,7 @@ const action='Proposed amendment to item 2: replace its command with `bun test s
 async function fixture(extra:Record<string,unknown>={}) {
  __testOnlyResetProcessState();fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!,JSON.stringify({autoResume:true,aggressiveMode:false,decisionPopup:false}));
  const cwd=tmpCwd();const tasks=buildTaskList([{title:'Completed implementation'},{title:'Preserve remaining checkpoint'}]);tasks.tasks[0]!.status='complete';
- seedState(cwd,{goal:seedGoal({status:'active',verificationContract:contract,revision:3,taskList:tasks,...extra})});
+ seedState(cwd,{goal:seedGoal({objective:'Implement the approved feature',status:'active',verificationContract:contract,revision:3,taskList:tasks,...extra})});
  const pi=new MockPi();activate(pi.api);const ctx=makeMockCtx(cwd);await pi.fire('session_start',{reason:'startup'},ctx);await tick(50);
  return {cwd,pi,ctx};
 }
