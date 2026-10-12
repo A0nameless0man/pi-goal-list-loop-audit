@@ -6,11 +6,11 @@ import { readState } from "../extensions/goal-loop-core.js";
 import { MockPi, makeMockCtx, seedGoal, seedState, tmpCwd, tick } from "./harness/mock-pi.js";
 
 const settings=process.env.GLLA_GLOBAL_SETTINGS_PATH!;
-async function boot(extra:Record<string,unknown>={}) {
+async function boot(extra:Record<string,unknown>={}, list:unknown[]=[]) {
   __testOnlyResetProcessState();
   fs.writeFileSync(settings,JSON.stringify({autoResume:true,aggressiveMode:false,decisionPauseBudget:0}));
   const cwd=tmpCwd();
-  seedState(cwd,{goal:seedGoal({status:"active",runToDone:true,objective:"Implement the approved interface",verificationContract:"affected tests pass",...extra})});
+  seedState(cwd,{goal:seedGoal({status:"active",runToDone:true,objective:"Implement the approved interface",verificationContract:"affected tests pass",...extra}),list});
   const pi=new MockPi();activate(pi.api);
   const ctx=makeMockCtx(cwd);await pi.fire("session_start",{reason:"startup"},ctx);await tick(50);
   return {cwd,pi,ctx};
@@ -45,6 +45,32 @@ for(const reason of ["missing-permission","missing-input","contract-conflict","u
   await nextPi.fire("session_shutdown",{reason:"quit"},nextCtx);
  });
 }
+for(const reason of ["missing-permission","missing-input","contract-conflict","unauthorized-irreversible-action"] as const) {
+ for(const kind of ["blocked","wait"] as const) {
+  test(`list ${reason} (${kind}) without a suggestion stays held, never dropped or advanced`,async()=>{
+   const queued=[{id:"next-item",objective:"Next authorized item"}];
+   const {cwd,pi,ctx}=await boot({policy:"list"},queued);
+   const before=readState(cwd).goal!;const sent=pi.sent.length;
+   await pi.runTool("pause_goal",{reason:"A supported material exception requires resolution",kind,
+     ...(kind==="wait"?{resumeAt:new Date(Date.now()+1000).toISOString()}:{}),
+     interruption:{reason,evidence:"Confirmed requirement lacks the necessary external input/authorization or conflicts with supplied facts"}},ctx);
+   const after=readState(cwd);
+   assert.equal(after.goal?.id,before.id);assert.equal(after.goal?.status,"paused");assert.equal(after.goal?.pauseKind,"blocked");
+   assert.equal(after.goal?.pauseResumeAt,undefined);assert.equal(after.goal?.verificationContract,before.verificationContract);
+   assert.deepEqual(after.list,queued);assert.equal(pi.sent.length,sent,"no queue dispatch");
+   assert.equal(fs.existsSync(`${cwd}/.pi-glla/archive/${before.id}.md`),false);
+   const ledger=fs.readFileSync(`${cwd}/.pi-glla/active.jsonl`,"utf8");
+   assert.ok(!ledger.includes('"type":"list_item_auto_dropped"'));assert.ok(!ledger.includes('"type":"list_item_impossible"'));
+   await pi.fire("session_shutdown",{reason:"quit"},ctx);
+   __testOnlyResetProcessState();const reloadedPi=new MockPi();activate(reloadedPi.api);const reloadedCtx=makeMockCtx(cwd);
+   await reloadedPi.fire("session_start",{reason:"startup"},reloadedCtx);await tick(50);
+   assert.equal(readState(cwd).goal?.id,before.id);assert.equal(readState(cwd).goal?.status,"paused");assert.deepEqual(readState(cwd).list,queued);
+   assert.equal(reloadedPi.sent.length,0,"restart does not advance held list work");
+   await reloadedPi.fire("session_shutdown",{reason:"quit"},reloadedCtx);
+  });
+ }
+}
+
 test("a wait label cannot automatically resume a material permission exception",async()=>{
  const {cwd,pi,ctx}=await boot();
  await pi.runTool("pause_goal",{reason:"Missing external permission",kind:"wait",resumeAt:new Date(Date.now()+1000).toISOString(),
