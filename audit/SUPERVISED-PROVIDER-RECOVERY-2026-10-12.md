@@ -71,3 +71,16 @@ fixture normalization/cold-versus-same-process consent expectations (corrected).
 Passing new tests: 4 exhaustion/audit tests and 5 reload/fence tests. Parent owns
 full-suite, release and broader audit acceptance. See worker acceptance report
 for final targeted validation results. No branch, identity or history operations.
+
+Final targeted validation: `npm run check` passes. The six-file serialized group
+reports 39 passed / 3 failed: all nine new tests, delayed-hold tests, terminal
+cleanup tests and same-model-window tests pass. Three existing
+`recovery-ownership-runtime.test.ts` cases fail only in the mixed-file run
+(absent-legacy, terminal, permission-denied cleanup); the entire ownership file
+passes independently (7/7) under the same isolated settings and timeout.
+Adding explicit afterEach process resets to the new files did not remove this
+mixed-run failure. Cross-file runtime/persistence latch contamination remains
+an acceptance risk for the parent's suite/reviewer investigation; it is not
+silently waived or repaired outside this slice. Tests do not modify real global
+settings. Git's sync daemon checkpointed the edits; no files were staged by the
+worker.
