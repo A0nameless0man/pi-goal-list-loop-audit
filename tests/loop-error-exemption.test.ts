@@ -13,6 +13,8 @@ import * as assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import activate, { __testOnlyResetStaleFlag, __testOnlyResetOwnerSession, __testOnlyResetTerminalFlags } from "../extensions/loops/goal.js";
+import { clearMainModelRecoveryTimer, probeMainModelRecovery } from "../extensions/goal-recovery.js";
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { requiresMainModelRecovery } from "../extensions/main-model-recovery.js";
 import { resetLengthContinue } from "../extensions/length-continue.js";
 import { __testOnlyResetLengthExhaustionEpisodes } from "../extensions/loops/goal-activation.js";
@@ -31,6 +33,8 @@ function setGlobalAutoResume(v: boolean): void {
 afterEach(() => {
   setGlobalAutoResume(false);
   pi.execHandler = null;
+  clearMainModelRecoveryTimer();
+  __testOnlyResetTerminalFlags();
   __testOnlyResetOwnerSession(); // release the claim so later files are unaffected
 });
 
@@ -58,6 +62,10 @@ function workTurn() {
   const words = ["inspect", "adjust", "verify", "tighten", "document", "measure"];
   const unique = `turn ${workSeq}: ${words[workSeq % 6] ?? "polish"} different aspect ${"abcxyz".charAt(workSeq % 6).repeat(workSeq % 5 + 1)}`;
   return { messages: [{ role: "assistant", content: [{ type: "text", text: `did ${unique} on the loop target` }], stopReason: "end_turn" }] };
+}
+async function probe(ctx: MockCtx): Promise<void> {
+  clearMainModelRecoveryTimer();
+  await probeMainModelRecovery(ctx as unknown as ExtensionContext);
 }
 async function fireWork(ctx: MockCtx): Promise<void> {
   await pi.fire("tool_call", {}, ctx);
@@ -92,21 +100,23 @@ async function sessionWithLoop(cwd: string, overrides: Record<string, unknown>):
   return freshSession(cwd, "startup");
 }
 
-test("v0.29.19: provider-error turns are NOT iterations — no measure, no stall, no stuck; loop stays active", async () => {
+test("v0.29.19: provider-error turns are NOT iterations — paced recovery preserves measure, stall and stuck state", async () => {
   __testOnlyResetStaleFlag();
   const cwd = tmpCwd();
   const ctx = await sessionWithLoop(cwd, { measureCmd: "echo 74", direction: "max", bestValue: 74, lastValue: 74, stallCount: 2 });
   for (let i = 0; i < 3; i++) {
+    if (i > 0) await probe(ctx);
     await pi.fire("agent_end", errTurn(), ctx);
     await tick();
   }
   const l = loop(cwd);
-  assert.equal(l.active, true, "loop survives error turns");
+  assert.equal(l.active, false, "provider failures park work until a paced probe");
+  assert.ok(readState(cwd).mainModelRecovery?.retryAt, "next retry is durable");
   assert.equal(l.iteration, 1, "error turns are not iterations");
   assert.equal(l.stallCount, 2, "stall count untouched by dead turns");
-  assert.equal(l.consecutiveErrors, 3, "dead-turn streak tracked");
+  assert.ok(readState(cwd).mainModelRecovery!.attempts >= 3, "recovery tracks repeated failures");
   const lg = ledger(cwd);
-  assert.ok(lg.includes('"loop_turn_exempt_error"'), "exemption ledgered");
+  assert.ok(lg.includes('"main_model_recovery_wait"'), "paced recovery ledgered");
   assert.ok(!lg.includes('"loop_measured"'), "no measurement on dead turns");
   assert.ok(!lg.includes('"loop_stuck"'), "no stuck accounting on dead turns (hellhunter class)");
 });
@@ -121,6 +131,7 @@ test("v0.35.x: repeated in-band provider tool output parks recovery without loop
     isError: false,
   };
   for (let turn = 0; turn < 6; turn++) {
+    if (turn > 0) await probe(ctx);
     for (let i = 0; i < 3; i++) await pi.fire("tool_result", providerPane, ctx);
     await pi.fire("agent_end", workTurn(), ctx);
     await tick();
@@ -133,7 +144,7 @@ test("v0.35.x: repeated in-band provider tool output parks recovery without loop
   assert.ok(readState(cwd).mainModelRecovery, "main-model recovery is durable");
   const lg = ledger(cwd);
   assert.ok(lg.includes('"loop_in_band_provider_failure"'), "the repeated pane is ledgered");
-  assert.ok(lg.includes('"loop_turn_exempt_error"'), "the turn uses the existing error exemption");
+  assert.ok(lg.includes('"main_model_recovery_wait"'), "the turn uses durable paced recovery");
   assert.ok(!lg.includes('"loop_stuck"'), "the repeated provider pane never reaches stuck accounting");
 });
 
@@ -171,15 +182,18 @@ test("explicit in-band prompt-policy refusal stops a loop on its first pane", as
   }
 });
 
-test("v0.29.19: a real turn after errors clears the streak and measures normally", async () => {
+test("v0.29.19: a real recovery probe after errors retires recovery and measures normally", async () => {
   __testOnlyResetStaleFlag();
   const cwd = tmpCwd();
   pi.execHandler = () => ({ code: 0, stdout: "74\n", stderr: "" });
   const ctx = await sessionWithLoop(cwd, { measureCmd: "echo 74", direction: "max", bestValue: 74, lastValue: 74 });
   await pi.fire("agent_end", errTurn(), ctx); await tick();
+  await probe(ctx);
   await pi.fire("agent_end", errTurn(), ctx); await tick();
-  assert.equal(loop(cwd).consecutiveErrors, 2);
+  assert.ok(readState(cwd).mainModelRecovery?.retryAt);
+  await probe(ctx);
   await fireWork(ctx);
+  assert.equal(readState(cwd).mainModelRecovery, undefined, "healthy probe retires recovery");
   const l = loop(cwd);
   assert.equal(l.iteration, 2, "real turn measured as iteration 2");
   assert.equal(l.consecutiveErrors ?? 0, 0, "streak cleared by a real turn");
