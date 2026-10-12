@@ -274,10 +274,9 @@ export function extractContractAmendment(
   // promotion is data-driven; the test suite pins the three
   // categories from the verification contract item 1.
   const kind: "safe" | "unsafe" = isSafeMechanicalCommandShape(proposed) ? "safe" : "unsafe";
-  const itemRe = new RegExp(`^(\\s*\\d+)\\.\\s+([^\\n]+(?:\\n(?!\\s*\\d+\\.\\s+)[^\\n]*)*)`, "m");
   const numbered = matchItemNumberedLine(currentContract, itemNumber);
   const proposedContract = kind === "safe" && numbered
-    ? currentContract.replace(numbered.match, `${itemNumber}. ${proposed}`)
+    ? currentContract.replace(numbered.line, `${itemNumber}. ${proposed}`)
     : currentContract;
   return kind === "safe"
     ? { itemNumber, command: proposed, proposedContract, kind: "safe" }
@@ -294,7 +293,7 @@ function isSafeMechanicalCommandShape(command: string): boolean {
   return /^[A-Za-z0-9_./:@=+,-]+(?:[ \t]+[A-Za-z0-9_./:@=+,-]+)*$/.test(command.trim());
 }
 
-function matchItemNumberedLine(contract: string, itemNumber: number): { match: RegExpMatchArray; replacement: string } | null {
+function matchItemNumberedLine(contract: string, itemNumber: number): { line: string; replacement: string } | null {
   const lines = contract.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
@@ -303,7 +302,7 @@ function matchItemNumberedLine(contract: string, itemNumber: number): { match: R
     const n = Number.parseInt(m[1] ?? "", 10);
     if (n === itemNumber) {
       const replaced = line.replace(/^\s*\d+\.\s+/, `${itemNumber}. `);
-      return { match: m as unknown as RegExpMatchArray, replacement: replaced };
+      return { line, replacement: replaced };
     }
   }
   return null;
