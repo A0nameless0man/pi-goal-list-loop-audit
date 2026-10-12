@@ -415,23 +415,27 @@ test("v0.29.5: the stand-down survives the heartbeat + autoResume is GLOBAL-only
   assert.match(settings, /"autoResume",/);
 });
 
-test("audit 2026-09-07 HIGH: zombie retry routes on the abort owner, cycle-reset consumes budget and honors the horizon", () => {
+test("audit 2026-09-07 HIGH: zombie retry routes on the abort owner, cycle-reset consumes budget and honors explicit holds without a cutoff", () => {
   // 1. The retry timer must route on its closure goalId, never live state —
   //    `|| goal` sent a loop retry into the goal branch whenever any goal
   //    object existed, stranding the loop paused forever with budget left.
   assert.ok(!ACT.includes("if (goalId !== undefined || goal) {"), "no live-state routing in the zombie retry timer");
   // 2. The fallback-exhausted cycle-reset must not re-activate immediately:
   //    it increments attempts and parks through the standard envelope
-  //    (growing backoff + 24h horizon + manual hold) instead of a 1s
+  //    (growing backoff + explicit manual hold, no elapsed-time cutoff) instead of a 1s
   //    continuation with an unincremented count.
   const resetAt = RECOVERY.indexOf("main_model_fallback_cycle_reset");
   assert.ok(resetAt >= 0, "cycle-reset ledger site exists");
-  const resetHead = RECOVERY.slice(Math.max(0, resetAt - 600), resetAt);
+  const resetDeclaration = RECOVERY.lastIndexOf("    const next = {", resetAt);
+  assert.ok(resetDeclaration >= 0, "cycle-reset recovery declaration exists");
+  const resetHead = RECOVERY.slice(resetDeclaration, resetAt);
   assert.match(resetHead, /attempted: \[current\],[\s\S]*?sameModelRetries: 1,[\s\S]*?attempts: recovery\.attempts \+ 1/, "each new cycle resets the same-model phase and consumes backoff budget");
+  assert.match(resetHead, /modelFailureSteps: recovery\.modelFailureSteps,/, "revisiting a failing model retains its cadence rung");
   const resetEnd = RECOVERY.indexOf('mode: "cycle-reset"', resetAt);
   assert.ok(resetEnd > resetAt, "cycle-reset probe ledger ends the block");
   const resetBlock = RECOVERY.slice(resetAt, resetEnd);
-  assert.match(resetBlock, /holdMainModelRecovery\(ctx, next/, "past the horizon the reset holds for manual resume instead of resurrecting");
+  assert.match(resetBlock, /if \(next\.manualResumeRequired\) \{\s*holdMainModelRecovery\(ctx, next/, "explicit manual holds prevent resurrection");
+  assert.doesNotMatch(resetBlock, /mainModelRecoveryWindowExpired|MAX_MAIN_MODEL_RECOVERY/, "cycle reset has no elapsed-time or attempt-count cutoff");
   assert.match(resetBlock, /resumeSupervisedRecoverySurface\(ctx, recovery\.kind\)/, "cycle reset synchronously resumes the owning surface");
   const resumeSurface = RECOVERY.slice(RECOVERY.indexOf('function resumeSupervisedRecoverySurface'), RECOVERY.indexOf('async function probeMainModelRecoveryImpl'));
   assert.match(resumeSurface, /scheduleContinuation\(ctx, true, 1_000\)/, "the goal probe turn still resumes synchronously (the turn IS the health check)");
