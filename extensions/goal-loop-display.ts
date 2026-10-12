@@ -1531,9 +1531,12 @@ export function buildUiStatusFooter(status: UiStatus, now: number, theme?: Displ
   // footer must name the state prominently instead of reading as
   // "BLOCKED". The upstream fence in retryStoredCompletionAudit
   // prevents re-audit; this branch makes the settled-but-parked state
-  // visible to the user.
+  // visible to the user. The phrasing preserves the existing
+  // audit-lifecycle surface test which expects "settling", "the
+  // terminal archive is owed", and "/goal resume finishes it" — all
+  // three facts are still on the surface.
   if (status.workflow === 'settling') {
-    return `${paint(theme, 'dim', 'glla:')} ${paint(theme, 'accent', 'settled')} ${paint(theme, 'dim', `· ${status.mode === 'list' ? 'list item' : 'goal'} settling`)} ${paint(theme, 'dim', '· verdict applied · awaiting archive')}`;
+    return `${paint(theme, 'dim', 'glla:')} ${paint(theme, 'accent', 'settled')} ${paint(theme, 'dim', `· ${status.mode === 'list' ? 'list item' : 'goal'} settling`)} ${paint(theme, 'dim', '· verdict applied · the terminal archive is owed')}${status.nextAction ? ` ${paint(theme, 'dim', '·')} ${paint(theme, 'accent', uiSafeText(status.nextAction))}` : ''}`;
   }
   const tone = uiStatusTone(status);
   const action = status.actionability === 'user' ? 'needs your action'

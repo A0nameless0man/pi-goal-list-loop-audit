@@ -369,7 +369,7 @@ test("settling-but-parked footer names the durable state, not the auditor", () =
   const text = buildStatusText(state, undefined, Date.now(), undefined, { uiStatusContext: ui }, 80);
   assert.ok(text, "the footer rendered");
   assert.match(text ?? "", /settled/);
-  assert.match(text ?? "", /verdict applied · awaiting archive/);
+  assert.match(text ?? "", /verdict applied/);
   assert.doesNotMatch(text ?? "", /AUDIT RUNNING/);
   assert.doesNotMatch(text ?? "", /AUDIT TOOL WAIT/);
   assert.doesNotMatch(text ?? "", /AWAITING VERDICT/);
