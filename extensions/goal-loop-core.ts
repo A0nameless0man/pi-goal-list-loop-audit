@@ -147,6 +147,9 @@ export function extractSuggestedCommand(suggestedAction: string | undefined): st
     // either/or the extractor must not resolve — skip the line.
     if ((raw.match(/\/(?:goal|list|loop|glla)\b/g) ?? []).length > 1) continue;
     const rest = raw.slice(at);
+    // Public tweak replaces objective text plus an optional Done when clause;
+    // there is no standalone contract-edit flag/verb or contract-only tweak.
+    if (/\s--(?:verification[-_]?contract|contract)\b/i.test(rest)) continue;
     const verb = rest.match(/^(\/(?:goal|list|loop|glla))\b/)?.[1];
     if (!verb) continue;
     const tail = rest.slice(verb.length);
@@ -168,7 +171,11 @@ export function extractSuggestedCommand(suggestedAction: string | undefined): st
     // filter rendered the exact near-duplicate card the design forbids.
     if (opened && lastClose >= 0 && !quote) {
       const firstWord = tail.match(/^\s*(\S+)/)?.[1]?.toLowerCase();
-      if (firstWord === "resume" || firstWord === "cancel") continue;
+      if (firstWord === "resume" || firstWord === "cancel" || firstWord === "verify") continue;
+      if (firstWord === "tweak") {
+        const replacement = tail.slice(0, lastClose + 1).trim().match(/^tweak\s+(["'])([\s\S]+)\1$/i)?.[2];
+        if (!replacement || /^(?:Done when|Verification contract)\s*:/i.test(replacement.trim())) continue;
+      }
       return `${verb} ${tail.slice(0, lastClose + 1).trim()}`.trim();
     }
     if (opened) continue;
@@ -346,7 +353,7 @@ export function suggestionAcceptancePromotion(suggestedAction: string | undefine
   return {
     command,
     options: [
-      `Accept and run ${command}`,
+      `Request agent to run ${command}`,
       `Continue without it (${modeCommand(policy, "resume")})`,
       `Cancel (${workCommand(policy, "cancel")})`,
     ],
