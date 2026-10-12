@@ -2582,6 +2582,26 @@ function registerAgentTools(pi: any): void {
       if (state.goal.status !== "active") {
         return { content: [{ type: "text", text: `Goal is already ${state.goal.status}; pause request ignored.` }], details: {} };
       }
+      const explicitHold = typeof state.supervisorPausedAt === "number" || typeof state.loadHoldAt === "number";
+      if (explicitHold) {
+        return { content: [{ type: "text", text: "Existing supervisor/load hold preserved; no interruption default or dispatch was admitted." }], details: {} };
+      }
+      let materialInterruption = false;
+      if (p.interruption && !p.redirect) {
+        if (!p.interruption.evidence?.trim()) {
+          return { content: [{ type: "text", text: "Not paused: provide supported interruption evidence; no choice or authorization was inferred." }], details: {}, isError: true };
+        }
+        const disposition = classifyInterruption({ phase: "execution", reason: p.interruption.reason,
+          explicitHold: false, authorizedNextStep: !!p.interruption.nextStep?.trim() });
+        materialInterruption = disposition === "material-exception";
+        appendLedger(ctx.cwd, "interruption_admitted", { goalId: state.goal.id,
+          category: p.interruption.reason, disposition, revision: state.goal.revision ?? 0 });
+        if (disposition === "continue-authorized-work" || disposition === "investigate-without-consent") {
+          return { content: [{ type: "text", text: disposition === "continue-authorized-work"
+            ? "Not paused: continue the known authorized mechanical/reversible work within the confirmed contract. No option was adopted and no suggested command was dispatched. Process verification failures honestly; never weaken criteria."
+            : "Not paused: investigate locally to establish the authorized next step. Do not infer consent or choose a substantive waiver. Report a supported material exception if missing input, permission or a contract conflict is established." }], details: {} };
+        }
+      }
       // v0.38.15: anti-confabulation — a pause whose blocker is "this
       // session has no <glla tool>" is refused when the tool path provably
       // works: this very pause_goal call dispatched through the same
@@ -2605,7 +2625,7 @@ function registerAgentTools(pi: any): void {
       // any park with no armed recovery. The user's own /goal pause path
       // (cmdPause) is untouched — this guards the agent tool only.
       const parkKind = p.kind ?? "blocked";
-      if ((parkKind === "error" || parkKind === "blocked") && isProviderRecoveryArmed(state.goal)) {
+      if (!materialInterruption && (parkKind === "error" || parkKind === "blocked") && isProviderRecoveryArmed(state.goal)) {
         appendLedger(ctx.cwd, "pause_refused_recovery_armed", { goalId: state.goal.id, kind: parkKind, recoveryEpisodeKey: state.goal.recoveryEpisodeKey });
         return { content: [{ type: "text", text: `Not parked: a bounded provider-error retry is already armed for this episode and resumes the goal on its own (${activeGoalSurfaceCommand("resume")} retries now). Keep working — the envelope owns this failure. Pause here only for something the retry cannot supply (user input, a credential, a destructive-action gate).` }], details: {} };
       }
@@ -2637,7 +2657,7 @@ function registerAgentTools(pi: any): void {
       let effectiveKind = p.kind;
       let quotaRerouteNotice = "";
       let quotaEpisodeKey: string | undefined;
-      const quotaCause = (parkKind === "blocked" || parkKind === "error" || parkKind === "wait")
+      const quotaCause = !materialInterruption && (parkKind === "blocked" || parkKind === "error" || parkKind === "wait")
         ? selectQuotaWaitReroute(p.reason, state.goal.subagentQuotaEvidence)
         : undefined;
       if (quotaCause && !(p.kind === "wait" && p.resumeAt)) {
@@ -2799,7 +2819,11 @@ function registerAgentTools(pi: any): void {
         // the draft consent is the budget. Same mechanics as the exhausted
         // path (counter + autoDefaultLog), distinct ledger + copy.
         const runToDone = state.goal?.runToDone === true;
-        if ((budget !== undefined && decisionCount > budget) || runToDone) {
+        // Generic recommended options are not permission or contract-waiver
+        // evidence. Only the established decline-without-execution promotion
+        // path may use legacy unattended defaults; typed routine work returned
+        // above, while material and unclassified decisions remain supervised.
+        if (!materialInterruption && promotedCommand && ((budget !== undefined && decisionCount > budget) || runToDone)) {
           // v0.39.30 challenger: a promoted suggestion auto-defaults to
           // the decline-and-continue option, never Accept — no user is
           // present to consent, and the screenshot's own suggestion warns
