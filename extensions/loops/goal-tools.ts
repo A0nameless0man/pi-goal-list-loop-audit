@@ -156,6 +156,7 @@ isGoalRevisionCurrent,
   isProviderRecoveryArmed,
   extractSuggestedCommand,
   suggestionAcceptancePromotion,
+  contractAmendmentPromotion,
 } from "../goal-loop-core.js";
 // v0.38.99: the tool-path approval settlement runs the same ordering gate as
 // the detached path, so no terminal surface can be produced from an
