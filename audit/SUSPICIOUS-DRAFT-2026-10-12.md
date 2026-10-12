@@ -14,7 +14,7 @@ GLLA's `extractVerificationContract` did not recognize that heading: the criteri
 
 ## Verification
 
-`npm test -- tests/suspicious-draft-contract.test.ts tests/confirm-draft.test.ts tests/faulty-objective-recovery.test.ts`: 57 pass, zero failures. Parser tests cover the reduced field reproduction, ordinary imperative prose, and genuine review fragments. The runtime drafting test confirms the persisted pause, unchanged objective, and non-runnable tool response.
+`npm test -- tests/suspicious-draft-contract.test.ts tests/confirm-draft.test.ts tests/faulty-objective-recovery.test.ts`: 58 pass, zero failures. Parser tests cover the reduced field reproduction, ordinary imperative prose, and genuine review fragments. Runtime drafting tests confirm both paths: the field-style actionable draft stays active with preserved intent/criteria, while a genuine review fragment preserves its objective in a durable pause and receives a non-runnable tool response.
 
 `npm run check`: exit 0. Logs: `/tmp/glla-suspicious-tests.log`, `/tmp/glla-suspicious-types.log`.
 
