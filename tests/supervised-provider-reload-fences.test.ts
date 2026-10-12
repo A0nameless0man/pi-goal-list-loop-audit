@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import type { ExtensionContext } from '@earendil-works/pi-coding-agent';
 import { withPressureSession, providerError } from './harness/context-pressure.js';
 import { tick } from './harness/mock-pi.js';
+import activate, { __testOnlyResetProcessState } from '../extensions/loops/goal.js';
 import { state, persistStateLine } from '../extensions/goal-state.js';
 import { readState } from '../extensions/goal-loop-core.js';
 import { clearMainModelRecoveryTimer, mainModelRecoveryRuntimeStatus, probeMainModelRecovery, scheduleMainModelRecoveryTimer, mainModelRecoverySucceeded } from '../extensions/goal-recovery.js';
@@ -22,6 +23,9 @@ for (const mode of ['goal', 'list', 'loop'] as const) {
       const retained = JSON.parse(JSON.stringify(readState(cwd)));
       assert.ok(retained.mainModelRecovery?.owner);
       configure(false);
+      await pi.fire('session_shutdown', { reason: 'reload' }, ctx);
+      __testOnlyResetProcessState();
+      activate(pi.api);
       await pi.fire('session_start', { reason: 'reload' }, ctx);
       assert.deepEqual(readState(cwd).mainModelRecovery?.owner, retained.mainModelRecovery.owner);
       assert.equal(mainModelRecoveryRuntimeStatus()?.retryTimerArmed, false, 'cold reload requires consent');
@@ -29,6 +33,9 @@ for (const mode of ['goal', 'list', 'loop'] as const) {
       assert.equal(mode === 'loop' ? state.loop?.active : state.goal?.status === 'active', false);
       assert.equal(pi.sent.length, 0);
       configure(true);
+      await pi.fire('session_shutdown', { reason: 'reload' }, ctx);
+      __testOnlyResetProcessState();
+      activate(pi.api);
       await pi.fire('session_start', { reason: 'reload' }, ctx);
       assert.equal(mainModelRecoveryRuntimeStatus()?.retryTimerArmed, true, 'consented reload restores timer');
       await pi.command('glla', 'pause', ctx);
