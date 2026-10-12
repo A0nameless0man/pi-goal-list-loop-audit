@@ -148,7 +148,7 @@ test("single and batch multiline bookkeeping drafts refuse before auto-accept", 
     await pi.fire("session_start",{reason:"startup"},ctx);
     await tick();
     if (batch) await enterListDrafting(ctx); else await enterGoalDrafting(ctx);
-    const raw="Fix audit finding: HIGH: menu routes fail\\nDone when: the fix is committed on the current branch with the repo's configured identity, and this finding's box in .pi-glla/audit-loop/findings.md is checked (fixed in commit).".replace("\\n","\n");
+    const raw="Fix audit finding: HIGH: menu routes fail\nDone when: the fix is committed on the current branch with the repo's configured identity, and this finding's box in .pi-glla/audit-loop/findings.md is checked (fixed in commit).";
     const result=await pi.runTool("propose_goal_draft",batch?{objective:"batch",items:[raw]}:{objective:raw},ctx);
     assert.match(result.content[0]!.text,/bookkeeping-only/);
     assert.equal(readState(cwd).goal,null);
