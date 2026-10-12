@@ -71,6 +71,12 @@ function reanchorRecoveryToCurrentModel(ctx: ExtensionContext, via: string): voi
     ...recovery,
     primary: current,
     active: current,
+    // The resumed supervised turn on the new anchor IS its health check
+    // (same convention as the probe's same-model branch): record it
+    // visited while keeping every known-dead predecessor.
+    attempted: recovery.attempted.some((ref) => sameModelRef(ref, current))
+      ? recovery.attempted
+      : [...recovery.attempted, current],
     sameModelRetries: 0,
     sameModelPhaseStartedAt: nowIso(),
     modelFailureSteps: 0,

@@ -24,7 +24,9 @@ On manual resume the explicit current selection wins:
 
 - `primary`/`active` re-anchor to `modelRef(ctx.model)`; the obsolete
   `pendingModelSwitch` is dropped (ledgered as `clearedSwitch`);
-- `attempted`/`skipped` are kept — known-dead rungs stay visited;
+- `attempted` keeps every known-dead predecessor and records the new anchor
+  (the resumed supervised turn IS its health check — same convention as the
+  probe's same-model branch); `skipped` is kept;
 - `sameModelRetries`/`modelFailureSteps` reset and `primaryThinkingLevel`
   cleared so the new anchor earns a fresh budget instead of inheriting the
   old episode's counters or thinking level;

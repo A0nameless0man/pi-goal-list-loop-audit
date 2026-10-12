@@ -102,6 +102,9 @@ test("manual resume re-anchors a stale recovery cursor to the current model", as
     assert.equal(saved.mainModelRecovery?.primary, CURRENT_REF, "primary tracks the retry model, not the stale cursor");
     assert.equal(saved.mainModelRecovery?.active, CURRENT_REF);
     assert.equal(saved.mainModelRecovery?.pendingModelSwitch, undefined);
+    assert.deepEqual([...(saved.mainModelRecovery?.attempted ?? [])].sort(), [CURRENT_REF, STALE_REF].sort(), "known-dead rungs stay visited and the new anchor is recorded");
+    assert.equal(saved.mainModelRecovery?.sameModelRetries ?? 0, 0, "the new anchor earns a fresh same-model budget");
+    assert.equal(saved.mainModelRecovery?.primaryThinkingLevel, undefined, "no stale thinking level leaks onto the new anchor");
     const reanchors = ledgerEntries(cwd, "manual_resume_model_reanchored");
     assert.equal(reanchors.length, 1, "exactly one re-anchor is ledgered");
     assert.equal(reanchors[0]?.["from"], STALE_REF);
