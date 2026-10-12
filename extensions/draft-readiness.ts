@@ -10,7 +10,9 @@ export function assessDraftReadiness(objective: string, contract = ""): DraftRea
   // Oversized prose is outside these narrowly supported pattern diagnostics.
   if (objective.length > MAX_TEXT || contract.length > MAX_TEXT) return [];
   const text = objective.trim();
-  const criteria = contract.trim();
+  // The contract parser deliberately retains populated line-start headings.
+  // Normalize only that supported decoration for inspection, never storage.
+  const criteria = contract.trim().replace(/^(?:(?:done|verified)\s+when\b[^:]{0,60}:|done\b[^:]{0,60}:|verify(?:\s+when)?\s*:|verification(?:\s+contract(?:\s*\(auditor checks each line\))?)?\s*:)\s*/i, "").trim();
   const issues: DraftReadinessIssue[] = [];
   if (/^review the latest auditor disapproval in \/goal status[.!]?$/i.test(text)
     && /\b(?:bun|npm|pnpm|npx)\b.*\b(?:test|check|lint)|\b(?:full unit suite|implementation|browser gates)\b/i.test(criteria)) {
