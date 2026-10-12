@@ -2,7 +2,7 @@
 
 ## Design checkpoint
 
-The original Designer run failed before producing findings; its checkpoint was recorded inline. The current implementation and screenshot follow-up are documented in [the objective/audit status register](../audit/OBJECTIVE-AUDIT-STATUS-2026-10-11.md).
+The original Designer run failed before producing findings; its checkpoint was recorded inline. The current implementation and screenshot follow-up are documented in [the objective/audit status register](https://github.com/DraconDev/pi-goal-list-loop-audit/blob/main/audit/OBJECTIVE-AUDIT-STATUS-2026-10-11.md).
 
 ## Architecture
 
@@ -37,7 +37,7 @@ age. The saved workflow remains distinct from execution: scheduled/background
 wait labels do not turn a manual-action blocker into an automatic wait.
 
 See [external-check recovery](RECOVERY.md#checking-authorized-external-work) and
-[the incident/capture register](../audit/WAITING-WAKE-LIFECYCLE-2026-10-12.md).
+[the incident/capture register](https://github.com/DraconDev/pi-goal-list-loop-audit/blob/main/audit/WAITING-WAKE-LIFECYCLE-2026-10-12.md).
 
 ## Surface map
 
@@ -91,4 +91,4 @@ Fleet: configured-root limits, symlinks, malformed and oversized journals, parti
 
 Summary: outcome-first grouped changes, one instance of each limitation, one next action, full archive evidence and truthful audit/challenge caveats.
 
-Captures: reproducible actual terminal renderer output for running, quota recovery, workflow rejection, user-blocked, dormant/unconfirmed audit, settling and completed summary at narrow/wide widths. See [native capture inspection](../audit/UI-CAPTURE-INSPECTION.md) for reproduction commands, real private-xterm screenshots and the disposition of the user's older/newer style comparison. These fixtures demonstrate production rendering, not live session execution; final integration gates remain open in the implementation register.
+Captures: reproducible actual terminal renderer output for running, quota recovery, workflow rejection, user-blocked, dormant/unconfirmed audit, settling and completed summary at narrow/wide widths. See [native capture inspection](https://github.com/DraconDev/pi-goal-list-loop-audit/blob/main/audit/UI-CAPTURE-INSPECTION.md) for reproduction commands, real private-xterm screenshots and the disposition of the user's older/newer style comparison. These fixtures demonstrate production rendering, not live session execution; final integration gates remain open in the implementation register.
