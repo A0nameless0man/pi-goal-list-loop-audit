@@ -1,3 +1,4 @@
+import { classifyInterruption, type InterruptionReason } from "../interruption-policy.js";
 import { assessDraftReadiness, draftReadinessMessage } from "../draft-readiness.js";
 import { effectiveToolTimeoutMs } from "../goal-loop-auditor-process.js";
 import { deliverTerminalSummary } from "../terminal-summary-delivery.js";
@@ -810,20 +811,16 @@ function registerAgentTools(pi: any): void {
       const lastAudited = state.goal.auditHistory?.[state.goal.auditHistory.length - 1];
       const currentRevision = state.goal.revision ?? 0;
       if (!(p.newObjective?.trim() ?? "") && lastAudited && typeof lastAudited.revision === "number" && lastAudited.revision !== currentRevision) {
-        appendLedger(ctx.cwd, "complete_goal_revision_rejected", {
+        appendLedger(ctx.cwd, "complete_goal_current_revision_audit_required", {
           goalId: state.goal.id,
           currentRevision,
           auditedRevision: lastAudited.revision,
           auditedAt: lastAudited.at,
           objective: state.goal.objective.slice(0, 200),
         });
-        return {
-          content: [{
-            type: "text",
-            text: `complete_goal REJECTED — revision mismatch: the goal's contract changed since its last audit (audited at revision ${lastAudited.revision}, now revision ${currentRevision}). An approval from the old contract cannot be cited against the new one. Run ${activeGoalRoot()} verify to audit the current contract, then call complete_goal again.`,
-          }],
-          details: {},
-        };
+        // This claim starts an independent revision-bound audit below.
+        // Do not borrow the old verdict, or require the user to start a
+        // second audit through /goal verify before this one can begin.
       }
       // v0.34.20/v0.34.21: persist the completion claim AND an explicit
       // running-attempt record BEFORE the isolated auditor starts. If session
@@ -2558,13 +2555,18 @@ function registerAgentTools(pi: any): void {
       recommended: Type.Optional(Type.Number({ description: "For kind=decision: 1-based index of the recommended option" })),
       resumeAt: Type.Optional(Type.String({ description: "For kind=wait: ISO time the pause lifts (countdown is shown)" })),
       redirect: Type.Optional(Type.String({ description: "User redirect to work IMMEDIATELY in this same turn (quote or summarize the interrupting request). Parks the goal WITHOUT ending the turn; the result orders the redirect worked now and the goal resumed after. Only for genuine user redirects." })),
+      interruption: Type.Optional(Type.Object({
+        reason: Type.Union([Type.Literal("missing-permission"), Type.Literal("missing-input"), Type.Literal("unauthorized-irreversible-action"), Type.Literal("contract-conflict"), Type.Literal("mechanical-verification"), Type.Literal("reversible-work")]),
+        evidence: Type.String({ minLength: 1, description: "Concrete missing fact/conflict or existing authorization. Never infer consent from recommended options." }),
+        nextStep: Type.Optional(Type.String({ description: "Known authorized routine next step; guidance only, never arbitrary command dispatch." })),
+      }, { description: "Classify the interruption explicitly. Authorized mechanical/reversible work must continue; material exceptions cannot auto-default." })), 
     }),
     async execute(_id, params, _signal, _onUpdate, execCtx) {
       const foreign1 = foreignToolGuard(execCtx);
       if (foreign1) return { content: [{ type: "text", text: foreign1 }], details: {} };
       const ctx = currentToolContext(execCtx);
       if (!ctx) return staleToolResult();
-      const p = params as { reason: string; runIds?: string[]; suggestedAction?: string; kind?: "decision" | "error" | "wait" | "blocked" | "standby"; options?: string[]; recommended?: number; resumeAt?: string; redirect?: string };
+      const p = params as { reason: string; runIds?: string[]; suggestedAction?: string; kind?: "decision" | "error" | "wait" | "blocked" | "standby"; options?: string[]; recommended?: number; resumeAt?: string; redirect?: string; interruption?: { reason: InterruptionReason; evidence: string; nextStep?: string } };
       if (p.kind === "standby") {
         const result = admitBackgroundWait(ctx, p.runIds ?? [], p.reason);
         return { content: [{ type: "text", text: result.message }], details: {}, isError: !result.ok, ...(result.ok ? { terminate: true } : {}) };
