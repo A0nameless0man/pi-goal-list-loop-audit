@@ -18,6 +18,7 @@ import {
   extractSuggestedCommand,
   suggestionAcceptancePromotion,
   readState,
+  type Goal,
 } from "../extensions/goal-loop-core.js";
 import { MockPi, makeMockCtx, seedGoal, seedState, tick, tmpCwd, type MockCtx } from "./harness/mock-pi.js";
 
@@ -44,10 +45,10 @@ function ledgerTypes(cwd: string): string[] {
     .map((line) => (JSON.parse(line) as { type: string }).type);
 }
 
-async function activeBoot(cwd: string, policy: "goal" | "list" = "goal"): Promise<{ pi: MockPi; ctx: MockCtx }> {
+async function activeBoot(cwd: string, policy: "goal" | "list" = "goal", extra: Partial<Goal> = {}): Promise<{ pi: MockPi; ctx: MockCtx }> {
   __testOnlyResetOwnerSession();
   __testOnlyResetStaleFlag();
-  seedState(cwd, { goal: seedGoal({ status: "active", policy }) });
+  seedState(cwd, { goal: seedGoal({ status: "active", policy, ...extra }) });
   const pi = new MockPi();
   activate(pi.api);
   const ctx = makeMockCtx(cwd, { sessionManager: { name: `suggestion-${Date.now()}-${Math.random()}` } });
@@ -79,6 +80,62 @@ for (const resumeAt of [undefined, "not-a-date"]) {
       assert.equal(readState(cwd).goal?.status, "active", "invalid wait never parks the work");
       assert.equal(readState(cwd).goal?.pauseResumeAt, undefined);
     } finally {
+      await pi.fire("session_shutdown", { reason: "quit" }, ctx);
+    }
+  });
+}
+
+for (const failure of ["throw", "no-timer"] as const) {
+  test(`pause_goal: heartbeat registration failure (${failure}) preserves the active checkpoint`, async () => {
+    const cwd = tmpCwd();
+    setSettings({});
+    const { pi, ctx } = await activeBoot(cwd, "goal", {
+      taskList: { version: 1, tasks: [{ id: "1", title: "Retained external-work checkpoint",
+        status: "in_progress", subtasks: [] }] },
+    });
+    // Exercise real startHeartbeat through the registered pause_goal tool.
+    // Reject its timer publication at the existing runtime boundary rather
+    // than fabricate presentation evidence or replace the tool's registrar.
+    if (heartbeatTimer) clearTimeout(heartbeatTimer);
+    heartbeatTimer = null;
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, "heartbeatTimer");
+    assert.ok(descriptor, "the host exposes its timer registration boundary");
+    const before = structuredClone(readState(cwd).goal);
+    const sendsBefore = pi.sent.length;
+    let attempted = 0;
+    Object.defineProperty(globalThis, "heartbeatTimer", {
+      configurable: true,
+      get: () => null,
+      set: (timer: NodeJS.Timeout | null) => {
+        if (!timer) return;
+        attempted++;
+        clearTimeout(timer); // failed publication never leaves an orphan wake
+        if (failure === "throw") throw new Error("fixture: heartbeat registration rejected");
+        // Simulate a registrar returning without retaining a timer handle.
+      },
+    });
+    try {
+      const result = await pi.runTool("pause_goal", {
+        kind: "wait", reason: "Inspect fresh external render evidence at the next bounded check.",
+        resumeAt: new Date(Date.now() + 60_000).toISOString(),
+      }, ctx);
+      assert.ok(attempted > 0, "real heartbeat registration was attempted");
+      assert.ok("isError" in result);
+      assert.equal(result.isError, true);
+      assert.ok("details" in result);
+      assert.deepEqual(result.details, { paused: false, wakeRegistered: false });
+      const text = result.content.map(c => c.text).join("\n");
+      assert.match(text, /Not paused: scheduled-check heartbeat registration failed/);
+      assert.match(text, /No automatic wake was registered/);
+      if (failure === "throw") assert.match(text, /fixture: heartbeat registration rejected/);
+      assert.deepEqual(readState(cwd).goal, before, "the full durable checkpoint is unchanged");
+      assert.equal(readState(cwd).goal?.pauseResumeAt, undefined);
+      assert.equal(heartbeatTimer, null);
+      await tick(30);
+      assert.equal(pi.sent.length, sendsBefore, "no automatic-wake reminder or continuation was sent");
+      assert.equal(ledgerTypes(cwd).includes("goal_paused"), false);
+    } finally {
+      Object.defineProperty(globalThis, "heartbeatTimer", descriptor);
       await pi.fire("session_shutdown", { reason: "quit" }, ctx);
     }
   });

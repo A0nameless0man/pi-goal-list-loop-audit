@@ -81,6 +81,37 @@ Commands and retained output:
   failed and missing outcomes, failed durable writes remaining retriable,
   supervisor/load/user holds, replaced ownership and single dispatch.
 
+### Registration-failure audit repair
+
+The 03:33 audit correctly found that absent-deadline tests and synthetic UI
+samples did not execute failed heartbeat registration. Added two real
+`pause_goal` tests in `tests/suggestion-acceptance.test.ts`, forcing timeout
+publication at the existing host-global boundary to (a) throw and (b) retain
+no timer. Both call the real `startHeartbeat`, assert registration was
+attempted, verify error/details and unchanged full durable active goal with an
+in-progress task, and reject any saved deadline, pause ledger event, new wake
+message or continuation dispatch. Rejected timeouts are canceled; the original
+global descriptor is restored in `finally` before host shutdown. No production
+code or test-only production hook was added for this repair.
+
+- `timeout 160 npm test -- tests/suggestion-acceptance.test.ts`: 20 pass,
+  0 fail (`/tmp/glla-wait-registration-failure.log`).
+- Combined admission/projection/overdue/backstop rehearsal: 42 pass, 0 fail
+  across 4 files (`/tmp/glla-wait-registration-repair.log`).
+- `timeout 120 npm run check` and `timeout 30 npm run check:inventory`:
+  exit 0, respectively `/tmp/glla-wait-failure-types.log` and
+  `/tmp/glla-wait-failure-inventory.log` (exit statuses observed by parent).
+- Fresh-context read-only reviewer run
+  `64a173fb-f0a9-4245-8ea4-ed5a8821e9bb`: no issues; BLOCKERS: none.
+  Reviewer inspected the actual publication path, assertions, cleanup and
+  retained command logs. Review tools did not independently execute shell
+  tests; executable results above were run by the parent. Output reference:
+  `review/wait-registration-failure.md` under this run's retained artifacts.
+
+The earlier ffprobe failures of external volume 03/04 are incident evidence,
+not GLLA repair work or an instruction to alter external renders. The only
+substantive auditor rejection was the registration-failure coverage gap.
+
 Capture reproduction:
 ```
 timeout 30 bun scripts/wait-status-capture.ts
