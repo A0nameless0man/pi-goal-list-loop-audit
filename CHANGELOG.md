@@ -2,8 +2,36 @@
 
 ## Unreleased
 
-## 0.39.29 — model-failure cadence isolation (2026-10-11)
+## 0.39.30 — truthful waiting, audit status and recovery (2026-10-12)
 
+Includes all changes since published 0.39.28; 0.39.29 was an untagged development version.
+
+### Waiting and automatic assessment
+
+- Distinguish observed background progress, registered waiting, intervention
+  blockers and unconfirmed/stale activity. Parent chat cannot prove worker progress.
+- Scheduled checks require a valid bounded deadline and a registered heartbeat;
+  failed registration leaves the active checkpoint unchanged and promises no wake.
+- Cards retain check deadlines and wake ownership at narrow widths. Restarted
+  sessions require admission; holds and persistence safety remain authoritative.
+- Resumed checks request fresh assessment, never infer external completion from
+  elapsed time. Add executable throw/no-timer registration-failure regressions.
+
+### Interaction and audit visibility
+
+- Explicit Goal, List item and Loop / Project identity across status surfaces.
+- Compact and detailed auditor status share evidence, clocks, tool budgets,
+  semantic colors and truthful stale-worker inspection actions.
+- Concrete command suggestions offer an Accept choice. Mid-run decision budgets
+  limit interruptions; unattended defaults never accept scope-changing suggestions.
+
+### Recovery
+
+- Manual resume re-anchors recovery to the selected retry model and drops stale
+  pending model switches without discarding safety history.
+- Recheck repaired persistence before recovery admission, breaking storage-latch
+  deadlocks while retaining stand-down when writes still fail. Existing eager
+  retries and hourly probes use the repaired gate.
 - Each active model now tracks its own `modelFailureSteps` rung; a freshly
   selected backup never inherits the primary's retry phase. The same-model
   phase deadline is suspended while a serving backup is healthy and resumes

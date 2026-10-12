@@ -31,7 +31,8 @@
 ## Versions and shipped content
 
 [CHANGELOG.md](../CHANGELOG.md) records the release history from
-v0.35.14–v0.39.28 and unreleased work. `/glla version` reports the loaded version
+v0.35.14–v0.39.28 and the prepared v0.39.30 release (including untagged
+v0.39.29 development changes). `/glla version` reports the loaded version
 and registry comparison. A checkout can contain changes not yet published.
 
 The package includes this documentation, [examples](../examples/),
