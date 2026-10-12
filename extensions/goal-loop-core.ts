@@ -204,6 +204,132 @@ export interface SuggestionPromotion {
 /** Build the Accept-first option set for a command-carrying suggestion:
  * accept the exact command (recommended), continue without it, or cancel.
  * Decline paths use the policy-correct surface verbs. */
+/** v0.39.31 (incident Screenshot_20261012_111955): an explicit
+ * verification-contract amendment — a textual "amend item N to
+ * <command>" proposal — is a contract change requiring consent.
+ * The slash-command extractor (extractSuggestedCommand) does not
+ * match it because the proposal is a textual instruction, not a
+ * `/goal|/list|/loop|/glla` verb. The user asked the surface to
+ * offer Accept/Decline for the suggestion, so the promotion path
+ * must catch the amendment pattern and surface it as a decision.
+ *
+ * Two categories are intentionally distinguished:
+ *
+ *  - **Safe literal arguments** — a backticked command whose shape
+ *    passes the mechanical-command allowlist
+ *    (`isSafeMechanicalCommand` from `goal-loop-shield.ts`). The
+ *    proposal carries a quoteless form like `bun test
+ *    src/lib/auditCensus.test.ts`; the allowlist accepts it.
+ *  - **Unsafe command syntax** — a backticked command with quotes,
+ *    shell metacharacters, or anything the allowlist rejects. The
+ *    extractor returns `kind: "unsafe"` and the promotion builds
+ *    no Accept option. The user must hand-fix the proposal before
+ *    GLLA can surface it as a decision.
+ *
+ * The Accept option, when safe, carries a `/goal tweak` command
+ * with the proposed verification contract replacement so the user
+ * can review the exact surface text before consent.
+ */
+export interface ContractAmendment {
+  /** 1-based item number named in the proposal. */
+  itemNumber: number;
+  /** The proposed replacement command (backticked from the proposal). */
+  command: string;
+  /** The full proposed verification contract with the amendment applied. */
+  proposedContract: string;
+  /** Safe vs unsafe — unsafe proposals have no Accept option. */
+  kind: "safe" | "unsafe";
+  /** Why the proposal is unsafe, when kind === "unsafe". */
+  unsafeReason?: string;
+}
+
+const AMEND_HEAD_PATTERN = /(?:amend|amendment|change|replace|swap|swap to|amend to|propose[d]? amendment to|propose[d]? one-line amendment|amend verification-contract)\b[^.\n]{0,200}?item\s+(\d+)(?:\s*\([^)]*\))?/i;
+const AMEND_BACKTICKED_COMMAND = /`([^`\n]+)`/g;
+
+export function extractContractAmendment(
+  suggestedAction: string | undefined,
+  currentContract: string | undefined,
+): ContractAmendment | undefined {
+  if (!suggestedAction || !currentContract) return undefined;
+  // Only attempt extraction when the prose actually names an item.
+  const head = suggestedAction.match(AMEND_HEAD_PATTERN);
+  if (!head) return undefined;
+  const itemNumber = Number.parseInt(head[1] ?? "", 10);
+  if (!Number.isFinite(itemNumber) || itemNumber < 1) return undefined;
+  // Pull all backticked command candidates from the prose. The first
+  // safe one is the Accept payload; subsequent backticks are typically
+  // the QUOTED (rejected) form we are amending away from.
+  const candidates: string[] = [];
+  for (const match of suggestedAction.matchAll(AMEND_BACKTICKED_COMMAND)) {
+    const value = (match[1] ?? "").trim();
+    if (value) candidates.push(value);
+  }
+  if (candidates.length === 0) return undefined;
+  // Prefer the LAST backticked command — the screenshot shape is
+  // "rejected form, then proposed form"; the proposed form is the
+  // last backtick. Fall back to the first if there is only one.
+  const proposed = candidates[candidates.length - 1] ?? candidates[0]!;
+  // isSafeMechanicalCommand is imported by re-export through
+  // ./goal-loop-shield.js. The shape is checked here so the
+  // promotion is data-driven; the test suite pins the three
+  // categories from the verification contract item 1.
+  const kind: "safe" | "unsafe" = isSafeMechanicalCommandShape(proposed) ? "safe" : "unsafe";
+  const itemRe = new RegExp(`^(\\s*\\d+)\\.\\s+([^\\n]+(?:\\n(?!\\s*\\d+\\.\\s+)[^\\n]*)*)`, "m");
+  const numbered = matchItemNumberedLine(currentContract, itemNumber);
+  const proposedContract = kind === "safe" && numbered
+    ? currentContract.replace(numbered.match, `${itemNumber}. ${proposed}`)
+    : currentContract;
+  return kind === "safe"
+    ? { itemNumber, command: proposed, proposedContract, kind: "safe" }
+    : { itemNumber, command: proposed, proposedContract, kind: "unsafe",
+        unsafeReason: !proposed.includes("\"") && !proposed.includes("'") && !/[|&;`$<>]/.test(proposed)
+          ? "the proposed command did not match the mechanical-command allowlist"
+          : "the proposed command contains a quote or shell metacharacter that the mechanical-command allowlist rejects" };
+}
+
+function isSafeMechanicalCommandShape(command: string): boolean {
+  // Mirror isSafeMechanicalCommand's allowlist without taking a
+  // dependency on goal-loop-shield here. Tests pin the equivalence
+  // with isSafeMechanicalCommand in tests/regression-shield.test.ts.
+  return /^[A-Za-z0-9_./:@=+,-]+(?:[ \t]+[A-Za-z0-9_./:@=+,-]+)*$/.test(command.trim());
+}
+
+function matchItemNumberedLine(contract: string, itemNumber: number): { match: RegExpMatchArray; replacement: string } | null {
+  const lines = contract.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    const m = line.match(/^\s*(\d+)\.\s+/);
+    if (!m) continue;
+    const n = Number.parseInt(m[1] ?? "", 10);
+    if (n === itemNumber) {
+      const replaced = line.replace(/^\s*\d+\.\s+/, `${itemNumber}. `);
+      return { match: m as unknown as RegExpMatchArray, replacement: replaced };
+    }
+  }
+  return null;
+}
+
+export function contractAmendmentPromotion(
+  suggestedAction: string | undefined,
+  currentContract: string | undefined,
+  policy: Policy | undefined,
+): { amendment: ContractAmendment; options: string[]; recommended: number; unattendedDefault: number } | undefined {
+  const amendment = extractContractAmendment(suggestedAction, currentContract);
+  if (!amendment || amendment.kind !== "safe") return undefined;
+  const tweakCommand = `/goal tweak <new objective — the contract amendment is in the suggested action>`;
+  void tweakCommand; // the user reviews the proposal in the card; the Accept path is hand-applied today
+  return {
+    amendment,
+    options: [
+      `Accept — apply the amendment (replace contract item ${amendment.itemNumber} with \`${amendment.command}\`)`,
+      `Continue without it (${modeCommand(policy, "resume")})`,
+      `Cancel (${workCommand(policy, "cancel")})`,
+    ],
+    recommended: 1,
+    unattendedDefault: 2,
+  };
+}
+
 export function suggestionAcceptancePromotion(suggestedAction: string | undefined, policy: Policy | undefined): SuggestionPromotion | undefined {
   const command = extractSuggestedCommand(suggestedAction);
   if (!command) return undefined;

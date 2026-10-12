@@ -2744,7 +2744,37 @@ function registerAgentTools(pi: any): void {
           appendLedger(ctx.cwd, "pause_suggestion_promoted_to_decision", {
             goalId: state.goal.id,
             command: promotion.command,
+            surface: "slash-command",
           });
+        } else {
+          // v0.39.31 (incident Screenshot_20261012_111955): a verification-
+          // contract amendment is a contract change requiring consent,
+          // not a slash command. When the suggestedAction names an item
+          // number and proposes a safe replacement command, surface an
+          // Accept/Decline decision so the user can review the exact
+          // contract text instead of hand-copying the amendment. Unsafe
+          // proposals (quoted, shell-metacharactered) do not promote —
+          // the user must hand-fix them first; the surface records the
+          // unsafe reason in the ledger for the audit trail.
+          const contractPromotion = contractAmendmentPromotion(
+            p.suggestedAction,
+            state.goal.verificationContract,
+            state.goal.policy,
+          );
+          if (contractPromotion) {
+            p.kind = "decision";
+            p.options = contractPromotion.options;
+            p.recommended = contractPromotion.recommended;
+            effectiveKind = "decision";
+            promotedCommand = `replace verification-contract item ${contractPromotion.amendment.itemNumber} with \`${contractPromotion.amendment.command}\``;
+            promotedUnattendedDefault = contractPromotion.unattendedDefault;
+            appendLedger(ctx.cwd, "pause_suggestion_promoted_to_decision", {
+              goalId: state.goal.id,
+              command: promotedCommand,
+              surface: "contract-amendment",
+              itemNumber: contractPromotion.amendment.itemNumber,
+            });
+          }
         }
       }
       // v0.38.69 (Antigravity port): mid-run interruption budget with
