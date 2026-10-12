@@ -2589,7 +2589,7 @@ function registerAgentTools(pi: any): void {
         if (materialInterruption) {
           // A timer/recovery label cannot turn missing consent or conflicting
           // requirements into permission when its deadline expires.
-          p.kind = p.options?.length ? "decision" : "blocked";
+          p.kind = p.kind === "decision" || p.options?.length ? "decision" : "blocked";
           p.resumeAt = undefined;
         }
         appendLedger(ctx.cwd, "interruption_admitted", { goalId: state.goal.id,
