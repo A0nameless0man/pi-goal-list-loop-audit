@@ -50,4 +50,10 @@ The bounded read-only objective audit on 2026-10-12 discovered 52 project journa
 
 ## Implementation boundaries
 
+## Verification evidence
+
+- `timeout 120 npm test -- tests/interruption-policy.test.ts`: 16 pass, zero failures (`/tmp/glla-interruption-policy-tests.log`).
+- `timeout 120 npm run check`: exit 0 (`/tmp/glla-interruption-policy-types.log`).
+- `git diff --check`: exit 0.
+
 No external objective/journal was amended, resumed or executed by this item. No failed test was waived. No runtime pause semantics changed yet. Subsequent list items must integrate typed supported facts (or a similarly sound admission contract) and add executable tool/runtime tests before claiming fewer mid-run questions in production. Unsupported natural-language contradictions remain explicitly uncertain, not mechanically proven.
