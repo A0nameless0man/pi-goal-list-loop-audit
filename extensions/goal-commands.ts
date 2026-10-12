@@ -1179,10 +1179,11 @@ export async function cmdTweak(
   // input with the current text makes this reachable by a plain Enter.
   if (
     newObjective.trim() === current.objective.trim()
-    && !hasNewContract
-    && !clearsContract
+    && (hasNewContract
+      ? proposed.verificationContract === (current.verificationContract ?? "")
+      : clearsContract ? !(current.verificationContract ?? "") : true)
   ) {
-    ctx.ui.notify("Tweak cancelled — the objective is unchanged.", "info");
+    ctx.ui.notify("Tweak cancelled — objective and contract are unchanged; nothing was amended.", "info");
     return false;
   }
   let confirmed = false;
