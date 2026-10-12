@@ -237,6 +237,10 @@ export interface ContractAmendment {
   command: string;
   /** The full proposed verification contract with the amendment applied. */
   proposedContract: string;
+  /** Syntax equivalence is conservative; changed coverage is substantive. */
+  changeKind: "syntax-correction" | "substantive-amendment";
+  originalItem: string;
+  proposedItem: string;
   /** Safe vs unsafe — unsafe proposals have no Accept option. */
   kind: "safe" | "unsafe";
   /** Why the proposal is unsafe, when kind === "unsafe". */
@@ -275,12 +279,21 @@ export function extractContractAmendment(
   // categories from the verification contract item 1.
   const kind: "safe" | "unsafe" = isSafeMechanicalCommandShape(proposed) ? "safe" : "unsafe";
   const numbered = matchItemNumberedLine(currentContract, itemNumber);
-  const proposedContract = kind === "safe" && numbered
-    ? currentContract.replace(numbered.line, `${itemNumber}. ${proposed}`)
-    : currentContract;
+  if (!numbered) return undefined; // Never offer acceptance of a nonexistent item.
+  const commands = numbered.line.match(/`[^`]+`/g) ?? [];
+  const oldCommand = commands.length === 1 ? commands[0]!.slice(1, -1) : numbered.line.replace(/^\s*\d+\.\s+/, "");
+  // Preserve the predicate/threshold surrounding a single explicit command.
+  const proposedItem = commands.length === 1
+    ? numbered.line.replace(commands[0]!, `\`${proposed}\``)
+    : `${itemNumber}. ${proposed}`;
+  const proposedContract = kind === "safe" ? currentContract.replace(numbered.line, proposedItem) : currentContract;
+  if (kind === "safe" && proposedContract === currentContract) return undefined;
+  const canonicalOld = oldCommand.replace(/(["'])([A-Za-z0-9_./:@=+,-]+)\1/g, "$2").trim().replace(/[ \t]+/g, " ");
+  const changeKind = canonicalOld === proposed.trim().replace(/[ \t]+/g, " ") ? "syntax-correction" : "substantive-amendment";
+  const details = { itemNumber, command: proposed, proposedContract, changeKind, originalItem: numbered.line, proposedItem } as const;
   return kind === "safe"
-    ? { itemNumber, command: proposed, proposedContract, kind: "safe" }
-    : { itemNumber, command: proposed, proposedContract, kind: "unsafe",
+    ? { ...details, kind: "safe" }
+    : { ...details, kind: "unsafe", 
         unsafeReason: !proposed.includes("\"") && !proposed.includes("'") && !/[|&;`$<>]/.test(proposed)
           ? "the proposed command did not match the mechanical-command allowlist"
           : "the proposed command contains a quote or shell metacharacter that the mechanical-command allowlist rejects" };
@@ -315,12 +328,10 @@ export function contractAmendmentPromotion(
 ): { amendment: ContractAmendment; options: string[]; recommended: number; unattendedDefault: number } | undefined {
   const amendment = extractContractAmendment(suggestedAction, currentContract);
   if (!amendment || amendment.kind !== "safe") return undefined;
-  const tweakCommand = `/goal tweak <new objective — the contract amendment is in the suggested action>`;
-  void tweakCommand; // the user reviews the proposal in the card; the Accept path is hand-applied today
   return {
     amendment,
     options: [
-      `Accept — apply the amendment (replace contract item ${amendment.itemNumber} with \`${amendment.command}\`)`,
+      `Accept — apply the amendment (replace contract item ${amendment.itemNumber} with \`${amendment.command}\`; ${amendment.changeKind === "syntax-correction" ? "syntax-only correction" : "substantive criteria change, not a syntax-only fix"}). Old: ${amendment.originalItem}; New: ${amendment.proposedItem}`,
       `Continue without it (${modeCommand(policy, "resume")})`,
       `Cancel (${workCommand(policy, "cancel")})`,
     ],
@@ -995,6 +1006,8 @@ export interface Goal {
   pauseOptions?: string[];
   /** v0.28.22: 1-based index into pauseOptions the agent recommends. */
   pauseRecommended?: number;
+  /** Concrete consent proposal; acceptance must match this base before writing. */
+  pauseContractAmendment?: { baseContract: string; baseRevision: number; amendment: ContractAmendment };
   /** v0.38.69 (Antigravity port): mid-run decision-pause accounting — every
    * agent-authored kind="decision" pause increments this, in-budget or
    * not, so the interruption budget has a durable counter across reloads. */
