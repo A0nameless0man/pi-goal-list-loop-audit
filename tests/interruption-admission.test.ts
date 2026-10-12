@@ -1,7 +1,6 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import path from "node:path";
 import activate, {__testOnlyResetProcessState} from "../extensions/loops/goal.js";
 import { readState } from "../extensions/goal-loop-core.js";
 import { MockPi, makeMockCtx, seedGoal, seedState, tmpCwd, tick } from "./harness/mock-pi.js";
@@ -53,6 +52,14 @@ test("intentional user pause cannot be undone by a classified routine request",a
  assert.equal(readState(cwd).goal?.status,before?.status);assert.equal(readState(cwd).goal?.pauseReason,before?.pauseReason);
  assert.equal(pi.sent.length,sent);await pi.fire("session_shutdown",{reason:"quit"},ctx);
 });
+test("unclassified decision cannot pause or auto-adopt a substantive option",async()=>{
+ const {cwd,pi,ctx}=await boot();
+ const result=await pi.runTool("pause_goal",{reason:"Choose a strategy",kind:"decision",options:["rewrite everything","patch"],recommended:1},ctx);
+ assert.match(result.content[0]!.text,/classify this proposed human decision/);
+ assert.equal(readState(cwd).goal?.status,"active");assert.equal(readState(cwd).goal?.autoDefaultLog?.length??0,0);
+ await pi.fire("session_shutdown",{reason:"quit"},ctx);
+});
+
 test("routine category without a known next step requests investigation, not human choice",async()=>{
  const {cwd,pi,ctx}=await boot();
  const result=await pi.runTool("pause_goal",{reason:"Unsure",interruption:{reason:"reversible-work",evidence:"No material requirement conflict established"}},ctx);
