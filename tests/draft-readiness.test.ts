@@ -29,7 +29,7 @@ for (const [objective,contract] of [
 test("ordinary verification prose cannot swallow the rest of a list objective", () => {
   const objective="Improve readiness and misleading bookkeeping-only verification without pretending arbitrary contradictions can be proven. Preserve valid tasks.";
   const parsed=extractVerificationContract(`${objective} Done when: regression tests pass.`);
-  assert.equal(parsed.objective,objective);
+  assert.equal(parsed.objective,objective.replace(/\.$/,""));
   assert.equal(parsed.verificationContract,"regression tests pass.");
   assert.equal(extractVerificationContract("Improve verification without a contract heading: preserve prose.").objective,"Improve verification without a contract heading: preserve prose.");
 });

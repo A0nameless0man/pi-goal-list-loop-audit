@@ -137,7 +137,7 @@ test("batch readiness rejects atomically before confirmation or first-item activ
   assert.match(result.content[0]!.text,/procedural-intent/);
   assert.equal(confirmations,0);
   assert.equal(readState(cwd).goal,null);
-  assert.equal(readState(cwd).list.length,0);
+  assert.equal(readState(cwd).list?.length,0);
   ctx.ui.customImpl=undefined;
 });
 
