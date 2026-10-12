@@ -1,7 +1,5 @@
 # Now
 
-# later
-
 ## cant tell that i am looping here so the type of obj should be obvioius
 /home/dracon/Pictures/Screenshots/Screenshot_20261011_165932.png
 
@@ -20,6 +18,12 @@ not supervised objs
 
 ## we have quota but we didnt retry, we need to be activley retrying and retry extra after the start of every hour
 /home/dracon/Pictures/Screenshots/Screenshot_20261011_211430.png
+
+# later
+
+## waiting is not the same as now 
+/home/dracon/Pictures/Screenshots/Screenshot_20261012_015606.png
+
 
 
 # Testing
