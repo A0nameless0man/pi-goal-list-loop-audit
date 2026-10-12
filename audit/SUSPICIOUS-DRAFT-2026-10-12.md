@@ -17,3 +17,7 @@ GLLA's `extractVerificationContract` did not recognize that heading: the criteri
 `npm test -- tests/suspicious-draft-contract.test.ts tests/confirm-draft.test.ts tests/faulty-objective-recovery.test.ts`: 57 pass, zero failures. Parser tests cover the reduced field reproduction, ordinary imperative prose, and genuine review fragments. The runtime drafting test confirms the persisted pause, unchanged objective, and non-runnable tool response.
 
 `npm run check`: exit 0. Logs: `/tmp/glla-suspicious-tests.log`, `/tmp/glla-suspicious-types.log`.
+
+Expanded verification: regression-shield, behavioral-orchestrator and paused-suspicious-close produced 197 passes and two failures. Both are pre-existing widget wording expectations: the detached-auditor repaint expects `detached worker`, and cold-start recovery expects `completion audit: parked — no review recorded`. A separate clean `git archive 7b703b75` snapshot (before this item's implementation), with the dependency directory symlinked, reproduced those exact two failures: 154 passes, two failures in behavioral-orchestrator. Logs: `/tmp/glla-suspicious-extra.log`, `/tmp/glla-suspicious-baseline.log`. These failures are not claimed green and are candidates for the queued follow-up reconciliation, not repairs to the darklord project.
+
+Runtime inventory regenerated and `npm run check:inventory` passed; `git diff --check` passed.
