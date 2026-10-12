@@ -116,7 +116,7 @@ test("confirmed actionable draft with the field contract heading stays active an
   const saved = readState(cwd);
   assert.equal(saved.goal?.status, "active");
   assert.equal(saved.goal?.objective, objective);
-  assert.ok(saved.goal?.verificationContract.includes("Prior archived goals remain verdict=approved"));
+  assert.ok(saved.goal?.verificationContract?.includes("Prior archived goals remain verdict=approved"));
   assert.ok(!saved.goal?.pauseReason);
   assert.match(res.content[0]!.text, /confirmed and activated/);
   assert.ok(!ledgerText(cwd).includes("faulty_objective_continuation_blocked"));
