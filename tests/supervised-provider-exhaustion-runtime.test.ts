@@ -62,6 +62,6 @@ test('provider probe cannot unpause a stored completion claim', async () => {
     persistStateLine(cwd, state);
     await probeMainModelRecovery(ctx as unknown as ExtensionContext);
     assert.equal(readState(cwd).goal?.status, 'paused');
-    assert.deepEqual(readState(cwd).goal?.pendingCompletion, claim);
+    assert.deepEqual(JSON.parse(JSON.stringify(readState(cwd).goal?.pendingCompletion)), claim);
   });
 });

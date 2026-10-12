@@ -1876,7 +1876,9 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
       // re-seeds the same-model budget so the retry cadence reflects a
       // fresh attempt, not the dead ladder rung it inherited.
       sameModelRetries: 1,
-      modelFailureSteps: 0,
+      // Revisiting the same failing model is not a healthy rotation. Keep
+      // its cadence rung so an exhausted single-model chain still backs off.
+      modelFailureSteps: recovery.modelFailureSteps,
       sameModelPhaseStartedAt: nowIso(),
       retryAt: undefined,
       resumeCurrent: undefined,
