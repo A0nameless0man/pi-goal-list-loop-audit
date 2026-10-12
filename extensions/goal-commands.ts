@@ -19,7 +19,7 @@ import {
   assignQueueOrder, compareQueueItems, readAuditLog, readQueueFromDisk, routeGoalArgs, routeListText, sanitizeDisplayText, sanitizeProviderAuditReport, statusLabel, waitingStatusLabel,
   visibleListPosition, visibleListPositions,
   writeQueueItemFile, type ModeCommand, type State, type AuditVerdict, type LedgerRecord, LIST_MUTATING_SUBCOMMANDS, SETTINGS_MUTATING_ACTIONS,
-  clearLoadHold, stateRootPending, isPersistenceDegraded, isForbiddenModel, recheckPersistenceAfterRepair,
+  clearLoadHold, stateRootPending, readGoalStateTransaction, isPersistenceDegraded, isForbiddenModel, recheckPersistenceAfterRepair,
 } from "./goal-loop-core.js";
 // v0.38.99: the status surfaces name the durable audit lifecycle from the one
 // projection the widget uses.
@@ -961,7 +961,12 @@ async function showDecisionPrompt(ctx: ExtensionContext): Promise<boolean> {
         pauseRecommended: undefined,
         pauseKind: "blocked",
       }, ctx)) {
-        ctx.ui.notify("Amendment not saved — nothing was accepted or resumed. Work remains paused; retry after storage recovers.", "warning");
+        const committed = readGoalStateTransaction(ctx.cwd)?.state.goal;
+        if (committed?.id === g.id && committed.revision === (g.revision ?? 0) + 1 && committed.verificationContract === proposal.amendment.proposedContract) {
+          ctx.ui.notify("Amendment committed to the durable recovery snapshot, but journal/markdown projection is incomplete. Work remains paused. Repair storage and inspect the revised contract before resuming; do not reapply the consumed proposal.", "warning");
+        } else {
+          ctx.ui.notify("Amendment not saved — nothing was accepted or resumed. Work remains paused; retry after storage recovers.", "warning");
+        }
         return true;
       }
       appendLedger(ctx.cwd, "contract_amendment_applied", { goalId: g.id, revision: (g.revision ?? 0) + 1, itemNumber: proposal.amendment.itemNumber, changeKind: proposal.amendment.changeKind });
