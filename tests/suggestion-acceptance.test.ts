@@ -301,6 +301,7 @@ test("pause_goal: vague suggestion stays a plain pause; explicit decisions pass 
     await pi.runTool("resume_goal", { reason: "user answered; continuing" }, ctx);
     await pi.runTool("pause_goal", {
       reason: "Genuine permission boundary: destructive deploy needs consent.",
+      interruption: {reason:"unauthorized-irreversible-action",evidence:"The confirmed scope did not authorize destructive deployment"},
       suggestedAction: "Approve the deploy to continue.",
       kind: "decision",
       options: ["approve the deploy", "hold the deploy"],

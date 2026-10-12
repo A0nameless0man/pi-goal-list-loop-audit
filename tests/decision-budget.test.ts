@@ -60,6 +60,7 @@ async function activeBoot(cwd: string): Promise<{ pi: MockPi; ctx: MockCtx }> {
 async function decisionPause(pi: MockPi, ctx: MockCtx, reason: string) {
   return await pi.runTool("pause_goal", {
     reason,
+    interruption: {reason:"missing-input",evidence:"A required external value is not available through local investigation"},
     suggestedAction: "Pick an option to continue.",
     kind: "decision",
     options: ["rebuild from scratch", "patch the existing build"],
@@ -74,7 +75,7 @@ afterEach(() => {
   setSettings({});
 });
 
-test("decision budget cannot adopt an unclassified choice as consent", async () => {
+test("decision budget cannot adopt a material exception as consent", async () => {
   const cwd = tmpCwd();
   setSettings({ decisionPauseBudget: 1 });
   const { pi, ctx } = await activeBoot(cwd);
