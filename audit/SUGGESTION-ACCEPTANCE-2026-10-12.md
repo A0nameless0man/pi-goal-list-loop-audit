@@ -103,4 +103,5 @@ backstop, and promoted suggestions count toward it.
   and admission behavior the promotion rides on.
 - Interaction contract for the user: a paused card whose first option reads
   `Accept and run …` is an agent suggestion awaiting one-key consent —
-  picking it runs the named command; resuming continues without it.
+  picking it delivers the named command to the agent turn (which runs it)
+  via the existing content-choice-plus-resume flow; resuming continues without it.
