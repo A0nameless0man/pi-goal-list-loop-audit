@@ -2415,7 +2415,10 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
         `Restored ${state.goal.policy === "list" ? "list item" : "goal"}: ${displaySlice(state.goal.objective, 70)}${listQueue().length > 0 ? ` (+${listQueue().length} queued)` : ""}`,
         "info",
       );
-    } else if ((!state.goal || state.goal.status === "complete" || state.goal.status === "aborted") && listQueue().length > 0) {
+    } else if ((!state.goal || state.goal.status === "complete" || state.goal.status === "aborted") && listQueue().length > 0
+      && state.mainModelRecovery?.kind !== "loop") {
+      // A parked loop still owns supervision. Activating the queued goal
+      // would replace that owner and retire its restored provider retry.
       if (autoResume) {
         // Session restarted with a non-empty queue but no active goal.
         activateNextListItem(ctx);
