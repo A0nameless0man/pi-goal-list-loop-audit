@@ -2,17 +2,12 @@
   "width": 120,
   "rows": 56,
   "fixtures": [
-    "Fresh progress \u00b7 last action visible",
-    "Stale progress \u00b7 historical action, no live claim",
-    "Bounded tool \u00b7 elapsed/budget alongside last action",
-    "Settling claim \u00b7 settlement owed, no live worker",
-    "Replaced attempt \u00b7 no live evidence"
+    "Fresh progress · last action visible",
+    "Stale progress · historical action, no live claim",
+    "Bounded tool · elapsed/budget alongside last action",
+    "Settling claim · settlement owed, no live worker",
+    "Replaced attempt · no live evidence"
   ],
   "source": "production buildWidgetLines/buildStatusText",
-  "fixedNow": "2026-10-12T10:00:00.000Z",
-  "capture": "real xterm on private Xvfb",
-  "pixels": [
-    1100,
-    1122
-  ]
+  "fixedNow": "2026-10-12T10:00:00.000Z"
 }
