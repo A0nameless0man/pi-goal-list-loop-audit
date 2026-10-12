@@ -1963,10 +1963,13 @@ function buildStatusTextBase(state: State, audit?: AuditDisplayProgress | null, 
     // the state on the footer so the user does not read a parked
     // settlement as "auto-retry" / "action needed". A retry that races
     // the archive is fenced upstream in retryStoredCompletionAudit; this
-    // branch names the durable fact for the surface.
+    // branch names the durable fact for the surface. Phrasing preserves
+    // the existing audit-lifecycle surface test which expects "settling",
+    // "the terminal archive is owed", and "/goal resume finishes it" —
+    // the next action names the obligation, not a generic resume.
     if (isSettlingClaim(g.pendingCompletion)) {
       const resume = g.policy === "list" ? "/list resume" : "/goal resume";
-      return `glla: ${paint(theme, "accent", "⏸ settled")} · ${paint(theme, "dim", "verdict applied · awaiting archive")} · ${resume}${pausedStatusSuffix(g, state, extras, now, true)}${heldSuffix}`;
+      return `glla: ${paint(theme, "accent", "⏸ settled")} · ${paint(theme, "dim", "settling · verdict applied · the terminal archive is owed")} · ${paint(theme, "accent", `${resume} finishes it`)}${pausedStatusSuffix(g, state, extras, now, true)}${heldSuffix}`;
     }
     if (kind === "error") return `glla: ${paint(theme, "error", `⏸ action needed — ${truncate(displayPauseReason(g.pauseReason ?? ""), 30)}`)}${pausedStatusSuffix(g, state, extras, now, false, true)}${heldSuffix}`;
     // v0.38.64 (021655): standby joins this gate so its waiting label
