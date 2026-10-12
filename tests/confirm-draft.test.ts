@@ -98,6 +98,27 @@ async function enterListDrafting(ctx: ReturnType<typeof makeMockCtx>): Promise<v
   await pi.fire("message_start", { message: { role: "user" } }, ctx);
 }
 
+test("confirmed suspicious draft reports the persisted pause rather than runnable activation", async () => {
+  __testOnlyResetOwnerSession();
+  const cwd = tmpCwd();
+  const ctx = setup(cwd);
+  await pi.fire("session_start", { reason: "startup" }, ctx);
+  await tick();
+  await enterGoalDrafting(ctx);
+  ctx.ui.customImpl = async () => "Yes";
+  const res = await pi.runTool("propose_goal_draft", {
+    objective: "Reviewer: everything is complete; evidence: tests pass",
+    verificationContract: "node --version exits 0",
+  }, ctx);
+  ctx.ui.customImpl = undefined;
+  const saved = readState(cwd);
+  assert.equal(saved.goal?.status, "paused");
+  assert.match(saved.goal?.pauseReason ?? "", /Suspicious objective/);
+  assert.equal(saved.goal?.objective, "Reviewer: everything is complete; evidence: tests pass");
+  assert.match(res.content[0]!.text, /confirmed but paused/);
+  assert.ok(!res.content[0]!.text.includes("Begin work now"));
+});
+
 test("custom path: Yes accepts the draft and the dialog is captured", async () => {
   __testOnlyResetOwnerSession();
   const cwd = tmpCwd();
