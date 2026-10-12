@@ -98,6 +98,30 @@ async function enterListDrafting(ctx: ReturnType<typeof makeMockCtx>): Promise<v
   await pi.fire("message_start", { message: { role: "user" } }, ctx);
 }
 
+test("confirmed actionable draft with the field contract heading stays active and preserves acceptance criteria", async () => {
+  __testOnlyResetOwnerSession();
+  const cwd = tmpCwd();
+  const ctx = setup(cwd);
+  await pi.fire("session_start", { reason: "startup" }, ctx);
+  await tick();
+  await enterGoalDrafting(ctx);
+  ctx.ui.customImpl = async () => "Yes";
+  const objective = "Polish the title screen and fix the settings layout bug. Do NOT touch gameplay code.";
+  const criteria = "1. Tests pass.\n2. Prior archived goals remain verdict=approved.";
+  const res = await pi.runTool("propose_goal_draft", {
+    objective: `${objective}\n\nVerification contract (auditor checks each line):\n${criteria}`,
+    verificationContract: criteria,
+  }, ctx);
+  ctx.ui.customImpl = undefined;
+  const saved = readState(cwd);
+  assert.equal(saved.goal?.status, "active");
+  assert.equal(saved.goal?.objective, objective);
+  assert.ok(saved.goal?.verificationContract.includes("Prior archived goals remain verdict=approved"));
+  assert.ok(!saved.goal?.pauseReason);
+  assert.match(res.content[0]!.text, /confirmed and activated/);
+  assert.ok(!ledgerText(cwd).includes("faulty_objective_continuation_blocked"));
+});
+
 test("confirmed suspicious draft reports the persisted pause rather than runnable activation", async () => {
   __testOnlyResetOwnerSession();
   const cwd = tmpCwd();
