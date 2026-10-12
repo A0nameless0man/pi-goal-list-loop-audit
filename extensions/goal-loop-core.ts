@@ -293,7 +293,7 @@ export function extractContractAmendment(
   const proposedItem = commands.length === 1
     ? numbered.line.replace(commands[0]!, `\`${proposed}\``)
     : `${itemNumber}. ${proposed}`;
-  const proposedContract = kind === "safe" ? currentContract.replace(numbered.line, proposedItem) : currentContract;
+  const proposedContract = kind === "safe" ? currentContract.split("\n").map(line => line === numbered.line ? proposedItem : line).join("\n") : currentContract;
   if (kind === "safe" && proposedContract === currentContract) return undefined;
   const canonicalOld = oldCommand.replace(/(["'])([A-Za-z0-9_./:@=+,-]+)\1/g, "$2").trim().replace(/[ \t]+/g, " ");
   const changeKind = canonicalOld === proposed.trim().replace(/[ \t]+/g, " ") ? "syntax-correction" : "substantive-amendment";
@@ -314,18 +314,10 @@ function isSafeMechanicalCommandShape(command: string): boolean {
 }
 
 function matchItemNumberedLine(contract: string, itemNumber: number): { line: string; replacement: string } | null {
-  const lines = contract.split("\n");
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!;
-    const m = line.match(/^\s*(\d+)\.\s+/);
-    if (!m) continue;
-    const n = Number.parseInt(m[1] ?? "", 10);
-    if (n === itemNumber) {
-      const replaced = line.replace(/^\s*\d+\.\s+/, `${itemNumber}. `);
-      return { line, replacement: replaced };
-    }
-  }
-  return null;
+  const matches = contract.split("\n").filter(line => Number(line.match(/^\s*(\d+)\.\s+/)?.[1]) === itemNumber);
+  if (matches.length !== 1) return null; // Duplicate numbering cannot identify a unique consent target.
+  const line = matches[0]!;
+  return { line, replacement: line.replace(/^\s*\d+\.\s+/, `${itemNumber}. `) };
 }
 
 export function contractAmendmentPromotion(
