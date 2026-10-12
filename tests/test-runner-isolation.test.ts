@@ -18,7 +18,8 @@ test('runner isolates recovery factory wiring per file and aggregates failures',
       import { test } from 'bun:test';
       import ${moduleUrl('extensions/loops/goal.ts')};
       import { createGoalRecovery } from ${moduleUrl('extensions/goal-recovery.ts')};
-      createGoalRecovery({}, new Proxy({}, { get() { throw new Error('LEAKED_RECOVERY_WIRING'); } }));
+      createGoalRecovery({}, new Proxy({}, { get() { return () => { throw new Error('LEAKED_RECOVERY_WIRING'); }; } }));
+      console.log('FACTORY_RIG_INSTALLED');
       test('factory rig', () => {});
     `);
     fs.writeFileSync(runtime, `
@@ -44,6 +45,7 @@ test('runner isolates recovery factory wiring per file and aggregates failures',
     const passing = run([rig, runtime]);
     assert.equal(passing.status, 0, passing.stdout + passing.stderr);
     assert.match(passing.stdout + passing.stderr, /PRODUCTION_ACTIVATION_PASSED/);
+    assert.ok(passing.stdout.indexOf('FACTORY_RIG_INSTALLED') < passing.stdout.indexOf('PRODUCTION_ACTIVATION_PASSED'), 'factory overwrite precedes production activation');
     const failing = run([rig, runtime, failure]);
     assert.equal(failing.status, 1, failing.stdout + failing.stderr);
     assert.match(failing.stdout + failing.stderr, /PRODUCTION_ACTIVATION_PASSED/);
