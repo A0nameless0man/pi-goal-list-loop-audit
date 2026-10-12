@@ -2807,19 +2807,16 @@ function registerAgentTools(pi: any): void {
       // auto-default-and-log fallback. Antigravity's no-mid-run-questions
       // trick is structural — the run cannot block on a human — while
       // GLLA's was rhetorical (the continuation prompt says don't ask).
-      // With decisionPauseBudget set, the (N+1)-th agent-authored decision
-      // pause does NOT pause and does NOT abort the turn: the goal stays
-      // active, the recommended option (or option 1 when none is
-      // recommended) is adopted as a logged assumption, and the agent is
-      // told to carry it into its completion recap's Left out. Unset
-      // budget = legacy pause-every-time; 0 = relentless from the start.
+      // Budgets now apply only to the safe decline of concrete suggestion
+      // promotions. They never adopt a substantive generic recommendation
+      // or supply missing permission. Typed routine work returned above;
+      // material exceptions remain supervised regardless of budget.
       if (p.kind === "decision" && p.options && p.options.length > 0) {
         const budgetRaw = loadSettings(ctx.cwd).decisionPauseBudget;
         const budget = typeof budgetRaw === "number" && Number.isInteger(budgetRaw) && budgetRaw >= 0 ? budgetRaw : undefined;
         const decisionCount = (state.goal.midRunDecisionCount ?? 0) + 1;
-        // v0.38.73: run-to-done auto-defaults EVERY decision immediately —
-        // the draft consent is the budget. Same mechanics as the exhausted
-        // path (counter + autoDefaultLog), distinct ledger + copy.
+        // Run-to-done uses the same safe decline path for suggestions;
+        // draft consent does not authorize material requirement waivers.
         const runToDone = state.goal?.runToDone === true;
         // Generic recommended options are not permission or contract-waiver
         // evidence. Only the established decline-without-execution promotion
