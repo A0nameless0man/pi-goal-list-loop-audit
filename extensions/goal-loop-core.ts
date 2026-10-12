@@ -288,11 +288,11 @@ export function extractContractAmendment(
   const numbered = matchItemNumberedLine(currentContract, itemNumber);
   if (!numbered) return undefined; // Never offer acceptance of a nonexistent item.
   const commands = numbered.line.match(/`[^`]+`/g) ?? [];
-  const oldCommand = commands.length === 1 ? commands[0]!.slice(1, -1) : numbered.line.replace(/^\s*\d+\.\s+/, "");
-  // Preserve the predicate/threshold surrounding a single explicit command.
-  const proposedItem = commands.length === 1
-    ? numbered.line.replace(commands[0]!, `\`${proposed}\``)
-    : `${itemNumber}. ${proposed}`;
+  // Without a uniquely delimited command, replacement could erase other
+  // predicates/commands. Require full-contract confirmation instead.
+  if (commands.length !== 1) return undefined;
+  const oldCommand = commands[0]!.slice(1, -1);
+  const proposedItem = numbered.line.replace(commands[0]!, `\`${proposed}\``);
   const proposedContract = kind === "safe" ? currentContract.split("\n").map(line => line === numbered.line ? proposedItem : line).join("\n") : currentContract;
   if (kind === "safe" && proposedContract === currentContract) return undefined;
   const canonicalOld = oldCommand.replace(/(["'])([A-Za-z0-9_./:@=+,-]+)\1/g, "$2").trim().replace(/[ \t]+/g, " ");

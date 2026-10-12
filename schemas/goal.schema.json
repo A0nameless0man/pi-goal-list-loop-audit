@@ -83,7 +83,7 @@
           }
         }
       }
-    }
+    },
     "midRunDecisionCount": { "type": "number" },
     "autoDefaultLog": {
       "type": "array",
