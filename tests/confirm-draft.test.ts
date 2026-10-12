@@ -120,6 +120,25 @@ test("readiness refusal preserves the existing goal and allows a revised draft b
   ctx.ui.customImpl=undefined;
 });
 
+test("auto-accept cannot bypass bookkeeping-only finding readiness", async () => {
+  __testOnlyResetOwnerSession();
+  const cwd=tmpCwd();
+  const ctx=setup(cwd);
+  fs.writeFileSync(path.join(cwd,".pi-glla","settings.json"),JSON.stringify({autoAcceptDrafts:true}));
+  await pi.fire("session_start",{reason:"startup"},ctx);
+  await tick();
+  await enterGoalDrafting(ctx);
+  const objective="Fix audit finding: HIGH: menu routes fail from nested paths";
+  const contract="the fix is committed on the current branch with the repo's configured identity, and this finding's box in .pi-glla/audit-loop/findings.md is checked (fixed in commit).";
+  const refused=await pi.runTool("propose_goal_draft",{objective,verificationContract:contract},ctx);
+  assert.match(refused.content[0]!.text,/bookkeeping-only/);
+  assert.equal(readState(cwd).goal,null);
+  const revised=await pi.runTool("propose_goal_draft",{objective,verificationContract:contract+" A nested-route regression test and typecheck pass."},ctx);
+  assert.match(revised.content[0]!.text,/confirmed and activated/);
+  assert.equal(readState(cwd).goal?.objective,objective);
+  assert.match(readState(cwd).goal?.verificationContract??"",/nested-route regression/);
+});
+
 test("batch readiness rejects atomically before confirmation or first-item activation", async () => {
   __testOnlyResetOwnerSession();
   const cwd=tmpCwd();
