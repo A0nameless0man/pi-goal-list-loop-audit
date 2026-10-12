@@ -51,4 +51,5 @@ If still needed, authorize a separate bounded read-only outcome check of those s
 - Seven screenshot references mapped individually, with four approved archives and four existing tracked evidence records.
 - `note.md` separates addressed reports from remaining verification candidates and preserves original paths/observations.
 - No source code, external project, archive, runtime journal, release tag, or list entry changed by this documentation reconciliation.
-- `git diff --check` is the whitespace gate; link/reference integrity is checked against local files, not inferred from prose.
+- `git diff --check`: passed (exit 0).
+- A bounded Python reference check passed: exactly seven unique absolute screenshot references in `note.md`, each mapped once in the register; all relative Markdown evidence links resolve; all four local completion archives contain `Status: complete` and an approved stop reason. This checks document integrity rather than asserting the original external outcomes.
