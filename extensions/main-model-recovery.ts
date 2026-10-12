@@ -98,7 +98,7 @@ export interface MainModelFailure {
   kind: MainModelFailureKind;
   raw: string;
   /** Set only for the provider's explicit prompt-policy refusal event. */
-  nonRecoverableReason?: "prompt-policy";
+  nonRecoverableReason?: "prompt-policy" | "user-abort";
   /** Legacy provider-hint fields are accepted by old callers only; the
    * classifier and retry policy never populate or consult them. */
   retryAfterSec?: number;
