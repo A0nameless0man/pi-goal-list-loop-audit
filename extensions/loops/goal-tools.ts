@@ -3388,7 +3388,7 @@ function registerAgentTools(pi: any): void {
       objective: Type.String({ description: "The clarified, concrete objective (single item) or a summary when items[] is used" }),
       verificationContract: Type.Optional(Type.String({ description: "Checkable done-criteria (commands, file states, test outcomes)" })),
       items: Type.Optional(Type.Array(Type.String(), { description: "LIST drafting only: many objectives at once (e.g. 'queue these 50 things'). Each becomes a list item; per-item 'Done when:' clauses are honored." })),
-      runToDone: Type.Optional(Type.Boolean({ description: "Single-goal drafting only: pass true ONLY when the user explicitly chose run-to-done in the interview (carry to completion with auto-resume + decision auto-default; hard stops still park). Shown in the Confirm dialog — the Confirm is the consent." })),
+      runToDone: Type.Optional(Type.Boolean({ description: "Single-goal drafting only: pass true ONLY when the user explicitly chose run-to-done in the interview (carry to completion with auto-resume and autonomous authorized work; material exceptions still park). Shown in the Confirm dialog — the Confirm is the consent." })),
       fullAudit: Type.Optional(Type.Boolean({ description: "Single-goal drafting only: pass true ONLY when the user explicitly asked for full audits in the interview (every claim gets the audit plus the falsification round, never the light tier). Escalation only — there is no light-audit request. Shown in the Confirm dialog — the Confirm is the consent." })),
     }),
     async execute(_id, params, _signal, _onUpdate, execCtx) {
@@ -3602,7 +3602,7 @@ function registerAgentTools(pi: any): void {
         // v0.38.73: the Confirm dialog IS the run-to-done consent — the mode
         // rides the body in full view, never as a silent agent-side param.
         const runToDoneNotice = !isListDraft && p.runToDone === true
-          ? "\n\n(RUN TO DONE: confirming grants this goal automatic session resume plus immediate decision auto-default until it completes or hits a hard stop — audit/error caps, provider outage, or your abort. The auditor still verifies completion. Reject for supervised pauses instead.)"
+          ? "\n\n(RUN TO DONE: confirming grants this goal automatic session resume and autonomous authorized work. Promoted suggestions may be declined without execution; material exceptions, explicit holds and hard stops remain authoritative. The auditor still verifies completion. Reject for supervised pauses instead.)"
           : "";
         // v0.38.81: the Confirm dialog IS the full-audit consent too.
         const fullAuditNotice = !isListDraft && p.fullAudit === true
