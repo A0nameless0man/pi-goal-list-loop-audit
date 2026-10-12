@@ -154,6 +154,8 @@ isGoalRevisionCurrent,
   sanitizeGateRows,
   clearLoadHold,
   isProviderRecoveryArmed,
+  extractSuggestedCommand,
+  suggestionAcceptancePromotion,
 } from "../goal-loop-core.js";
 // v0.38.99: the tool-path approval settlement runs the same ordering gate as
 // the detached path, so no terminal surface can be produced from an
@@ -2544,7 +2546,7 @@ function registerAgentTools(pi: any): void {
   pi.registerTool(defineTool({
     name: "pause_goal",
     label: "Pause goal",
-    description: "Pause the active goal with a reason and suggested action. Use when blocked on user input or unable to make progress. Pausing ABORTS the current turn immediately — after this call, stop; never keep working. When the user interrupts with a NEW task ('do X first'), pass redirect=\"<their request>\" instead: the goal parks but the turn CONTINUES so you work X immediately — a plain pause strands the redirect until the user nudges. Never use redirect to dodge a real blocker, decision, or wait. When the user must CHOOSE between options, pass kind=\"decision\" with the options list (recommended = 1-based index of the best one) — decision pauses render as a prominent DECISION NEEDED card and pop a picker for the user. Time-gated waits (retry at a specific time) use kind=\"wait\" with resumeAt (ISO). Quota-caused parks (rate-limit/plan-quota/billing wording in the reason, or a recent subagent quota error) are automatically converted to monitored auto-retry waits — park normally and the reset wait re-fires on its own. Operational failures use kind=\"error\". For background dependencies use wait_for_background with exact runIds instead of pausing. Legacy kind=\"standby\" requires those same runIds and admits an owned wait, not a freeze. VOCABULARY (v0.28.24): decision options and reasons must reference REAL commands only — /goal resume, /goal cancel, /goal tweak \"<new text>\", /list remove N, /list next, /list resume, /loop stop, /loop resume. These all act on the ACTIVE goal/item: there is NO /goal drop and NO command takes a goal id. Never show goal ids to the user — name the thing ('the active goal', 'list item \"<short name>\"'); ids are internal plumbing the user cannot act on.",
+    description: "Pause the active goal with a reason and suggested action. Use when blocked on user input or unable to make progress. Pausing ABORTS the current turn immediately — after this call, stop; never keep working. When the user interrupts with a NEW task ('do X first'), pass redirect=\"<their request>\" instead: the goal parks but the turn CONTINUES so you work X immediately — a plain pause strands the redirect until the user nudges. Never use redirect to dodge a real blocker, decision, or wait. When the user must CHOOSE between options, pass kind=\"decision\" with the options list (recommended = 1-based index of the best one) — decision pauses render as a prominent DECISION NEEDED card and pop a picker for the user. Time-gated waits (retry at a specific time) use kind=\"wait\" with resumeAt (ISO). Quota-caused parks (rate-limit/plan-quota/billing wording in the reason, or a recent subagent quota error) are automatically converted to monitored auto-retry waits — park normally and the reset wait re-fires on its own. Operational failures use kind=\"error\". If you have a concrete fix command, put the exact command in suggestedAction with kind blocked/error — it is offered as an Accept-first decision (no separate question needed). For background dependencies use wait_for_background with exact runIds instead of pausing. Legacy kind=\"standby\" requires those same runIds and admits an owned wait, not a freeze. VOCABULARY (v0.28.24): decision options and reasons must reference REAL commands only — /goal resume, /goal cancel, /goal tweak \"<new text>\", /list remove N, /list next, /list resume, /loop stop, /loop resume. These all act on the ACTIVE goal/item: there is NO /goal drop and NO command takes a goal id. Never show goal ids to the user — name the thing ('the active goal', 'list item \"<short name>\"'); ids are internal plumbing the user cannot act on.",
     parameters: Type.Object({
       reason: Type.String({ description: "Why the work is paused" }),
       runIds: Type.Optional(Type.Array(Type.String(), { description: "Legacy standby only: exact owned dependency run ids. Prefer wait_for_background.", minItems: 1, maxItems: 32 })),
@@ -2684,6 +2686,31 @@ function registerAgentTools(pi: any): void {
             source: quotaCause.source,
             storedResumeAt,
             keptAgentTime: true,
+          });
+        }
+      }
+      // v0.39.30 (note.md #later Screenshot_20261011_175739 — "can have
+      // an option to accept suggestion"): a blocked/error pause carrying a
+      // concrete command is an implicit question with no accept path. Promote
+      // it to an Accept-first decision so the existing card + picker + budget
+      // machinery carries it — the user picks Accept instead of hand-copying
+      // a long quoted command. Quota-rerouted waits, explicit waits, and
+      // agent-authored decisions are untouched; vague prose stays a plain
+      // pause. The promotion counts against the mid-run budget below, so
+      // repeated suggestions auto-default under a budget instead of
+      // interrogating the user every turn.
+      if ((p.kind === undefined || p.kind === "blocked" || p.kind === "error")
+        && (!p.options || p.options.length === 0)
+        && (effectiveKind === undefined || effectiveKind === "blocked" || effectiveKind === "error")) {
+        const promotion = suggestionAcceptancePromotion(p.suggestedAction, state.goal.policy);
+        if (promotion) {
+          p.kind = "decision";
+          p.options = promotion.options;
+          p.recommended = promotion.recommended;
+          effectiveKind = "decision";
+          appendLedger(ctx.cwd, "pause_suggestion_promoted_to_decision", {
+            goalId: state.goal.id,
+            command: promotion.command,
           });
         }
       }

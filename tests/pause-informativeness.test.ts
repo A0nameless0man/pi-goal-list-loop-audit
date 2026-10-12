@@ -113,7 +113,8 @@ test("pause_goal tool: structured kind/options/recommended/resumeAt persist to t
 test("pause_goal description: teaches the real command surface + no-id vocabulary (v0.28.24)", () => {
   // v0.38.97: the window grows with the redirect sentence (name→parameters
   // is now ~1.6k chars); the shape guard stands.
-  const m = SRC.match(/name: "pause_goal",[\s\S]{0,1900}?parameters:/);
+  // v0.39.30: the accept-suggestion sentence grows it again; widen to 2.2k.
+  const m = SRC.match(/name: "pause_goal",[\s\S]{0,2200}?parameters:/);
   assert.ok(m, "pause_goal registration found");
   const desc = m![0];
   assert.match(desc, /\/list remove N/, "enumerates the real /list command");

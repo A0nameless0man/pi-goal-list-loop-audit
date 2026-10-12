@@ -125,6 +125,71 @@ export function workCommand(mode: Policy | "loop" | undefined, command: string):
   return `${workCommandRoot(mode)} ${command}`;
 }
 
+/** v0.39.30 (note.md #later Screenshot_20261011_175739 — "can have an
+ * option to accept suggestion"): extract the first actionable GLLA command
+ * (`/goal`, `/list`, `/loop`, `/glla` + verb + arguments) from free-form
+ * pause prose. Quote-aware: when the command opens a quoted argument, the
+ * extraction runs through the last closing quote on that line, so trailing
+ * explanation ("This changes scope…") is not glued onto the command.
+ * Without quotes only verb + first token survive, with trailing sentence
+ * punctuation stripped. Conservative by design: a bare verb, a quoteless
+ * `tweak` (its `<new text>` arg is mandatory per the pause vocabulary),
+ * or prose with no command yields undefined — never a half-command. */
+export function extractSuggestedCommand(suggestedAction: string | undefined): string | undefined {
+  if (!suggestedAction) return undefined;
+  for (const raw of suggestedAction.split("\n")) {
+    const at = raw.search(/\/(?:goal|list|loop|glla)\b/);
+    if (at < 0) continue;
+    const rest = raw.slice(at);
+    const verb = rest.match(/^(\/(?:goal|list|loop|glla))\b/)?.[1];
+    if (!verb) continue;
+    const tail = rest.slice(verb.length);
+    let quote: string | null = null;
+    let lastClose = -1;
+    let opened = false;
+    for (let i = 0; i < tail.length; i++) {
+      const c = tail[i];
+      if (quote) { if (c === quote) { quote = null; lastClose = i; } }
+      else if (c === '"' || c === "'") { quote = c; opened = true; }
+    }
+    if (opened && lastClose >= 0 && !quote) return `${verb} ${tail.slice(0, lastClose + 1).trim()}`.trim();
+    if (opened) return undefined;
+    const token = tail.match(/^\s*(\S+)/)?.[1];
+    if (!token) return undefined;
+    const clean = token.replace(/[.,;:!?)\]]+$/, "");
+    if (!clean || /^(and|or|then|to|for|with|than)$/i.test(clean)) return undefined;
+    const word = clean.toLowerCase();
+    // `tweak` without its quoted replacement text is not runnable.
+    if (word === "tweak") return undefined;
+    return `${verb} ${clean}`;
+  }
+  return undefined;
+}
+
+/** Accept-first decision shape built from an extracted suggestion. */
+export interface SuggestionPromotion {
+  command: string;
+  options: string[];
+  recommended: number;
+}
+
+/** Build the Accept-first option set for a command-carrying suggestion:
+ * accept the exact command (recommended), continue without it, or cancel.
+ * Decline paths use the policy-correct surface verbs. */
+export function suggestionAcceptancePromotion(suggestedAction: string | undefined, policy: Policy | undefined): SuggestionPromotion | undefined {
+  const command = extractSuggestedCommand(suggestedAction);
+  if (!command) return undefined;
+  return {
+    command,
+    options: [
+      `Accept and run ${command}`,
+      `Continue without it (${modeCommand(policy, "resume")})`,
+      `Cancel (${workCommand(policy, "cancel")})`,
+    ],
+    recommended: 1,
+  };
+}
+
 export interface TaskDeferral {
   /** Why the durable action is unsafe, impossible, or blocked right now. */
   reason: string;
@@ -3878,6 +3943,7 @@ export const ACTIVE_EXECUTION_QUESTION_GUIDANCE = `ACTIVE-EXECUTION QUESTION DIS
 - During active execution, do NOT ask about reversible implementation choices, naming, formatting, test shape, or whether to continue. Choose the maintainable contract-preserving option, record the rationale, and proceed. The target is zero mid-execution questions unless proceeding would cross an irreversible/destructive external boundary, require a missing permission/credential, or face two genuinely comparable options with materially different results.
 - Defer non-blocking preferences and alternatives to the completion summary (or a durable note); do not turn them into a pause or question.
 - For the rare necessary mid-run question, state the exact impact, include a recommended default, and pause only the dependent action; continue independent work when possible.
+- If you are pausing with a concrete fix command, put the exact command in suggestedAction — it is offered as an Accept-first decision. Do not also ask about it in prose or a second pause.
 - Never ask a vague progress or "what next?" question, and never wait on a guessed provider or quota reset; use bounded recovery or choose the safe default. If drafting left an ambiguity, pick the safest contract-preserving default and record it rather than interrupting a multi-hour run.`;
 
 /**
