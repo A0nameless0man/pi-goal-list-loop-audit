@@ -25,6 +25,7 @@ for(const policy of ['goal','list'] as const) test(`${policy}: explicit acceptan
  assert.equal(after.verificationContract,'1. Full suite exits 0\n2. `bun test src/example.test.ts` exits 0\n3. Human review is required');
  assert.equal(after.revision,4);assert.equal(after.objective,before.objective);assert.deepEqual(after.taskList,before.taskList);assert.equal(after.createdAt,before.createdAt);
  assert.equal(after.status,'active');assert.equal(after.pauseContractAmendment,undefined);
+ await f.pi.command('goal','decide',f.ctx);assert.equal(readState(f.cwd).goal?.revision,4,'duplicate selection cannot apply twice');
  assert.ok(f.ctx.ui.notifies.some(n=>n.message.includes('Contract amendment persisted')));
  assert.ok(!f.pi.userMessages.some(m=>m.message.includes('Accept — apply')),'host persists instead of merely steering acceptance prose');
  await f.pi.fire('session_shutdown',{reason:'quit'},f.ctx);
@@ -75,8 +76,17 @@ test('unattended recommendation declines rather than waiving failing criteria',a
  const goal=readState(f.cwd).goal!;assert.equal(goal.status,'active');assert.equal(goal.verificationContract,contract);assert.equal(goal.revision,3);assert.equal(goal.pauseContractAmendment,undefined);
  assert.ok(goal.autoDefaultLog?.[0]?.chosen.includes('Continue without it'));await f.pi.fire('session_shutdown',{reason:'quit'},f.ctx);
 });
+test('a classified material conflict never defaults to amendment or resumed criteria',async()=>{
+ const f=await fixture({runToDone:true});
+ await f.pi.runTool('pause_goal',{kind:'blocked',reason:'Full suite has actual failures',suggestedAction:action,
+ interruption:{reason:'contract-conflict',evidence:'Zero failures required, but a failure is recorded'}},f.ctx);
+ const goal=readState(f.cwd).goal!;assert.equal(goal.status,'paused');assert.equal(goal.verificationContract,contract);assert.equal(goal.revision,3);assert.ok(goal.pauseContractAmendment);
+ assert.equal(goal.autoDefaultLog?.length??0,0);await f.pi.fire('session_shutdown',{reason:'quit'},f.ctx);
+});
+
 test('missing item or unchanged proposal cannot advertise acceptance',()=>{
  assert.equal(contractAmendmentPromotion('Amend item 99 to `node --version`',contract,'goal'),undefined);
+ assert.equal(contractAmendmentPromotion('Amend item 1 to `node --version`','1. x\n1. y','goal'),undefined);
  assert.equal(contractAmendmentPromotion('Amend item 1 to `node --version`','1. `node --version` exits 0','goal'),undefined);
 });
 test('quote correction is separate from changed test coverage and preserves its predicate',()=>{
