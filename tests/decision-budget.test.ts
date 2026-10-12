@@ -74,7 +74,7 @@ afterEach(() => {
   setSettings({});
 });
 
-test("decision budget: in-budget pauses behave as today, over-budget auto-defaults without pausing", async () => {
+test("decision budget cannot adopt an unclassified choice as consent", async () => {
   const cwd = tmpCwd();
   setSettings({ decisionPauseBudget: 1 });
   const { pi, ctx } = await activeBoot(cwd);
@@ -90,14 +90,11 @@ test("decision budget: in-budget pauses behave as today, over-budget auto-defaul
 
     const res = await decisionPause(pi, ctx, "choose the build strategy again");
     g = readState(cwd).goal as GoalView;
-    assert.equal(g.status, "active", "over-budget decision must NOT pause");
+    assert.equal(g.status, "paused", "budget cannot supply missing authority for a generic choice");
     assert.equal(g.midRunDecisionCount, 2);
-    assert.equal(g.autoDefaultLog?.length, 1);
-    assert.equal(g.autoDefaultLog![0]!.chosen, "patch the existing build");
-    assert.match(res.content[0]!.text, /budget/i, "the agent is told the budget is exhausted");
-    assert.match(res.content[0]!.text, /patch the existing build/, "the adopted default is named");
-    assert.match(res.content[0]!.text, /Left out/i, "the assumption is routed to the recap");
-    assert.ok(ledgerTypes(cwd).includes("decision_budget_auto_default"), "the auto-default is ledgered");
+    assert.equal(g.autoDefaultLog?.length ?? 0, 0);
+    assert.match(res.content[0]!.text, /paused/i);
+    assert.ok(!ledgerTypes(cwd).includes("decision_budget_auto_default"), "no substantive default is adopted");
   } finally {
     await pi.fire("session_shutdown", { reason: "quit" }, ctx);
   }
