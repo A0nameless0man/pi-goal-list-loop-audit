@@ -1,0 +1,57 @@
+[38;5;244mScheduled check · registered[0m
+[38;5;147m● [0m[38;5;244mGOAL[0m[38;5;244m · [0m[38;5;244mscheduled wait[0m[38;5;244m · [0m[38;5;147mWAITING[0m[38;5;244m · [0m[38;5;244mage 0s[0m
+[38;5;244m│  [0mAssess external render evidence without assuming completion
+[38;5;244m├─ [0m[38;5;147mcheck: 2026-10-12T03:05:00.000Z[0m
+[38;5;244m├─ [0m[38;5;244mwake: GLLA assessment heartbeat[0m
+[38;5;244m├─ [0m[38;5;244mnext: Next assessment: 2026-10-12T03:05:00.000Z · GLLA heartbeat; completion must be checked[0m
+[38;5;244m├─ [0m[38;5;244mwake registered · activity unknown/stale[0m
+[38;5;244m├─ [0m[38;5;244mcompaction: eligibility unconfirmed; no fresh owner observation[0m
+[38;5;244m├─ [0m[38;5;244mprovenance: runtime[0m
+[38;5;244m└─ [0m[38;5;244mdetails: /glla status[0m
+[38;5;244mglla:[0m [38;5;147mWAITING[0m [38;5;244m· goal scheduled wait[0m [38;5;244m· automatic[0m
+
+[38;5;244mBackground progress · observed[0m
+[38;5;72m● [0m[38;5;244mGOAL[0m[38;5;244m · [0m[38;5;244mbackground wait[0m[38;5;244m · [0m[38;5;72mRUNNING[0m[38;5;244m · [0m[38;5;244mage 0s[0m
+[38;5;244m│  [0mAssess external render evidence without assuming completion
+[38;5;244m├─ [0m[38;5;244mwake: Owned dependency completion/reconciliation[0m
+[38;5;244m├─ [0m[38;5;244mnext: Background activity observed; assess on owned completion/reconciliation[0m
+[38;5;244m├─ [0m[38;5;244mlast progress 5s ago · runtime[0m
+[38;5;244m├─ [0m[38;5;244mcompaction: eligibility unconfirmed; no fresh owner observation[0m
+[38;5;244m├─ [0m[38;5;244mprovenance: runtime[0m
+[38;5;244m└─ [0m[38;5;244mdetails: /glla status[0m
+[38;5;244mglla:[0m [38;5;72mRUNNING[0m [38;5;244m· goal background wait[0m [38;5;244m· automatic[0m
+
+[38;5;244mBlocked · intervention required[0m
+[38;5;179m● [0m[38;5;244mGOAL[0m[38;5;244m · [0m[38;5;244mpaused by agent[0m[38;5;244m · [0m[38;5;179mBLOCKED[0m[38;5;244m · [0m[38;5;244mage 0s[0m
+[38;5;244m│  [0mAssess external render evidence without assuming completion
+[38;5;244m├─ [0m[38;5;244mnext: Grant read access to the render logs before resuming.[0m
+[38;5;244m├─ [0m[38;5;179mwhy: Read access denied; no progress evidence[0m
+[38;5;244m├─ [0m[38;5;244mresume: /goal resume retries work after the prerequisite is resolved; it does not fix the blocker[0m
+[38;5;244m├─ [0m[38;5;244mcompaction: eligibility unconfirmed; no fresh owner observation[0m
+[38;5;244m├─ [0m[38;5;244mprovenance: saved[0m
+[38;5;244m└─ [0m[38;5;244mdetails: /glla status[0m
+[38;5;244mglla:[0m [38;5;179mBLOCKED[0m [38;5;244m· goal paused by agent[0m [38;5;244m·[0m [38;5;179mGrant read access to the render logs before resuming.[0m
+
+[38;5;244mBackground activity · stale[0m
+[38;5;147m● [0m[38;5;244mGOAL[0m[38;5;244m · [0m[38;5;244mbackground wait[0m[38;5;244m · [0m[38;5;147mWAITING[0m[38;5;244m · [0m[38;5;244mage 0s[0m
+[38;5;244m│  [0mAssess external render evidence without assuming completion
+[38;5;244m├─ [0m[38;5;244mwake: Owned dependency completion/reconciliation[0m
+[38;5;244m├─ [0m[38;5;244mnext: Waiting on owned dependencies; activity unknown/stale, not proof of a stuck worker[0m
+[38;5;244m├─ [0m[38;5;244mlast progress 2m 00s ago · runtime[0m
+[38;5;244m├─ [0m[38;5;244mcompaction: eligibility unconfirmed; no fresh owner observation[0m
+[38;5;244m├─ [0m[38;5;244mprovenance: runtime[0m
+[38;5;244m└─ [0m[38;5;244mdetails: /glla status[0m
+[38;5;244mglla:[0m [38;5;147mWAITING[0m [38;5;244m· goal background wait[0m [38;5;244m· automatic[0m
+
+[38;5;244mSaved check · wake unconfirmed[0m
+[38;5;179m● [0m[38;5;244mGOAL[0m[38;5;244m · [0m[38;5;244mscheduled wait[0m[38;5;244m · [0m[38;5;179mEXECUTION UNCONFIRMED[0m[38;5;244m · [0m[38;5;244mage 0s[0m
+[38;5;244m│  [0mAssess external render evidence without assuming completion
+[38;5;244m├─ [0m[38;5;147mcheck: 2026-10-12T03:05:00.000Z[0m
+[38;5;244m├─ [0m[38;5;244mwake: GLLA assessment heartbeat[0m
+[38;5;244m├─ [0m[38;5;244mnext: Check saved for 2026-10-12T03:05:00.000Z; host/wake unconfirmed — reopen the session and inspect /glla status[0m
+[38;5;244m├─ [0m[38;5;244mexecution unconfirmed · saved work retained[0m
+[38;5;244m├─ [0m[38;5;244mcompaction: eligibility unconfirmed; no fresh owner observation[0m
+[38;5;244m├─ [0m[38;5;244mprovenance: saved[0m
+[38;5;244m└─ [0m[38;5;244mdetails: /glla status[0m
+[38;5;244mglla:[0m [38;5;179mEXECUTION UNCONFIRMED[0m [38;5;244m· goal scheduled wait[0m [38;5;244m· inspect execution[0m
+

@@ -3,7 +3,7 @@ import { unconfirmedCompactionStatus, type CompactionStatus } from './compaction
 
 /** Presentation only. Never use these states as dispatch permissions. */
 export type ExecutionHealth = 'idle' | 'complete' | 'cancelled' | 'running' | 'tool-wait'
-  | 'retry-armed' | 'queued' | 'blocked' | 'dormant' | 'unconfirmed';
+  | 'retry-armed' | 'waiting' | 'queued' | 'blocked' | 'dormant' | 'unconfirmed';
 export interface UiStatusEvidence {
   /** Both values must match the adapter's currently bound work/generation. */
   ownerKey: string;
@@ -15,6 +15,9 @@ export interface UiStatusEvidence {
   turnQueued?: boolean;
   tool?: { name: string; startedAt: number; budgetMs: number };
   recovery?: MainModelRecoveryRuntime;
+  /** Observed heartbeat registration for this exact saved assessment deadline. */
+  scheduledCheck?: { resumeAt: string; heartbeatArmed: boolean };
+  backgroundWait?: { waitId: string; registered: boolean; lastActivityAt?: number };
   compaction?: CompactionStatus;
 }
 export interface UiStatusContext {
@@ -39,6 +42,8 @@ export interface UiStatus {
   lastActivityAt?: number;
   retryAt?: string;
   retryKind?: 'regular' | 'hourly';
+  checkAt?: string;
+  wakeOwner?: string;
   blocker?: string;
   workflowIssue?: string;
   nextAction: string;
@@ -127,6 +132,14 @@ export function projectUiStatus(state: State, context: UiStatusContext): UiStatu
   }
   if (recoveryOwned && recovery?.manualResumeRequired) return finish('blocked', 'user', `${resume} after resolving the recovery prerequisite`, recovery.reason);
   if (loop && !loop.active && !providerWait && !loop.backgroundWait) return finish('blocked', 'user', `${resume} when ready`, loop.stopReason ?? 'Loop held');
+  const background = loop?.backgroundWait ?? goal?.backgroundWait;
+  if (background) base.wakeOwner = 'Owned dependency completion/reconciliation';
+  const scheduledCheck = goal?.status === 'paused' && goal.pauseKind === 'wait'
+    && !goal.pendingCompletion && !providerWait && epoch(goal.pauseResumeAt) !== undefined;
+  if (scheduledCheck) {
+    base.checkAt = goal!.pauseResumeAt;
+    base.wakeOwner = 'GLLA assessment heartbeat';
+  }
   const evidence = context.evidence;
   const matches = evidence && context.generation !== undefined && evidence.generation === context.generation
     && evidence.ownerKey === ownerKey && validTime(evidence.observedAt, now)
@@ -137,6 +150,29 @@ export function projectUiStatus(state: State, context: UiStatusContext): UiStatu
     if (evidence.session === 'closed') return finish('dormant', 'user', 'Reopen project; /glla status', 'Session observed closed');
     if (evidence.recovery?.hold) return finish('blocked', 'user', '/glla status for the required recovery action', evidence.recovery.hold);
     if (evidence.session === 'open') {
+      if (background) {
+        const sample = evidence.backgroundWait;
+        const registered = sample?.waitId === background.id && sample.registered;
+        const progress = registered && validTime(sample?.lastActivityAt, now)
+          && now - sample.lastActivityAt <= UI_OBSERVATION_FRESH_MS;
+        // Parent-host stream activity is never evidence of worker progress.
+        base.lastActivityAt = sample?.waitId === background.id && validTime(sample.lastActivityAt, now)
+          ? sample.lastActivityAt : undefined;
+        return finish(progress ? 'running' : registered ? 'waiting' : 'unconfirmed',
+          registered ? 'automatic' : 'inspect', registered
+            ? progress ? 'Background activity observed; assess on owned completion/reconciliation'
+              : 'Waiting on owned dependencies; activity unknown/stale, not proof of a stuck worker'
+            : 'Background checkpoint saved; live completion/reconciliation registration unconfirmed — /glla status');
+      }
+      if (scheduledCheck) {
+        const registered = evidence.scheduledCheck?.resumeAt === base.checkAt
+          && evidence.scheduledCheck?.heartbeatArmed === true;
+        return finish(registered ? 'waiting' : 'unconfirmed', registered ? 'automatic' : 'inspect',
+          registered
+            ? `Next assessment: ${base.checkAt} · GLLA heartbeat; completion must be checked`
+            : `Check saved for ${base.checkAt}; live wake registration missing — /glla status`,
+          registered ? undefined : 'Saved deadline is not a live wake');
+      }
       const tool = evidence.tool;
       if (tool && validTime(tool.startedAt, now) && Number.isFinite(tool.budgetMs) && tool.budgetMs > 0 && now - tool.startedAt < tool.budgetMs) {
         return finish('tool-wait', 'automatic', 'Tool timeout handling is automatic');
@@ -153,6 +189,8 @@ export function projectUiStatus(state: State, context: UiStatusContext): UiStatu
       if (evidence.turnQueued) return finish('queued', 'automatic', 'Turn queued; execution start not yet observed');
     }
   }
+  if (background) return finish('unconfirmed', 'inspect',
+    'Background checkpoint saved; host/activity/wake unconfirmed — /glla status');
   const savedActivity = epoch(goal?.pendingCompletion?.lastActivityAt);
   if (validTime(savedActivity, now)) base.lastActivityAt = savedActivity;
   if (recoveryOwned && epoch(recovery?.retryAt) !== undefined) base.retryAt = recovery?.retryAt;
@@ -160,5 +198,7 @@ export function projectUiStatus(state: State, context: UiStatusContext): UiStatu
   // qualifier inline, so the status line never reads as an armed probe it
   // cannot prove.
   if (providerWait) base.recoveryNote = 'main-model recovery — retry saved (unconfirmed)';
+  if (scheduledCheck) return finish('unconfirmed', 'inspect',
+    `Check saved for ${base.checkAt}; host/wake unconfirmed — reopen the session and inspect /glla status`);
   return finish('unconfirmed', 'inspect', base.workflow === 'settling' ? '/glla status · settlement/archive owed' : '/glla status to inspect execution', providerWait ? 'Retry saved; execution unconfirmed' : undefined);
 }

@@ -100,8 +100,9 @@ test("v0.35.28 #16: a wait 30min past its pauseResumeAt is resumed by the heartb
 
     assert.ok(pi.sent.length >= 1, "one fresh continuation dispatch follows");
     const sent = String((pi.sent[pi.sent.length - 1]!.message as { content?: unknown }).content ?? "");
-    assert.ok(sent.includes("YOU WERE RECOVERED"), "the agent is told it was itself that was recovered");
-    assert.ok(sent.includes("no external recovery signal to wait for"), "the waiting-for-recovery confusion is named");
+    assert.ok(sent.includes("SCHEDULED ASSESSMENT DUE"), "the released check requests an assessment, not a recovery fiction");
+    assert.ok(sent.includes("not proof that external work completed or succeeded"), "elapsed time is not completion evidence");
+    assert.ok(sent.includes("Inspect fresh, authorized evidence"), "completed, failed and unknown outcomes must be checked");
 
     // v0.35.37: the notice fires EXACTLY ONCE — the accepted dispatch marks
     // it delivered (ledger + stamp cleared), so a goal that keeps running

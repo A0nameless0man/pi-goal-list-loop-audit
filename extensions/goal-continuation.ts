@@ -1974,9 +1974,13 @@ export function continuationPrompt(goal: Goal, opts: { includeRestartDetail?: bo
   // told it the recovery had already happened and that it should continue
   // its own work instead of waiting.
   if (goal.status === "active" && goal.autoResumedAt) {
-    directives.push(
-      `## RECOVERY NOTICE — WELCOME BACK, YOU WERE RECOVERED\n\nThis goal was paused and glla auto-resumed it at ${goal.autoResumedAt} (event: ${goal.autoResumedEvent ?? "recovery"}). You are the SAME session that was disconnected — nobody else took over, and there is no external recovery signal to wait for. The wait condition you were told about has elapsed; continue your own work toward the objective now.`,
-    );
+    if (goal.autoResumedEvent?.startsWith('overdue wait resumed')) {
+      directives.push(`## SCHEDULED ASSESSMENT DUE\n\nGLLA released the saved time gate at ${goal.autoResumedAt} (${goal.autoResumedEvent}). Only the check deadline elapsed: this is not proof that external work completed or succeeded. Inspect fresh, authorized evidence; assess completed, failed, and unknown outcomes separately. Preserve the task checkpoint. If work is still ongoing, register another bounded check or owned dependency wait, never promise a wake from prose. Explicit user/supervisor/load holds remain authoritative.`);
+    } else {
+      directives.push(
+        `## RECOVERY NOTICE — WELCOME BACK, YOU WERE RECOVERED\n\nThis goal was paused and glla auto-resumed it at ${goal.autoResumedAt} (event: ${goal.autoResumedEvent ?? "recovery"}). You are the SAME session that was disconnected — nobody else took over, and there is no external recovery signal to wait for. The wait condition you were told about has elapsed; continue your own work toward the objective now.`,
+      );
+    }
   }
   const dynamicDirectives = directives.length > 0 ? directives.join("\n\n") : "(no active directives)";
   // Use replacement callbacks: String.replace interprets `$&`, `$1`, `$'`,

@@ -1,0 +1,58 @@
+[38;5;244mScheduled check · registered[0m
+[38;5;147m● [0m[38;5;147mWAITING[0m[38;5;244m · [0m[38;5;244mGOAL[0m [38;5;244mscheduled wait[0m
+[38;5;244m│  [0mAssess external render evidence with[0m…[0m
+[38;5;244m├─ [0m[38;5;147mcheck: 2026-10-12T03:05:00.000Z[0m
+[38;5;244m├─ [0m[38;5;244mwake: GLLA assessment heartbeat[0m
+[38;5;244m├─ [0m[38;5;244mnext: Next assessment:[0m
+[38;5;244m│  [0m[38;5;244m2026-10-12T03:05:00.000Z · GLLA[0m
+[38;5;244m│  [0m[38;5;244mheartbeat; completion must be[0m
+[38;5;244m│  [0m[38;5;244mchecked[0m
+[38;5;244m└─ [0m[38;5;244mdetails: /glla status[0m
+[38;5;244mglla:[0m [38;5;147mWAITING[0m [38;5;244m· goal scheduled wait[0m [38;5;244m· a[0m…[0m
+
+[38;5;244mBackground progress · observed[0m
+[38;5;72m● [0m[38;5;72mRUNNING[0m[38;5;244m · [0m[38;5;244mGOAL[0m [38;5;244mbackground wait[0m
+[38;5;244m│  [0mAssess external render evidence with[0m…[0m
+[38;5;244m├─ [0m[38;5;244mwake: Owned dependency[0m
+[38;5;244m│  [0m[38;5;244mcompletion/reconciliation[0m
+[38;5;244m├─ [0m[38;5;244mnext: Background activity observed;[0m
+[38;5;244m│  [0m[38;5;244massess on owned[0m
+[38;5;244m│  [0m[38;5;244mcompletion/reconciliation[0m
+[38;5;244m└─ [0m[38;5;244mdetails: /glla status[0m
+[38;5;244mglla:[0m [38;5;72mRUNNING[0m [38;5;244m· goal background wait[0m [38;5;244m· [0m…[0m
+
+[38;5;244mBlocked · intervention required[0m
+[38;5;179m● [0m[38;5;179mBLOCKED[0m[38;5;244m · [0m[38;5;244mGOAL[0m [38;5;244mpaused by agent[0m
+[38;5;244m│  [0mAssess external render evidence with[0m…[0m
+[38;5;244m├─ [0m[38;5;244mnext: Grant read access to the[0m
+[38;5;244m│  [0m[38;5;244mrender logs before resuming.[0m
+[38;5;244m├─ [0m[38;5;179mwhy: Read access denied; no[0m
+[38;5;244m│  [0m[38;5;179mprogress evidence[0m
+[38;5;244m├─ [0m[38;5;244mresume: /goal resume; fix first[0m
+[38;5;244m└─ [0m[38;5;244mdetails: /glla status[0m
+[38;5;244mglla:[0m [38;5;179mGrant read access to the render l[0m…[0m
+
+[38;5;244mBackground activity · stale[0m
+[38;5;147m● [0m[38;5;147mWAITING[0m[38;5;244m · [0m[38;5;244mGOAL[0m [38;5;244mbackground wait[0m
+[38;5;244m│  [0mAssess external render evidence with[0m…[0m
+[38;5;244m├─ [0m[38;5;244mwake: Owned dependency[0m
+[38;5;244m│  [0m[38;5;244mcompletion/reconciliation[0m
+[38;5;244m├─ [0m[38;5;244mnext: Waiting on owned[0m
+[38;5;244m│  [0m[38;5;244mdependencies; activity[0m
+[38;5;244m│  [0m[38;5;244munknown/stale, not proof of a stuck[0m
+[38;5;244m│  [0m[38;5;244mworker[0m
+[38;5;244m└─ [0m[38;5;244mdetails: /glla status[0m
+[38;5;244mglla:[0m [38;5;147mWAITING[0m [38;5;244m· goal background wait[0m [38;5;244m· [0m…[0m
+
+[38;5;244mSaved check · wake unconfirmed[0m
+[38;5;179m● [0m[38;5;179mEXECUTION UNCONFIRMED[0m[38;5;244m · [0m[38;5;244mGOAL[0m [38;5;244mschedule[0m…[0m
+[38;5;244m│  [0mAssess external render evidence with[0m…[0m
+[38;5;244m├─ [0m[38;5;147mcheck: 2026-10-12T03:05:00.000Z[0m
+[38;5;244m├─ [0m[38;5;244mwake: GLLA assessment heartbeat[0m
+[38;5;244m├─ [0m[38;5;244mnext: Check saved for[0m
+[38;5;244m│  [0m[38;5;244m2026-10-12T03:05:00.000Z; host/wake[0m
+[38;5;244m│  [0m[38;5;244munconfirmed — reopen the session[0m
+[38;5;244m│  [0m[38;5;244mand inspect /glla status[0m
+[38;5;244m└─ [0m[38;5;244mdetails: /glla status[0m
+[38;5;244mglla:[0m [38;5;179mEXECUTION UNCONFIRMED[0m [38;5;244m· goal sche[0m…[0m
+

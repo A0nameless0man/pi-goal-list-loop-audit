@@ -7,7 +7,7 @@ import type { Goal } from "../extensions/goal-loop-core.js";
 import { readState } from "../extensions/goal-loop-core.js";
 import { state, replaceState, persistStateLine } from "../extensions/goal-state.js";
 import { admitBackgroundWait, bindBackgroundWaitRuntime, observeBackgroundStart, observeBackgroundTerminal,
-  reconcileBackgroundWait, backgroundWaitPromptContext, __testOnlyResetBackgroundWaitRuntime } from "../extensions/background-wait-runtime.js";
+  reconcileBackgroundWait, backgroundWaitPromptContext, backgroundWaitUiEvidence, __testOnlyResetBackgroundWaitRuntime } from "../extensions/background-wait-runtime.js";
 import { makeMockCtx, tmpCwd } from "./harness/mock-pi.js";
 
 const now = "2026-10-08T17:00:00.000Z";
@@ -94,6 +94,25 @@ for (const status of ["complete", "failed", "missing", "mismatched"] as const) {
       status === "complete" ? "completed" : status === "failed" ? "failed" : "missing");
   });
 }
+
+test('UI activity uses matching worker timestamps, never artifact existence or fresh host polls', () => {
+  const f = fixture(); f.start(); admitBackgroundWait(f.ctx, ['worker-1'], 'checkpoint');
+  const checkNow = Date.now();
+  assert.equal(backgroundWaitUiEvidence(f.ctx, checkNow)?.lastActivityAt, undefined);
+  const file = path.join(f.asyncDir, 'status.json');
+  fs.writeFileSync(file, JSON.stringify({ runId: 'worker-1', state: 'running', lastActivityAt: checkNow - 45_000 }));
+  reconcileBackgroundWait(f.ctx, checkNow);
+  assert.equal(backgroundWaitUiEvidence(f.ctx, checkNow)?.lastActivityAt, checkNow - 45_000);
+  assert.equal(backgroundWaitUiEvidence(f.ctx, checkNow + 5000)?.lastActivityAt, checkNow - 45_000,
+    'repeated render reads cannot refresh worker activity');
+  fs.writeFileSync(file, JSON.stringify({ runId: 'worker-1', state: 'running', lastActivityAt: checkNow + 60_000 }));
+  reconcileBackgroundWait(f.ctx, checkNow);
+  assert.equal(backgroundWaitUiEvidence(f.ctx, checkNow)?.lastActivityAt, checkNow - 45_000,
+    'future timestamps are rejected');
+  assert.equal(backgroundWaitUiEvidence(f.ctx, checkNow)?.registered, true);
+  replaceState({ goal: goal({ id: 'replacement' }) });
+  assert.equal(backgroundWaitUiEvidence(f.ctx), undefined, 'replacement cannot inherit wait activity');
+});
 
 test("legacy standby reconciles through assessment, not invented worker ownership", () => {
   const f = fixture(); state.goal = goal({ status: "paused", pauseKind: "standby", pauseReason: "Old design wait" });

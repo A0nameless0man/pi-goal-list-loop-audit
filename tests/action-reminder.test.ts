@@ -130,7 +130,8 @@ test("timed wait is automatic and does not invent a manual action", () => {
   });
   const text = renderReminder(reminder);
   assert.match(text, /GLLA Waiting — work is safely parked/);
-  assert.match(text, /resumes automatically at 2026-09-24T23:59:00\.000Z/);
+  assert.match(text, /Assessment check saved for 2026-09-24T23:59:00\.000Z/);
+  assert.match(text, /does not prove completion/);
   assert.match(text, /no manual action is needed/);
   assert.doesNotMatch(text, /this turn stopped/);
   assert.doesNotMatch(text, /Next:/);
@@ -160,7 +161,8 @@ test("wait abort notice uses the same automatic-wake explanation as its card", (
   });
   assert.match(notice, /GLLA paused this turn safely/);
   assert.match(notice, /The rate limit resets later/);
-  assert.match(notice, /resumes automatically at 2026-09-24T23:59:00\.000Z/);
+  assert.match(notice, /Assessment check saved for 2026-09-24T23:59:00\.000Z/);
+  assert.match(notice, /current registration/);
   assert.doesNotMatch(notice, /Next:/);
   assert.doesNotMatch(notice, /Operation aborted/);
 });

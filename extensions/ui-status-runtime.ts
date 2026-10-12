@@ -12,6 +12,8 @@ export interface UiRuntimeObservation {
   turnActive?: boolean;
   turnQueued?: boolean;
   recovery?: MainModelRecoveryRuntime;
+  scheduledCheck?: UiStatusEvidence['scheduledCheck'];
+  backgroundWait?: UiStatusEvidence['backgroundWait'];
   compaction?: UiStatusEvidence['compaction'];
 }
 export interface UiAuditObservation {

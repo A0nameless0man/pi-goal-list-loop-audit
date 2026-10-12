@@ -1,0 +1,18 @@
+{
+  "width": 120,
+  "rows": 57,
+  "fixtures": [
+    "Scheduled check \u00b7 registered",
+    "Background progress \u00b7 observed",
+    "Blocked \u00b7 intervention required",
+    "Background activity \u00b7 stale",
+    "Saved check \u00b7 wake unconfirmed"
+  ],
+  "source": "production buildUiStatusCard/buildUiStatusFooter",
+  "fixedNow": "2026-10-12T03:00:00.000Z",
+  "capture": "real xterm on private Xvfb",
+  "pixels": [
+    1100,
+    1141
+  ]
+}

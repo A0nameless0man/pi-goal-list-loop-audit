@@ -96,7 +96,8 @@ for (const surface of ["goal", "list", "metric", "project"] as const) for (const
       await tick(50);
       assert.equal(mainSends() - sendsBefore, 0, "an explicit pause forbids completion-triggered dispatch");
       assert.ok(state.goal?.backgroundWait ?? state.loop?.backgroundWait, "freeze retains owned result evidence");
-      assert.match(ctx.ui.statuses["pi-glla"]!, /⏸ paused/);
+      assert.match(ctx.ui.statuses["pi-glla"]!, surface === "goal" || surface === "list"
+        ? /BLOCKED.*paused by you/ : /⏸ paused/);
       await pi.command(surface === "metric" || surface === "project" ? "loop" : "goal", "resume", ctx);
       __testOnlyHeartbeatTickRaw();
     }

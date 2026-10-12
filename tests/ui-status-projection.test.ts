@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { State } from '../extensions/goal-loop-core.js';
+import { buildUiStatusCard, buildUiStatusFooter } from '../extensions/goal-loop-display.js';
 import { projectUiStatus, uiStatusOwnerKey, type UiStatusEvidence } from '../extensions/ui-status.js';
 
 const NOW = Date.parse('2026-10-10T12:00:00Z');
@@ -16,6 +17,66 @@ function recovery(state: State): void {
   state.mainModelRecovery = { primary: 'provider/model', active: 'provider/model', attempted: [], attempts: 6,
     kind: 'goal', owner: { kind: 'goal', id: state.goal!.id }, reason: 'Rate limit', retryAt: new Date(NOW + 5 * 3600_000).toISOString() };
 }
+
+test('scheduled external assessment requires current-owner heartbeat registration', () => {
+  const state = fixture();
+  const at = new Date(NOW + 600_000).toISOString();
+  Object.assign(state.goal!, { status: 'paused', pauseKind: 'wait', pauseResumeAt: at });
+  const registered = observed(state, { scheduledCheck: { resumeAt: at, heartbeatArmed: true } });
+  const live = projectUiStatus(state, { now: NOW, generation: 2, evidence: registered });
+  assert.equal(live.execution, 'waiting');
+  assert.equal(live.actionability, 'automatic');
+  assert.equal(live.checkAt, at);
+  assert.match(live.nextAction, /completion must be checked/);
+  for (const width of [40, 120]) for (const compact of [true, false]) {
+    const card = buildUiStatusCard(state, live, NOW, undefined, width, compact).join('\n');
+    assert.match(card, /WAITING/);
+    assert.match(card, /check: 2026-10-10T12:10:00\.000Z/);
+    assert.match(card, /wake: GLLA assessment heartbeat/);
+    assert.doesNotMatch(card, /BLOCKED|paused by/);
+    assert.match(buildUiStatusFooter(live, NOW, undefined, width), /WAITING/);
+  }
+  for (const patch of [
+    { scheduledCheck: undefined },
+    { scheduledCheck: { resumeAt: at, heartbeatArmed: false } },
+    { scheduledCheck: { resumeAt: new Date(NOW).toISOString(), heartbeatArmed: true } },
+    { observedAt: NOW - 31_000 }, { ownerKey: 'goal:other' }, { generation: 1 },
+  ]) {
+    assert.equal(projectUiStatus(state, { now: NOW, generation: 2,
+      evidence: { ...registered, ...patch } }).execution, 'unconfirmed');
+  }
+  assert.equal(projectUiStatus(state, { now: NOW }).execution, 'unconfirmed');
+  for (const patch of [{ supervisorPausedAt: NOW }, { loadHoldAt: NOW }]) {
+    assert.equal(projectUiStatus({ ...state, ...patch }, { now: NOW, generation: 2,
+      evidence: registered }).execution, 'blocked');
+  }
+  assert.equal(projectUiStatus(state, { now: NOW, generation: 2,
+    evidence: registered, persistenceHold: 'writes failing' }).execution, 'blocked');
+});
+
+test('background activity is attributed to the owned dependency, not parent chat', () => {
+  const state = fixture();
+  state.goal!.backgroundWait = { version: 1, id: 'wait-1', targetId: state.goal!.id,
+    sessionId: 'session-1', createdAt: new Date(NOW).toISOString(), reason: 'Owned worker',
+    dependencies: [{ runId: 'run-1', outcome: 'pending' }] };
+  const evidence = observed(state, { turnActive: true, lastActivityAt: NOW,
+    backgroundWait: { waitId: 'wait-1', registered: true } });
+  const waiting = projectUiStatus(state, { now: NOW, generation: 2, evidence });
+  assert.equal(waiting.execution, 'waiting', 'chat is not worker activity');
+  assert.equal(waiting.lastActivityAt, undefined);
+  assert.match(waiting.nextAction, /unknown\/stale/);
+  for (const at of [NOW, NOW - 31_000]) {
+    const status = projectUiStatus(state, { now: NOW, generation: 2,
+      evidence: { ...evidence, backgroundWait: { waitId: 'wait-1', registered: true, lastActivityAt: at } } });
+    assert.equal(status.execution, at === NOW ? 'running' : 'waiting');
+  }
+  assert.equal(projectUiStatus(state, { now: NOW, generation: 2,
+    evidence: { ...evidence, backgroundWait: { waitId: 'other', registered: true, lastActivityAt: NOW } } }).execution, 'unconfirmed');
+  const future = projectUiStatus(state, { now: NOW, generation: 2,
+    evidence: { ...evidence, backgroundWait: { waitId: 'wait-1', registered: true, lastActivityAt: NOW + 1 } } });
+  assert.equal(future.execution, 'waiting');
+  assert.equal(future.lastActivityAt, undefined, 'invalid future activity cannot leak into a rendered age');
+});
 
 test('saved active or auditing state never proves execution', () => {
   const state = fixture();

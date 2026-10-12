@@ -1405,7 +1405,7 @@ function backgroundWidget(state: State, theme?: DisplayTheme, width?: number): s
 
 const UI_HEALTH_LABEL: Record<UiStatus['execution'], string> = {
   idle: 'IDLE', complete: 'COMPLETE', cancelled: 'CANCELLED', running: 'RUNNING',
-  'tool-wait': 'TOOL WAIT', 'retry-armed': 'RETRY ARMED', queued: 'QUEUED',
+  'tool-wait': 'TOOL WAIT', 'retry-armed': 'RETRY ARMED', waiting: 'WAITING', queued: 'QUEUED',
   blocked: 'BLOCKED', dormant: 'DORMANT', unconfirmed: 'EXECUTION UNCONFIRMED',
 };
 // Execution-tone semantics (matches the established card/footer vocabulary):
@@ -1424,6 +1424,7 @@ function uiStatusTone(status: UiStatus): DisplayColor {
     case 'dormant':
     case 'unconfirmed': return 'warning';
     case 'tool-wait':
+    case 'waiting':
     case 'queued': return 'accent';
     default: return 'dim';
   }
@@ -1481,6 +1482,8 @@ function uiSafeText(value: string, prose = false): string {
   return compactDisplayText(sanitizeProviderDisplayText(safe));
 }
 function workflowLabel(status: UiStatus): string {
+  if (status.checkAt) return 'scheduled wait';
+  if (status.wakeOwner && status.workflow === 'working') return 'background wait';
   if (status.workflow !== 'paused') return status.workflow;
   return status.pauseSource === 'agent' ? 'paused by agent'
     : status.pauseSource === 'user' ? 'paused by you'
@@ -1626,7 +1629,12 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
     wrap(`${label}: ${uiSafeText(value, true)}`, Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3), compact ? 4 : 32)
       .forEach((line, index) => rows.push(row(index === 0 ? '├─ ' : '│  ', line, color, true)));
   };
-  if (status.actionability === 'user') prose('next', status.nextAction, 'dim');
+  if (status.checkAt) rows.push(row('├─ ', `check: ${status.checkAt}`, 'accent'));
+  if (status.wakeOwner) {
+    wrap(`wake: ${status.wakeOwner}`, Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3), 3)
+      .forEach((line, index) => rows.push(row(index === 0 ? '├─ ' : '│  ', line, 'dim', true)));
+  }
+  if (status.actionability === 'user' || status.wakeOwner) prose('next', status.nextAction, 'dim');
   if (status.blocker) prose('why', status.blocker, 'warning');
   if (compact && status.actionability === 'user' && extras?.durableDeferRecommendation) {
     const judgment = buildDurableDeferDecisionLines(extras.durableDeferRecommendation, width);
@@ -1645,6 +1653,7 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
     const activity = status.workflow === 'settling' ? 'approval recorded · settlement owed'
       : status.lastActivityAt !== undefined ? `last progress ${fmtElapsed(now - status.lastActivityAt)} ago · ${status.provenance}`
       : status.execution === 'running' ? 'current-owner turn observed'
+      : status.execution === 'waiting' ? 'wake registered · activity unknown/stale'
       : status.execution === 'tool-wait' ? 'current-owner tool within budget'
       : status.execution === 'queued' ? 'turn queued · execution not yet observed' : 'execution unconfirmed · saved work retained';
     const retry = status.retryKind === 'hourly' ? 'hourly recovery probe armed'
@@ -1659,7 +1668,7 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   // Detailed status retains all model/owner facts. In the glance card these
   // give way to actionable blockers, never the other way round.
   const tail = status.actionability === 'user' || (g?.status === 'paused' && pauseKind(g) === 'wait' && state.mainModelRecovery)
-    ? 'details: /glla status' : `next: ${status.nextAction}`;
+    ? 'details: /glla status' : status.wakeOwner ? 'details: /glla status' : `next: ${status.nextAction}`;
   const modelBudget = compact ? Math.max(0, 5 - rows.length) : provenance.length;
   provenance.slice(0, modelBudget).forEach(value => rows.push(row('├─ ', value)));
   if (!compact) {

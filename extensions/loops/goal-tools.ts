@@ -2689,6 +2689,32 @@ function registerAgentTools(pi: any): void {
           });
         }
       }
+      // Scheduled assessment needs a real durable deadline. Do not admit a
+      // wait whose only wake mechanism is prose (or an invalid date). Quota
+      // reroutes above already supply a bounded deadline; tracked dependency
+      // waits use wait_for_background instead of this time-based path.
+      if (effectiveKind === "wait" && (!storedResumeAt || !Number.isFinite(Date.parse(storedResumeAt)))) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "Not paused: a scheduled wait requires a valid ISO resumeAt. For external work, register a bounded check with kind=wait and resumeAt, then inspect fresh evidence on that turn; a deadline is not proof of completion. For owned background runs use wait_for_background. No automatic wake was registered by this call." }],
+          details: { paused: false, wakeRegistered: false },
+        };
+      }
+      if (effectiveKind === "wait") {
+        // Admit the scheduled check only when the current host really has
+        // its fenced heartbeat registered. A saved date alone is no wake.
+        let registrationError: string | undefined;
+        try { startHeartbeat(); } catch (error) {
+          registrationError = error instanceof Error ? error.message : String(error);
+        }
+        if (registrationError || heartbeatTimer === null) {
+          return {
+            isError: true,
+            content: [{ type: "text", text: `Not paused: scheduled-check heartbeat registration failed${registrationError ? ` (${registrationError})` : ''}. No automatic wake was registered; inspect /glla status.` }],
+            details: { paused: false, wakeRegistered: false },
+          };
+        }
+      }
       // v0.39.30 (note.md #later Screenshot_20261011_175739 — "can have
       // an option to accept suggestion"): a blocked/error pause carrying a
       // concrete command is an implicit question with no accept path. Promote

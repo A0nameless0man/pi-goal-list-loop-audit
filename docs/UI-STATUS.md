@@ -24,6 +24,21 @@ Reuse `extensions/audit-lifecycle.ts` for stored claim phase/settlement facts, n
 
 Represent independent workflow rejection and provider recovery together. Requirement coverage counts must be labelled as requirement counts, not execution-blocker counts. A missing user prerequisite takes precedence over a generic resume hint.
 
+## Wait evidence
+
+Scheduled external assessments expose `checkAt` and `wakeOwner`. WAITING is
+shown only with fresh current-owner/current-generation heartbeat registration;
+a saved deadline without live evidence remains EXECUTION UNCONFIRMED. A
+registered owned dependency wait is WAITING with unknown/stale activity, or
+RUNNING when its attributed worker activity timestamp is fresh. Parent-host
+chat is not worker evidence. Cards retain the full check deadline and wrapped
+wake owner even at 40 columns; detailed status retains provenance and activity
+age. The saved workflow remains distinct from execution: scheduled/background
+wait labels do not turn a manual-action blocker into an automatic wait.
+
+See [external-check recovery](RECOVERY.md#checking-authorized-external-work) and
+[the incident/capture register](../audit/WAITING-WAKE-LIFECYCLE-2026-10-12.md).
+
 ## Surface map
 
 - `extensions/goal-loop-display.ts`: compact/detailed cards and footer, including project-builder branch.
@@ -42,8 +57,8 @@ Matches the established card/footer vocabulary — color emphasizes, never repla
 
 - `success` (green): live or terminal-ok — running activity, completed work, fresh evidence. Icon plus execution word only.
 - `warning` (amber): needs the user — blocked, dormant, unconfirmed; blocker/reason rows. Required-action rows ride `dim` (position carries the emphasis; only hard errors shout), exactly like legacy pause actions.
-- `accent` (primary highlight): informational in-flight progress — tool waits, queued starts, decision prompts, recommended options.
-- `dim` (grey): everything secondary — mode/phase words, saved metrics, evidence lines, model provenance, closers, automatic background waits (`retry-armed`, standby, scheduled waits) that need no action.
+- `accent` (primary highlight): informational in-flight progress — registered waiting, tool waits, queued starts, decision prompts, recommended options.
+- `dim` (grey): everything secondary — mode/phase words, saved metrics, evidence lines, model provenance, closers and secondary automatic-retry details. Registered waiting execution words use `accent`; their ownership/detail rows remain `dim`.
 - `error` (red): error pauses and stalled audit observations beyond the silence bound, never ordinary blocks. Silence is not proof of process death; the UI says that no worker responds, not that a PID was verified dead.
 
 Headers and footers are segmented: only the execution word (and, in the footer, the required user action) carries the tone. Painting a whole line in the tone washed every blocked card orange (field 2026-10-10). Objectives render as plain body text; closers stay `dim`.

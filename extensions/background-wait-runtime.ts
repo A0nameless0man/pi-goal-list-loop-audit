@@ -19,6 +19,18 @@ interface Hooks {
 let hooks: Hooks | undefined;
 interface Observation { runId: string; targetId: string; sessionId: string; asyncDir?: string; outcome: DependencyOutcome; }
 const observations = new Map<string, Observation>();
+// Activity comes from attributed worker events/artifacts, never file size,
+// existence, process age, or an agent-authored reason.
+const workerActivity = new Map<string, number>();
+export function backgroundWaitUiEvidence(ctx: ExtensionContext, now = Date.now()):
+  { waitId: string; registered: boolean; lastActivityAt?: number } | undefined {
+  const wait = targetWait();
+  if (!wait || wait.targetId !== workTargetId()) return undefined;
+  const activity = wait.dependencies.map(d => workerActivity.get(`${wait.id}:${d.runId}`))
+    .filter((at): at is number => typeof at === 'number' && Number.isFinite(at) && at <= now);
+  return { waitId: wait.id, registered: hooks?.valid(ctx) === true,
+    ...(activity.length ? { lastActivityAt: Math.max(...activity) } : {}) };
+}
 const yieldedSessions = new Set<string>();
 export function consumeBackgroundYield(ctx: ExtensionContext): boolean {
   const id = sessionId(ctx);
@@ -30,9 +42,10 @@ export function consumeBackgroundYield(ctx: ExtensionContext): boolean {
 export function bindBackgroundWaitRuntime(next: Hooks): void {
   hooks = next;
   observations.clear();
+  workerActivity.clear();
   yieldedSessions.clear();
 }
-export function __testOnlyResetBackgroundWaitRuntime(): void { hooks = undefined; observations.clear(); yieldedSessions.clear(); }
+export function __testOnlyResetBackgroundWaitRuntime(): void { hooks = undefined; observations.clear(); workerActivity.clear(); yieldedSessions.clear(); }
 
 export function workTargetId(): string | undefined {
   if (state.goal && (state.goal.status === "active" || state.goal.status === "paused")) return state.goal.id;
@@ -138,6 +151,10 @@ function artifactOutcome(wait: BackgroundWait, dependency: BackgroundWait["depen
       if (fs.statSync(file).size > 1024 * 1024) return "missing";
       const raw = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
       if (raw.runId !== dependency.runId) return "missing";
+      if (typeof raw.lastActivityAt === 'number' && Number.isFinite(raw.lastActivityAt)
+        && raw.lastActivityAt >= 0 && raw.lastActivityAt <= now) {
+        workerActivity.set(`${wait.id}:${dependency.runId}`, raw.lastActivityAt);
+      }
       switch (raw.state ?? raw.status) {
         case "complete": case "completed": return "completed";
         case "failed": case "partial": return "failed";

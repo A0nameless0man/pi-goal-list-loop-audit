@@ -63,6 +63,27 @@ afterEach(() => {
   setSettings({});
 });
 
+// ---- scheduled waits require an actual wake registration ----
+
+for (const resumeAt of [undefined, "not-a-date"]) {
+  test(`pause_goal rejects a wait with no valid wake deadline (${resumeAt ?? "missing"})`, async () => {
+    const cwd = tmpCwd();
+    setSettings({});
+    const { pi, ctx } = await activeBoot(cwd);
+    try {
+      const result = await pi.runTool("pause_goal", {
+        kind: "wait", reason: "Render is still running; check fresh progress later.",
+        ...(resumeAt ? { resumeAt } : {}),
+      }, ctx);
+      assert.match(result.content.map(c => c.text).join("\n"), /No automatic wake was registered/);
+      assert.equal(readState(cwd).goal?.status, "active", "invalid wait never parks the work");
+      assert.equal(readState(cwd).goal?.pauseResumeAt, undefined);
+    } finally {
+      await pi.fire("session_shutdown", { reason: "quit" }, ctx);
+    }
+  });
+}
+
 // ---- pure extraction ----
 
 test("extractSuggestedCommand: screenshot-shaped tweak suggestion extracts the exact command", () => {

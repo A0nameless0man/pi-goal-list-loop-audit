@@ -144,7 +144,7 @@ export function buildActionReminder(input: {
     parkState === "redirect"
       ? "The saved goal is held while the current turn handles the new request."
       : parkState === "automatic"
-        ? "Your saved work is intact; no manual action is needed."
+        ? "Your saved work is intact; no manual action is needed while the owned wake remains registered and no hold applies."
         : "Your saved work is intact; this turn stopped before more work could be lost.",
     presentation.next,
     ...(diagnostic ? [`Diagnostic: ${compactDisplayText(diagnostic)}`] : []),
@@ -200,8 +200,8 @@ export function buildPausePresentation(input: {
       heading: "Waiting — work is safely parked",
       why,
       next: displayed.resumeAt
-        ? `The wait resumes automatically at ${displayed.resumeAt}.`
-        : "The wait resumes automatically when its condition clears.",
+        ? `Assessment check saved for ${displayed.resumeAt}. GLLA's admitted heartbeat releases it shortly after that deadline; holds can delay it. A saved deadline does not prove completion or a live wake after closing the session. Inspect /glla status for current registration.`
+        : "No check deadline is recorded; automatic wake is unconfirmed. Inspect /glla status rather than waiting on prose.",
       parkState: displayed.parkState,
     };
   }
@@ -252,7 +252,7 @@ export function registerActionReminderRenderer(pi: ExtensionAPI): void {
     if (presentation.parkState === "redirect") {
       box.addChild(new Text(theme.fg("dim", "The saved goal is held while the current turn handles the new request."), 0, 0));
     } else if (presentation.parkState === "automatic") {
-      box.addChild(new Text(theme.fg("dim", "Your saved work is intact; no manual action is needed."), 0, 0));
+      box.addChild(new Text(theme.fg("dim", "Your saved work is intact; no manual action is needed while the owned wake remains registered and no hold applies."), 0, 0));
     } else {
       box.addChild(new Text(theme.fg("dim", "Your saved work is intact; this turn stopped before more work could be lost."), 0, 0));
     }

@@ -19,6 +19,7 @@
  */
 
 import * as fs from "node:fs";
+import { backgroundWaitUiEvidence } from '../background-wait-runtime.js';
 import * as os from "node:os";
 import * as path from "node:path";
 
@@ -839,6 +840,10 @@ export function currentUiStatusContext(ctx: ExtensionContext, now = Date.now()):
     ownerKey, generation, observedAt: now, session: 'open',
     lastActivityAt: activity.lastActivityAt, turnActive, turnQueued,
     recovery: mainModelRecoveryRuntimeStatus(), compaction,
+    backgroundWait: backgroundWaitUiEvidence(ctx, now),
+    ...(selectedGoal?.status === 'paused' && selectedGoal.pauseKind === 'wait' && selectedGoal.pauseResumeAt
+      ? { scheduledCheck: { resumeAt: selectedGoal.pauseResumeAt, heartbeatArmed: heartbeatTimer !== null } }
+      : {}),
   }, audit);
   if (isPersistenceDegraded()) context.persistenceHold = `Persistence failed: ${lastPersistenceFailure()?.what ?? 'state write'}`;
   return context;

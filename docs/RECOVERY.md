@@ -8,8 +8,11 @@ Start with `/glla status`. For full saved details, use `/goal status`,
 **⏳ waiting** yields the main agent to named background dependencies. The
 saved goal/list item or loop/project remains supervised; exact terminal results
 trigger a bounded assessment of the retained checkpoint. Waiting does not mark
-tasks or project requirements successful. **⏸ paused** freezes automatic
-continuation; children may still run, but their results cannot bypass the freeze.
+tasks or project requirements successful. **⏸ paused** for a user hold,
+decision, or manual-action blocker freezes automatic continuation; children may
+still run, but their results cannot bypass the freeze. A scheduled time gate is
+stored as a paused goal with `pauseKind=wait`, but is displayed as a scheduled
+wait, not a manual-action blocker.
 Lifecycle is separate from activity such as researching, implementing, auditing
 or recovering. Activity requires observed evidence, not the model's narration.
 
@@ -27,6 +30,33 @@ scope or progress. A running artifact with no deadline is assessed after at most
 sooner. No busy polling or guessed worker adoption is performed. Load holds,
 supervisor pauses and pending audits remain authoritative. Explicit resume
 reconciles a dependency wait instead of blindly re-sending the main work.
+
+### Checking authorized external work
+
+For external work that has no owned subagent notification, use
+`pause_goal(kind="wait", resumeAt="<ISO deadline>", reason="<what to assess>")`.
+A valid deadline and a registered current-host heartbeat are required; failed
+admission leaves the goal unpaused and reports that no wake was registered.
+This registers a **bounded assessment check**, not a completion detector or an
+arbitrary shell command. On the assessment turn inspect fresh authorized logs
+or results, distinguish completed/failed/unknown outcomes, and register a new
+bounded check if needed. `blocked` plus prose such as “on next wake” registers
+nothing and must not promise automatic continuation.
+
+The card exposes the saved check deadline and wake owner. **WAITING** requires
+fresh, matching host registration; **RUNNING** background activity additionally
+requires a matching worker activity timestamp. Old or absent worker activity
+is unknown/stale, not proof of a stuck worker. A saved checkpoint with no live
+host/wake evidence is **EXECUTION UNCONFIRMED**. Parent chat, elapsed time, file
+existence, and process age do not prove worker progress or completion.
+
+Deadlines survive restart, but host timers do not. Reopen the session and admit
+continuation (release a load hold explicitly); GLLA's fenced heartbeat assesses
+an overdue check shortly after its deadline, subject to dispatch, recovery and
+persistence gates. It does not bypass explicit user/supervisor/load holds,
+unresolved persistence failures, or replaced/terminal ownership. Detailed
+`/glla status` shows saved versus live evidence. No automatic wake is promised
+while the host is closed or registration is unconfirmed.
 
 See [the lifecycle/state reference](DESIGN-work-lifecycle.md).
 
