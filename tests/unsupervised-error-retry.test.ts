@@ -151,7 +151,11 @@ test("a goal paused with kind=blocked refuses the unsupervised retry (incident 1
   // must NOT auto-retry because the user hold is explicit. Without
   // the goal-blocked-paused gate, the user saw
   // "glla: provider error (...) — retrying automatically" right after
-  // issuing the hold (Screenshot_20261012_111955).
+  // issuing the hold (Screenshot_20261012_111955). autoResume=true
+  // prevents the activation from also latching loadHoldAt; we want
+  // the goal-blocked-paused gate specifically, not the supervisor
+  // hold latched by blank-start restore.
+  fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify({ autoResume: true }));
   cwd = tmpCwd();
   seedState(cwd, {
     goal: seedGoal({
@@ -177,6 +181,7 @@ test("'This operation was aborted' on a blocked-paused goal never reaches the re
   // Combined: the classifier widens 'This operation was aborted' to
   // non-recoverable, and the gate refuses anyway. Two fences in
   // series; the audit trail records the FIRST one that fired.
+  fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify({ autoResume: true }));
   cwd = tmpCwd();
   seedState(cwd, {
     goal: seedGoal({
