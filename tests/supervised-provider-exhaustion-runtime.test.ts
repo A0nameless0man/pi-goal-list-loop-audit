@@ -1,15 +1,18 @@
-import { test } from 'node:test';
+import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import type { ExtensionContext } from '@earendil-works/pi-coding-agent';
 import { withPressureSession, providerError } from './harness/context-pressure.js';
 import { tick } from './harness/mock-pi.js';
+import { __testOnlyResetProcessState } from '../extensions/loops/goal.js';
 import { state, persistStateLine } from '../extensions/goal-state.js';
 import { readState } from '../extensions/goal-loop-core.js';
 import { clearMainModelRecoveryTimer, mainModelRecoveryRuntimeStatus, probeMainModelRecovery, mainModelRecoverySucceeded } from '../extensions/goal-recovery.js';
 
 // Drive registered agent_end and the real durable recovery probe, not a retry
 // model. Advance only the cadence clock; no provider calls or quota requests.
+afterEach(() => __testOnlyResetProcessState());
+
 for (const mode of ['goal', 'list', 'loop'] as const) {
   test(`${mode}: 2101 provider exhaustion failures preserve work then continue`, async () => {
     await withPressureSession(async (pi, ctx, cwd) => {

@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import type { ExtensionContext } from '@earendil-works/pi-coding-agent';
@@ -8,6 +8,8 @@ import activate, { __testOnlyResetProcessState } from '../extensions/loops/goal.
 import { state, persistStateLine } from '../extensions/goal-state.js';
 import { readState } from '../extensions/goal-loop-core.js';
 import { clearMainModelRecoveryTimer, mainModelRecoveryRuntimeStatus, probeMainModelRecovery, scheduleMainModelRecoveryTimer, mainModelRecoverySucceeded } from '../extensions/goal-recovery.js';
+
+afterEach(() => __testOnlyResetProcessState());
 
 for (const mode of ['goal', 'list', 'loop'] as const) {
   test(`${mode}: reload preserves recovery ownership and queue, consent and pause fence probes`, async () => {
