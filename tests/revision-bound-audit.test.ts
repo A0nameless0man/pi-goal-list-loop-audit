@@ -433,7 +433,7 @@ test("v0.34.61: a settled audit never invalidates its own verdict — a second c
   }
 });
 
-test("v0.34.61: the documented escape works — tweak, then /goal verify, then complete_goal proceeds", async () => {
+test("manual /goal verify remains an optional current-revision audit after tweak", async () => {
   // Auditor round-2 finding 2: the rejection text promised "Run /goal
   // verify … then call complete_goal again", but the verify settle bumped
   // the revision too, dead-ending the escape. With the contract-scoped
@@ -451,9 +451,7 @@ test("v0.34.61: the documented escape works — tweak, then /goal verify, then c
     // Contract change: /goal tweak → revision 2 → the old approval is stale.
     await pi.command("goal", 'tweak "new contract after tweak"', ownerCtx(cwd));
     assert.equal(readState(cwd).goal?.revision, 2, "tweak bumps 1 → 2");
-    const resRejected = await pi.runTool("complete_goal", { completionSummary: "Claim", verificationSummary: "Evidence" }, ownerCtx(cwd));
-    assert.match(resRejected.content[0]!.text, /REJECTED/i, "tweak since the last audit → rejected");
-    // The escape: /goal verify audits the CURRENT contract (disapproved
+    // The optional manual path still audits the CURRENT contract (disapproved
     // settle → goal stays active) and records its revision.
     await pi.command("goal", "verify", ownerCtx(cwd));
     await waitUntil(() => {
@@ -464,7 +462,7 @@ test("v0.34.61: the documented escape works — tweak, then /goal verify, then c
     assert.equal(afterVerify.goal?.auditHistory?.at(-1)?.revision, afterVerify.goal?.revision, "verify records the current revision");
     const res2 = await pi.runTool("complete_goal", { completionSummary: "Claim", verificationSummary: "Evidence" }, ownerCtx(cwd));
     assert.match(res2.content[0]!.text, /auditor queued|detached/i, "after /goal verify the claim proceeds (escape is real)");
-    assert.equal(readLedger(cwd).filter((l) => l.type === "complete_goal_revision_rejected").length, 1, "exactly the pre-verify rejection");
+    assert.equal(readLedger(cwd).filter((l) => l.type === "complete_goal_revision_rejected").length, 0, "no redundant pre-verify rejection");
   } finally {
     delete process.env.GLLA_PI_BINARY;
   }

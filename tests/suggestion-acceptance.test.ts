@@ -410,7 +410,7 @@ test("pause_goal: an explicit user hold (/glla pause) survives a command-carryin
     }, ctx);
     const after = readState(cwd) as unknown as { supervisorPausedAt?: number; goal: GoalView };
     assert.equal(typeof after.supervisorPausedAt, "number", "only an explicit /glla resume clears the user hold — never a pause");
-    assert.equal(after.goal.pauseKind, "decision", "the suggestion path still works under a hold");
+    assert.equal(after.goal.pauseKind, undefined, "agent suggestions cannot overwrite the existing supervisor hold");
   } finally {
     await pi.fire("session_shutdown", { reason: "quit" }, ctx);
   }
