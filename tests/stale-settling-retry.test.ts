@@ -219,30 +219,63 @@ for (const origin of ["provider-retry", "session-retry"] as const) {
 // =================================================================
 // 3. Restart rehydrates the same pendingCompletion — no extra audit.
 // =================================================================
-test("session_start with a settling claim rehydrates without launching a new audit", async () => {
+test("session_start with a settling claim completes the settlement driver when approved history is present", async () => {
+  // The settlement driver is the ONLY authority for archive on a settling
+  // claim. On session_start, the v0.38.99 re-drive invokes
+  // resumeSettlingCompletionAudit, which calls settleApprovedCompletion
+  // when an approved entry exists in auditHistory. This is the
+  // screenshot_20261012_111046 path: a goal with verdict already applied
+  // (approved + falsification) reaches session_start and the settlement
+  // driver finishes the archive. The contract: NO new audit is launched
+  // and the goal is archived exactly once.
   const cwd = tmpCwd();
   const pi = new MockPi();
   activate(pi.api);
-  const ctx = makeMockCtx(cwd, { sessionManager: { name: "settling-rehydrate" } });
-  // Seed the settling claim BEFORE session_start; the activation should
-  // leave it on disk with the same attemptId.
-  const { attemptId } = seedSettlingFixture(cwd, { phase: "settling" });
+  const ctx = makeMockCtx(cwd, { sessionManager: { name: "settling-rehydrate-settled" } });
+  const { goalId, attemptId } = seedSettlingFixture(cwd, { phase: "settling" });
   try {
     await pi.fire("session_start", { reason: "startup" }, ctx);
     const after = readState(cwd).goal;
-    if (!after) {
-      // Surface the actual disk + ledger content for the failing case so
-      // the regression is diagnosable, not a silent skip.
-      const ledger = fs.readFileSync(path.join(cwd, ".pi-glla", "active.jsonl"), "utf8").split("\n").filter(Boolean);
-      const terminalTypes = ["terminal_goal_slot_closed", "stale_settling_retry_refused", "audit_recovery_retry_suppressed", "completion_audit_recovery_pending", "main_model_recovery_retired"];
-      const matched = ledger.filter((line) => terminalTypes.some((t) => line.includes(`"${t}"`)));
-      throw new Error(
-        `goal cleared during session_start; attemptId=${attemptId}; matched ledger entries=${JSON.stringify(matched)}; last 3 lines=${JSON.stringify(ledger.slice(-3))}`,
-      );
-    }
+    // The settlement driver archived the goal. state.goal is now null.
+    assert.equal(after, null, "the settlement driver archived the goal on session_start");
+    const archivePath = path.join(cwd, ".pi-glla", "archive", `${goalId}.md`);
+    assert.ok(fs.existsSync(archivePath), "the archive file is on disk");
+    // No new audit was launched. The audit_started event is only emitted
+    // for a brand-new audit, not a settlement-driver archive.
+    assert.ok(!ledgerHas(cwd, "audit_started"), "session_start did not launch a new audit");
+    // The settlement driver is observable: the audit_settlement_completed
+    // ledger entry is the source-pin for the successful archive.
+    const types = ledgerTypes(cwd).map((row) => row.type);
+    assert.ok(types.includes("audit_settlement_completed"), "the settlement driver reported completion");
+    // The attemptId in the settlement-completed entry matches the seeded
+    // attemptId — the approved verdict is the one that was applied.
+    const settlement = ledgerTypes(cwd).find((row) => row.type === "audit_settlement_completed");
+    assert.equal((settlement?.value as { attemptId: string }).attemptId, attemptId);
+  } finally {
+    await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
+  }
+});
+
+test("session_start with a settling claim without approved history parks the claim durably", async () => {
+  // The opposite path: a settling claim that lacks an approved entry in
+  // auditHistory is corrupt/incomplete. resumeSettlingCompletionAudit parks
+  // it via markCompletionAuditRecoveryPending. The claim is preserved on
+  // disk for explicit user recovery (no settlement, no new audit, no
+  // archive). The retryStoredCompletionAudit fence does not fire here
+  // because session_start is not a retry path; the claim sits parked.
+  const cwd = tmpCwd();
+  const pi = new MockPi();
+  activate(pi.api);
+  const ctx = makeMockCtx(cwd, { sessionManager: { name: "settling-rehydrate-parked" } });
+  const { attemptId } = seedSettlingFixture(cwd, { phase: "settling", includeApprovedHistory: false });
+  try {
+    await pi.fire("session_start", { reason: "startup" }, ctx);
+    const after = readState(cwd).goal;
+    assert.ok(after, "the goal is preserved on disk when there is no approved history");
     assert.equal(after?.pendingCompletion?.attemptId, attemptId, "the same attemptId is on disk after session_start");
     assert.equal(after?.pendingCompletion?.phase, "settling", "the same phase is on disk after session_start");
     assert.ok(!ledgerHas(cwd, "audit_started"), "session_start did not launch a new audit");
+    assert.ok(!ledgerHas(cwd, "audit_settlement_completed"), "the settlement driver did not fire without approved history");
   } finally {
     await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
   }
