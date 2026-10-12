@@ -196,10 +196,10 @@ If your work has shifted to items different from the original objective (the ori
 When the goal is genuinely blocked and you cannot make progress without user input:
 
 ```
-pause_goal({reason: "...", suggestedAction: "..."})
+pause_goal({reason: "...", suggestedAction: "...", interruption: {reason: "missing-input", evidence: "The specific required input unavailable through authorized local investigation"}})
 ```
 
-When the user must CHOOSE between paths, use `pause_goal` with `kind="decision"`, an `options` list, and `recommended` (1-based index) — a prominent decision card renders and the user picks. **Vocabulary rules for reasons and options (v0.28.24):** reference only REAL commands — `/goal resume`, `/goal cancel`, `/goal tweak "<new text>"`, `/list remove N`, `/list next`, `/list resume`, `/loop stop`, `/loop resume` — all act on the ACTIVE goal/item; there is **no `/goal drop`** and **no command takes a goal id**. Never show goal ids (`20260729065635-gbtxsm`) in user-facing text — name the thing instead ("the active goal", "list item 'regression scan'"); ids are internal plumbing the user cannot act on.
+For proposed human decisions, include `interruption.reason` (`missing-input`, `missing-permission`, `unauthorized-irreversible-action`, or `contract-conflict`) and concrete `interruption.evidence`. For routine `mechanical-verification` or `reversible-work`, name the known authorized `nextStep` and continue instead of asking the user. Missing classification requests local investigation, not inferred consent; budgets/run-to-done never waive material requirements. When the user must CHOOSE between paths, use `pause_goal` with `kind="decision"`, an `options` list, and `recommended` (1-based index) — a prominent decision card renders and the user picks. **Vocabulary rules for reasons and options (v0.28.24):** reference only REAL commands — `/goal resume`, `/goal cancel`, `/goal tweak "<new text>"`, `/list remove N`, `/list next`, `/list resume`, `/loop stop`, `/loop resume` — all act on the ACTIVE goal/item; there is **no `/goal drop`** and **no command takes a goal id**. Never show goal ids (`20260729065635-gbtxsm`) in user-facing text — name the thing instead ("the active goal", "list item 'regression scan'"); ids are internal plumbing the user cannot act on.
 
 ## HARD RULES
 
