@@ -19,7 +19,7 @@ import {
   assignQueueOrder, compareQueueItems, readAuditLog, readQueueFromDisk, routeGoalArgs, routeListText, sanitizeDisplayText, sanitizeProviderAuditReport, statusLabel,
   visibleListPosition, visibleListPositions,
   writeQueueItemFile, type ModeCommand, type State, type AuditVerdict, type LedgerRecord, LIST_MUTATING_SUBCOMMANDS, SETTINGS_MUTATING_ACTIONS,
-  clearLoadHold, stateRootPending, isPersistenceDegraded,
+  clearLoadHold, stateRootPending, isPersistenceDegraded, isForbiddenModel,
 } from "./goal-loop-core.js";
 // v0.38.99: the status surfaces name the durable audit lifecycle from the one
 // projection the widget uses.
@@ -40,7 +40,55 @@ import { Settings, globalSettingsPath, loadSettings, projectSettingsPath, saveSe
 import { resolveGllaStateDir } from "./glla-state-root.js";
 import { resolveAuditorThinkingLevel } from "./auditor-thinking.js";
 import { modelRef } from "./main-model-recovery.js";
-import { mainModelRecoveryProbeSettled, mainModelRecoveryRuntimeStatus } from './goal-recovery.js';
+
+// v0.39.30 (note.md # later Screenshot_20261011_192005): a manual resume
+// adopts the model the user is retrying with. A persisted recovery cursor
+// names the episode-creation model as `primary`; without a re-anchor the
+// status card keeps reporting that obsolete ref
+// (`model: primary <stale> · inherited from session`) while the resumed
+// turn runs on the user's selection — and a committed-but-unreconciled
+// `pendingModelSwitch` can re-drive setModel at the next probe, silently
+// overriding the fresh selection. The explicit current selection wins:
+// re-anchor primary/active to it, drop the obsolete switch intent, keep
+// attempted/skipped (known-dead rungs stay visited), and give the new
+// anchor a fresh same-model budget. A forbidden current selection is never
+// adopted. Armed schedules (retryAt, failback probes) are left in place so
+// the existing probe-then-release path still validates the resumed attempt.
+function reanchorRecoveryToCurrentModel(ctx: ExtensionContext, via: string): void {
+  const recovery = state.mainModelRecovery;
+  if (!recovery) return;
+  const current = modelRef(ctx.model);
+  if (!current) return;
+  if (isForbiddenModel(current, loadSettings(ctx.cwd).forbiddenModels)) {
+    appendLedger(ctx.cwd, "manual_resume_model_kept", { reason: "current selection is forbidden", current, primary: recovery.primary, via });
+    return;
+  }
+  const staleSwitch = recovery.pendingModelSwitch && !sameModelRef(recovery.pendingModelSwitch, current)
+    ? recovery.pendingModelSwitch : undefined;
+  if (sameModelRef(current, recovery.primary) && !staleSwitch) return;
+  const previous = recovery.primary;
+  state.mainModelRecovery = {
+    ...recovery,
+    primary: current,
+    active: current,
+    sameModelRetries: 0,
+    sameModelPhaseStartedAt: nowIso(),
+    modelFailureSteps: 0,
+    primaryThinkingLevel: undefined,
+    pendingModelSwitch: undefined,
+  };
+  persistState(ctx);
+  appendLedger(ctx.cwd, "manual_resume_model_reanchored", {
+    from: previous, to: current, clearedSwitch: staleSwitch ?? null, via,
+  });
+  ctx.ui.notify(
+    staleSwitch
+      ? `Manual resume adopts your current model (${current}) — the interrupted switch to ${staleSwitch} is dropped.`
+      : `Manual resume adopts your current model (${current}) for recovery tracking.`,
+    "info",
+  );
+}
+import { mainModelRecoveryProbeSettled, mainModelRecoveryRuntimeStatus, sameModelRef } from './goal-recovery.js';
 import { formatMainModelFallbacks, normalizeMainModelFallbackRefs } from "./main-model-recovery.js";
 import { ReviewerConfig, normalizeObjective, resolveReviewerConfig, reviewerMenuOptions } from "./reviewer.js";
 import type { SettingsSectionId } from "./settings-menu.js";
@@ -564,6 +612,11 @@ async function cmdResume(ctx: ExtensionContext): Promise<void> {
   const recoveryStaleEntry = state.mainModelRecovery
     ? warnIfStaleAtEntry(ctx, resumeCommand)
     : false;
+  // Adopt the user's current model before any recovery branch runs, so an
+  // obsolete cursor can neither mislabel the status nor re-drive a stale
+  // switch over the fresh selection. Skipped in a stale session — that
+  // session's model reading is foreign, not the user's selection.
+  if (state.mainModelRecovery && !recoveryStaleEntry) reanchorRecoveryToCurrentModel(ctx, resumeCommand);
   const requestedGoal = state.goal?.status === "paused" ? state.goal : undefined;
   const resumeGeneration = flags.sessionGeneration;
   if (!recoveryStaleEntry && manuallyResumeMainModelRecovery(ctx)) {
