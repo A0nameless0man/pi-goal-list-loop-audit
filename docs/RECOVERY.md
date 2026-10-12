@@ -3,6 +3,16 @@
 Start with `/glla status`. For full saved details, use `/goal status`,
 `/list show`, or `/loop status`, depending on the work surface.
 
+## Resolving contract conflicts without losing work
+
+A rejected invocation is not a passed criterion. Correcting shell syntax is distinct from waiving failures or required human evidence: keep the confirmed criteria until explicitly amended. `/goal verify` starts/manages a completion audit; it does not edit the contract or supply missing evidence.
+
+Public tweak syntax is `/goal tweak "<existing objective> Done when: <complete revised contract>"` (or paused `/list tweak`). Keep the full objective and every criterion to retain. There is no standalone `/goal tweak verification contract ...` or contract-edit flag. An omitted `Done when:` clause preserves criteria; a bare clause clears them only after confirmation. Identical text reports no change.
+
+For a concrete numbered-command amendment, the decision shows the old/new criterion and whether it is a syntax-only correction or a substantive criteria change. Explicit selection persists the exact amendment before resuming and preserves objective/tasks/checkpoints. Missing items, unchanged proposals, stale consent or failed persistence cannot report successful amendment. Declining/unattended defaults retain the original criteria; supported material exceptions remain held. Revised criteria still require independent verification.
+
+Other slash suggestions say **Request agent to run**: this delivers an instruction, not proof that a command ran or changed durable state. Inspect persisted status before treating a resolution as accepted. Never invent player transcripts or treat a nonzero test gate as passed because a pipeline was rejected.
+
 ## Waiting is not paused
 
 **⏳ waiting** yields the main agent to named background dependencies. The
