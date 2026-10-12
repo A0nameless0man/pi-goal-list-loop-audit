@@ -124,6 +124,7 @@ test("decision picker while armed is still allowed (user deliberating)", async (
     await pi.runTool("pause_goal", {
       reason: "Choose a or b",
       kind: "decision",
+      interruption: { reason: "missing-input", evidence: "The a/b choice is the user's missing input; it cannot be derived from local evidence" },
       options: ["a", "b"],
       recommended: 1,
     }, ctx);

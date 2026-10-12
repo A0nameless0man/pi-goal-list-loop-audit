@@ -2251,7 +2251,7 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
   const background = shared?.execution === 'blocked' || shared?.execution === 'dormant' ? undefined : backgroundWidget(state, theme, width);
   const compact = extras?.compactAuditCard !== false;
   const rawInner = background
-    ?? (shared && (shared.execution === 'blocked' || shared.execution === 'dormant' || !needsLegacyWidget(state, audit, compact))
+    ?? (shared && !needsLegacyWidget(state, audit, compact)
       ? buildUiStatusCard(state, shared, now, theme, width, compact, extras, audit)
       : buildWidgetLinesInner(state, audit, now, theme, width, extras));
   const view = stateWorkView(state, observedWorkActivity(extras, now));
@@ -2701,7 +2701,8 @@ function auditingCardBlock(g: Goal, audit: AuditDisplayProgress | null | undefin
 // adds its own one-space gutter, so any indent here doubles up.
 function compactAuditingCardRows(g: Goal, audit: AuditDisplayProgress | null | undefined, block: { lead: string[]; tail: string[] }, now: number, theme?: DisplayTheme, extras?: WidgetExtras, width?: number): string[] {
       const phase = auditorDisplayPhase(g, audit, now);
-      const durable = auditLifecycleProjection(g.pendingCompletion, { now });
+      const recoveryPending = auditRecoveryPending(g);
+      const durable = auditLifecycleProjection(g.pendingCompletion, { now, resumeCommand: g.policy === 'list' ? '/list resume' : '/goal resume' });
       // v0.39.22: stalled needs recovery like quiet/blocked — without it
       // the glance path falls through to "Audit review pending · detached
       // worker" + "No action needed", preserving the can't-tell gap on
@@ -2715,7 +2716,7 @@ function compactAuditingCardRows(g: Goal, audit: AuditDisplayProgress | null | u
         age !== undefined ? `activity ${fmtElapsed(age)} ago` : "no activity yet"].filter(Boolean);
       const toolWait = auditorToolWait(audit, phase, now);
       const live = auditorHasLiveEvidence(audit, phase, now);
-      const unconfirmed = phase === 'running' && !toolWait && !live;
+      const unconfirmed = phase === 'running' && !toolWait && !live && !recoveryPending;
       const inspectCommand = g.policy === 'list' ? '/list show' : '/goal status';
       const action = block.lead.find(line => line.startsWith("│ next:"));
       // No history or model plaques in the glance card: Pi clips its tail.
@@ -2732,7 +2733,7 @@ function compactAuditingCardRows(g: Goal, audit: AuditDisplayProgress | null | u
         ...(compactToolLine && (compactToolLine.startsWith('│ tool:') || !latestAction)
           ? [compactToolLine.startsWith("│ tool:") ? compactToolLine : `│ last tool: ${lastAuditorTool(audit) ?? audit?.currentTool}`] : []),
         ...(latestAction ? [`│ ${latestAction}`] : []),
-        ...(unconfirmed ? [`│ ${inspectCommand} inspects unconfirmed audit execution`] : needsRecovery ? (action ? [action] : block.lead.slice(1)) : [toolWait ? `│ No tool completion yet — timeout handling is automatic` : `│ No action needed — review applies automatically`]),
+        ...(unconfirmed ? [`│ ${inspectCommand} inspects unconfirmed audit execution`] : recoveryPending ? [`│ next: ${durable?.nextAction ?? `${g.policy === 'list' ? '/list resume' : '/goal resume'} retries the stored claim`}`] : needsRecovery ? (action ? [action] : block.lead.slice(1)) : [toolWait ? `│ No tool completion yet — timeout handling is automatic` : `│ No action needed — review applies automatically`]),
         `└─ ${inspectCommand} for full audit details`];
 }
 

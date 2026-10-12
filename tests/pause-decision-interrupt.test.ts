@@ -14,7 +14,8 @@
 //      options silently dropped — no card, no picker, nothing.
 //
 // Contract under test:
-//   1. kind="decision" + options → persisted pauseKind/pauseOptions AND the
+//   1. kind="decision" + options + a typed material interruption (the
+//      classification gate at goal-tools.ts) → persisted pauseKind/pauseOptions AND the
 //      turn is aborted (ctx.abort) with a ledger entry.
 //   2. options WITHOUT kind → inferred as decision (lenient intent).
 //   3. Any agent-authored pause aborts the turn (blocked/error/wait too).
@@ -122,6 +123,7 @@ test("decision pause persists options AND aborts the turn so the picker owns an 
   const res = await runPauseTool(ctx, {
     reason: "two viable architectures — user picks",
     kind: "decision",
+    interruption: { reason: "missing-input", evidence: "Two viable architectures are confirmed; which one to build is the user's missing input, not derivable locally" },
     options: [
       "Option A (/goal resume)",
       'Option B (/goal tweak "do B instead")',
@@ -162,6 +164,7 @@ test("options without kind are inferred as decision — no silently dropped pick
 
   await runPauseTool(ctx, {
     reason: "user must choose",
+    interruption: { reason: "missing-input", evidence: "Continuing or stopping is the user's missing input; no local evidence decides it" },
     options: ["/goal resume — keep going", "/goal cancel — stop"],
   });
   await tick();
