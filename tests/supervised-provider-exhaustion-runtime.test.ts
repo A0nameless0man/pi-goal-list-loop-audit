@@ -15,7 +15,7 @@ for (const mode of ['goal', 'list', 'loop'] as const) {
     await withPressureSession(async (pi, ctx, cwd) => {
       fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, JSON.stringify({ autoResume: true, aggressiveMode: false, mainModelFallbacks: [], hourlyRetryProbe: false }));
       ctx.getContextUsage = () => ({ tokens: 1000, contextWindow: 272000, percent: 1 });
-      const queue = [{ id: 'queued-work', objective: 'retain queued contract', verificationContract: 'queue acceptance', status: 'queued' }];
+      const queue = [{ id: 'queued-work', objective: 'retain queued contract', verificationContract: 'queue acceptance', addedAt: new Date().toISOString() }];
       state.list = queue as typeof state.list;
       if (state.goal) state.goal = { ...state.goal, verificationContract: 'independent acceptance required' };
       persistStateLine(cwd, state);
@@ -57,7 +57,7 @@ test('provider probe cannot unpause a stored completion claim', async () => {
   await withPressureSession(async (_pi, ctx, cwd) => {
     fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, JSON.stringify({ aggressiveMode: false, mainModelFallbacks: [], hourlyRetryProbe: false }));
     const claim = { at: new Date().toISOString(), phase: 'retry-waiting', summary: 'unverified claim' };
-    state.goal = { ...state.goal!, status: 'paused', pauseKind: 'wait', pauseReason: 'main model recovery', pendingCompletion: claim as typeof state.goal.pendingCompletion };
+    state.goal = { ...state.goal!, status: 'paused', pauseKind: 'wait', pauseReason: 'main model recovery', pendingCompletion: claim as NonNullable<typeof state.goal>['pendingCompletion'] };
     state.mainModelRecovery = { primary: 'provider/primary', active: 'provider/primary', attempted: ['provider/primary'], attempts: 2101, kind: 'goal', reason: 'provider unavailable', owner: { kind: 'goal', id: state.goal.id } };
     persistStateLine(cwd, state);
     await probeMainModelRecovery(ctx as unknown as ExtensionContext);

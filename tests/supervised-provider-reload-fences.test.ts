@@ -16,7 +16,7 @@ for (const mode of ['goal', 'list', 'loop'] as const) {
       const configure = (autoResume: boolean) => fs.writeFileSync(settings, JSON.stringify({ autoResume, aggressiveMode: false, mainModelFallbacks: [], hourlyRetryProbe: false }));
       configure(true);
       ctx.getContextUsage = () => ({ tokens: 1000, contextWindow: 272000, percent: 1 });
-      state.list = [{ id: 'queued', objective: 'queue survives reload', verificationContract: 'queue evidence' }] as typeof state.list;
+      state.list = [{ id: 'queued', objective: 'queue survives reload', verificationContract: 'queue evidence', addedAt: new Date().toISOString() }] as typeof state.list;
       if (state.goal) state.goal = { ...state.goal, verificationContract: 'retained acceptance' };
       persistStateLine(cwd, state);
       await pi.fire('agent_end', providerError('Retry failed after 15 attempts: 429 rate limit exceeded'), ctx);
