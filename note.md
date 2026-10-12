@@ -2,9 +2,6 @@
 
 # Next
 
-# Later
-
-
 ##
 These never had hte auditor compelete with prev 0.29 ver but still investigate and not sure if they clear now
 /home/dracon/Pictures/Screenshots/Screenshot_20261012_110726.png
@@ -26,6 +23,14 @@ i needed clearer idea what to do
 we can have suggested resolution like we can has a question here with the suggestion
 
 also could imply other issues
+
+# Later
+
+
+## sus obj detect what is even this
+
+/home/dracon/Pictures/Screenshots/Screenshot_20261012_130230.png
+
 
 # Testing
 
