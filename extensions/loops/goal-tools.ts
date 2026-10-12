@@ -3724,9 +3724,10 @@ function registerAgentTools(pi: any): void {
       scheduleContinuation(liveCtx, true);
       // The synchronous continuation guard can pause a confirmed draft.
       // Confirmation is not proof that activation remains runnable.
-      if (state.goal?.id === goal.id && state.goal.status === "paused") {
+      const confirmedGoal = state.goal;
+      if (confirmedGoal && confirmedGoal.id === goal.id && confirmedGoal.status === "paused") {
         return {
-          content: [{ type: "text", text: `Goal confirmed but paused. Do not begin work: ${state.goal.pauseReason ?? "activation was held"}. ${state.goal.suggestedAction ?? "Inspect /glla status for the resolution."}` }],
+          content: [{ type: "text", text: `Goal confirmed but paused. Do not begin work: ${confirmedGoal.pauseReason ?? "activation was held"}. ${confirmedGoal.pauseSuggestedAction ?? "Inspect /glla status for the resolution."}` }],
           details: {},
         };
       }
