@@ -1311,6 +1311,13 @@ async function retryStoredCompletionAudit(origin: CompletionAuditOrigin = "provi
   if (origin !== "manual" && supervisorPaused(state) && !exemptLoadHold) return;
   const goal = state.goal;
   if (!goal?.pendingCompletion) return;
+  const goalId = goal.id;
+  if (completionAuditInFlight) return;
+  const generation = sessionGeneration;
+  // Delayed audit recovery has no safe fallback: if the current generation
+  // cannot be proven live, the fresh session must rehydrate the durable claim.
+  const initialCtx = freshCtxForGeneration(generation);
+  if (!initialCtx) return;
   // v0.39.31 (incident Screenshot_20261012_110844/111046): a settling
   // claim is owed an archive, not a new audit. The settlement driver
   // (settleApprovedCompletion via resumeSettlingCompletionAudit) is the
@@ -1322,21 +1329,14 @@ async function retryStoredCompletionAudit(origin: CompletionAuditOrigin = "provi
   // (verify path is also fenced at the higher level via
   // resumeStoredCompletionOrSettlement; this is the last-line guard).
   if (origin !== "manual" && origin !== "agent" && isSettlingClaim(goal.pendingCompletion)) {
-    appendLedger(ctx.cwd, "stale_settling_retry_refused", {
-      goalId: goal.id,
+    appendLedger(initialCtx.cwd, "stale_settling_retry_refused", {
+      goalId,
       attemptId: goal.pendingCompletion.attemptId,
       phase: goal.pendingCompletion.phase,
       origin,
     });
     return;
   }
-  const goalId = goal.id;
-  if (completionAuditInFlight) return;
-  const generation = sessionGeneration;
-  // Delayed audit recovery has no safe fallback: if the current generation
-  // cannot be proven live, the fresh session must rehydrate the durable claim.
-  const initialCtx = freshCtxForGeneration(generation);
-  if (!initialCtx) return;
   if (!guardGoalBeforeContinuation(initialCtx, "stored-completion-audit", goalId, { allowAuditing: true, allowSuspiciousClose: true })) return;
   const guardedGoal = state.goal;
   if (!guardedGoal || guardedGoal.id !== goalId || !guardedGoal.pendingCompletion) return;
