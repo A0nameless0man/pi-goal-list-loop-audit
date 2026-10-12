@@ -84,3 +84,47 @@ an acceptance risk for the parent's suite/reviewer investigation; it is not
 silently waived or repaired outside this slice. Tests do not modify real global
 settings. Git's sync daemon checkpointed the edits; no files were staged by the
 worker.
+
+
+## Follow-up isolation and failure triage
+
+Updated loop-error-exemption fixtures to the current first-failure paced recovery
+contract: each later provider/in-band failure is delivered on a real recovery
+probe, not while the loop is parked. Assertions still forbid measurement, stall
+and stuck accounting on dead turns. Healthy probes must retire recovery and
+measure normally. Failover-primary-probe fixtures now retain an actual goal owner;
+the new ownership fence correctly retires their former orphan goal episodes.
+Added healthy-recovery regressions for retained iteration, time and token bounds.
+
+The proposed factory-wiring contamination diagnosis was DISPROVEN by a negative
+control: both native --isolate and the original --parallel=1 isolate the synthetic
+factory overwrite. The speculative runner flag edit was reverted by forward
+edit; discovery, serialization, changed selection and containment are unchanged.
+A retained runner regression verifies factory overwrite followed by production
+activation across files, plus nonzero aggregation with an intentional failure.
+No assertion was disabled and no custom test discovery was introduced.
+
+Final original-runner mixed group: exhaustion, reload fences, ownership,
+delayed holds, terminal cleanup, same-model window, loop exemptions and runner
+isolation: 57 passed / 0 failed across 8 files in 40s. The original six-file
+ownership contamination is not reproduced in this superset; no global runtime
+or persistence reset was added without causal evidence. Runner lifecycle group
+passed all 13 cases (signal, early EOF, descendant cleanup and failed registry).
+Final smoke: failover-primary-probe and runner isolation 5/5; npm run check passes.
+Logs: /tmp/glla-worker-verification/{final-focused,final-other,final-smoke}.log.
+
+Read-only baseline extracted using git archive 0fd283aa^ into a temporary folder
+with node_modules symlinked (no branch/reset/history operations). Baseline and
+current both reproduce 16 failures across pause-decision-interrupt (2),
+audit-glance-clarity (5), context-checkpoint (1), activity-first-status (6),
+respec-builder-ui (1) and mid-objective-park-refusal (1). Both also reproduce the
+2 behavioral-orchestrator failures: detached completion approval/archive and
+cold-start recovered-claim hold. These 18 inherited failures remain blockers
+for a green full gate, not waived assertions. Baseline failover-primary-probe
+passed; the two new ownership-incompatible fixtures were corrected as above.
+Baseline evidence: /tmp/glla-worker-verification/{baseline,baseline-behavioral}.log.
+
+The parent full run reached 338 files at 600s; repository scale is over 400 files.
+Recommend 1800s outer full-suite/release bound, retaining the runner's 180s silent
+stall watchdog. Parent owns the final full gate; no complete release was rerun.
+All settings redirects preceded Bun preloads and used /tmp only.

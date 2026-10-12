@@ -32,12 +32,15 @@ For the release gate (the WHOLE suite through that wrapper, typecheck, jiti
 regression, and the mandatory hermetic auditor-extension boundary check), run:
 
 ```bash
-npm run test:all
+GLLA_GLOBAL_SETTINGS_PATH=/tmp/glla-verification-settings.json timeout 1800 npm run test:all
 ```
 
 The suite is intentionally discovered by Bun rather than a hard-coded glob or
 fixed test count; use the runner's summary for the current file and test
-counts.
+counts. The October 2026 suite has over 400 files; a 600-second outer
+limit reached only 338 files. Use a 1800-second full-gate bound on a loaded
+host; the runner still terminates a silent suite after its 180-second stall
+window. Set the temporary settings path before preloads, not inside tests.
 
 ### Removed coverage (2026-09-28)
 
