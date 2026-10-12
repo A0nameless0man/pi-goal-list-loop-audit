@@ -1,15 +1,8 @@
 // pi-goal-list-loop-audit — mid-run interruption budget with auto-default fallback.
 //
-// Antigravity port (survey 2026-09-19): Antigravity's no-mid-run-questions
-// trick is structural — the run cannot block on a human — while GLLA's is
-// rhetorical (the continuation prompt says don't ask). Pins:
-//   1. With `decisionPauseBudget: N`, the first N agent-authored decision
-//      pauses behave exactly as today (paused + picker).
-//   2. The (N+1)-th decision pause does NOT pause: the goal stays active,
-//      the recommended option is adopted as a logged assumption, and the
-//      agent is told to record it in its completion recap's Left out.
-//   3. Without the setting, legacy behavior is untouched (every decision
-//      pauses).
+// Material exceptions stay supervised even when the decision budget is
+// exhausted. A recommendation is not authority to waive a requirement.
+// Safe unattended decline of promotions is covered in suggestion-acceptance.
 
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
