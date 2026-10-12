@@ -25,6 +25,8 @@ The checks apply to confirmed drafting proposals, single and batch, not retroact
 
 `tests/draft-readiness.test.ts` covers the four named project shapes and valid counterexamples, ordinary verification prose, explicit inline headings and bare markers. Runtime additions in `tests/confirm-draft.test.ts` verify pre-confirmation refusal with preserved existing objective/criteria, revised proposal while still drafting, atomic batch refusal, and auto-accept refusal followed by activation only after a stronger user-visible proposal.
 
-`timeout 120 npm test -- tests/draft-readiness.test.ts tests/confirm-draft.test.ts tests/contract-text-semantics.test.ts tests/suspicious-draft-contract.test.ts tests/goal-loop-core.test.ts tests/drafting-questionnaire.test.ts`: 92 pass, zero failures (`/tmp/glla-readiness-tests.log`).
+Independent review `8035f9c4-1386-4743-8047-5d69ff102a23` found a populated multiline-heading bypass in bookkeeping matching. Corrected it by stripping supported leading heading decoration for inspection only; added six-heading pure coverage and single/batch multiline auto-accept refusal. The final 94-test result includes that repair; no parsed/stored contract is mutated by assessment.
+
+`timeout 120 npm test -- tests/draft-readiness.test.ts tests/confirm-draft.test.ts tests/contract-text-semantics.test.ts tests/suspicious-draft-contract.test.ts tests/goal-loop-core.test.ts tests/drafting-questionnaire.test.ts`: 94 pass, zero failures (`/tmp/glla-readiness-tests.log`).
 
 `timeout 120 npm run check`: exit 0, captured in `/tmp/glla-readiness-types.log`. Runtime inventory regenerated; `timeout 30 npm run check:inventory`: exit 0. `git diff --check`: exit 0.
