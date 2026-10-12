@@ -68,3 +68,30 @@ test('provider probe cannot unpause a stored completion claim', async () => {
     assert.deepEqual(JSON.parse(JSON.stringify(readState(cwd).goal?.pendingCompletion)), claim);
   });
 });
+
+for (const bound of ['iterations', 'time', 'tokens'] as const) {
+  test(`loop: healthy recovery still enforces the retained ${bound} bound`, async () => {
+    await withPressureSession(async (pi, ctx, cwd) => {
+      fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, JSON.stringify({ autoResume: true, aggressiveMode: false, mainModelFallbacks: [], hourlyRetryProbe: false }));
+      ctx.getContextUsage = () => ({ tokens: 1000, contextWindow: 272000, percent: 1 });
+      pi.execHandler = () => ({ code: 0, stdout: '2\n', stderr: '' });
+      state.loop = {
+        ...state.loop!, maxIterations: bound === 'iterations' ? 2 : 0,
+        ...(bound === 'time' ? { timeLimitHours: 1, startedAt: new Date(Date.now() - 2 * 3600000).toISOString() } : {}),
+        ...(bound === 'tokens' ? { tokenBudget: 100, tokensUsed: 100 } : {}),
+      };
+      persistStateLine(cwd, state);
+      await pi.fire('agent_end', providerError('429 rate limit exceeded'), ctx);
+      assert.equal(readState(cwd).loop?.iteration, 1, 'provider failure is not productive work');
+      clearMainModelRecoveryTimer();
+      await probeMainModelRecovery(ctx as unknown as ExtensionContext);
+      await pi.fire('tool_call', {}, ctx);
+      await pi.fire('agent_end', { messages: [{ role: 'assistant', stopReason: 'end_turn', content: [{ type: 'text', text: 'Verified the retained target with fresh independent evidence after the healthy provider probe.' }] }] }, ctx);
+      await tick();
+      const saved = readState(cwd);
+      assert.equal(saved.mainModelRecovery, undefined, 'healthy provider settles the recovery');
+      assert.equal(saved.loop?.active, false, 'recovery never removes the original work bound');
+      assert.match(saved.loop?.stopReason ?? '', bound === 'iterations' ? /max iterations reached/ : bound === 'time' ? /time bound reached/ : /token budget exhausted/);
+    }, 'loop');
+  });
+}
