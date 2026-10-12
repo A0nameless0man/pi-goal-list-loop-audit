@@ -196,13 +196,13 @@ test("pause_goal: picking Accept delivers the decision and resumes — the agent
       suggestedAction: 'Run /goal tweak "Restore the implementation objective."',
       kind: "blocked",
     }, ctx);
-    ctx.ui.selectImpl = async (_title, options) => options.find((o) => o.startsWith("Accept and run")) ?? options[0];
+    ctx.ui.selectImpl = async (_title, options) => options.find((o) => o.startsWith("Request agent to run")) ?? options[0];
     await pi.command("goal", "decide", ctx);
     await tick(120);
     const g = readState(cwd).goal as GoalView;
     assert.equal(g.status, "active", "Accept resumes the goal");
     const steered = pi.userMessages.map((m) => m.message).join("\n");
-    assert.match(steered, /Accept and run \/goal tweak "Restore the implementation objective\."/, "the exact command reaches the agent turn");
+    assert.match(steered, /Request agent to run \/goal tweak "Restore the implementation objective\."/, "the exact command reaches the agent turn");
     assert.match(steered, /continue on this path/, "the decision is framed as the path to continue");
   } finally {
     await pi.fire("session_shutdown", { reason: "quit" }, ctx);
@@ -227,13 +227,13 @@ test("extractSuggestedCommand: junk on line 1 does not hide a valid command on l
 test("suggestionAcceptancePromotion: accept-first options use policy-correct verbs", () => {
   const goal = suggestionAcceptancePromotion('Run /goal tweak "Fix X."', "goal")!;
   assert.equal(goal.options.length, 3);
-  assert.match(goal.options[0]!, /^Accept and run \/goal tweak "Fix X\."\s*$/);
+  assert.match(goal.options[0]!, /^Request agent to run \/goal tweak "Fix X\."\s*$/);
   assert.match(goal.options[1]!, /\/goal resume/);
   assert.match(goal.options[2]!, /\/goal cancel/);
   assert.equal(goal.recommended, 1);
   assert.equal(goal.unattendedDefault, 2, "unattended auto-default declines, never accepts");
   const list = suggestionAcceptancePromotion("Run /list next to proceed", "list")!;
-  assert.match(list.options[0]!, /^Accept and run \/list next\s*$/);
+  assert.match(list.options[0]!, /^Request agent to run \/list next\s*$/);
   assert.match(list.options[1]!, /\/list resume/);
   assert.equal(suggestionAcceptancePromotion("no command here", "goal"), undefined);
 });
@@ -254,7 +254,7 @@ test("pause_goal: blocked pause with a concrete command lands as an Accept-first
     assert.equal(g.status, "paused");
     assert.equal(g.pauseKind, "decision");
     assert.equal(g.pauseOptions?.length, 3);
-    assert.match(g.pauseOptions![0]!, /^Accept and run \/goal tweak "Restore the implementation objective\."\s*$/);
+    assert.match(g.pauseOptions![0]!, /^Request agent to run \/goal tweak "Restore the implementation objective\."\s*$/);
     assert.equal(g.pauseRecommended, 1);
     assert.equal(g.midRunDecisionCount, 1, "the promotion counts against the mid-run budget");
     assert.match(g.pauseSuggestedAction!, /\/goal tweak/, "the exact command stays on the card");
@@ -276,7 +276,7 @@ test("pause_goal: list policy promotes with list verbs", async () => {
     }, ctx);
     const g = readState(cwd).goal as GoalView;
     assert.equal(g.pauseKind, "decision");
-    assert.match(g.pauseOptions![0]!, /^Accept and run \/list next\s*$/);
+    assert.match(g.pauseOptions![0]!, /^Request agent to run \/list next\s*$/);
     assert.match(g.pauseOptions![1]!, /\/list resume/);
   } finally {
     await pi.fire("session_shutdown", { reason: "quit" }, ctx);
