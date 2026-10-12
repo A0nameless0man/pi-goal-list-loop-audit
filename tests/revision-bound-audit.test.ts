@@ -299,24 +299,26 @@ test("repair replan bumps the contract revision and invalidates an older approva
 
 // ---- (b) the complete_goal revision gate ----
 
-test("v0.34.60: complete_goal REJECTS when the contract revision moved past the last audited revision", async () => {
+test("complete_goal audits the current revision directly without borrowing old approval or a manual verify handoff", async () => {
   const cwd = tmpCwd();
-  seedRevisionedGoal(cwd, 2, 1, true); // approved at revision 1, contract changed to revision 2
-  const pi = new MockPi();
-  activate(pi.api);
-  __testOnlyRegisterAgentTools(pi.api);
-  rememberCtxFor(cwd);
-  const res = await pi.runTool("complete_goal", { completionSummary: "Claim", verificationSummary: "Evidence" }, ownerCtx(cwd));
-
-  assert.match(res.content[0]!.text, /REJECTED/i, "the tool refuses the claim");
-  assert.match(res.content[0]!.text, /revision/i, "the refusal names the revision mismatch");
-  const st = readState(cwd);
-  assert.equal(st.goal?.status, "active", "the goal is untouched");
-  assert.equal(st.goal?.pendingCompletion, undefined, "no claim was stored");
-  assert.equal(st.goal?.revision, 2, "the rejection does not mutate the goal");
-  const ledger = readLedger(cwd);
-  assert.equal(ledger.filter((l) => l.type === "complete_goal_revision_rejected").length, 1, "clear ledger entry for the rejection");
-  assert.equal(ledger.filter((l) => l.type === "audit_started").length, 0, "no audit was started");
+  seedRevisionedGoal(cwd, 2, 1, true);
+  process.env.GLLA_PI_BINARY = writeFakeAuditor(cwd, "disapproved");
+  try {
+    const pi = new MockPi();
+    activate(pi.api);
+    __testOnlyRegisterAgentTools(pi.api);
+    rememberCtxFor(cwd);
+    const res = await pi.runTool("complete_goal", { completionSummary: "Claim", verificationSummary: "Evidence" }, ownerCtx(cwd));
+    assert.match(res.content[0]!.text, /auditor queued|detached/i);
+    assert.ok(!res.content[0]!.text.includes("Run /goal verify"));
+    assert.equal(readState(cwd).goal?.revision, 2);
+    assert.equal(readLedger(cwd).filter(l => l.type === "audit_started").length, 1);
+    assert.equal(readLedger(cwd).filter(l => l.type === "complete_goal_current_revision_audit_required").length, 1);
+    await waitUntil(() => readState(cwd).goal?.status === "active" && !readState(cwd).goal?.pendingCompletion);
+    const current = readState(cwd).goal!;
+    assert.equal(current.auditHistory?.at(-1)?.revision, 2, "fresh verdict is bound to the current contract");
+    assert.equal(current.auditHistory?.at(-1)?.disapproved, true, "old approval did not override current disapproval");
+  } finally { delete process.env.GLLA_PI_BINARY; }
 });
 
 test("direct complete_goal refuses an approval when the contract revision changes during the detached audit", async () => {
