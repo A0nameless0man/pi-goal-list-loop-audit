@@ -145,6 +145,60 @@ test("user aborts never retry", async () => {
   assert.ok(!ledger().some((e) => e.type === "unsupervised_error_retry_scheduled"));
 });
 
+test("a goal paused with kind=blocked refuses the unsupervised retry (incident 111955)", async () => {
+  // The agent called pause_goal kind="blocked" with "do NOT continue
+  // working". The next turn hits a transient error. The recovery loop
+  // must NOT auto-retry because the user hold is explicit. Without
+  // the goal-blocked-paused gate, the user saw
+  // "glla: provider error (...) — retrying automatically" right after
+  // issuing the hold (Screenshot_20261012_111955).
+  cwd = tmpCwd();
+  seedState(cwd, {
+    goal: seedGoal({
+      id: "blocked-paused",
+      status: "paused",
+      pauseKind: "blocked",
+      pauseReason: "Auditor is right about the syntax, wrong about the substance — do NOT continue working.",
+    }),
+  });
+  const file = path.join(cwd, "session.jsonl");
+  const ctx = makeMockCtx(cwd, { sessionManager: { getBranch: () => [], getSessionFile: () => file } });
+  await pi.fire("session_start", { reason: "startup" }, ctx);
+  __testOnlySetUnsupervisedErrorRetryDelay(20);
+  await pi.fire("agent_end", errTurn("Provider returned an empty response"), ctx);
+  await tick(150);
+  assert.equal(sentRetries().length, 0, "a blocked-paused goal does NOT auto-retry");
+  const refused = ledger().find((e) => e.type === "unsupervised_error_retry_refused");
+  assert.ok(refused, "the refusal is ledgered for the audit trail");
+  assert.equal(refused.value.reason, "goal-blocked-paused", "the durable reason is the new gate");
+});
+
+test("'This operation was aborted' on a blocked-paused goal never reaches the retry path", async () => {
+  // Combined: the classifier widens 'This operation was aborted' to
+  // non-recoverable, and the gate refuses anyway. Two fences in
+  // series; the audit trail records the FIRST one that fired.
+  cwd = tmpCwd();
+  seedState(cwd, {
+    goal: seedGoal({
+      id: "blocked-paused-abort",
+      status: "paused",
+      pauseKind: "blocked",
+      pauseReason: "do NOT continue working.",
+    }),
+  });
+  const file = path.join(cwd, "session.jsonl");
+  const ctx = makeMockCtx(cwd, { sessionManager: { getBranch: () => [], getSessionFile: () => file } });
+  await pi.fire("session_start", { reason: "startup" }, ctx);
+  __testOnlySetUnsupervisedErrorRetryDelay(20);
+  await pi.fire("agent_end", { messages: [{ role: "assistant", content: [], stopReason: "error", errorMessage: "This operation was aborted" }] }, ctx);
+  await tick(150);
+  assert.equal(sentRetries().length, 0, "the user-abort never reaches the recovery loop");
+  const refused = ledger().filter((e) => e.type === "unsupervised_error_retry_refused").at(-1);
+  assert.ok(refused, "the refusal is ledgered");
+  assert.ok(["non-recoverable", "goal-blocked-paused"].includes(String(refused.value.reason)),
+    `the reason is one of the two fences: ${refused.value.reason}`);
+});
+
 test("policy refusals, auth, billing, and deterministic 400s refuse with a reason", async () => {
   const ctx = await boot();
   __testOnlySetUnsupervisedErrorRetryDelay(20);
