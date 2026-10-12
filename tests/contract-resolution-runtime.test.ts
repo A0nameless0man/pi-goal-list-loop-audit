@@ -2,7 +2,7 @@ import {test,afterEach} from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import activate,{__testOnlyResetProcessState} from '../extensions/loops/goal.js';
-import {readState,buildTaskList,extractContractAmendment,contractAmendmentPromotion,goalStateTransactionPath} from '../extensions/goal-loop-core.js';
+import {readState,buildTaskList,extractContractAmendment,contractAmendmentPromotion,extractSuggestedCommand,goalStateTransactionPath} from '../extensions/goal-loop-core.js';
 import {MockPi,makeMockCtx,seedGoal,seedState,tmpCwd,tick} from './harness/mock-pi.js';
 const contract='1. Full suite exits 0\n2. `bun test src/example.test.ts -t "specific test"` exits 0\n3. Human review is required';
 const action='Proposed amendment to item 2: replace its command with `bun test src/example.test.ts`.';
@@ -48,6 +48,28 @@ test('failed amendment transaction reports no acceptance and retains the origina
   assert.ok(f.ctx.ui.notifies.some(n=>n.message.includes('Amendment not saved')));assert.ok(!f.ctx.ui.notifies.some(n=>n.message.includes('Contract amendment persisted')));
  } finally {fs.rmdirSync(txn);await f.pi.fire('session_shutdown',{reason:'quit'},f.ctx);}
 });
+test('stale proposal after an independently confirmed tweak reports no amendment',async()=>{
+ const f=await fixture();await propose(f);const before=readState(f.cwd).goal!;
+ f.ctx.ui.confirmImpl=async()=>true;
+ await f.pi.command('goal',`tweak "${before.objective} Done when: 1. Keep original zero-failure criterion"`,f.ctx);
+ const changed=readState(f.cwd).goal!;assert.equal(changed.revision,4);assert.equal(changed.status,'paused');
+ f.ctx.ui.selectImpl=async(_t,options)=>options[0];await f.pi.command('goal','decide',f.ctx);
+ assert.equal(readState(f.cwd).goal?.verificationContract,changed.verificationContract);assert.equal(readState(f.cwd).goal?.revision,4);assert.equal(readState(f.cwd).goal?.status,'paused');
+ assert.ok(f.ctx.ui.notifies.some(n=>n.message.includes('Amendment not applied')));await f.pi.fire('session_shutdown',{reason:'quit'},f.ctx);
+});
+test('public tweak rejects misleading standalone contract edits and reports identical text as no change',async()=>{
+ const f=await fixture();const before=readState(f.cwd).goal!;f.ctx.ui.confirmImpl=async()=>true;
+ await f.pi.command('goal','tweak verification contract mechanical proof is enough',f.ctx);
+ assert.equal(readState(f.cwd).goal?.objective,before.objective);assert.equal(readState(f.cwd).goal?.verificationContract,contract);
+ assert.ok(f.ctx.ui.notifies.some(n=>n.message.includes('no standalone verification-contract')));
+ await f.pi.command('goal',`tweak "${before.objective} Done when: ${contract}"`,f.ctx);
+ assert.equal(readState(f.cwd).goal?.revision,3);assert.equal(readState(f.cwd).goal?.verificationContract,contract);
+ assert.ok(f.ctx.ui.notifies.some(n=>n.message.includes('nothing was amended')));await f.pi.fire('session_shutdown',{reason:'quit'},f.ctx);
+});
+test('unsupported contract-edit guidance is never extracted as an executable suggestion',()=>{
+ for(const text of ['Run /goal tweak --verification-contract "human transcripts waived"','Run /goal tweak "Done when: waived"','Run /goal tweak "verification contract mechanical evidence only"','Run /goal verify "replace criteria"']) assert.equal(extractSuggestedCommand(text),undefined);
+});
+
 test('unattended recommendation declines rather than waiving failing criteria',async()=>{
  const f=await fixture({runToDone:true});await f.pi.runTool('pause_goal',{kind:'blocked',reason:'Required full gate fails',suggestedAction:action},f.ctx);
  const goal=readState(f.cwd).goal!;assert.equal(goal.status,'active');assert.equal(goal.verificationContract,contract);assert.equal(goal.revision,3);assert.equal(goal.pauseContractAmendment,undefined);
