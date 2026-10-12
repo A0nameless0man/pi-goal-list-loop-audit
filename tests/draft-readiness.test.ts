@@ -26,6 +26,15 @@ for (const [objective,contract] of [
 ] as const) {
   test(`valid counterexample: ${objective}`, () => assert.deepEqual(assessDraftReadiness(objective,contract),[]));
 }
+test("supported populated contract headings do not bypass bookkeeping readiness", () => {
+  for (const heading of ["Done when:","Done when all checks pass:","Verified when:","Verify:","Verification contract:","Verification contract (auditor checks each line):"]) {
+    const raw=`Fix audit finding: routes fail\n${heading} ${bookkeeping}`;
+    const parsed=extractVerificationContract(raw);
+    assert.equal(assessDraftReadiness(parsed.objective,parsed.verificationContract)[0]?.code,"bookkeeping-only",heading);
+    assert.ok(parsed.verificationContract.startsWith(heading),"assessment does not mutate the parsed contract");
+  }
+});
+
 test("ordinary verification prose cannot swallow the rest of a list objective", () => {
   const objective="Improve readiness and misleading bookkeeping-only verification without pretending arbitrary contradictions can be proven. Preserve valid tasks.";
   const parsed=extractVerificationContract(`${objective} Done when: regression tests pass.`);

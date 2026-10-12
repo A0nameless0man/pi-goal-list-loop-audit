@@ -139,6 +139,23 @@ test("auto-accept cannot bypass bookkeeping-only finding readiness", async () =>
   assert.match(readState(cwd).goal?.verificationContract??"",/nested-route regression/);
 });
 
+test("single and batch multiline bookkeeping drafts refuse before auto-accept", async () => {
+  for (const batch of [false,true]) {
+    __testOnlyResetOwnerSession();
+    const cwd=tmpCwd();
+    const ctx=setup(cwd);
+    fs.writeFileSync(path.join(cwd,".pi-glla","settings.json"),JSON.stringify({autoAcceptDrafts:true}));
+    await pi.fire("session_start",{reason:"startup"},ctx);
+    await tick();
+    if (batch) await enterListDrafting(ctx); else await enterGoalDrafting(ctx);
+    const raw="Fix audit finding: HIGH: menu routes fail\\nDone when: the fix is committed on the current branch with the repo's configured identity, and this finding's box in .pi-glla/audit-loop/findings.md is checked (fixed in commit).".replace("\\n","\n");
+    const result=await pi.runTool("propose_goal_draft",batch?{objective:"batch",items:[raw]}:{objective:raw},ctx);
+    assert.match(result.content[0]!.text,/bookkeeping-only/);
+    assert.equal(readState(cwd).goal,null);
+    assert.equal(readState(cwd).list?.length,0);
+  }
+});
+
 test("batch readiness rejects atomically before confirmation or first-item activation", async () => {
   __testOnlyResetOwnerSession();
   const cwd=tmpCwd();
