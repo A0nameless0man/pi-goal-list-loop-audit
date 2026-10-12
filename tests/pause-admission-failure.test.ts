@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as vm from 'node:vm';
 import ts from 'typescript';
+import { classifyInterruption } from '../extensions/interruption-policy.js';
 
 // Exercise the actual tool method with the same boolean refusal exposed by
 // the production transaction boundary, without touching the live journal.
@@ -24,7 +25,7 @@ for (const admitted of [false, true]) test(`pause result reflects durable admiss
   const ctx = { cwd: '/fixture', sessionManager: {}, ui: { notify: () => events.push('notify') }, abort: () => events.push('abort') };
   const noop = () => {};
   const execute = vm.runInNewContext(script, {
-    state, foreignToolGuard: () => undefined, currentToolContext: () => ctx,
+    state, classifyInterruption, foreignToolGuard: () => undefined, currentToolContext: () => ctx,
     claimedMissingGllaTool: () => undefined, isProviderRecoveryArmed: () => false,
     providerErrorPresentation: (raw: string) => ({ sensitive: false, display: raw }),
     sanitizeProviderDisplayText: (text: string) => text,

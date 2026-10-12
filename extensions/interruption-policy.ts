@@ -1,7 +1,7 @@
 /** Typed reference policy for the hands-off execution boundary.
  * Callers must supply supported facts, not infer consent from prose.
  * This module does not dispatch commands, amend contracts, or resume holds.
- * Runtime admission integration is a separate implementation step.
+ * pause_goal integrates this policy for supported typed interruption facts.
  */
 export type InterruptionReason =
   | "missing-permission" | "missing-input" | "unauthorized-irreversible-action"
