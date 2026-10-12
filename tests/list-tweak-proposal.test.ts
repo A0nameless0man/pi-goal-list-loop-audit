@@ -126,7 +126,7 @@ test("bare /list tweak returning the unchanged text is a no-op (no revision bump
 
   await pi.command("list", "tweak", ctx);
 
-  assert.ok(ctx.ui.matching("Tweak cancelled — the objective is unchanged.").length >= 1, "no-op notify");
+  assert.ok(ctx.ui.matching("Tweak cancelled — objective and contract are unchanged; nothing was amended.").length >= 1, "no-op notify");
   assert.equal(confirmCalled, false, "no confirm dialog for a no-op");
   assert.equal((readState(cwd).goal as { objective: string }).objective, "old list objective");
   assert.equal(readLedger(cwd).filter((l) => l.type === "goal_tweaked").length, 0, "no goal_tweaked ledger");
