@@ -46,6 +46,12 @@ test('runner isolates recovery factory wiring per file and aggregates failures',
     assert.equal(passing.status, 0, passing.stdout + passing.stderr);
     assert.match(passing.stdout + passing.stderr, /PRODUCTION_ACTIVATION_PASSED/);
     assert.ok(passing.stdout.indexOf('FACTORY_RIG_INSTALLED') < passing.stdout.indexOf('PRODUCTION_ACTIVATION_PASSED'), 'factory overwrite precedes production activation');
+    const reusedWorker = spawnSync('bun', ['test', '--parallel=1', '--max-concurrency=1', rig, runtime], {
+      env: { ...process.env, GLLA_GLOBAL_SETTINGS_PATH: path.join(directory, 'settings.json') },
+      encoding: 'utf8', timeout: 30000,
+    });
+    assert.notEqual(reusedWorker.status, 0, 'negative control: the reused worker leaks factory wiring');
+    assert.match(reusedWorker.stdout + reusedWorker.stderr, /LEAKED_RECOVERY_WIRING/);
     const failing = run([rig, runtime, failure]);
     assert.equal(failing.status, 1, failing.stdout + failing.stderr);
     assert.match(failing.stdout + failing.stderr, /PRODUCTION_ACTIVATION_PASSED/);
