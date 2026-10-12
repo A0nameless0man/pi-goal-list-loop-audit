@@ -98,6 +98,49 @@ async function enterListDrafting(ctx: ReturnType<typeof makeMockCtx>): Promise<v
   await pi.fire("message_start", { message: { role: "user" } }, ctx);
 }
 
+test("readiness refusal preserves the existing goal and allows a revised draft before confirmation", async () => {
+  __testOnlyResetOwnerSession();
+  const cwd = tmpCwd();
+  const ctx = makeMockCtx(cwd);
+  seedState(cwd, {goal:seedGoal({status:"active",objective:"Preserve the existing authorized work",verificationContract:"original criteria"})});
+  await pi.fire("session_start", {reason:"startup"},ctx);
+  await tick();
+  await enterGoalDrafting(ctx);
+  let confirmations=0;
+  ctx.ui.customImpl=async()=>{confirmations++;return "No";};
+  const refused=await pi.runTool("propose_goal_draft",{objective:"ok lets upload the videos but not release"},ctx);
+  assert.match(refused.content[0]!.text,/external-action-without-criteria/);
+  assert.equal(confirmations,0,"readiness precedes confirmation and replacement");
+  assert.equal(readState(cwd).goal?.objective,"Preserve the existing authorized work");
+  assert.equal(readState(cwd).goal?.verificationContract,"original criteria");
+  const revised=await pi.runTool("propose_goal_draft",{objective:"Upload the named videos as private drafts",verificationContract:"Private-draft receipts for each named video; no publication"},ctx);
+  assert.equal(confirmations,1,"drafting remains open for a clarified proposal");
+  assert.match(revised.content[0]!.text,/rejected by the user/);
+  assert.equal(readState(cwd).goal?.objective,"Preserve the existing authorized work");
+  ctx.ui.customImpl=undefined;
+});
+
+test("batch readiness rejects atomically before confirmation or first-item activation", async () => {
+  __testOnlyResetOwnerSession();
+  const cwd=tmpCwd();
+  const ctx=setup(cwd);
+  await pi.fire("session_start",{reason:"startup"},ctx);
+  await tick();
+  await enterListDrafting(ctx);
+  let confirmations=0;
+  ctx.ui.customImpl=async()=>{confirmations++;return "Yes";};
+  const result=await pi.runTool("propose_goal_draft",{objective:"batch",items:[
+    "Fix README spelling. Done when: spelling is correct",
+    "Review the latest auditor disapproval in /goal status. Done when: bun run test exits 0 — full unit suite",
+  ]},ctx);
+  assert.match(result.content[0]!.text,/Item 2/);
+  assert.match(result.content[0]!.text,/procedural-intent/);
+  assert.equal(confirmations,0);
+  assert.equal(readState(cwd).goal,null);
+  assert.equal(readState(cwd).list.length,0);
+  ctx.ui.customImpl=undefined;
+});
+
 test("confirmed actionable draft with the field contract heading stays active and preserves acceptance criteria", async () => {
   __testOnlyResetOwnerSession();
   const cwd = tmpCwd();
