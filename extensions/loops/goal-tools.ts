@@ -796,18 +796,10 @@ function registerAgentTools(pi: any): void {
         appendLedger(ctx.cwd, "goal_tweaked", { via: "complete_goal.newObjective", from: oldObjective.slice(0, 200), to: cleanObj.slice(0, 200) });
         ctx.ui.notify(`Objective updated (complete_goal newObjective): ${cleanObj.slice(0, 80)}`, "info");
       }
-      // v0.34.60 (steal #3): revision-bound audit validity — an approval
-      // from an older contract must not be cited against the current one.
-      // The gate compares the goal's CURRENT revision against the revision
-      // the LAST audit in history ran at: a contract change since that
-      // audit (/goal tweak, or any objective mutation) invalidates the
-      // prior verdict, and the claim is refused until the current contract
-      // gets its own audit. Two escapes: (1) the claim itself carries the
-      // contract change (newObjective above) — its audit covers the NEW
-      // contract in this same call, so the gate skips; (2) /goal verify
-      // audits the current state explicitly, after which the latest
-      // audited revision matches and complete_goal proceeds. Legacy
-      // history entries without a revision field pass unchanged.
+      // A changed contract invalidates historical verdict evidence, not the
+      // ability to claim fresh completion. The independent audit below binds
+      // to the current revision, and settlement still rejects a verdict if
+      // the contract changes while that audit runs. No manual verify detour.
       const lastAudited = state.goal.auditHistory?.[state.goal.auditHistory.length - 1];
       const currentRevision = state.goal.revision ?? 0;
       if (!(p.newObjective?.trim() ?? "") && lastAudited && typeof lastAudited.revision === "number" && lastAudited.revision !== currentRevision) {
@@ -2545,7 +2537,7 @@ function registerAgentTools(pi: any): void {
   pi.registerTool(defineTool({
     name: "pause_goal",
     label: "Pause goal",
-    description: "Pause the active goal with a reason and suggested action. Use when blocked on user input or unable to make progress. Pausing ABORTS the current turn immediately — after this call, stop; never keep working. When the user interrupts with a NEW task ('do X first'), pass redirect=\"<their request>\" instead: the goal parks but the turn CONTINUES so you work X immediately — a plain pause strands the redirect until the user nudges. Never use redirect to dodge a real blocker, decision, or wait. When the user must CHOOSE between options, pass kind=\"decision\" with the options list (recommended = 1-based index of the best one) — decision pauses render as a prominent DECISION NEEDED card and pop a picker for the user. Time-gated waits (retry at a specific time) use kind=\"wait\" with resumeAt (ISO). Quota-caused parks (rate-limit/plan-quota/billing wording in the reason, or a recent subagent quota error) are automatically converted to monitored auto-retry waits — park normally and the reset wait re-fires on its own. Operational failures use kind=\"error\". If you have a concrete fix command, put the exact command in suggestedAction with kind blocked/error — it is offered as an Accept-first decision (no separate question needed). For background dependencies use wait_for_background with exact runIds instead of pausing. Legacy kind=\"standby\" requires those same runIds and admits an owned wait, not a freeze. VOCABULARY (v0.28.24): decision options and reasons must reference REAL commands only — /goal resume, /goal cancel, /goal tweak \"<new text>\", /list remove N, /list next, /list resume, /loop stop, /loop resume. These all act on the ACTIVE goal/item: there is NO /goal drop and NO command takes a goal id. Never show goal ids to the user — name the thing ('the active goal', 'list item \"<short name>\"'); ids are internal plumbing the user cannot act on.",
+    description: "Pause the active goal with a reason and suggested action. Classify proposed human decisions with interruption.reason and concrete interruption.evidence; material exceptions cannot auto-default. Authorized mechanical/reversible work should continue, not pause. Unknown decisions are returned for local classification without adopting an option. Use when blocked on user input or unable to make progress. Pausing ABORTS the current turn immediately — after this call, stop; never keep working. When the user interrupts with a NEW task ('do X first'), pass redirect=\"<their request>\" instead: the goal parks but the turn CONTINUES so you work X immediately — a plain pause strands the redirect until the user nudges. Never use redirect to dodge a real blocker, decision, or wait. When the user must CHOOSE between options, pass kind=\"decision\" with the options list (recommended = 1-based index of the best one) — decision pauses render as a prominent DECISION NEEDED card and pop a picker for the user. Time-gated waits (retry at a specific time) use kind=\"wait\" with resumeAt (ISO). Quota-caused parks (rate-limit/plan-quota/billing wording in the reason, or a recent subagent quota error) are automatically converted to monitored auto-retry waits — park normally and the reset wait re-fires on its own. Operational failures use kind=\"error\". If you have a concrete fix command, put the exact command in suggestedAction with kind blocked/error — it is offered as an Accept-first decision (no separate question needed). For background dependencies use wait_for_background with exact runIds instead of pausing. Legacy kind=\"standby\" requires those same runIds and admits an owned wait, not a freeze. VOCABULARY (v0.28.24): decision options and reasons must reference REAL commands only — /goal resume, /goal cancel, /goal tweak \"<new text>\", /list remove N, /list next, /list resume, /loop stop, /loop resume. These all act on the ACTIVE goal/item: there is NO /goal drop and NO command takes a goal id. Never show goal ids to the user — name the thing ('the active goal', 'list item \"<short name>\"'); ids are internal plumbing the user cannot act on.",
     parameters: Type.Object({
       reason: Type.String({ description: "Why the work is paused" }),
       runIds: Type.Optional(Type.Array(Type.String(), { description: "Legacy standby only: exact owned dependency run ids. Prefer wait_for_background.", minItems: 1, maxItems: 32 })),
