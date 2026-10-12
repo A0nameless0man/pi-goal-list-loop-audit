@@ -1,0 +1,13 @@
+{
+  "width": 40,
+  "rows": 66,
+  "fixtures": [
+    "Fresh progress · last action visible",
+    "Stale progress · historical action, no live claim",
+    "Bounded tool · elapsed/budget alongside last action",
+    "Settling claim · settlement owed, no live worker",
+    "Replaced attempt · no live evidence"
+  ],
+  "source": "production buildWidgetLines/buildStatusText",
+  "fixedNow": "2026-10-12T10:00:00.000Z"
+}

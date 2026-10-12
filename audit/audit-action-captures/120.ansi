@@ -1,0 +1,56 @@
+[38;5;244mFresh progress · last action visible[0m
+[38;5;72m● [0m[38;5;244mGOAL[0m[38;5;244m · [0m[38;5;244mauditing[0m[38;5;244m · [0m[38;5;72mRUNNING[0m[38;5;244m · [0m[38;5;244mage 10m 00s[0m
+[38;5;244m│  [0mInspect actual worker evidence, not a percentage of work
+[38;5;244m├─ [0m[38;5;72mAudit running · thinking… · detached worker[0m
+[38;5;244m│ [0m1 calls finished · activity 5s ago
+[38;5;244m│ [0maudit elapsed 2m 00s
+[38;5;244m│ [0mlast action: read → Widget.svelte · 8s ago
+[38;5;244m│ [0mNo action needed — review applies automatically
+[38;5;244m├─ [0m/goal status for full audit details
+[38;5;244m└─ [0m[38;5;244mnext: completion review applies automatically[0m
+glla: [38;5;72mAUDIT RUNNING[0m · activity 5s ago · last action: read → Widget.svelte · 8s ago · [38;5;147mMAIN HOST · SUPERVISING[0m · [38;5;72mauditor [0m…[0m
+
+[38;5;244mStale progress · historical action, no live claim[0m
+[38;5;179m● [0m[38;5;244mGOAL[0m[38;5;244m · [0m[38;5;244mauditing[0m[38;5;244m · [0m[38;5;179mEXECUTION UNCONFIRMED[0m[38;5;244m · [0m[38;5;244mage 10m 00s[0m
+[38;5;244m│  [0mInspect actual worker evidence, not a percentage of work
+[38;5;244m├─ [0mauditor: [38;5;179mexecution unconfirmed[0m · worker activity not confirmed · last progress 45s ago
+[38;5;244m│ [0m1 calls finished · activity 45s ago
+[38;5;244m│ [0maudit elapsed 2m 00s
+[38;5;244m│ [0mlast action: read → Widget.svelte · 1m 00s ago
+[38;5;244m│ [0m/goal status inspects unconfirmed audit execution
+[38;5;244m├─ [0m/goal status for full audit details
+[38;5;244m└─ [0m[38;5;244mnext: /glla status to inspect unconfirmed audit execution[0m
+glla: [38;5;179mAUDIT UNCONFIRMED[0m · /goal status · activity 45s ago · last action: read → Widget.svelte · 1m 00s ago · [38;5;147mMAIN HOST [0m…[0m
+
+[38;5;244mBounded tool · elapsed/budget alongside last action[0m
+[38;5;147m● [0m[38;5;244mGOAL[0m[38;5;244m · [0m[38;5;244mauditing[0m[38;5;244m · [0m[38;5;147mTOOL WAIT[0m[38;5;244m · [0m[38;5;244mage 10m 00s[0m
+[38;5;244m│  [0mInspect actual worker evidence, not a percentage of work
+[38;5;244m├─ [0m[38;5;147mWaiting on bash · detached auditor[0m
+[38;5;244m│ [0m1 calls finished · activity 5s ago
+[38;5;244m│ [0maudit elapsed 2m 00s
+[38;5;244m│ [0mtool: 30s / 5m 00s budget · bash
+[38;5;244m│ [0mlast action: read → Widget.svelte · 8s ago
+[38;5;244m│ [0mNo tool completion yet — timeout handling is automatic
+[38;5;244m├─ [0m/goal status for full audit details
+[38;5;244m└─ [0m[38;5;244mnext: completion review applies automatically[0m
+glla: [38;5;147mAUDIT TOOL WAIT · bash 30s / 5m 00s[0m · last action: read → Widget.svelte · 8s ago · [38;5;147mMAIN HOST · SUPERVISING[0m · [38;5;147maudi[0m…[0m
+
+[38;5;244mSettling claim · settlement owed, no live worker[0m
+[38;5;179m● [0m[38;5;244mGOAL[0m[38;5;244m · [0m[38;5;244msettling[0m[38;5;244m · [0m[38;5;179mEXECUTION UNCONFIRMED[0m[38;5;244m · [0m[38;5;244mage 10m 00s[0m
+[38;5;244m│  [0mInspect actual worker evidence, not a percentage of work
+[38;5;244m├─ [0mauditor: [38;5;72msettling[0m · detached worker · last progress 30s ago
+[38;5;244m│ [0m1 calls finished · activity 30s ago
+[38;5;244m│ [0maudit elapsed 2m 00s
+[38;5;244m│ [0mlast action: read → Widget.svelte · 8s ago
+[38;5;244m│ [0mnext: /goal resume finishes approved settlement
+[38;5;244m├─ [0m/goal status for full audit details
+[38;5;244m└─ [0m[38;5;244mnext: /glla status to inspect the saved audit[0m
+glla: [38;5;72msettling[0m · activity 30s ago · last action: read → Widget.svelte · 8s ago · [38;5;147mMAIN HOST · SUPERVISING[0m · [38;5;72mauditor ✓ se[0m…[0m
+
+[38;5;244mReplaced attempt · no live evidence[0m
+[38;5;179m● [0m[38;5;244mGOAL[0m[38;5;244m · [0m[38;5;244mauditing[0m[38;5;244m · [0m[38;5;179mEXECUTION UNCONFIRMED[0m[38;5;244m · [0m[38;5;244mage 10m 00s[0m
+[38;5;244m│  [0mInspect actual worker evidence, not a percentage of work
+[38;5;244m├─ [0m[38;5;244mexecution unconfirmed · saved work retained[0m
+[38;5;244m└─ [0m[38;5;244mnext: /glla status to inspect the saved audit[0m
+[38;5;244mglla:[0m [38;5;179mEXECUTION UNCONFIRMED[0m [38;5;244m· goal auditing[0m [38;5;244m· inspect execution[0m
+

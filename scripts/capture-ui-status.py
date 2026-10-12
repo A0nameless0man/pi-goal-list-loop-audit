@@ -32,7 +32,7 @@ def stop(process):
 
 root = Path(__file__).resolve().parents[1]
 summaries = '--summaries' in sys.argv
-out = root / 'audit' / ('wait-status-captures' if '--wait-status' in sys.argv else 'summary-captures' if summaries else 'audit-status-captures' if '--audit-status' in sys.argv else 'recovery-ui-captures' if '--recovery-followup' in sys.argv else 'ui-captures')
+out = root / 'audit' / ('audit-action-captures' if '--audit-action' in sys.argv else 'wait-status-captures' if '--wait-status' in sys.argv else 'summary-captures' if summaries else 'audit-status-captures' if '--audit-status' in sys.argv else 'recovery-ui-captures' if '--recovery-followup' in sys.argv else 'ui-captures')
 xvfb = terminal = None
 read_fd, write_fd = os.pipe()
 try:
@@ -44,7 +44,7 @@ try:
     display = ':' + os.read(read_fd, 32).decode().strip()
     env = {**os.environ, 'DISPLAY': display}
     with tempfile.TemporaryDirectory(prefix='glla-capture-') as temporary:
-        stems = [f'{appearance}-{width}' for appearance in ['dark', 'light'] for width in [40, 120]] if summaries else ['40', '120', '40-detailed', '120-detailed'] if '--audit-status' in sys.argv or '--wait-status' in sys.argv else ['40', '120']
+        stems = ([f'{appearance}-{width}' for appearance in ['dark', 'light'] for width in [40, 120]] if summaries else ['40', '120', '40-detailed', '120-detailed'] if any(arg in sys.argv for arg in ('--audit-status', '--wait-status')) else ['40', '120'])
         for stem in stems:
             metadata = json.loads((out / f'{stem}.json').read_text())
             width = metadata['width']

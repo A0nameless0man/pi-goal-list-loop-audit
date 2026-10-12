@@ -1150,6 +1150,42 @@ function latestAuditorOutput(audit: AuditDisplayProgress | null | undefined): st
   return undefined;
 }
 
+/** A stamped worker snapshot cannot migrate to another claim or host. Legacy
+ * un-stamped snapshots retain compatibility rendering but cannot provide an
+ * attributed latest-action row. This is presentation, never dispatch consent. */
+function scopedAuditProgress(state: State, audit: AuditDisplayProgress | null | undefined,
+  extras?: WidgetExtras): AuditDisplayProgress | null | undefined {
+  if (!audit || (audit.ownerKey === undefined && audit.attemptId === undefined && audit.generation === undefined)) return audit;
+  const g = state.goal, context = extras?.uiStatusContext;
+  if (!g || g.status !== 'auditing' || audit.ownerKey !== `goal:${g.id}`
+    || !g.pendingCompletion?.attemptId || audit.attemptId !== g.pendingCompletion.attemptId
+    || context?.generation === undefined || audit.generation !== context.generation
+    || context.evidence?.ownerKey !== audit.ownerKey || context.evidence.generation !== audit.generation
+    || context.evidence.session !== 'open') return null;
+  return audit;
+}
+
+/** Tool completion is concrete progress evidence; neither an activity poll
+ * nor a UI clock updates this timestamp. Command strings are never displayed. */
+export function auditorLatestAction(g: Goal, audit: AuditDisplayProgress | null | undefined, now: number, width?: number): string | undefined {
+  if (!audit || g.status !== 'auditing' || audit.ownerKey !== `goal:${g.id}`
+    || !g.pendingCompletion?.attemptId || audit.attemptId !== g.pendingCompletion.attemptId
+    || audit.generation === undefined) return undefined;
+  const latest = audit.toolCalls?.filter(call => Number.isFinite(call.finishedAt)
+    && call.finishedAt >= 0 && call.finishedAt <= now)
+    .reduce<typeof audit.toolCalls[number] | undefined>((best, call) => !best || call.finishedAt > best.finishedAt ? call : best, undefined);
+  if (!latest) return 'latest action: not observed';
+  const narrow = width !== undefined && width < 80;
+  const name = truncate(sanitizeDisplayText(latest.name), narrow ? 10 : 24);
+  const age = `${fmtElapsed(now - latest.finishedAt)} ago`;
+  const prefix = narrow ? 'last' : 'last action';
+  const base = `${prefix}: ${name} · ${age}`;
+  const target = auditorToolTarget(latest.argsPrefix);
+  const room = narrow ? Math.max(0, width! - 3 - tuiVisibleWidth(base) - 3) : 32;
+  const safeTarget = target && room >= 4 ? tuiTruncateToWidth(target, room, '…') : undefined;
+  return `${prefix}: ${name}${safeTarget ? ` → ${safeTarget}` : ''} · ${age}`;
+}
+
 function lastAuditorTool(audit: AuditDisplayProgress | null | undefined): string | undefined {
   const name = audit?.toolCalls?.at(-1)?.name;
   return typeof name === "string" && name.trim() ? truncate(name, 30) : undefined;
@@ -1574,7 +1610,7 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   // glance the legacy card renders (v0.34.22 "Audit starting"). Without an
   // object the generic unconfirmed rail below stays (saved-claim contract).
   const auditingLive = g && g.status === 'auditing' && audit && compact && status.execution !== 'blocked' && status.execution !== 'dormant'
-    ? compactAuditingCardRows(g, audit, auditingCardBlock(g, audit, now, theme, extras), now, theme, extras).map(line => line.replace(/^└─/, '├─'))
+    ? compactAuditingCardRows(g, audit, auditingCardBlock(g, audit, now, theme, extras, width), now, theme, extras, width).map(line => line.replace(/^└─/, '├─'))
     : undefined;
   if (auditingLive) rows.push(...auditingLive.map(line => clipped(line)));
   // Active attention (disapproval/shield/blocked-claim) owns detail +
@@ -1688,6 +1724,7 @@ function buildTaskProgressText(goal: Goal): string {
 }
 
 export function buildStatusText(state: State, audit?: AuditDisplayProgress | null, now = Date.now(), theme?: DisplayTheme, extras?: WidgetExtras, width?: number): string | undefined {
+  audit = scopedAuditProgress(state, audit, extras);
   const shared = extras?.uiStatusContext ? projectDisplayStatus(state, audit, { ...extras.uiStatusContext, now }) : undefined;
   // Adapter boundary: background waits, waiting-only queues, live audit
   // objects and stale-handle interruptions keep their exact legacy lines
@@ -1819,7 +1856,8 @@ function auditingStatusText(state: State, g: Goal, audit: AuditDisplayProgress |
     const freshness = extras?.compactAuditCard && phase !== "quiet" && !toolWait
       ? `${activityAge !== undefined ? `activity ${fmtElapsed(activityAge)} ago` : "no worker activity yet"} · `
       : "";
-    return `glla: ${compactPrefix}${unconfirmed ? `${g.policy === 'list' ? '/list show' : '/goal status'} · ` : ''}${freshness}${host} · ${label}${quietSuffix}${heldSuffix}`;
+    const latestAction = auditorLatestAction(g, audit, now, width);
+    return `glla: ${compactPrefix}${unconfirmed ? `${g.policy === 'list' ? '/list show' : '/goal status'} · ` : ''}${freshness}${latestAction ? `${latestAction} · ` : ''}${host} · ${label}${quietSuffix}${heldSuffix}`;
   }
 }
 
@@ -2183,6 +2221,7 @@ export function responsiveWidget(renderRows: (width: number, maxRows: number) =>
 }
 
 export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | null, now = Date.now(), theme?: DisplayTheme, width?: number, extras?: WidgetExtras): string[] | undefined {
+  audit = scopedAuditProgress(state, audit, extras);
   const shared = extras?.uiStatusContext ? projectDisplayStatus(state, audit, { ...extras.uiStatusContext, now }) : undefined;
   const background = shared?.execution === 'blocked' || shared?.execution === 'dormant' ? undefined : backgroundWidget(state, theme, width);
   const compact = extras?.compactAuditCard !== false;
@@ -2260,7 +2299,9 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
   if (lines) {
     const limit = extras?.maxWidgetLines;
     const max = typeof limit === 'number' && Number.isFinite(limit)
-      ? Math.max(1, Math.min(32, Math.floor(limit))) : shared ? (compact ? 8 : 32) : Number.MAX_SAFE_INTEGER;
+      ? Math.max(1, Math.min(32, Math.floor(limit))) : shared
+        ? (compact ? (state.goal && auditorLatestAction(state.goal, audit, now) ? 10 : 8) : 32)
+        : Number.MAX_SAFE_INTEGER;
     if (lines.length > max) {
       // Keep the headline and explicit inspection path even on tiny screens.
       // In larger budgets reserve field starts before wrapped continuations,
@@ -2446,7 +2487,7 @@ function auditorNextAction(phase: AuditorDisplayPhase): string {
  * historical rows. One shared phase interpretation feeds both, and the
  * same interpretation feeds the one-line footer — the three surfaces
  * agree on phase words by construction. */
-function auditingCardBlock(g: Goal, audit: AuditDisplayProgress | null | undefined, now: number, theme?: DisplayTheme, extras?: WidgetExtras): { lead: string[]; tail: string[] } {
+function auditingCardBlock(g: Goal, audit: AuditDisplayProgress | null | undefined, now: number, theme?: DisplayTheme, extras?: WidgetExtras, width?: number): { lead: string[]; tail: string[] } {
   if (auditRecoveryPending(g)) {
     // v0.38.99: a parked claim names its OWN durable state and evidence
     // ("recovery needed · parked 5m 12s ago") instead of the one flat
@@ -2550,8 +2591,11 @@ function auditingCardBlock(g: Goal, audit: AuditDisplayProgress | null | undefin
     ? now - audit.startedAt : undefined);
   if (elapsed !== undefined) lead.push(`│ audit elapsed ${fmtElapsed(elapsed)}`);
   lead.push(`│ last activity: ${activity !== undefined ? `${fmtElapsed(activity)} ago` : durableActivityMs !== undefined ? `${fmtElapsed(durableActivityMs)} ago (saved)` : 'unconfirmed'}`);
+  const latestAction = auditorLatestAction(g, audit, now, width);
+  if (latestAction) lead.push(`│ ${latestAction}`);
   const settlementNext = durable?.phase === "settling" ? `${g.policy === "list" ? "/list resume" : "/goal resume"} finishes approved settlement` : undefined;
   lead.push(`│ next: ${settlementNext ?? (unconfirmed ? `${inspectCommand} inspects unconfirmed execution` : auditorNextAction(phase))}`);
+  if (latestAction) lead.push(`│ inspect: ${inspectCommand}`);
   if (targetSeg) lead.push(targetSeg);
   // Tail: the remaining observations (session, quiet stretch, report
   // tail, evidence, unmatched events) flow straight into the closing
@@ -2630,7 +2674,7 @@ function auditingCardBlock(g: Goal, audit: AuditDisplayProgress | null | undefin
 
 // Branch lines sit flush-left (pi-tasks convention): pi's widget renderer
 // adds its own one-space gutter, so any indent here doubles up.
-function compactAuditingCardRows(g: Goal, audit: AuditDisplayProgress | null | undefined, block: { lead: string[]; tail: string[] }, now: number, theme?: DisplayTheme, extras?: WidgetExtras): string[] {
+function compactAuditingCardRows(g: Goal, audit: AuditDisplayProgress | null | undefined, block: { lead: string[]; tail: string[] }, now: number, theme?: DisplayTheme, extras?: WidgetExtras, width?: number): string[] {
       const phase = auditorDisplayPhase(g, audit, now);
       const durable = auditLifecycleProjection(g.pendingCompletion, { now });
       // v0.39.22: stalled needs recovery like quiet/blocked — without it
@@ -2654,12 +2698,15 @@ function compactAuditingCardRows(g: Goal, audit: AuditDisplayProgress | null | u
       const phaseLine = unconfirmed ? block.lead[0]! : toolWait ? `├─ ${paint(theme, "accent", `Waiting on ${sanitizeDisplayText(audit!.currentTool!)}${audit?.round === 2 ? " · second audit pass" : ""} · detached auditor`)}` : needsRecovery ? (phase === "quiet" ? `├─ ${paint(theme, "warning", "Audit quiet — may be stuck")}` : block.lead[0]!)
         : `├─ ${paint(theme, auditorPhaseTone(phase, live), phase === "running" ? `Audit running · ${(extras?.auditorProgressSignals !== false ? auditorProgressPhaseLabel(audit) : undefined) ?? auditorPhaseForDisplay(audit, phase, live, now)} · detached worker` : phase === "queued" ? "Audit starting · detached worker" : "Audit review pending · detached worker")}`;
       const toolLine = block.lead.find(line => /^│ (?:last )?tool:/.test(line));
+      const latestAction = auditorLatestAction(g, audit, now, width);
       const modelRef = auditorCardModelRef(audit, g.pendingCompletion);
       const compactToolLine = modelRef ? toolLine?.split(` · ${modelRef}`)[0] : toolLine;
       return [phaseLine,
         ...(facts.length ? [`│ ${facts.join(" · ")}`] : []),
         ...(elapsed !== undefined ? [`│ audit elapsed ${fmtElapsed(elapsed)}`] : []),
-        ...(compactToolLine ? [compactToolLine.startsWith("│ tool:") ? compactToolLine : `│ last tool: ${lastAuditorTool(audit) ?? audit?.currentTool}`] : []),
+        ...(compactToolLine && (compactToolLine.startsWith('│ tool:') || !latestAction)
+          ? [compactToolLine.startsWith("│ tool:") ? compactToolLine : `│ last tool: ${lastAuditorTool(audit) ?? audit?.currentTool}`] : []),
+        ...(latestAction ? [`│ ${latestAction}`] : []),
         ...(unconfirmed ? [`│ ${inspectCommand} inspects unconfirmed audit execution`] : needsRecovery ? (action ? [action] : block.lead.slice(1)) : [toolWait ? `│ No tool completion yet — timeout handling is automatic` : `│ No action needed — review applies automatically`]),
         `└─ ${inspectCommand} for full audit details`];
 }
@@ -2786,9 +2833,9 @@ function goalLines(g: Goal, state: State, audit: AuditDisplayProgress | null | u
 // (v0.34.22: "Audit starting" before worker progress).
   let auditTail: string[] = [];
   if (g.status === "auditing") {
-    const block = auditingCardBlock(g, audit, now, theme, extras);
+    const block = auditingCardBlock(g, audit, now, theme, extras, width);
     if (extras?.compactAuditCard) {
-      return [...lines, ...compactAuditingCardRows(g, audit, block, now, theme, extras)];
+      return [...lines, ...compactAuditingCardRows(g, audit, block, now, theme, extras, width)];
     }
     lines.push(...block.lead);
     auditTail = block.tail;

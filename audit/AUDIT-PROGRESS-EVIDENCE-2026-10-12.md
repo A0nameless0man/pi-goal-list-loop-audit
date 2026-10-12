@@ -41,6 +41,53 @@ Retain historical/stale labels, reject mismatched attempt/owner evidence, and
 keep stage, tool budget, activity age and next inspection/recovery action
 visible across compact/detailed cards and footer. Respect silent report mode.
 
-Implementation, executable matrix and terminal captures remain pending.
+## Implementation, regression and capture evidence
+
+- `extensions/goal-loop-display.ts` adds a shared `auditorLatestAction`
+  projection that reads the most recent completed tool call from
+  `AuditDisplayProgress.toolCalls`, filters future/invalid timestamps and
+  renders `last action: <name> [→ <basename target>] · <age> ago`. The
+  card/footer reuses it through `auditingCardBlock` and the production
+  footer. Compact and detailed surfaces carry the row when an
+  attributed latest action exists; replaced/legacy or empty evidence
+  renders `last: not observed` and a dedicated inspect command instead of
+  inventing a target.
+- `scopedAuditProgress` rejects audit snapshots whose `ownerKey`,
+  `attemptId` or `generation` do not match the current claim, or whose
+  context session is not open. This is enforced at both
+  `buildWidgetLines` and `buildStatusText` boundaries.
+- `compactAuditingCardRows` drops the redundant `last tool:` row when the
+  action row already exists, and the widget budget is widened to ten rows
+  for the action + tool-budget + inspect combination so narrow terminals
+  keep the action visible.
+- Holds (supervisor, load, persistence) and gate precedence are preserved:
+  `BUILD` tests verify that a `supervisorPausedAt` claim still reads
+  `BLOCKED` and the audit footer stops advertising `AUDIT RUNNING` /
+  `AUDIT TOOL WAIT`.
+
+## Verification and inspected captures
+
+- New tests: `tests/audit-latest-action.test.ts` (9 cases) — fresh/stale
+  completion, current tool budget alongside the last action, missing
+  data, replaced attempt, future timestamps, arbitrary command hiding,
+  legacy un-stamped snapshots, holds outranking audit live evidence.
+- Existing affected tests rerun (37 across 5 files) all pass.
+- Reproduction: `timeout 30 bun scripts/audit-action-capture.ts && timeout 70
+  python3 scripts/capture-ui-status.py --audit-action` produced
+  `audit/audit-action-captures/{40,120,40-detailed,120-detailed}.{ansi,json,png}`.
+  Inspected all four real xterm/private-Xvfb PNGs. Fresh progress shows
+  `last action: read → Widget.svelte · 8s ago`; stale completion shows
+  the historical age (`1m 00s ago`) with `AUDIT UNCONFIRMED` heading;
+  bounded tool keeps the elapsed/budget row and a separate last-action
+  row; settling claim labels itself `auditor: settling · ...` and the
+  footer offers `/goal resume finishes approved settlement`; replaced
+  attempt shows no live evidence and a generic inspect path. No
+  percentage of work, no invented command content, no claim of
+  completion, and no claim that a replaced attempt is alive.
+- `npm run check`: exit 0 (`/tmp/glla-audit-action-types.log`).
+- Limited scope: only GLLA changes; the new fixture lives in the
+  repository; the original screenshot evidence under /tmp/glla-note-* and
+  the capture-anime-girls progress artifact remain read-only observations
+  and were not used as projection inputs.
 Unrelated full-release failures, settlement messaging and blocked-resolution
 behavior belong to other items and are not repaired by this item.

@@ -1,0 +1,66 @@
+[38;5;244mFresh progress · last action visible[0m
+[38;5;72m● [0m[38;5;72mRUNNING[0m[38;5;244m · [0m[38;5;244mGOAL[0m [38;5;244mauditing[0m
+[38;5;244m│  [0mInspect actual worker evidence, no[0m…[0m
+[38;5;244m├─ [0mauditor: [38;5;72mthinking…[0m · detached work[0m…[0m
+[38;5;244m│ [0mlast tool: read
+[38;5;244m│ [0maudit elapsed 2m 00s
+[38;5;244m│ [0mlast activity: 5s ago
+[38;5;244m│ [0mlast: read → Widget.svelte · 8s ago
+[38;5;244m│ [0mnext: completion review applies aut[0m…[0m
+[38;5;244m│ [0minspect: /goal status
+[38;5;244m├─ [0m[38;5;244mevidence: 1 audit call[0m
+[38;5;244m└─ [0m[38;5;244m2m 00s in detached worker · worker[0m…[0m
+glla: [38;5;72mAUDIT RUNNING[0m · last: read → Widg[0m…[0m
+
+[38;5;244mStale progress · historical action, no live claim[0m
+[38;5;179m● [0m[38;5;179mEXECUTION UNCONFIRMED[0m[38;5;244m · [0m[38;5;244mGOAL[0m [38;5;244mauditi[0m…[0m
+[38;5;244m│  [0mInspect actual worker evidence, no[0m…[0m
+[38;5;244m├─ [0mauditor: [38;5;179mexecution unconfirmed[0m · w[0m…[0m
+[38;5;244m│ [0mlast tool: read
+[38;5;244m│ [0maudit elapsed 2m 00s
+[38;5;244m│ [0mlast activity: 45s ago
+[38;5;244m│ [0mlast: read → Widget.sve[0m…[0m · 1m 00s a[0m…[0m
+[38;5;244m│ [0mnext: /goal status inspects unconfi[0m…[0m
+[38;5;244m│ [0minspect: /goal status
+[38;5;244m├─ [0m[38;5;244mevidence: 1 audit call[0m
+[38;5;244m└─ [0m[38;5;244mworker execution unconfirmed — cla[0m…[0m
+glla: [38;5;179mAUDIT UNCONFIRMED[0m · /goal status [0m…[0m
+
+[38;5;244mBounded tool · elapsed/budget alongside last action[0m
+[38;5;147m● [0m[38;5;147mTOOL WAIT[0m[38;5;244m · [0m[38;5;244mGOAL[0m [38;5;244mauditing[0m
+[38;5;244m│  [0mInspect actual worker evidence, no[0m…[0m
+[38;5;244m├─ [0mauditor: [38;5;147mtool executing[0m · detached[0m…[0m
+[38;5;244m│ [0mtool: 30s / 5m 00s budget · bash
+[38;5;244m│ [0maudit elapsed 2m 00s
+[38;5;244m│ [0mlast activity: 5s ago
+[38;5;244m│ [0mlast: read → Widget.svelte · 8s ago
+[38;5;244m│ [0mnext: completion review applies aut[0m…[0m
+[38;5;244m│ [0minspect: /goal status
+[38;5;244m├─ [0m[38;5;244mevidence: 1 audit call[0m
+[38;5;244m└─ [0m[38;5;244m2m 00s in detached worker · worker[0m…[0m
+glla: [38;5;147mAUDIT TOOL WAIT · bash 30s / 5m 0[0m…[0m
+
+[38;5;244mSettling claim · settlement owed, no live worker[0m
+[38;5;179m● [0m[38;5;179mEXECUTION UNCONFIRMED[0m[38;5;244m · [0m[38;5;244mGOAL[0m [38;5;244msettli[0m…[0m
+[38;5;244m│  [0mInspect actual worker evidence, no[0m…[0m
+[38;5;244m├─ [0mauditor: [38;5;72msettling[0m · detached worke[0m…[0m
+[38;5;244m│ [0mlast tool: read
+[38;5;244m│ [0maudit elapsed 2m 00s
+[38;5;244m│ [0mlast activity: 30s ago
+[38;5;244m│ [0mlast: read → Widget.svelte · 8s ago
+[38;5;244m│ [0mnext: /goal resume finishes approve[0m…[0m
+[38;5;244m│ [0minspect: /goal status
+[38;5;244m├─ [0m[38;5;244mevidence: 1 audit call[0m
+[38;5;244m└─ [0m[38;5;244mapproved — terminal archive owed[0m
+glla: [38;5;72msettling[0m · last: read → Widget.sv[0m…[0m
+
+[38;5;244mReplaced attempt · no live evidence[0m
+[38;5;179m● [0m[38;5;179mEXECUTION UNCONFIRMED[0m[38;5;244m · [0m[38;5;244mGOAL[0m [38;5;244mauditi[0m…[0m
+[38;5;244m│  [0mInspect actual worker evidence, no[0m…[0m
+[38;5;244m├─ [0m[38;5;244mexecution unconfirmed · saved work[0m…[0m
+[38;5;244m├─ [0m[38;5;244mcompaction: eligibility unconfirme[0m…[0m
+[38;5;244m├─ [0m[38;5;244mprovenance: saved[0m
+[38;5;244m├─ [0m[38;5;244msaved audit phase: running[0m
+[38;5;244m└─ [0m[38;5;244mnext: /glla status to inspect the [0m…[0m
+[38;5;244mglla:[0m [38;5;179mEXECUTION UNCONFIRMED[0m [38;5;244m· goal audi[0m…[0m
+
