@@ -41,12 +41,12 @@ test('restart retains concrete amendment consent and acceptance does not require
  assert.equal(readState(f.cwd).goal?.revision,4);assert.notEqual(readState(f.cwd).goal?.verificationContract,contract);await pi.fire('session_shutdown',{reason:'quit'},ctx);
 });
 test('failed amendment transaction reports no acceptance and retains the original hold',async()=>{
- const f=await fixture();await propose(f);const txn=goalStateTransactionPath(f.cwd);const saved=fs.readFileSync(txn);fs.unlinkSync(txn);fs.mkdirSync(txn);
+ const f=await fixture();await propose(f);const txn=goalStateTransactionPath(f.cwd);fs.mkdirSync(txn);
  try {
   f.ctx.ui.selectImpl=async(_t,options)=>options[0];await f.pi.command('goal','decide',f.ctx);
   const after=readState(f.cwd).goal!;assert.equal(after.verificationContract,contract);assert.equal(after.revision,3);assert.equal(after.status,'paused');
   assert.ok(f.ctx.ui.notifies.some(n=>n.message.includes('Amendment not saved')));assert.ok(!f.ctx.ui.notifies.some(n=>n.message.includes('Contract amendment persisted')));
- } finally {fs.rmdirSync(txn);fs.writeFileSync(txn,saved);await f.pi.fire('session_shutdown',{reason:'quit'},f.ctx);}
+ } finally {fs.rmdirSync(txn);await f.pi.fire('session_shutdown',{reason:'quit'},f.ctx);}
 });
 test('unattended recommendation declines rather than waiving failing criteria',async()=>{
  const f=await fixture({runToDone:true});await f.pi.runTool('pause_goal',{kind:'blocked',reason:'Required full gate fails',suggestedAction:action},f.ctx);
