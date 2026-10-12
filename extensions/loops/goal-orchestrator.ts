@@ -751,7 +751,7 @@ async function handleMainModelAgentEnd(ctx: ExtensionContext, rawLastA: any, las
       // Every recoverable provider failure uses the same ordered backup and
       // bounded retry envelope. If the chain is empty or every candidate is
       // rejected, the durable envelope owns retry on the current model.
-      if ((state.goal?.status === "active" && requiresMainModelRecovery(failure)) || (backupRefs.length > 0 && isMainModelFallbackFailure(failure))) {
+      if ((isSupervising() && requiresMainModelRecovery(failure)) || (backupRefs.length > 0 && isMainModelFallbackFailure(failure))) {
         parkMainModelAfterFailure(ctx, failure);
         if (mainModelRecoveryActive() || (isSupervising() && state.mainModelRecovery)) return true;
       }
