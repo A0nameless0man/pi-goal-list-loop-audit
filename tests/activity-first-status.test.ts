@@ -49,6 +49,13 @@ function claimOf(overrides: Partial<PendingCompletion> = {}): PendingCompletion 
   };
 }
 
+/** Index of the auditor lead row (the segmented card head + objective row precede it). */
+function auditorAt(lines: string[]): number {
+  const at = lines.findIndex((l) => /auditor:/.test(l));
+  assert.ok(at >= 0, `auditor lead renders:\n${lines.join("\n")}`);
+  return at;
+}
+
 /** A theme that records colour pairing instead of emitting ANSI. */
 function recordingTheme(calls: Array<{ color: string; text: string }>): DisplayTheme {
   return { fg: (color, text) => { calls.push({ color, text }); return `<${color}>${text}</>`; } };
@@ -91,9 +98,10 @@ test("activity-first: lead rows follow the head and precede all historical rows"
     },
   )!;
   const text = lines.join("\n");
-  assert.match(lines[1]!, /├─ auditor: /, "first content row is the auditor activity lead");
-  assert.match(lines[2]!, /^│ tool: /, "second row carries tool/budget/model/thinking");
-  assert.match(lines[3]!, /^│ next: /, "third row names the next action");
+  const leadAt = auditorAt(lines);
+  assert.match(lines[leadAt]!, /├─ auditor: /, "first content row is the auditor activity lead");
+  assert.match(lines[leadAt + 1]!, /^│ tool: /, "second row carries tool/budget/model/thinking");
+  assert.match(lines[leadAt + 2]!, /^│ next: /, "third row names the next action");
   const nextAt = lines.findIndex((l) => /^│ next: /.test(l));
   const auditsAt = lines.findIndex((l) => l.includes("audits:"));
   const modelAt = lines.findIndex((l) => l.includes("handled audit:"));
@@ -125,11 +133,12 @@ test("activity-first: quiet card leads with phase, age, last tool, model, thinki
     120,
   )!;
   const text = lines.join("\n");
-  assert.match(lines[1]!, /auditor: quiet · detached worker · last progress 31m/, `quiet phase + age lead:\n${text}`);
-  assert.match(lines[2]!, /last tool: read/, "stale tool demoted to last-tool, still in the lead");
-  assert.match(lines[2]!, /test-auditor\/model/, "effective model named in the lead");
-  assert.match(lines[2]!, /thinking max/, "effective thinking named in the lead");
-  assert.match(lines[3]!, /next: \/goal cancel discards the claim/, "quiet next action names the escape hatch");
+  const leadAt = auditorAt(lines);
+  assert.match(lines[leadAt]!, /auditor: quiet · detached worker · last progress 31m/, `quiet phase + age lead:\n${text}`);
+  assert.match(lines[leadAt + 1]!, /last tool: read/, "stale tool demoted to last-tool, still in the lead");
+  assert.match(lines[leadAt + 1]!, /test-auditor\/model/, "effective model named in the lead");
+  assert.match(lines[leadAt + 1]!, /thinking max/, "effective thinking named in the lead");
+  assert.match(lines[leadAt + 2]!, /next: \/goal cancel discards the claim/, "quiet next action names the escape hatch");
   assert.match(text, /auditor quiet 31m/, "closer keeps its byte-identical quiet wording");
   const toolRows = lines.filter((l) => /tool:|last tool:/.test(l));
   assert.equal(toolRows.length, 1, "the card keeps its one-current-observation rule");
@@ -147,9 +156,10 @@ test("activity-first: awaiting-verdict card and footer agree on the phase words"
   };
   const lines = buildWidgetLines({ goal: g, list: [] }, audit, NOW, undefined, 120)!;
   const text = lines.join("\n");
-  assert.match(lines[1]!, /auditor: awaiting completion review · detached worker · last progress/, `review phase leads:\n${text}`);
-  assert.match(lines[2]!, /test-auditor\/model · thinking high/, "model + thinking in the lead");
-  assert.match(lines[3]!, /next: completion review applying/, "completion review next action");
+  const leadAt = auditorAt(lines);
+  assert.match(lines[leadAt]!, /auditor: awaiting completion review · detached worker · last progress/, `review phase leads:\n${text}`);
+  assert.match(lines[leadAt + 1]!, /test-auditor\/model · thinking high/, "model + thinking in the lead");
+  assert.match(lines[leadAt + 2]!, /next: completion review applying/, "completion review next action");
   const footer = buildStatusText({ goal: g, list: [] }, audit, NOW)!;
   assert.match(footer, /auditor ✓ awaiting completion review/, "footer names the same phase");
   assert.ok(text.includes("awaiting completion review") && footer.includes("awaiting completion review"), "card and footer agree: awaiting completion review");
@@ -170,8 +180,9 @@ test("activity-first: blocked card and footer agree on the blocked label", () =>
   };
   const lines = buildWidgetLines({ goal: g, list: [] }, audit, NOW, undefined, 120)!;
   const text = lines.join("\n");
-  assert.match(lines[1]!, /auditor: blocked · .*detached worker · last progress/, `blocked phase leads:\n${text}`);
-  assert.match(lines[3]!, /next: \/goal resume retries the claim/, "blocked next action names resume");
+  const leadAt = auditorAt(lines);
+  assert.match(lines[leadAt]!, /auditor: blocked · .*detached worker · last progress/, `blocked phase leads:\n${text}`);
+  assert.match(lines[lines.findIndex((l) => /^│ next: /.test(l))]!, /next: \/goal resume retries the claim/, "blocked next action names resume");
   assert.match(text, /auditor blocked — provider error: upstream timeout/, "closer keeps its blocked wording");
   const footer = buildStatusText({ goal: g, list: [] }, audit, NOW)!;
   assert.match(footer, /auditor .* blocked/, "footer names the same blocked phase");
@@ -199,9 +210,10 @@ test("activity-first: live running card carries tool elapsed/budget in the lead"
     120,
   )!;
   const text = lines.join("\n");
-  assert.match(lines[1]!, /auditor: tool executing · detached worker · last progress/, `live phase leads:\n${text}`);
-  assert.match(lines[2]!, /tool: read → .*README\.md.*\/ 20m 00s budget/, "tool elapsed + budget in the lead");
-  assert.match(lines[3]!, /next: completion review applies automatically/, "running next action");
+  const leadAt = auditorAt(lines);
+  assert.match(lines[leadAt]!, /auditor: tool executing · detached worker · last progress/, `live phase leads:\n${text}`);
+  assert.match(lines[leadAt + 1]!, /tool: read → .*README\.md.*\/ 20m 00s budget/, "tool elapsed + budget in the lead");
+  assert.match(lines[leadAt + 2]!, /next: completion review applies automatically/, "running next action");
   const narrow = buildWidgetLines(
     { goal: g, list: [] },
     {
@@ -235,9 +247,10 @@ test("activity-first: legacy claim without thinking/model omits the segments, ne
     120,
   )!;
   const text = lines.join("\n");
-  assert.match(lines[1]!, /auditor: queued · detached worker · last progress none yet/, `legacy lead:\n${text}`);
+  const leadAt = auditorAt(lines);
+  assert.match(lines[leadAt]!, /auditor: queued · detached worker · last progress none yet/, `legacy lead:\n${text}`);
   assert.doesNotMatch(text, /thinking/, "no thinking segment without a stamped level");
-  assert.match(lines[2]!, /next: worker starting/, "queued next action still renders");
+  assert.match(lines[leadAt + 1]!, /next: worker starting/, "queued next action still renders");
 });
 
 // ---- colour paired with words, never instead of them ----

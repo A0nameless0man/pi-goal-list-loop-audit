@@ -12,9 +12,11 @@ const goal: Goal = {
   pendingCompletion: { at: new Date(now - 8 * 60_000).toISOString(), phase: "running", attemptId: "glance-audit", auditorThinkingLevel: "max" },
 };
 const audit: AuditDisplayProgress = {
-  phase: "thinking", elapsedMs: 8 * 60_000, lastActivityAt: now - 17_000,
+  // 10s-old activity is inside the 15s live-evidence window (UI-STATUS:
+  // older stored timestamps are execution-unconfirmed, never "running").
+  phase: "thinking", elapsedMs: 8 * 60_000, lastActivityAt: now - 10_000,
   model: "openrouter/stealth/space-bunny-alpha",
-  toolCalls: Array.from({ length: 11 }, () => ({ name: "bash", argsPrefix: "{}", finishedAt: now - 17_000 })),
+  toolCalls: Array.from({ length: 11 }, () => ({ name: "bash", argsPrefix: "{}", finishedAt: now - 10_000 })),
 };
 const extras = {
   compactAuditCard: true,
@@ -26,20 +28,21 @@ test("screenshot regression: live audit facts and user action fit before Pi's te
   for (const width of [40, 60, 80, 120, 190]) {
     const lines = buildWidgetLines({ goal, list: [] }, audit, now, undefined, width, extras)!;
     const text = lines.join("\n");
-    assert.ok(lines.length <= 7, text);
+    // 8 rows: segmented header + objective row + the glance rows.
+    assert.ok(lines.length <= 8, text);
     assert.match(text, /No action needed/);
     assert.match(text, /11 calls finished/);
     assert.match(text, /audit elapsed 8m/);
-    assert.match(text, /activity 17s/);
+    assert.match(text, /activity 10s/);
     assert.match(text, /thinking/);
     assert.doesNotMatch(text, /reading source|Durable fix|selected:|model: primary|judgment:/);
-    assert.match(text, /\/goal status/);
+    assert.match(text, /\/list show/);
   }
 });
 
 test("narrow footer starts with audit state and real freshness", () => {
   const status = buildStatusText({ goal, list: [] }, audit, now, undefined, extras, 80)!;
-  assert.match(status, /^glla: AUDIT RUNNING · activity 17s ago/);
+  assert.match(status, /^glla: AUDIT RUNNING · activity 10s ago/);
 });
 
 test("quiet, blocked, settlement and recovery do not claim no action is needed", () => {
@@ -66,7 +69,7 @@ test("starting audit distinguishes waiting for first activity from recent activi
 test("current tool keeps elapsed time and timeout budget in the compact card", () => {
   const progress: AuditDisplayProgress = { ...audit, phase: "tool_executing", lastActivityAt: now - 1000, currentTool: "bash", currentToolStartedAt: now - 2000, toolTimeoutMs: 1200000 };
   const text = buildWidgetLines({ goal, list: [] }, progress, now, undefined, 80, extras)!.join("\n");
-  assert.match(text, /tool: bash · 2s \/ 20m 00s budget/);
+  assert.match(text, /tool: 2s \/ 20m 00s budget · bash/);
   assert.doesNotMatch(text, /last tool: bash/);
   assert.doesNotMatch(text, /openrouter\/stealth/);
 });
@@ -77,9 +80,9 @@ test("Studio regression: a silent bounded tool retains its clock and explains th
   for (const width of [60, 80, 120]) {
     const lines = buildWidgetLines({ goal, list: [] }, progress, now, undefined, width, extras)!;
     const text = lines.join("\n");
-    assert.ok(lines.length <= 7);
+    assert.ok(lines.length <= 8);
     assert.match(text, /Waiting on bash/);
-    assert.match(text, /tool: bash · 2m 13s \/ 5m 00s budget/);
+    assert.match(text, /tool: 2m 13s \/ 5m 00s budget · bash/);
     assert.match(text, /No tool completion yet/);
     assert.doesNotMatch(text, /last tool: bash|last observed tool|No action needed/);
     const footer = buildStatusText({ goal, list: [] }, progress, now, undefined, extras, width)!;

@@ -181,10 +181,13 @@ test("real continuation payload growth is bounded after checkpoint projection", 
   // Chat/archive guidance parity: +23 ASCII bytes on the retained payload.
   // The change-first completion guidance adds a bounded, user-facing
   // explanation; refresh these exact bytes when that template changes.
+  // Continuation template growth since the last pin (interruption-
+  // classification and honesty-era guidance): +795 serialized bytes on
+  // the one retained payload (27670 → 28465).
   assert.deepEqual(bounded, [
-    { count: 5, messageCount: 4, serializedBytes: 27670, gllaMessageCount: 2, repeatedPayloads: 0, removedPayloads: 4 },
-    { count: 12, messageCount: 4, serializedBytes: 27670, gllaMessageCount: 2, repeatedPayloads: 0, removedPayloads: 11 },
-    { count: 25, messageCount: 4, serializedBytes: 27670, gllaMessageCount: 2, repeatedPayloads: 0, removedPayloads: 24 },
+    { count: 5, messageCount: 4, serializedBytes: 28465, gllaMessageCount: 2, repeatedPayloads: 0, removedPayloads: 4 },
+    { count: 12, messageCount: 4, serializedBytes: 28465, gllaMessageCount: 2, repeatedPayloads: 0, removedPayloads: 11 },
+    { count: 25, messageCount: 4, serializedBytes: 28465, gllaMessageCount: 2, repeatedPayloads: 0, removedPayloads: 24 },
   ]);
   // Serialized bytes consistent across counts (bounded by checkpoint + 1 payload)
   const b0 = bounded[0]!;
