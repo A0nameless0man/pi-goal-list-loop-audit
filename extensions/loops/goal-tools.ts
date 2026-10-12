@@ -2801,6 +2801,10 @@ function registerAgentTools(pi: any): void {
           }
         }
       }
+      if (p.kind === "decision" && !materialInterruption && !promotedCommand && !p.redirect) {
+        appendLedger(ctx.cwd, "interruption_classification_required", { goalId: state.goal.id });
+        return { content: [{ type: "text", text: "Not paused: classify this proposed human decision using interruption evidence. Continue reversible/mechanical work locally; pause only for supported missing input/permission, unauthorized irreversible action, or a confirmed-requirement conflict. No option or waiver was adopted." }], details: {} };
+      }
       // v0.38.69 (Antigravity port): mid-run interruption budget with
       // auto-default-and-log fallback. Antigravity's no-mid-run-questions
       // trick is structural — the run cannot block on a human — while
