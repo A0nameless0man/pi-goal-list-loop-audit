@@ -27,6 +27,7 @@ import {
 } from "../extensions/goal-recovery.js";
 import { replaceState, state } from "../extensions/goal-state.js";
 import { globalSettingsPath } from "../extensions/goal-settings.js";
+import { seedGoal } from "./harness/mock-pi.js";
 
 const HOUR_MS = 60 * 60_000;
 
@@ -116,7 +117,9 @@ test("background primary probe fires at reset, not on the generic cadence", () =
   const r = rig();
   try {
     const resetAt = new Date(Date.now() + 4 * HOUR_MS).toISOString();
+    state.goal = seedGoal({ id: "failover-owner", status: "active" });
     state.mainModelRecovery = {
+      owner: { kind: "goal", id: state.goal.id },
       primary: "provider/primary",
       active: "provider/first",
       attempted: ["provider/primary", "provider/first"],
@@ -137,7 +140,9 @@ test("no reset keeps the generic probe cadence", () => {
   const r = rig();
   try {
     const before = Date.now();
+    state.goal = seedGoal({ id: "failover-owner", status: "active" });
     state.mainModelRecovery = {
+      owner: { kind: "goal", id: state.goal.id },
       primary: "provider/primary",
       active: "provider/first",
       attempted: ["provider/primary", "provider/first"],
