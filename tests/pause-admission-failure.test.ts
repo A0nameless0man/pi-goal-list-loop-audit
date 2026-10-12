@@ -34,7 +34,7 @@ for (const admitted of [false, true]) test(`pause result reflects durable admiss
     activeGoalSurfaceCommand: (command: string) => `/goal ${command}`, goalNoun: () => 'Goal',
     notifyExternal: noop, markPauseAbort: noop, clearPauseAbort: noop, appendLedger: noop,
   });
-  const result = await execute('fixture', { kind: 'decision', reason: 'Need approval' }, undefined, undefined, ctx);
+  const result = await execute('fixture', { kind: 'decision', reason: 'Need approval', interruption: {reason: 'missing-permission', evidence: 'Required external operation lacks authorization'} }, undefined, undefined, ctx);
   if (!admitted) {
     assert.equal(result.isError, true);
     assert.equal(state.goal.status, 'active');
