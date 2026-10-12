@@ -1526,6 +1526,15 @@ function workflowLabel(status: UiStatus): string {
     : status.pauseSource === 'system' ? 'paused by GLLA' : 'paused (source unknown)';
 }
 export function buildUiStatusFooter(status: UiStatus, now: number, theme?: DisplayTheme, width?: number): string {
+  // v0.39.31 (incident Screenshot_20261012_110844/111046): a settling
+  // claim is settled — the verdict is durable, the archive is owed. The
+  // footer must name the state prominently instead of reading as
+  // "BLOCKED". The upstream fence in retryStoredCompletionAudit
+  // prevents re-audit; this branch makes the settled-but-parked state
+  // visible to the user.
+  if (status.workflow === 'settling') {
+    return `${paint(theme, 'dim', 'glla:')} ${paint(theme, 'accent', 'settled')} ${paint(theme, 'dim', `· ${status.mode === 'list' ? 'list item' : 'goal'} settling`)} ${paint(theme, 'dim', '· verdict applied · awaiting archive')}`;
+  }
   const tone = uiStatusTone(status);
   const action = status.actionability === 'user' ? 'needs your action'
     : status.actionability === 'inspect' ? 'inspect execution' : status.actionability === 'automatic' ? 'automatic' : 'no action';
