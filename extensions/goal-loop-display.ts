@@ -2251,7 +2251,7 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
   const background = shared?.execution === 'blocked' || shared?.execution === 'dormant' ? undefined : backgroundWidget(state, theme, width);
   const compact = extras?.compactAuditCard !== false;
   const rawInner = background
-    ?? (shared && !needsLegacyWidget(state, audit, compact)
+    ?? (shared && (shared.execution === 'blocked' || shared.execution === 'dormant' || !needsLegacyWidget(state, audit, compact))
       ? buildUiStatusCard(state, shared, now, theme, width, compact, extras, audit)
       : buildWidgetLinesInner(state, audit, now, theme, width, extras));
   const view = stateWorkView(state, observedWorkActivity(extras, now));

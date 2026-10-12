@@ -87,7 +87,7 @@ test("pause_goal tool: structured kind/options/recommended/resumeAt persist to t
   assert.match(SRC, /MAX_AGENT_WAIT_MS = 60 \* 60 \* 1000/);
   assert.match(SRC, /pause_wait_clamped/);
   // Resume clears the new fields alongside the old ones.
-  assert.match(CMDS, /pauseKind: undefined, pauseOptions: undefined, pauseRecommended: undefined, pauseResumeAt: undefined/); // decomposition step 2: cmdResume moved
+  assert.match(CMDS, /pauseKind: undefined, pauseOptions: undefined, pauseRecommended: undefined, pauseContractAmendment: undefined, pauseResumeAt: undefined/); // decomposition step 2: cmdResume moved
   // The extension's own pauses are classified at the source.
   const pairs: Array<[string, string]> = [
     ["pauseReason: `send-retry storm", "error"],
@@ -111,12 +111,10 @@ test("pause_goal tool: structured kind/options/recommended/resumeAt persist to t
 });
 
 test("pause_goal description: teaches the real command surface + no-id vocabulary (v0.28.24)", () => {
-  // v0.38.97: the window grows with the redirect sentence (name→parameters
-  // is now ~1.6k chars); the shape guard stands.
-  // v0.39.30: the accept-suggestion sentence grows it again; widen to 2.2k.
-  const m = SRC.match(/name: "pause_goal",[\s\S]{0,2200}?parameters:/);
+  // Extract the registration's string literal, independent of description length.
+  const m = SRC.match(/name: "pause_goal",\s*label: "Pause goal",\s*description: ("(?:[^"\\]|\\.)*"),\s*parameters: Type\.Object\(/);
   assert.ok(m, "pause_goal registration found");
-  const desc = m![0];
+  const desc = JSON.parse(m![1]!) as string;
   assert.match(desc, /\/list remove N/, "enumerates the real /list command");
   assert.match(desc, /NO \/goal drop|no \/goal drop/i, "kills the hallucinated command");
   assert.match(desc, /no command takes a goal id|NO command takes a goal id/i);
