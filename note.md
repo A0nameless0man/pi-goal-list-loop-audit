@@ -25,5 +25,7 @@ i needed clearer idea what to do
 
 we can have suggested resolution like we can has a question here with the suggestion
 
+also could imply other issues
+
 # Testing
 
