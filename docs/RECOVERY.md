@@ -139,7 +139,7 @@ different provider's quota to solve a five-second problem.
 - A successful **rotation** resets the budget for the new model so the
   backup earns its own retries from zero and a fresh per-model phase clock.
   The per-model `modelFailureSteps` counter (see
-  [audit/MODEL-CADENCE-2026-10-11.md](../audit/MODEL-CADENCE-2026-10-11.md))
+  [audit/MODEL-CADENCE-2026-10-11.md](https://github.com/DraconDev/pi-goal-list-loop-audit/blob/main/audit/MODEL-CADENCE-2026-10-11.md))
   tracks THIS model's own failures — a new backup never inherits the
   primary's rung, and a successful backup session that later fails again
   starts a fresh phase with eager retries. The same-model phase deadline
