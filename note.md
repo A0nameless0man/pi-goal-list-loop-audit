@@ -15,7 +15,7 @@ irrespective we need to update the ui to see actual progress for hte audit
 
 ## auditor dead yet waitied one, or least seeming dead
 /home/dracon/Pictures/Screenshots/Screenshot_20261012_110844.png
-
+/home/dracon/Pictures/Screenshots/Screenshot_20261012_111046.png
 
 
 # Testing
