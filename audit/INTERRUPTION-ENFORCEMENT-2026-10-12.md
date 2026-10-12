@@ -26,4 +26,9 @@ Typed evidence is a caller assertion, not a natural-language proof of consent. T
 
 `tests/revision-bound-audit.test.ts` now proves fresh revision audit without a user verify detour, disapproval overriding old approval, repeated claims single-dispatch, and rejection of a concurrent-revision stale approval. Optional manual verify still works. Legacy tests were strengthened/updated to preserve admission failure atomicity and explicit hold semantics, not bypassed.
 
-Focused gates cover interruption admission/policy, budget, run-to-done, revision audits, suggestion consent, failed pause persistence, background waits and late owner-fenced callbacks. Final commands/results are recorded below after the final gate. Full aggregate suite is not claimed passing; the earlier known unrelated widget failures remain in the [follow-up register](FOLLOW-UP-REGISTER-2026-10-12.md).
+Focused gates cover interruption admission/policy, budget, run-to-done, revision audits, suggestion consent, failed pause persistence, background waits and late owner-fenced callbacks. Final commands/results:
+
+- `timeout 150 npm test -- tests/interruption-admission.test.ts tests/interruption-policy.test.ts tests/decision-budget.test.ts tests/run-to-done.test.ts tests/revision-bound-audit.test.ts tests/suggestion-acceptance.test.ts tests/pause-admission-failure.test.ts tests/background-wait-runtime.test.ts tests/recovery-owner-fences.test.ts`: 127 pass, zero failures (`/tmp/glla-interruption-runtime.log`).
+- `timeout 120 npm run check`: `EXIT_CODE=0` (`/tmp/glla-interruption-enforcement-types.log`).
+- Runtime inventory regenerated; `timeout 30 npm run check:inventory`: `EXIT_CODE=0` (`/tmp/glla-interruption-enforcement-inventory.log`).
+- `git diff --check`: exit 0. Full aggregate suite is not claimed passing; the earlier known unrelated widget failures remain in the [follow-up register](FOLLOW-UP-REGISTER-2026-10-12.md).
