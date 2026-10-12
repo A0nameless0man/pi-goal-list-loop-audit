@@ -4372,13 +4372,13 @@ export function extractVerificationContract(raw: string): { objective: string; v
   // truncate the objective before the actual Done when marker. `Verify:`
   // remains supported as the explicit short marker form.
   if (!verificationContract) {
-    const m = raw.match(/^(.*?)(?:\.|;)?\s+(?:(?:done when|verified when|verification)\b[^:]*:|verify\s*:)\s*(.+)$/is);
+    const m = raw.match(/^(.*?)(?:\.|;)?\s+(?:(?:done when|verified when)\b[^:]{0,60}:|verification(?:\s+contract(?:\s*\(auditor checks each line\))?)?\s*:|verify\s*:)\s*(.+)$/is);
     if (m) {
       objective = (m[1] ?? "").trim().replace(/[.;]\s*$/, "");
       verificationContract = (m[2] ?? "").trim();
     } else if (!explicitClear) {
       // Trailing bare marker mid-line: "Do x. Done when:" — explicit clear.
-      const empty = raw.match(/^(.*?)\s+(?:done when|verified when|verify|verification)\b[^:]*:\s*$/is);
+      const empty = raw.match(/^(.*?)\s+(?:(?:done when|verified when)\b[^:]{0,60}:|verification(?:\s+contract(?:\s*\(auditor checks each line\))?)?\s*:|verify\s*:)\s*$/is);
       if (empty) {
         objective = (empty[1] ?? "").trim().replace(/[.;]\s*$/, "");
         explicitClear = true;
