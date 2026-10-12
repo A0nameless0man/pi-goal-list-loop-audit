@@ -321,6 +321,24 @@ test("complete_goal audits the current revision directly without borrowing old a
   } finally { delete process.env.GLLA_PI_BINARY; }
 });
 
+test("current-revision automatic audit remains single-dispatch under repeated claims", async () => {
+  const cwd=tmpCwd();seedRevisionedGoal(cwd,2,1,true);
+  process.env.GLLA_PI_BINARY=writeDelayedApprovedAuditor(cwd);
+  try {
+    const pi=new MockPi();activate(pi.api);__testOnlyRegisterAgentTools(pi.api);rememberCtxFor(cwd);
+    await pi.runTool("complete_goal",{completionSummary:"Claim",verificationSummary:"Evidence"},ownerCtx(cwd));
+    await waitUntil(()=>fs.existsSync(path.join(cwd,"auditor-ready")));
+    const attempt=readState(cwd).goal?.pendingCompletion?.attemptId;
+    await pi.runTool("complete_goal",{completionSummary:"Claim again",verificationSummary:"Evidence"},ownerCtx(cwd));
+    assert.equal(readState(cwd).goal?.pendingCompletion?.attemptId,attempt);
+    assert.equal(readLedger(cwd).filter(l=>l.type==="audit_started").length,1);
+    fs.writeFileSync(path.join(cwd,"auditor-release"),"release");
+    await waitUntil(()=>!readState(cwd).goal?.pendingCompletion);
+  } finally {
+    fs.writeFileSync(path.join(cwd,"auditor-release"),"release");delete process.env.GLLA_PI_BINARY;
+  }
+});
+
 test("direct complete_goal refuses an approval when the contract revision changes during the detached audit", async () => {
   const cwd = tmpCwd();
   seedRevisionedGoal(cwd, 1, undefined, false);
