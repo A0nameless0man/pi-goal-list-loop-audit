@@ -72,10 +72,10 @@ test("extractSuggestedCommand: screenshot-shaped tweak suggestion extracts the e
   assert.equal(cmd, '/goal tweak "Restore the original selective automatic Git LFS implementation."');
 });
 
-test("extractSuggestedCommand: bare resume/stop commands extract cleanly", () => {
-  assert.equal(extractSuggestedCommand("/goal resume to continue"), "/goal resume");
+test("extractSuggestedCommand: distinct non-decline commands extract cleanly", () => {
   assert.equal(extractSuggestedCommand("then run /loop stop; fix first"), "/loop stop");
   assert.equal(extractSuggestedCommand("inspect /list show for details"), "/list show");
+  assert.equal(extractSuggestedCommand("Run /list next after fixing access."), "/list next");
 });
 
 test("extractSuggestedCommand: vague prose, bare verbs, and quoteless tweak yield nothing", () => {
@@ -83,13 +83,26 @@ test("extractSuggestedCommand: vague prose, bare verbs, and quoteless tweak yiel
   assert.equal(extractSuggestedCommand(undefined), undefined);
   assert.equal(extractSuggestedCommand("run /goal to continue"), undefined);
   assert.equal(extractSuggestedCommand("run /goal tweak the objective"), undefined);
-  assert.equal(extractSuggestedCommand("maybe /goal resume or /goal cancel later"), "/goal resume");
+});
+
+test("extractSuggestedCommand: resume/cancel-class suggestions stay plain pauses (no duplicate choice)", () => {
+  // Accept would restate the built-in decline options — nothing distinct to accept.
+  assert.equal(extractSuggestedCommand("/goal resume to continue"), undefined);
+  assert.equal(extractSuggestedCommand("Run /list resume after fixing access."), undefined);
+  assert.equal(extractSuggestedCommand("run /goal cancel now"), undefined);
+  assert.equal(suggestionAcceptancePromotion("/goal resume to continue", "goal"), undefined);
+});
+
+test("extractSuggestedCommand: ambiguous multi-command lines are never coin-flipped", () => {
+  assert.equal(extractSuggestedCommand("maybe /goal resume or /goal cancel later"), undefined);
+  assert.equal(extractSuggestedCommand('Run /goal tweak "A" or /goal cancel'), undefined);
+  assert.equal(suggestionAcceptancePromotion("maybe /goal resume or /goal cancel later", "goal"), undefined);
 });
 
 test("extractSuggestedCommand: junk on line 1 does not hide a valid command on line 2", () => {
   assert.equal(
-    extractSuggestedCommand("run /goal tweak the objective\nRun /goal resume to continue"),
-    "/goal resume",
+    extractSuggestedCommand("run /goal tweak the objective\nRun /list next to proceed"),
+    "/list next",
   );
 });
 
@@ -102,7 +115,9 @@ test("suggestionAcceptancePromotion: accept-first options use policy-correct ver
   assert.match(goal.options[1]!, /\/goal resume/);
   assert.match(goal.options[2]!, /\/goal cancel/);
   assert.equal(goal.recommended, 1);
-  const list = suggestionAcceptancePromotion("/list resume to continue", "list")!;
+  assert.equal(goal.unattendedDefault, 2, "unattended auto-default declines, never accepts");
+  const list = suggestionAcceptancePromotion("Run /list next to proceed", "list")!;
+  assert.match(list.options[0]!, /^Accept and run \/list next\s*$/);
   assert.match(list.options[1]!, /\/list resume/);
   assert.equal(suggestionAcceptancePromotion("no command here", "goal"), undefined);
 });
@@ -140,12 +155,12 @@ test("pause_goal: list policy promotes with list verbs", async () => {
   try {
     await pi.runTool("pause_goal", {
       reason: "Item cannot proceed without a scope call.",
-      suggestedAction: "Run /list resume after fixing access.",
+      suggestedAction: "Run /list next after fixing access.",
       kind: "error",
     }, ctx);
     const g = readState(cwd).goal as GoalView;
     assert.equal(g.pauseKind, "decision");
-    assert.match(g.pauseOptions![0]!, /^Accept and run \/list resume\s*$/);
+    assert.match(g.pauseOptions![0]!, /^Accept and run \/list next\s*$/);
     assert.match(g.pauseOptions![1]!, /\/list resume/);
   } finally {
     await pi.fire("session_shutdown", { reason: "quit" }, ctx);
@@ -183,10 +198,42 @@ test("pause_goal: vague suggestion stays a plain pause; explicit decisions pass 
   }
 });
 
-test("pause_goal: promoted suggestion honors the decision budget instead of asking again", async () => {
+test("pause_goal: unattended promotion declines the suggestion instead of auto-running it", async () => {
   const cwd = tmpCwd();
   setSettings({ decisionPauseBudget: 0 });
   const { pi, ctx } = await activeBoot(cwd);
+  try {
+    const res = await pi.runTool("pause_goal", {
+      reason: "Blocked with a concrete fix available.",
+      suggestedAction: 'Run /goal tweak "Restore the implementation objective." This changes scope explicitly.',
+      kind: "blocked",
+    }, ctx) as { content: Array<{ text: string }> };
+    const g = readState(cwd).goal as GoalView & { autoDefaultLog?: Array<{ chosen: string; promotionDeclined?: string }> };
+    assert.equal(g.status, "active", "over-budget promotion auto-defaults instead of pausing");
+    assert.match(res.content[0]!.text, /Continue without it/, "the run proceeds without the suggestion");
+    assert.match(res.content[0]!.text, /was NOT run \(no user consent while unattended\)/, "consent refusal is explicit");
+    assert.match(res.content[0]!.text, /Left out/i);
+    assert.ok(!(res.content[0]!.text.includes("proceeding with the recommended default, option 1")), "Accept is not adopted");
+    const entry = g.autoDefaultLog?.at(-1);
+    assert.match(entry?.chosen ?? "", /Continue without it/, "the log records the decline");
+    assert.match(entry?.promotionDeclined ?? "", /\/goal tweak/, "the declined command stays recoverable");
+    assert.ok(ledgerTypes(cwd).includes("decision_budget_auto_default"), "the auto-default is ledgered");
+  } finally {
+    await pi.fire("session_shutdown", { reason: "quit" }, ctx);
+  }
+});
+
+test("pause_goal: run-to-done never auto-runs a suggested scope change", async () => {
+  const cwd = tmpCwd();
+  setSettings({});
+  __testOnlyResetOwnerSession();
+  __testOnlyResetStaleFlag();
+  seedState(cwd, { goal: seedGoal({ status: "active", policy: "goal", runToDone: true }) });
+  const pi = new MockPi();
+  activate(pi.api);
+  const ctx = makeMockCtx(cwd, { sessionManager: { name: `suggestion-rtd-${Date.now()}` } });
+  await pi.fire("session_start", { reason: "startup" }, ctx);
+  await tick(120);
   try {
     const res = await pi.runTool("pause_goal", {
       reason: "Blocked with a concrete fix available.",
@@ -194,9 +241,60 @@ test("pause_goal: promoted suggestion honors the decision budget instead of aski
       kind: "blocked",
     }, ctx) as { content: Array<{ text: string }> };
     const g = readState(cwd).goal as GoalView;
-    assert.equal(g.status, "active", "over-budget promotion auto-defaults instead of pausing");
-    assert.match(res.content[0]!.text, /Accept and run \/goal tweak/);
-    assert.match(res.content[0]!.text, /Left out/i);
+    assert.equal(g.status, "active", "run-to-done keeps running");
+    assert.match(res.content[0]!.text, /Continue without it/);
+    assert.match(res.content[0]!.text, /was NOT run/);
+  } finally {
+    await pi.fire("session_shutdown", { reason: "quit" }, ctx);
+  }
+});
+
+test("pause_goal: a wait carrying a suggestion stays a wait — no question asked", async () => {
+  const cwd = tmpCwd();
+  setSettings({});
+  const { pi, ctx } = await activeBoot(cwd);
+  try {
+    await pi.runTool("pause_goal", {
+      reason: "Waiting for the window; a tweak could also apply.",
+      suggestedAction: 'Run /goal tweak "Restore the implementation objective."',
+      kind: "wait",
+      resumeAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+    }, ctx);
+    const g = readState(cwd).goal as GoalView;
+    assert.equal(g.pauseKind, "wait", "explicit waits are never promoted");
+    assert.equal(g.pauseOptions, undefined, "no decision card, no question");
+    assert.equal(g.midRunDecisionCount ?? 0, 0, "no budget spent");
+  } finally {
+    await pi.fire("session_shutdown", { reason: "quit" }, ctx);
+  }
+});
+
+test("pause_goal: an explicit user hold (/glla pause) survives a command-carrying pause unchanged", async () => {
+  const cwd = tmpCwd();
+  setSettings({});
+  // Seed the supervisor freeze BEFORE boot so it is in durable + memory state:
+  // /glla pause freezes automation around an untouched active goal, released
+  // only by an explicit /glla resume — a pause must never clear it.
+  __testOnlyResetOwnerSession();
+  __testOnlyResetStaleFlag();
+  seedState(cwd, {
+    goal: seedGoal({ status: "active", policy: "goal" }),
+    supervisorPausedAt: Date.now(),
+  } as Parameters<typeof seedState>[1]);
+  const pi = new MockPi();
+  activate(pi.api);
+  const ctx = makeMockCtx(cwd, { sessionManager: { name: `suggestion-hold-${Date.now()}` } });
+  await pi.fire("session_start", { reason: "startup" }, ctx);
+  await tick(120);
+  try {
+    await pi.runTool("pause_goal", {
+      reason: "Scope repair is still blocked.",
+      suggestedAction: 'Run /goal tweak "Restore the implementation objective."',
+      kind: "blocked",
+    }, ctx);
+    const after = readState(cwd) as unknown as { supervisorPausedAt?: number; goal: GoalView };
+    assert.equal(typeof after.supervisorPausedAt, "number", "only an explicit /glla resume clears the user hold — never a pause");
+    assert.equal(after.goal.pauseKind, "decision", "the suggestion path still works under a hold");
   } finally {
     await pi.fire("session_shutdown", { reason: "quit" }, ctx);
   }

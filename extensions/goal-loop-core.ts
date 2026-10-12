@@ -134,12 +134,18 @@ export function workCommand(mode: Policy | "loop" | undefined, command: string):
  * Without quotes only verb + first token survive, with trailing sentence
  * punctuation stripped. Conservative by design: a bare verb, a quoteless
  * `tweak` (its `<new text>` arg is mandatory per the pause vocabulary),
- * or prose with no command yields undefined — never a half-command. */
+ * resume/cancel-class commands (Accept would duplicate the built-in
+ * Continue-without-it / Cancel decline options — no distinct action),
+ * multi-command lines (ambiguous "A or B" alternatives), or prose with
+ * no command yields undefined — never a half-command or a coin flip. */
 export function extractSuggestedCommand(suggestedAction: string | undefined): string | undefined {
   if (!suggestedAction) return undefined;
   for (const raw of suggestedAction.split("\n")) {
     const at = raw.search(/\/(?:goal|list|loop|glla)\b/);
     if (at < 0) continue;
+    // v0.39.30 challenger: two command shapes on one line is an
+    // either/or the extractor must not resolve — skip the line.
+    if ((raw.match(/\/(?:goal|list|loop|glla)\b/g) ?? []).length > 1) continue;
     const rest = raw.slice(at);
     const verb = rest.match(/^(\/(?:goal|list|loop|glla))\b/)?.[1];
     if (!verb) continue;
@@ -165,16 +171,26 @@ export function extractSuggestedCommand(suggestedAction: string | undefined): st
     const word = clean.toLowerCase();
     // `tweak` without its quoted replacement text is not runnable.
     if (word === "tweak") continue;
+    // v0.39.30 challenger: resume/cancel suggestions offer nothing the
+    // decline options don't already say ("Continue without it (resume)" /
+    // "Cancel") — promoting them renders a near-duplicate choice, so a
+    // resume note stays a plain pause with the usual resume guidance.
+    if (word === "resume" || word === "cancel") continue;
     return `${verb} ${clean}`;
   }
   return undefined;
 }
 
-/** Accept-first decision shape built from an extracted suggestion. */
+/** Accept-first decision shape built from an extracted suggestion.
+ * `unattendedDefault` is the 1-based option the budget/runToDone
+ * auto-default adopts when no user is present to consent: always the
+ * decline-and-continue path, never Accept — running a suggested command
+ * with zero consent is the scope-violation the screenshot warns about. */
 export interface SuggestionPromotion {
   command: string;
   options: string[];
   recommended: number;
+  unattendedDefault: number;
 }
 
 /** Build the Accept-first option set for a command-carrying suggestion:
@@ -191,6 +207,7 @@ export function suggestionAcceptancePromotion(suggestedAction: string | undefine
       `Cancel (${workCommand(policy, "cancel")})`,
     ],
     recommended: 1,
+    unattendedDefault: 2,
   };
 }
 

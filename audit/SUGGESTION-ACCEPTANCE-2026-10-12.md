@@ -47,13 +47,24 @@ contains a concrete `/goal`, `/list`, `/loop`, or `/glla` command:
    under a `decisionPauseBudget` instead of asking every turn.
 4. The exact command stays in `pauseSuggestedAction`, so the card keeps the
    full text even where options truncate.
+5. Unattended auto-default NEVER adopts Accept: under an exhausted budget or
+   `runToDone`, a promoted decision proceeds with `Continue without it` and
+   logs the declined command (`promotionDeclined`) — the screenshot's own
+   suggestion warns it "changes scope explicitly", and scope changes need a
+   present user. The agent is told to re-suggest when the user is present.
 
 Untouched: quota-rerouted waits, explicit waits, agent-authored decisions,
-and vague prose with no extractable command (stays a plain pause).
+vague prose with no extractable command (stays a plain pause), resume/cancel
+suggestions (Accept would duplicate the built-in decline options — a resume
+note stays a plain pause with the usual resume guidance), and ambiguous
+multi-command lines ("A or B" is never coin-flipped).
 `extractSuggestedCommand` is conservative — a bare verb, a quoteless `tweak`
 (its replacement text is mandatory), or ambiguous prose yields nothing rather
 than a half-command. The extraction is quote-aware: trailing explanation
 after the closing quote is not glued onto the command.
+
+Explicit user holds (`/glla pause` → `supervisorPausedAt`) survive a
+command-carrying pause untouched — only an explicit resume clears them.
 
 ## Question discipline
 
@@ -67,11 +78,13 @@ backstop, and promoted suggestions count toward it.
 
 ## Verification
 
-- `tests/suggestion-acceptance.test.ts` (8 tests): pure extraction (including
+- `tests/suggestion-acceptance.test.ts` (14 tests): pure extraction (including
   the screenshot-shaped tweak), policy-correct promotion shape, tool-level
   blocked→decision promotion for goal and list policies, vague prose
-  untouched, explicit genuine-blocker decisions untouched, and budget
-  auto-default of a promoted suggestion.
+  untouched, explicit genuine-blocker decisions untouched, resume/cancel and
+  ambiguous prose rejected, waits never promoted, unattended budget and
+  run-to-done auto-defaults declining (never auto-running) a scope-explicit
+  tweak, and `/glla pause` hold survival.
 - Existing `tests/decision-budget.test.ts` and pause suites guard the budget
   and admission behavior the promotion rides on.
 - Interaction contract for the user: a paused card whose first option reads

@@ -2699,6 +2699,11 @@ function registerAgentTools(pi: any): void {
       // pause. The promotion counts against the mid-run budget below, so
       // repeated suggestions auto-default under a budget instead of
       // interrogating the user every turn.
+      // v0.39.30 challenger: an unattended auto-default must never adopt
+      // Accept — track the promotion so the budget path below declines
+      // instead (promotionUnattendedDefault), preserving consent.
+      let promotedCommand: string | undefined;
+      let promotedUnattendedDefault = 0;
       if ((p.kind === undefined || p.kind === "blocked" || p.kind === "error")
         && (!p.options || p.options.length === 0)
         && (effectiveKind === undefined || effectiveKind === "blocked" || effectiveKind === "error")) {
@@ -2708,6 +2713,8 @@ function registerAgentTools(pi: any): void {
           p.options = promotion.options;
           p.recommended = promotion.recommended;
           effectiveKind = "decision";
+          promotedCommand = promotion.command;
+          promotedUnattendedDefault = promotion.unattendedDefault;
           appendLedger(ctx.cwd, "pause_suggestion_promoted_to_decision", {
             goalId: state.goal.id,
             command: promotion.command,
@@ -2733,15 +2740,25 @@ function registerAgentTools(pi: any): void {
         // path (counter + autoDefaultLog), distinct ledger + copy.
         const runToDone = state.goal?.runToDone === true;
         if ((budget !== undefined && decisionCount > budget) || runToDone) {
-          const recIdx = p.recommended && p.recommended >= 1 && p.recommended <= p.options.length
-            ? Math.floor(p.recommended) - 1
-            : 0;
+          // v0.39.30 challenger: a promoted suggestion auto-defaults to
+          // the decline-and-continue option, never Accept — no user is
+          // present to consent, and the screenshot's own suggestion warns
+          // it "changes scope explicitly". The declined command stays in
+          // the log so a present user can still accept it later.
+          const unattendedIdx = promotedCommand && promotedUnattendedDefault >= 1 && promotedUnattendedDefault <= p.options.length
+            ? promotedUnattendedDefault - 1
+            : -1;
+          const recIdx = unattendedIdx >= 0 ? unattendedIdx
+            : p.recommended && p.recommended >= 1 && p.recommended <= p.options.length
+              ? Math.floor(p.recommended) - 1
+              : 0;
           const chosen = p.options[recIdx]!;
           const entry = {
             at: new Date().toISOString(),
             reason: (p.reason ?? "").slice(0, 300),
             chosen: chosen.slice(0, 300),
             options: p.options.map((o) => o.slice(0, 200)).slice(0, 10),
+            ...(promotedCommand ? { promotionDeclined: promotedCommand.slice(0, 300) } : {}),
           };
           updateGoal({
             midRunDecisionCount: decisionCount,
@@ -2753,11 +2770,12 @@ function registerAgentTools(pi: any): void {
               decisionCount,
               chosen,
               reason: p.reason,
+              ...(promotedCommand ? { promotionDeclined: promotedCommand } : {}),
             });
             return {
               content: [{
                 type: "text",
-                text: `Run-to-done decision #${decisionCount}: NOT paused — proceeding with the recommended default, option ${recIdx + 1}: "${chosen}". This assumption is logged on the goal (autoDefaultLog) and ledgered as run_to_done_auto_default. Keep working — record it in your completion summary's Left out: "assumed ${chosen} for: ${(p.reason ?? "").slice(0, 160)}".`,
+                text: `Run-to-done decision #${decisionCount}: NOT paused — proceeding with the recommended default, option ${recIdx + 1}: "${chosen}".${promotedCommand ? ` The suggested command "${promotedCommand.slice(0, 160)}" was NOT run (no user consent while unattended) — re-suggest it via a decision pause when the user is present.` : ""} This assumption is logged on the goal (autoDefaultLog) and ledgered as run_to_done_auto_default. Keep working — record it in your completion summary's Left out: "assumed ${chosen} for: ${(p.reason ?? "").slice(0, 160)}".`,
               }],
               details: {},
             };
@@ -2768,11 +2786,12 @@ function registerAgentTools(pi: any): void {
             decisionCount,
             chosen,
             reason: p.reason,
+            ...(promotedCommand ? { promotionDeclined: promotedCommand } : {}),
           });
           return {
             content: [{
               type: "text",
-              text: `Decision budget exhausted (budget ${budget}, this is mid-run decision #${decisionCount}): NOT paused — proceeding with the recommended default, option ${recIdx + 1}: "${chosen}". This assumption is logged on the goal (autoDefaultLog) and ledgered as decision_budget_auto_default. Keep working — record it in your completion summary's Left out: "assumed ${chosen} for: ${(p.reason ?? "").slice(0, 160)}".`,
+              text: `Decision budget exhausted (budget ${budget}, this is mid-run decision #${decisionCount}): NOT paused — proceeding with the recommended default, option ${recIdx + 1}: "${chosen}".${promotedCommand ? ` The suggested command "${promotedCommand.slice(0, 160)}" was NOT run (no user consent while unattended) — re-suggest it via a decision pause when the user is present.` : ""} This assumption is logged on the goal (autoDefaultLog) and ledgered as decision_budget_auto_default. Keep working — record it in your completion summary's Left out: "assumed ${chosen} for: ${(p.reason ?? "").slice(0, 160)}".`,
             }],
             details: {},
           };
