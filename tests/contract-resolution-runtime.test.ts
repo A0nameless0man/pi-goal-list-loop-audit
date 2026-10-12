@@ -2,7 +2,7 @@ import {test,afterEach} from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import activate,{__testOnlyResetProcessState} from '../extensions/loops/goal.js';
-import {readState,buildTaskList,extractContractAmendment,contractAmendmentPromotion,extractSuggestedCommand,goalStateTransactionPath} from '../extensions/goal-loop-core.js';
+import {readState,buildTaskList,extractContractAmendment,contractAmendmentPromotion,extractSuggestedCommand,goalStateTransactionPath,goalMdPath,readGoalStateTransaction} from '../extensions/goal-loop-core.js';
 import {MockPi,makeMockCtx,seedGoal,seedState,tmpCwd,tick} from './harness/mock-pi.js';
 const contract='1. Full suite exits 0\n2. `bun test src/example.test.ts -t "specific test"` exits 0\n3. Human review is required';
 const action='Proposed amendment to item 2: replace its command with `bun test src/example.test.ts`.';
@@ -49,6 +49,27 @@ test('failed amendment transaction reports no acceptance and retains the origina
   assert.ok(f.ctx.ui.notifies.some(n=>n.message.includes('Amendment not saved')));assert.ok(!f.ctx.ui.notifies.some(n=>n.message.includes('Contract amendment persisted')));
  } finally {fs.rmdirSync(txn);await f.pi.fire('session_shutdown',{reason:'quit'},f.ctx);}
 });
+for(const failedProjection of ['markdown','journal'] as const) test(`late ${failedProjection} failure reports durable commit, stays held and recovers revised criteria`,async()=>{
+ const f=await fixture();await propose(f);const before=readState(f.cwd).goal!;
+ const target=failedProjection==='markdown'?goalMdPath(f.cwd,before.id):`${f.cwd}/.pi-glla/active.jsonl`;
+ const saved=fs.readFileSync(target);fs.unlinkSync(target);fs.mkdirSync(target);
+ try {
+  f.ctx.ui.selectImpl=async(_t,options)=>options[0];await f.pi.command('goal','decide',f.ctx);
+  const durable=readGoalStateTransaction(f.cwd)?.state.goal!;
+  assert.equal(durable.status,'paused');assert.equal(durable.revision,4);assert.notEqual(durable.verificationContract,contract);
+  assert.equal(durable.pauseContractAmendment,undefined);assert.equal(durable.pauseOptions,undefined);assert.deepEqual(durable.taskList,before.taskList);
+  assert.ok(f.ctx.ui.notifies.some(n=>n.message.includes('Amendment committed to the durable recovery snapshot')));
+  assert.ok(!f.ctx.ui.notifies.some(n=>n.message.includes('nothing was accepted')||n.message.startsWith('Contract amendment persisted')));
+ } finally {fs.rmdirSync(target);fs.writeFileSync(target,saved);}
+ __testOnlyResetProcessState();const pi=new MockPi();activate(pi.api);const ctx=makeMockCtx(f.cwd);await pi.fire('session_start',{reason:'startup'},ctx);await tick(50);
+ const recovered=readState(f.cwd).goal!;assert.equal(recovered.status,'paused');assert.equal(recovered.revision,4);assert.notEqual(recovered.verificationContract,contract);assert.deepEqual(recovered.taskList,before.taskList);
+ assert.equal(recovered.pauseContractAmendment,undefined);await pi.fire('session_shutdown',{reason:'quit'},ctx);
+});
+test('goal schema is executable JSON',()=>{
+ const schema=JSON.parse(fs.readFileSync('schemas/goal.schema.json','utf8'));
+ assert.ok(schema.properties.pauseContractAmendment);assert.ok(schema.properties.midRunDecisionCount);
+});
+
 test('stale proposal after an independently confirmed tweak reports no amendment',async()=>{
  const f=await fixture();await propose(f);const before=readState(f.cwd).goal!;
  f.ctx.ui.confirmImpl=async()=>true;
@@ -89,6 +110,13 @@ test('missing item or unchanged proposal cannot advertise acceptance',()=>{
  assert.equal(contractAmendmentPromotion('Amend item 1 to `node --version`','1. x\n1. y','goal'),undefined);
  assert.equal(contractAmendmentPromotion('Amend item 1 to `node --version`','1. `node --version` exits 0','goal'),undefined);
 });
+test('unbounded command replacement never drops undelimited or multiple-command predicates',()=>{
+ for(const original of ['1. bun test exits 0 with zero failures','1. `bun test` and `node check.mjs` both exit 0']) {
+  assert.equal(extractContractAmendment('Amend item 1 to `node --version`',original),undefined);
+  assert.equal(contractAmendmentPromotion('Amend item 1 to `node --version`',original,'goal'),undefined);
+ }
+});
+
 test('quote correction is separate from changed test coverage and preserves its predicate',()=>{
  const syntax=extractContractAmendment('Amend item 1 to `node script.mjs`','1. `node "script.mjs"` exits 0');
  assert.equal(syntax?.changeKind,'syntax-correction');assert.equal(syntax?.proposedContract,'1. `node script.mjs` exits 0');
