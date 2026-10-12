@@ -50,14 +50,14 @@ for(const reason of ["missing-permission","missing-input","contract-conflict","u
   test(`list ${reason} (${kind}) without a suggestion stays held, never dropped or advanced`,async()=>{
    const queued=[{id:"next-item",objective:"Next authorized item"}];
    const {cwd,pi,ctx}=await boot({policy:"list"},queued);
-   const before=readState(cwd).goal!;const sent=pi.sent.length;
+   const before=readState(cwd).goal!;const dispatches=pi.sent.filter(s=>(s.options as {triggerTurn?:boolean})?.triggerTurn).length;
    await pi.runTool("pause_goal",{reason:"A supported material exception requires resolution",kind,
      ...(kind==="wait"?{resumeAt:new Date(Date.now()+1000).toISOString()}:{}),
      interruption:{reason,evidence:"Confirmed requirement lacks the necessary external input/authorization or conflicts with supplied facts"}},ctx);
    const after=readState(cwd);
    assert.equal(after.goal?.id,before.id);assert.equal(after.goal?.status,"paused");assert.equal(after.goal?.pauseKind,"blocked");
    assert.equal(after.goal?.pauseResumeAt,undefined);assert.equal(after.goal?.verificationContract,before.verificationContract);
-   assert.deepEqual(after.list,queued);assert.equal(pi.sent.length,sent,"no queue dispatch");
+   assert.deepEqual(after.list,queued);assert.equal(pi.sent.filter(s=>(s.options as {triggerTurn?:boolean})?.triggerTurn).length,dispatches,"pause card does not dispatch queue work");
    assert.equal(fs.existsSync(`${cwd}/.pi-glla/archive/${before.id}.md`),false);
    const ledger=fs.readFileSync(`${cwd}/.pi-glla/active.jsonl`,"utf8");
    assert.ok(!ledger.includes('"type":"list_item_auto_dropped"'));assert.ok(!ledger.includes('"type":"list_item_impossible"'));
@@ -65,7 +65,7 @@ for(const reason of ["missing-permission","missing-input","contract-conflict","u
    __testOnlyResetProcessState();const reloadedPi=new MockPi();activate(reloadedPi.api);const reloadedCtx=makeMockCtx(cwd);
    await reloadedPi.fire("session_start",{reason:"startup"},reloadedCtx);await tick(50);
    assert.equal(readState(cwd).goal?.id,before.id);assert.equal(readState(cwd).goal?.status,"paused");assert.deepEqual(readState(cwd).list,queued);
-   assert.equal(reloadedPi.sent.length,0,"restart does not advance held list work");
+   assert.equal(reloadedPi.sent.filter(s=>(s.options as {triggerTurn?:boolean})?.triggerTurn).length,0,"restart does not advance held list work");
    await reloadedPi.fire("session_shutdown",{reason:"quit"},reloadedCtx);
   });
  }
