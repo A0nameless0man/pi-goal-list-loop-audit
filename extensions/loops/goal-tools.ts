@@ -2586,6 +2586,12 @@ function registerAgentTools(pi: any): void {
         const disposition = classifyInterruption({ phase: "execution", reason: p.interruption.reason,
           explicitHold: false, authorizedNextStep: !!p.interruption.nextStep?.trim() });
         materialInterruption = disposition === "material-exception";
+        if (materialInterruption) {
+          // A timer/recovery label cannot turn missing consent or conflicting
+          // requirements into permission when its deadline expires.
+          p.kind = p.options?.length ? "decision" : "blocked";
+          p.resumeAt = undefined;
+        }
         appendLedger(ctx.cwd, "interruption_admitted", { goalId: state.goal.id,
           category: p.interruption.reason, disposition, revision: state.goal.revision ?? 0 });
         if (disposition === "continue-authorized-work" || disposition === "investigate-without-consent") {

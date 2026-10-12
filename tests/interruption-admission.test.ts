@@ -45,6 +45,14 @@ for(const reason of ["missing-permission","missing-input","contract-conflict","u
   await nextPi.fire("session_shutdown",{reason:"quit"},nextCtx);
  });
 }
+test("a wait label cannot automatically resume a material permission exception",async()=>{
+ const {cwd,pi,ctx}=await boot();
+ await pi.runTool("pause_goal",{reason:"Missing external permission",kind:"wait",resumeAt:new Date(Date.now()+1000).toISOString(),
+   interruption:{reason:"missing-permission",evidence:"External operation lacks consent"}},ctx);
+ const goal=readState(cwd).goal!;assert.equal(goal.status,"paused");assert.equal(goal.pauseKind,"blocked");assert.equal(goal.pauseResumeAt,undefined);
+ await pi.fire("session_shutdown",{reason:"quit"},ctx);
+});
+
 test("intentional user pause cannot be undone by a classified routine request",async()=>{
  const {cwd,pi,ctx}=await boot();await pi.command("goal","pause",ctx);
  const before=readState(cwd).goal;const sent=pi.sent.length;
