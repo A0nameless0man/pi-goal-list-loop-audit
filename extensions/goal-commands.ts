@@ -781,7 +781,7 @@ async function cmdResume(ctx: ExtensionContext): Promise<void> {
   // manual resume exactly as by an automatic one. (staleEntry still re-marks
   // below — a resume inside a stale session is a NEW interrupt.)
   const storedCompletion = state.goal.pendingCompletion;
-  if (!updateGoal({ status: "active", pauseReason: undefined, pauseSuggestedAction: undefined, pauseKind: undefined, pauseOptions: undefined, pauseRecommended: undefined, pauseResumeAt: undefined, interruptedAt: undefined, interruptedReason: undefined, autoResumedAt: undefined, autoResumedEvent: undefined, ...(staleEntry ? { interruptedAt: nowIso(), interruptedReason: "resumed in a stale session" } : {}), ...(usage ? { usage } : {}) }, ctx)) return;
+  if (!updateGoal({ status: "active", pauseReason: undefined, pauseSuggestedAction: undefined, pauseKind: undefined, pauseOptions: undefined, pauseRecommended: undefined, pauseContractAmendment: undefined, pauseResumeAt: undefined, interruptedAt: undefined, interruptedReason: undefined, autoResumedAt: undefined, autoResumedEvent: undefined, ...(staleEntry ? { interruptedAt: nowIso(), interruptedReason: "resumed in a stale session" } : {}), ...(usage ? { usage } : {}) }, ctx)) return;
   if (staleEntry) return;
   releaseAuditorSurface();
   // A manual resume starts a fresh relentless cycle: a user pause between
@@ -837,7 +837,7 @@ function releasePausedGoalAfterRecoveryProbe(ctx: ExtensionContext, resumeComman
   if (!goal || goal.status !== "paused" || goal.pendingCompletion) return;
   if ((goal.pauseReason ?? "").startsWith("main model recovery")) return; // recovery release owns this shape
   if (warnIfStaleAtEntry(ctx, resumeCommand)) return;
-  if (!updateGoal({ status: "active", pauseReason: undefined, pauseSuggestedAction: undefined, pauseKind: undefined, pauseOptions: undefined, pauseRecommended: undefined, pauseResumeAt: undefined, interruptedAt: undefined, interruptedReason: undefined, autoResumedAt: undefined, autoResumedEvent: undefined }, ctx)) return;
+  if (!updateGoal({ status: "active", pauseReason: undefined, pauseSuggestedAction: undefined, pauseKind: undefined, pauseOptions: undefined, pauseRecommended: undefined, pauseContractAmendment: undefined, pauseResumeAt: undefined, interruptedAt: undefined, interruptedReason: undefined, autoResumedAt: undefined, autoResumedEvent: undefined }, ctx)) return;
   appendLedger(ctx.cwd, "goal_resumed_after_recovery_probe", { goalId: goal.id, policy: goal.policy, via: resumeCommand });
   ctx.ui.notify(`Recovery probe settled — resuming the paused ${goal.policy === "list" ? "list item" : "goal"}: ${displaySlice(goal.objective, 70)}`, "info");
   resetLengthExhaustionEpisodes();
@@ -946,6 +946,29 @@ async function showDecisionPrompt(ctx: ExtensionContext): Promise<boolean> {
       return true;
     }
     const idx = options.indexOf(pick);
+    if (idx < 0) return true; // A response outside offered choices is not consent.
+    if (g.pauseContractAmendment && idx === 0) {
+      const proposal = g.pauseContractAmendment;
+      if ((g.revision ?? 0) !== proposal.baseRevision || g.verificationContract !== proposal.baseContract || proposal.amendment.proposedContract === g.verificationContract) {
+        ctx.ui.notify("Amendment not applied — the contract changed or the proposal makes no change. Work remains paused; request a fresh proposal.", "warning");
+        return true;
+      }
+      if (!updateGoal({
+        verificationContract: proposal.amendment.proposedContract,
+        revision: (g.revision ?? 0) + 1,
+        pauseContractAmendment: undefined,
+        pauseOptions: undefined,
+        pauseRecommended: undefined,
+        pauseKind: "blocked",
+      }, ctx)) {
+        ctx.ui.notify("Amendment not saved — nothing was accepted or resumed. Work remains paused; retry after storage recovers.", "warning");
+        return true;
+      }
+      appendLedger(ctx.cwd, "contract_amendment_applied", { goalId: g.id, revision: (g.revision ?? 0) + 1, itemNumber: proposal.amendment.itemNumber, changeKind: proposal.amendment.changeKind });
+      ctx.ui.notify("Contract amendment persisted. Objective, tasks and checkpoints are preserved; the revised contract still requires independent verification.", "info");
+      await cmdResume(ctx);
+      return true;
+    }
     const label = g.pauseOptions![idx] ?? pick.replace(/ {2}\(recommended\)$/, "");
     // v0.29.3: the wipe escape — "… (/glla wipe)" options run the wipe
     // (which Confirms on its own — destructive actions keep their gate).
