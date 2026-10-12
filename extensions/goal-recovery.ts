@@ -1145,7 +1145,7 @@ export function scheduleMainModelRecoveryTimer(ctx: ExtensionContext, delayMs: n
     // immediately (manuallyResumeMainModelRecovery path).
     if (supervisorPaused(state)) return;
     const fresh = freshCtxForGeneration(generation);
-    if (!fresh || !state.mainModelRecovery) return;
+    if (!fresh || !recovery || !recoveryEpisodeCurrent(recovery)) return;
     void probeMainModelRecovery(fresh).catch((err) => { if (isStaleApiError(err)) flags.extensionApiStale = true; });
   }, Math.max(1_000, delayMs));
   // Arm the optional hourly slot beside every normal recovery timer, not
@@ -1621,7 +1621,9 @@ function resumeSupervisedRecoverySurface(ctx: ExtensionContext, kind: "goal" | "
   const before = { ...state };
   let landed = true;
   let resumed: 'goal' | 'loop' | undefined;
-  if (kind === "goal" && state.goal?.status === "paused" && (state.goal.pauseReason ?? "").startsWith("main model recovery")) {
+  if (kind === "goal" && state.goal?.status === "paused" && !state.goal.pendingCompletion
+    && (state.goal.pauseKind === "wait" || state.goal.pauseKind === "blocked" || state.goal.pauseKind === undefined)
+    && (state.goal.pauseReason ?? "").startsWith("main model recovery")) {
     landed = updateGoal({ status: "active", pauseSource: undefined, pauseKind: undefined, pauseResumeAt: undefined, pauseReason: undefined, pauseSuggestedAction: undefined, providerErrorDiagnostic: undefined, recoveryEpisodeKey: undefined, recoveryNoticeKeys: undefined }, ctx) !== false;
     resumed = 'goal';
   } else if (kind === "loop" && state.loop && !state.loop.active && (state.loop.stopReason ?? "").startsWith("main model recovery")) {
@@ -1859,9 +1861,8 @@ async function probeMainModelRecoveryImpl(ctx: ExtensionContext): Promise<void> 
     // attempted "quiet wait" here wedged recovery into a park loop that
     // never retried; blocked-pause-autoclear pins the probe contract.)
     // Audit 2026-09-07 (HIGH, scoped): each new cycle consumes backoff
-    // budget (attempts+1, so the next failure's envelope delay grows) and
-    // honors the 24h horizon (past the wall the reset holds for manual
-    // resume instead of resurrecting a turn). The probe turn itself stays
+    // steps (attempts+1), without an elapsed-time or attempt-count stop.
+    // The probe turn itself stays
     // prompt by design — the backoff wait is served between failure and
     // probe by the park+timer envelope, the hourly ticker's extra probe is
     // an explicit queue-jump, and the resumed supervised turn on `current`
@@ -2036,10 +2037,8 @@ export function parkMainModelAfterFailure(ctx: ExtensionContext, failure: MainMo
     // configured fallback chain has been visited.
     resumeCurrent: existing.resumeCurrent,
   });
-  // The generic envelope owns the wait; the 24h horizon ends automatic
-  // probes regardless of the provider's wording. (A quota-class failure
-  // with an explicit upstream reset hint sleeps until reset inside the
-  // same 5h-capped envelope via mainModelFailureDelayMs.)
+  // The paced envelope owns the wait without an attempt or elapsed-time
+  // cutoff. Explicit upstream reset hints still use the 5h-capped delay.
   const delay = mainModelFailureDelayMs(failure, modelFailureSteps, loadGlobalSettings().mainModelRetryMinutes);
   if (!setMainModelRecoveryPause(ctx, nextRecovery, delay)) return;
   flags.mainModelAbortForRecovery = true;
@@ -2081,8 +2080,10 @@ export async function recoverMainModelFromSendStorm(ctx: ExtensionContext, kind:
 }
 
 export function mainModelRecoverySucceeded(ctx: ExtensionContext): void {
+  if (flags.initialSessionLoadPending || stateRootPending()) return;
+  if (retireOrphanedMainModelRecovery(ctx, true) === 'persistence-failed') return;
   const recovery = state.mainModelRecovery;
-  if (!recovery) return;
+  if (!recovery || !recoveryEpisodeCurrent(recovery)) return;
   const current = modelRef(ctx.model);
   const preferredPrimary = recovery.primary;
   const servingFallback = !!current && !sameModelRef(current, preferredPrimary);
