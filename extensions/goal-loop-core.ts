@@ -4348,7 +4348,7 @@ export function extractVerificationContract(raw: string): { objective: string; v
   // when"/"verified when" keep a bounded decorated-marker gap (they are not
   // imperative openers), now capped at 60 chars so prose tails cannot
   // masquerade as markers either.
-  const MARKER_START = /^\s*(?:(?:done|verified)\s+when\b[^:]{0,60}:|done\b[^:]{0,60}:|verify(?:\s+when)?\s*:|verification\s*:)/i;
+  const MARKER_START = /^\s*(?:(?:done|verified)\s+when\b[^:]{0,60}:|done\b[^:]{0,60}:|verify(?:\s+when)?\s*:|verification(?:\s+contract(?:\s*\(auditor checks each line\))?)?\s*:)/i;
   for (const line of lines) {
     const m = line.match(MARKER_START);
     if (m) {
