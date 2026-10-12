@@ -57,7 +57,8 @@ test("contract amendment extraction names item 8 and the safe proposed command",
   assert.equal(amendment?.itemNumber, 8, "the item number is parsed from the proposal");
   assert.equal(amendment?.command, "bun test src/lib/auditCensus.test.ts", "the LAST backticked command is the proposed quoteless form");
   assert.equal(amendment?.kind, "safe", "the proposed form passes the mechanical-command allowlist");
-  assert.match(amendment?.proposedContract ?? "", /^8\. bun test src\/lib\/auditCensus\.test\.ts$/m, "the proposed contract replaces item 8 verbatim");
+  assert.match(amendment?.proposedContract ?? "", /^8\. `bun test src\/lib\/auditCensus\.test\.ts` exits 0$/m, "the command changes without losing its required exit predicate");
+  assert.equal(amendment?.changeKind, "substantive-amendment", "removing a test filter changes coverage, not just syntax");
 });
 
 test("contract amendment promotion builds Accept/Decline options on a safe proposal", () => {
