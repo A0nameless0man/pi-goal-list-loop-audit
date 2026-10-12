@@ -1,3 +1,4 @@
+import { assessDraftReadiness, draftReadinessMessage } from "../draft-readiness.js";
 import { effectiveToolTimeoutMs } from "../goal-loop-auditor-process.js";
 import { deliverTerminalSummary } from "../terminal-summary-delivery.js";
 import { archiveCurrentGoal } from "./goal-orchestrator.js";
@@ -3424,6 +3425,16 @@ function registerAgentTools(pi: any): void {
         if (p.fullAudit === true) {
           return { content: [{ type: "text", text: "fullAudit is single-goal only in v1 — it cannot ride a batch. Draft one goal with fullAudit, or re-propose the batch without it." }], details: {} };
         }
+        // Readiness is checked for the whole batch before confirmation or
+        // carryover conflict resolution; no partial enqueue on rejection.
+        const readinessIssues = p.items.flatMap((item, index) => {
+          const parsed = parseListItemDeclaration(item);
+          return assessDraftReadiness(parsed.objective, parsed.verificationContract)
+            .map(issue => ({ ...issue, clarification: `Item ${index + 1}: ${issue.clarification}` }));
+        });
+        if (readinessIssues.length) {
+          return { content: [{ type: "text", text: draftReadinessMessage(readinessIssues) }], details: {}, isError: true };
+        }
         // v0.23.7: show ALL items in full — the user approves the whole
         // batch; hidden items would be approved blind.
         const preview = p.items.map((t, i) => `  ${i + 1}. ${t}`).join("\n");
@@ -3530,6 +3541,11 @@ function registerAgentTools(pi: any): void {
         };
       }
       const normContract = p.verificationContract?.trim() ? normalizeDraftContract(p.verificationContract) : "";
+      const parsedReadiness = extractVerificationContract(p.objective.trim());
+      const readinessIssues = assessDraftReadiness(parsedReadiness.objective, normContract || parsedReadiness.verificationContract);
+      if (readinessIssues.length) {
+        return { content: [{ type: "text", text: draftReadinessMessage(readinessIssues) }], details: {}, isError: true };
+      }
       const checkCount = normContract ? draftContractItemCount(normContract) : 0;
       const contractBlock = normContract
         ? `\n\nDone when${checkCount > 0 ? ` — ${checkCount} check${checkCount === 1 ? "" : "s"}` : ""}:\n${normContract}`
