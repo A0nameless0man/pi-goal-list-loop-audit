@@ -16,10 +16,10 @@ import {
   DEFAULT_TOKEN_LIMIT, DEFAULT_COMPACTION_TOKEN_THRESHOLD, Goal, ListItem, Status, appendLedger, archiveDir, archivedGoalPath, auditVerdictLabel, sanitizeProviderDisplayText,
   computeListDepthFromLedger, clearQueueItemFiles, deleteQueueItemFile, deleteQueueItemFileResult, extractVerificationContract, stripTweakProceduralTail, formatAuditLog, formatGoalAuditHistory, formatMainModelRecoveryStatus, queueItemSidecarCount, countTrailingDisapprovals,
   formatListDepth, goalArgsNeedDrafting, ledgerPath, newGoalId, nowIso, parseListImport, parseListItemDeclaration, readLedgerTail, countLiveDisapprovals,
-  assignQueueOrder, compareQueueItems, readAuditLog, readQueueFromDisk, routeGoalArgs, routeListText, sanitizeDisplayText, sanitizeProviderAuditReport, statusLabel,
+  assignQueueOrder, compareQueueItems, readAuditLog, readQueueFromDisk, routeGoalArgs, routeListText, sanitizeDisplayText, sanitizeProviderAuditReport, statusLabel, waitingStatusLabel,
   visibleListPosition, visibleListPositions,
   writeQueueItemFile, type ModeCommand, type State, type AuditVerdict, type LedgerRecord, LIST_MUTATING_SUBCOMMANDS, SETTINGS_MUTATING_ACTIONS,
-  clearLoadHold, stateRootPending, isPersistenceDegraded, isForbiddenModel,
+  clearLoadHold, stateRootPending, isPersistenceDegraded, isForbiddenModel, recheckPersistenceAfterRepair,
 } from "./goal-loop-core.js";
 // v0.38.99: the status surfaces name the durable audit lifecycle from the one
 // projection the widget uses.
@@ -515,7 +515,7 @@ async function cmdStatus(ctx: ExtensionContext): Promise<void> {
   const lines = [
     ...buildUiStatusCard(statusState, uiStatus, uiContext.now, undefined, process.stdout.columns || 80, false),
     '', 'Saved workflow and diagnostics:',
-    `${view.lifecycle === "waiting" ? "WAITING" : statusLabel(g.status)}: ${sanitizeDisplayText(g.objective)}`,
+    `${view.lifecycle === "waiting" ? waitingStatusLabel(isPersistenceDegraded()) : statusLabel(g.status)}: ${sanitizeDisplayText(g.objective)}`,
     buildWorkLifecycleSummary({ ...state, loop: undefined }),
     ...(g.agentRole ? [`Agent role: ${g.agentRole} subagent checkpoint requested`] : []),
     // v0.24.7: name WHERE the work came from — a queue item is not a goal.
@@ -823,7 +823,13 @@ function releasePausedGoalAfterRecoveryProbe(ctx: ExtensionContext, resumeComman
   // The command authorizes only this held snapshot, not successor work or a
   // later pause. A resolved/skipped probe alone is never permission to resume.
   if (!requested || state.goal !== requested || flags.sessionGeneration !== generation) return;
-  if (typeof state.supervisorPausedAt === 'number' || state.loadHoldAt || isPersistenceDegraded()) return;
+  if (typeof state.supervisorPausedAt === 'number' || state.loadHoldAt) return;
+  // Same repaired-disk deadlock as the probe gate: recheck once so a fixed
+  // store resumes the parked goal instead of refusing without trying.
+  if (isPersistenceDegraded()) {
+    recheckPersistenceAfterRepair(ctx.cwd, "resume-after-probe");
+    if (isPersistenceDegraded()) return;
+  }
   const recovery = state.mainModelRecovery;
   if (recovery?.pendingModelSwitch || recovery?.retryAt || recovery?.manualResumeRequired) return;
   if (isLoopActive()) return;
@@ -1727,7 +1733,8 @@ async function cmdList(args: string, ctx: ExtensionContext): Promise<void> {
     if (state.goal) {
       const terminal = state.goal.status === "complete" || state.goal.status === "aborted";
       const view = goalWorkView(state.goal, state);
-      lines.push(`${terminal ? "Last" : view.lifecycle === "waiting" ? "Waiting" : "Active"}: [${state.goal.policy}] ${displaySlice(state.goal.objective, 80)} (${view.lifecycle === "waiting" ? "WAITING" : statusLabel(state.goal.status)})`);
+      const waitingHold = view.lifecycle === "waiting" && isPersistenceDegraded();
+      lines.push(`${terminal ? "Last" : view.lifecycle === "waiting" ? (waitingHold ? "Waiting (storage hold)" : "Waiting") : "Active"}: [${state.goal.policy}] ${displaySlice(state.goal.objective, 80)} (${view.lifecycle === "waiting" ? waitingStatusLabel(isPersistenceDegraded()) : statusLabel(state.goal.status)})`);
       lines.push(buildWorkLifecycleSummary({ ...state, loop: undefined }));
       if (state.goal.repairTarget) {
         lines.push(`Replan target (preserved): ${displaySlice(state.goal.repairTarget.objective, 180)}`);

@@ -2617,6 +2617,19 @@ export function lastPersistenceFailure(): PersistenceFailure | null {
   return lastFailure;
 }
 
+/** v0.39.30 (note.md # later Screenshot_20261011_211430): the degraded latch
+ * clears on the next SUCCESSFUL wrapped write — but the stand-down gates
+ * return before attempting any write, so a repaired disk stays latched until
+ * some unrelated write lands, and resume/probe paths refuse meanwhile. One
+ * probe write breaks the deadlock: landing self-heals and the caller
+ * proceeds; failing leaves the latch (and its standing warning) unchanged.
+ * Never throws. Returns true while still degraded. */
+export function recheckPersistenceAfterRepair(cwd: string, via: string): boolean {
+  if (!persistenceDegraded) return false;
+  appendLedger(cwd, "persistence_recheck", { via });
+  return persistenceDegraded;
+}
+
 /** Run one persistence step. On failure: latch the degraded flag, remember
  * the error, return undefined (NEVER throw into an orchestrator handler).
  * On success: clear the flag — a landing write means the disk is back. */
@@ -3580,6 +3593,13 @@ function renderTaskTreeMarkdown(tasks: Task[], out: string[], depth: number): vo
 // =================================================================
 // Status helpers
 // =================================================================
+
+/** v0.39.30 (note.md # later Screenshot_20261011_211430): a quota-wait and a
+ * storage hold both project lifecycle "waiting", but only one has a live
+ * timer. Name the hold so a stopped card is never misread as retrying. */
+export function waitingStatusLabel(persistenceHold: boolean): string {
+  return persistenceHold ? "WAITING (storage hold)" : "WAITING";
+}
 
 export function statusLabel(status: Status | null | undefined): string {
   switch (status) {

@@ -23,7 +23,7 @@ import { currentRecoveryOwner, recoveryOwnership } from "./recovery-ownership.js
 import { clampThinkingLevel } from "@earendil-works/pi-ai/compat";
 import { FALLBACK_THINKING_LEVELS, type FallbackThinkingLevel } from "./main-fallback-thinking.js";
 import { auditPhaseOwnsAttempt } from "./audit-lifecycle.js";
-import { isPersistenceDegraded, appendLedger, claimRecoveryNotice, nowIso, piGlaDir, isFreshPastTimestamp, isForbiddenModel, isStaleApiError, nextHourlyProbeMs, providerErrorFingerprint, providerErrorPresentation, resolveEffectiveAggressiveSettings, sanitizeProviderDisplayText, supervisorPaused, writeGoalMd, goalMdPath, writeGoalStateTransaction, clearGoalStateTransaction, MAX_AUDITOR_CANDIDATE_REFS, type Goal, type MainModelRecovery, type PendingCompletion } from "./goal-loop-core.js";
+import { isPersistenceDegraded, recheckPersistenceAfterRepair, appendLedger, claimRecoveryNotice, nowIso, piGlaDir, isFreshPastTimestamp, isForbiddenModel, isStaleApiError, nextHourlyProbeMs, providerErrorFingerprint, providerErrorPresentation, resolveEffectiveAggressiveSettings, sanitizeProviderDisplayText, supervisorPaused, writeGoalMd, goalMdPath, writeGoalStateTransaction, clearGoalStateTransaction, MAX_AUDITOR_CANDIDATE_REFS, type Goal, type MainModelRecovery, type PendingCompletion } from "./goal-loop-core.js";
 import { persistStateLine, replaceState } from "./goal-state.js";
 import { stateRootPending } from './glla-state-root.js';
 import { cancelDetachedGoalCompletionAuditor } from "./goal-loop-auditor-process.js";
@@ -1402,9 +1402,16 @@ export async function probeMainModelRecovery(ctx: ExtensionContext): Promise<voi
   if (retireOrphanedMainModelRecovery(ctx, true) === 'persistence-failed') return;
   if (supervisorPaused(state)) return;
   if (!state.mainModelRecovery) return;
-  if (state.loadHoldAt || isPersistenceDegraded()
+  if (state.loadHoldAt
     || state.mainModelRecovery?.manualResumeRequired || !state.mainModelRecovery
     || !recoveryEpisodeCurrent(state.mainModelRecovery)) return;
+  // A repaired disk stays latched until a write lands; returning here without
+  // attempting one would refuse the probe forever. Recheck once — a landing
+  // write self-heals and the probe proceeds, a failed write keeps the stand-down.
+  if (isPersistenceDegraded()) {
+    recheckPersistenceAfterRepair(ctx.cwd, "recovery-probe");
+    if (isPersistenceDegraded()) return;
+  }
   const generation = flags.sessionGeneration;
   if (mainModelRecoveryProbeInFlight && mainModelRecoveryProbeGeneration !== generation) {
     mainModelRecoveryProbeInFlight = false;
@@ -1606,7 +1613,11 @@ async function probePreferredPrimary(ctx: ExtensionContext, recovery: MainModelR
  * transitions live in one place. Safe to call when nothing is parked: the
  * guard clauses are no-ops. */
 function resumeSupervisedRecoverySurface(ctx: ExtensionContext, kind: "goal" | "loop"): void {
-  if (supervisorPaused(state) || state.loadHoldAt || isPersistenceDegraded()) return;
+  if (supervisorPaused(state) || state.loadHoldAt) return;
+  if (isPersistenceDegraded()) {
+    recheckPersistenceAfterRepair(ctx.cwd, "recovery-resume-surface");
+    if (isPersistenceDegraded()) return;
+  }
   const before = { ...state };
   let landed = true;
   let resumed: 'goal' | 'loop' | undefined;

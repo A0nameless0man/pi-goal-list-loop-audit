@@ -112,7 +112,9 @@ test("v0.34.92: parkMainModelAfterFailure schedules the hourly ticker alongside 
   // up the extra probe slot.
   const parkIdx = RECOVERY_SRC.indexOf("function parkMainModelAfterFailure");
   assert.ok(parkIdx > 0, "parkMainModelAfterFailure is present");
-  const tail = RECOVERY_SRC.slice(parkIdx, parkIdx + 2_500);
+  // v0.39.30: the park body outgrew the original window (same-model budget
+  // bookkeeping); widen like the v0.35.15 precedent below.
+  const tail = RECOVERY_SRC.slice(parkIdx, parkIdx + 4_000);
   assert.match(tail, /scheduleMainModelRecoveryTimer\(ctx, delay\);/, "park schedules the recovery timer");
   const scheduleIdx = RECOVERY_SRC.indexOf("function scheduleMainModelRecoveryTimer");
   // v0.35.15: the /glla pause freeze-gate lengthened this function; widen
