@@ -39,6 +39,11 @@ function setSettings(extra: Record<string, unknown>): void {
   );
 }
 
+function ledgerTypes(cwd: string): string[] {
+  return fs.readFileSync(path.join(cwd, ".pi-glla", "active.jsonl"), "utf8").split("\n").filter(Boolean)
+    .map((line) => (JSON.parse(line) as { type: string }).type);
+}
+
 async function activeBoot(cwd: string, policy: "goal" | "list" = "goal"): Promise<{ pi: MockPi; ctx: MockCtx }> {
   __testOnlyResetOwnerSession();
   __testOnlyResetStaleFlag();
@@ -81,6 +86,13 @@ test("extractSuggestedCommand: vague prose, bare verbs, and quoteless tweak yiel
   assert.equal(extractSuggestedCommand("maybe /goal resume or /goal cancel later"), "/goal resume");
 });
 
+test("extractSuggestedCommand: junk on line 1 does not hide a valid command on line 2", () => {
+  assert.equal(
+    extractSuggestedCommand("run /goal tweak the objective\nRun /goal resume to continue"),
+    "/goal resume",
+  );
+});
+
 // ---- pure promotion shape ----
 
 test("suggestionAcceptancePromotion: accept-first options use policy-correct verbs", () => {
@@ -115,6 +127,7 @@ test("pause_goal: blocked pause with a concrete command lands as an Accept-first
     assert.equal(g.pauseRecommended, 1);
     assert.equal(g.midRunDecisionCount, 1, "the promotion counts against the mid-run budget");
     assert.match(g.pauseSuggestedAction!, /\/goal tweak/, "the exact command stays on the card");
+    assert.ok(ledgerTypes(cwd).includes("pause_suggestion_promoted_to_decision"), "the promotion is ledgered");
   } finally {
     await pi.fire("session_shutdown", { reason: "quit" }, ctx);
   }

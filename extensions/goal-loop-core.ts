@@ -152,15 +152,19 @@ export function extractSuggestedCommand(suggestedAction: string | undefined): st
       if (quote) { if (c === quote) { quote = null; lastClose = i; } }
       else if (c === '"' || c === "'") { quote = c; opened = true; }
     }
+    // v0.39.30 reviewer P2: per-line rejections `continue`, not `return` —
+    // a multiline suggestedAction with junk on line 1 and a valid command
+    // on line 2 must still promote. Still conservative: only a fully valid
+    // command on some line returns; otherwise the loop yields undefined.
     if (opened && lastClose >= 0 && !quote) return `${verb} ${tail.slice(0, lastClose + 1).trim()}`.trim();
-    if (opened) return undefined;
+    if (opened) continue;
     const token = tail.match(/^\s*(\S+)/)?.[1];
-    if (!token) return undefined;
+    if (!token) continue;
     const clean = token.replace(/[.,;:!?)\]]+$/, "");
-    if (!clean || /^(and|or|then|to|for|with|than)$/i.test(clean)) return undefined;
+    if (!clean || /^(and|or|then|to|for|with|than)$/i.test(clean)) continue;
     const word = clean.toLowerCase();
     // `tweak` without its quoted replacement text is not runnable.
-    if (word === "tweak") return undefined;
+    if (word === "tweak") continue;
     return `${verb} ${clean}`;
   }
   return undefined;
