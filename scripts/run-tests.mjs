@@ -37,7 +37,11 @@ import { createTestProcessRegistry, registerOwnedTestProcess, reapOwnedTestProce
 import { captureTestFailureDiagnostics, diagnosticTail } from "./test-failure-diagnostics.mjs";
 import { SLOW_TEST_FILES } from "../tests/slow-files.mjs";
 
-export const SERIAL_FLAGS = ["--parallel=1", "--max-concurrency=1", "--timeout=60000"];
+// Do not use --parallel=1: Bun reuses its IPC worker's imported module graph,
+// including factory wiring replaced by unit rigs. Native --isolate without
+// parallel workers reloads the graph per file while retaining Bun's discovery,
+// --changed selection and serial execution.
+export const SERIAL_FLAGS = ["--isolate", "--max-concurrency=1", "--timeout=60000"];
 
 /** v0.38.104: how long the suite may print NOTHING before we call it hung.
  * Generous on purpose — a serialized suite on a loaded host still emits
