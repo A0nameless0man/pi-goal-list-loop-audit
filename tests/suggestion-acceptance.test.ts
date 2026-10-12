@@ -93,6 +93,44 @@ test("extractSuggestedCommand: resume/cancel-class suggestions stay plain pauses
   assert.equal(suggestionAcceptancePromotion("/goal resume to continue", "goal"), undefined);
 });
 
+test("extractSuggestedCommand: quoted resume/cancel stays a plain pause too", () => {
+  assert.equal(extractSuggestedCommand('Run /goal resume "after X"'), undefined);
+  assert.equal(extractSuggestedCommand('Run /goal cancel "now"'), undefined);
+  assert.equal(suggestionAcceptancePromotion('Run /goal resume "after X"', "goal"), undefined);
+  // Quoted non-decline verbs still extract.
+  assert.equal(
+    extractSuggestedCommand('Run /goal tweak "Fix X." after the window'),
+    '/goal tweak "Fix X."',
+  );
+});
+
+test("pause_goal: picking Accept delivers the decision and resumes — the agent runs the named command", async () => {
+  // Challenger round 2: the picker cannot auto-execute a tweak (whitelist
+  // is arg-free verbs only), so Accept travels the existing content-choice
+  // convention — decision text steered to the agent turn + resume — like
+  // every agent-authored decision option. This locks that flow end to end.
+  const cwd = tmpCwd();
+  setSettings({});
+  const { pi, ctx } = await activeBoot(cwd);
+  try {
+    await pi.runTool("pause_goal", {
+      reason: "Scope repair is still blocked.",
+      suggestedAction: 'Run /goal tweak "Restore the implementation objective."',
+      kind: "blocked",
+    }, ctx);
+    ctx.ui.selectImpl = async (_title, options) => options.find((o) => o.startsWith("Accept and run")) ?? options[0];
+    await pi.command("goal", "decide", ctx);
+    await tick(120);
+    const g = readState(cwd).goal as GoalView;
+    assert.equal(g.status, "active", "Accept resumes the goal");
+    const steered = pi.userMessages.map((m) => m.message).join("\n");
+    assert.match(steered, /Accept and run \/goal tweak "Restore the implementation objective\."/, "the exact command reaches the agent turn");
+    assert.match(steered, /continue on this path/, "the decision is framed as the path to continue");
+  } finally {
+    await pi.fire("session_shutdown", { reason: "quit" }, ctx);
+  }
+});
+
 test("extractSuggestedCommand: ambiguous multi-command lines are never coin-flipped", () => {
   assert.equal(extractSuggestedCommand("maybe /goal resume or /goal cancel later"), undefined);
   assert.equal(extractSuggestedCommand('Run /goal tweak "A" or /goal cancel'), undefined);

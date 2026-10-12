@@ -162,7 +162,15 @@ export function extractSuggestedCommand(suggestedAction: string | undefined): st
     // a multiline suggestedAction with junk on line 1 and a valid command
     // on line 2 must still promote. Still conservative: only a fully valid
     // command on some line returns; otherwise the loop yields undefined.
-    if (opened && lastClose >= 0 && !quote) return `${verb} ${tail.slice(0, lastClose + 1).trim()}`.trim();
+    // v0.39.30 challenger round 2: the resume/cancel-class rejection must
+    // apply to the quoted path too — the verb word precedes its quoted
+    // argument (`/goal resume "after X"`), and returning before the
+    // filter rendered the exact near-duplicate card the design forbids.
+    if (opened && lastClose >= 0 && !quote) {
+      const firstWord = tail.match(/^\s*(\S+)/)?.[1]?.toLowerCase();
+      if (firstWord === "resume" || firstWord === "cancel") continue;
+      return `${verb} ${tail.slice(0, lastClose + 1).trim()}`.trim();
+    }
     if (opened) continue;
     const token = tail.match(/^\s*(\S+)/)?.[1];
     if (!token) continue;
