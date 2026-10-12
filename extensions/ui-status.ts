@@ -124,6 +124,15 @@ export function projectUiStatus(state: State, context: UiStatusContext): UiStatu
     && (!!recovery?.retryAt || !!recovery?.pendingModelSwitch);
   const legacyProviderPause = providerWait && goal?.pauseKind !== 'decision'
     && (goal?.pauseReason ?? '').startsWith('main model recovery');
+  // v0.39.31 (incident Screenshot_20261012_110844/111046): a settling
+  // claim is settled — the verdict is durable, the archive is owed. Name
+  // the state on the projection so the user does not read a parked
+  // settlement as "blocked". The retry that races the archive is fenced
+  // upstream in retryStoredCompletionAudit; this branch names the
+  // durable fact for the surface.
+  if (goal?.pendingCompletion?.phase === 'settling') {
+    return finish('blocked', 'automatic', `${resume} when the archive lands (or runs the settlement driver again on the next wake)`, 'verdict applied · awaiting archive');
+  }
   if (goal?.status === 'paused' && goal.pauseKind !== 'wait' && goal.pauseKind !== 'standby' && !legacyProviderPause) {
     base.resumeAction = goal.pauseKind === 'decision'
       ? `${mode === 'list' ? '/list decide' : '/goal decide'} resolves the pending choice`
