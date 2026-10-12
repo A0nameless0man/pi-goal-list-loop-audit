@@ -21,7 +21,7 @@ not supervised objs
 
 # later
 
-## waiting is not the same as now 
+## waiting is not the same as blocked 
 /home/dracon/Pictures/Screenshots/Screenshot_20261012_015606.png
 
 
