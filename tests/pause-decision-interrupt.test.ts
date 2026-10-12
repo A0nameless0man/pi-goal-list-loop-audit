@@ -120,17 +120,15 @@ function runPauseTool(
 test("decision pause persists options AND aborts the turn so the picker owns an idle surface", async () => {
   const { cwd, ctx, aborts } = await activeGoalFixture();
 
-  const resumeAt = new Date(Date.now() + 10 * 60_000).toISOString();
   const res = await runPauseTool(ctx, {
     reason: "two viable architectures — user picks",
-    resumeAt,
     kind: "decision",
     interruption: { reason: "missing-input", evidence: "Two viable architectures are confirmed; which one to build is the user's missing input, not derivable locally" },
     options: [
       "Option A (/goal resume)",
       'Option B (/goal tweak "do B instead")',
     ],
-    recommended: 1,
+    recommended: 1.9,
   });
   await tick();
 
@@ -139,7 +137,6 @@ test("decision pause persists options AND aborts the turn so the picker owns an 
     pauseKind?: string;
     pauseOptions?: string[];
     pauseRecommended?: number;
-    pauseResumeAt?: string;
   };
   assert.equal(g.status, "paused");
   assert.equal(g.pauseKind, "decision");
@@ -147,8 +144,7 @@ test("decision pause persists options AND aborts the turn so the picker owns an 
     "Option A (/goal resume)",
     'Option B (/goal tweak "do B instead")',
   ]);
-  assert.equal(g.pauseRecommended, 1);
-  assert.equal(g.pauseResumeAt, resumeAt, "typed missing-input decision preserves the requested short resume time");
+  assert.equal(g.pauseRecommended, 1, "typed missing-input decision floors the recommended option index");
   // THE fix: the turn ends — the model cannot keep working past its own pause.
   assert.equal(aborts(), 1, "pause_goal must abort the running turn");
   assert.equal(
