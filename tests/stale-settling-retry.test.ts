@@ -230,7 +230,16 @@ test("session_start with a settling claim rehydrates without launching a new aud
   try {
     await pi.fire("session_start", { reason: "startup" }, ctx);
     const after = readState(cwd).goal;
-    assert.ok(after, "the goal is still on disk after session_start");
+    if (!after) {
+      // Surface the actual disk + ledger content for the failing case so
+      // the regression is diagnosable, not a silent skip.
+      const ledger = fs.readFileSync(path.join(cwd, ".pi-glla", "active.jsonl"), "utf8").split("\n").filter(Boolean);
+      const terminalTypes = ["terminal_goal_slot_closed", "stale_settling_retry_refused", "audit_recovery_retry_suppressed", "completion_audit_recovery_pending", "main_model_recovery_retired"];
+      const matched = ledger.filter((line) => terminalTypes.some((t) => line.includes(`"${t}"`)));
+      throw new Error(
+        `goal cleared during session_start; attemptId=${attemptId}; matched ledger entries=${JSON.stringify(matched)}; last 3 lines=${JSON.stringify(ledger.slice(-3))}`,
+      );
+    }
     assert.equal(after?.pendingCompletion?.attemptId, attemptId, "the same attemptId is on disk after session_start");
     assert.equal(after?.pendingCompletion?.phase, "settling", "the same phase is on disk after session_start");
     assert.ok(!ledgerHas(cwd, "audit_started"), "session_start did not launch a new audit");
