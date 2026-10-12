@@ -56,6 +56,7 @@ The latest audit correctly identified one remaining contradiction: compact stale
 - Compact captures now include stale-worker Goal and List cases (40-second-old worker activity plus a busy parent), previously absent. Native inspection of both compact PNGs confirms unconfirmed amber phase rows with no thinking/detached-worker suffix, retained clocks and owner-specific inspection commands.
 - Focused reviewer follow-up `cb141e31-b7ea-4884-9f4d-9c95600b64b7` inspected both compact call sites, footer suppression, the complete layout/owner/width matrix, saved logs and both compact PNGs. Verdict OK, BLOCKERS none; no reviewer commands executed.
 - Final bounded tests: 180 pass, zero fail across eleven files (`/tmp/glla-audit-compact-final-tests.log`); typecheck passed (`/tmp/glla-audit-compact-final-types.log`); four fixture captures and inventory check passed. Fixture limitations remain unchanged: no live provider-session claim.
+- Claim rerun on current HEAD: typecheck pass (`/tmp/glla-audit-compact-claim-types.log`), 180 pass / 0 fail across the same eleven files (`/tmp/glla-audit-compact-claim-tests.log`), capture regeneration plus private-xterm rasterization pass, inventory check pass, clean worktree at 76c14063. Direct production-render probe of the auditor's exact repro (40s-old worker activity plus busy parent, both owners, compact layout) now returns `auditor: execution unconfirmed · worker activity not confirmed · last progress 40s ago` with owner-specific inspection actions and no thinking/detached-worker/automatic-review terms.
 
 ## Scope
 
