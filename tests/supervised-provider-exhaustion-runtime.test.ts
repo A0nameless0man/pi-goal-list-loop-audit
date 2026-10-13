@@ -23,7 +23,7 @@ for (const mode of ['goal', 'list', 'loop'] as const) {
       if (state.goal) state.goal = { ...state.goal, verificationContract: 'independent acceptance required' };
       persistStateLine(cwd, state);
       const originalGoal = state.goal && { id: state.goal.id, objective: state.goal.objective, verificationContract: state.goal.verificationContract };
-      const originalLoop = state.loop && { startedAt: state.loop.startedAt, iteration: state.loop.iteration, history: state.loop.history, maxIterations: state.loop.maxIterations };
+      const originalLoop = state.loop && { startedAt: state.loop.startedAt, iteration: state.loop.iteration, history: structuredClone(state.loop.history), maxIterations: state.loop.maxIterations };
       const realNow = Date.now;
       let clock = realNow();
       Date.now = () => clock;
