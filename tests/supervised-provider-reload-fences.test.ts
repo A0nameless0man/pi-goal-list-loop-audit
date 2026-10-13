@@ -75,10 +75,13 @@ test('a dequeued old timer cannot probe a replacement recovery episode', async (
     clearMainModelRecoveryTimer();
     state.mainModelRecovery = { ...state.mainModelRecovery, recoveryEpisodeKey: 'replacement' };
     persistStateLine(cwd, state);
+    scheduleMainModelRecoveryTimer(ctx as unknown as ExtensionContext, 3600000);
+    assert.equal(mainModelRecoveryRuntimeStatus()?.retryTimerArmed, true);
     const before = JSON.parse(JSON.stringify(readState(cwd)));
     dequeued();
     await tick(30);
     assert.deepEqual(JSON.parse(JSON.stringify(readState(cwd))), before);
+    assert.equal(mainModelRecoveryRuntimeStatus()?.retryTimerArmed, true, 'stale callback cannot clear the replacement timer handle');
     assert.equal(pi.sent.length, 0);
     assert.equal(pi.modelSelections.length, 0);
   });
