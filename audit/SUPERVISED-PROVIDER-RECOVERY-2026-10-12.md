@@ -128,3 +128,46 @@ The parent full run reached 338 files at 600s; repository scale is over 400 file
 Recommend 1800s outer full-suite/release bound, retaining the runner's 180s silent
 stall watchdog. Parent owns the final full gate; no complete release was rerun.
 All settings redirects preceded Bun preloads and used /tmp only.
+
+## Final corrective slice (independent review follow-up)
+
+The parent's pre-slice release log
+`/tmp/glla-recovery-verification/release-final.log` supersedes the earlier
+baseline/partial-suite blockers above: 3848 passed / 1 environment skip / 0
+failed across 414 files; TypeScript, jiti state binding and offline auditor
+extension checks passed. That release command stopped at stale generated
+inventory, before package/release smoke. It is NOT final release acceptance
+for the edits below; a fresh final release gate remains pending.
+
+Repaired the review P2: explicit storage/load/supervisor holds and observed
+closed-host admission now outrank legacy paused-claim recovery cards, not only
+auditing cards. Shared closed-host projection precedes saved pause blockers;
+the prerequisite/decision reason and action remain visible, and reopening a
+host is not presented as resolving human approval. Ordinary cold parked
+no-verdict claims retain `completion audit: parked — no review recorded`.
+Six added display cases cover paused claims under closed/load/storage/supervisor
+holds, normal parked semantics, and preservation of ordinary/decision blockers.
+Rendering is asserted not to mutate saved state.
+
+The stale callback regression now arms a replacement recovery timer and checks
+that its runtime handle remains armed. This exposed a real ownership race:
+the old callback cleared the timer slot before its episode fence. The callback
+now verifies its captured timer handle still owns the slot before clearing it
+or probing. Durable retryAt is read back after every simulated failure, and
+final exhaustion settlement now arrives through the registered healthy
+agent_end handler rather than directly invoking settlement. Loop history is
+snapshotted (not held by mutable reference); dead turns preserve exact history
+and bounds, while the healthy turn consumes exactly one iteration and appends
+one measurement.
+
+Final serialized targeted run under a unique /tmp global-settings redirect:
+183 passed / 0 failed across nine files in 78s, including display, parked,
+UI-status projection/runtime/surfaces, exhaustion and reload/fence tests.
+Log: `/tmp/glla-final-slice-verification/targeted-final.log`.
+Two diagnostic runs failed only the newly changed healthy loop assertion:
+first it incorrectly expected no productive iteration, then its baseline
+history shared a mutable reference. Assertions now distinguish the actual
+healthy event from dead turns and use a deep baseline snapshot; no assertion
+was disabled or weakened. `npm run check` passed. Inventory is regenerated
+following these edits; parent owns the fresh full release and review gate.
+No external/provider/runtime requests, branch/worktree changes or staging.
