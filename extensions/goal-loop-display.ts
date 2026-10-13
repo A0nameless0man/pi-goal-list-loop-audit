@@ -2250,10 +2250,14 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
   const shared = extras?.uiStatusContext ? projectDisplayStatus(state, audit, { ...extras.uiStatusContext, now }) : undefined;
   const background = shared?.execution === 'blocked' || shared?.execution === 'dormant' ? undefined : backgroundWidget(state, theme, width);
   const compact = extras?.compactAuditCard !== false;
-  // Admission/storage stops own the card even when cached audit progress
-  // would otherwise select the detailed legacy renderer.
+  // Admission/storage stops outrank legacy parked claims too; an ordinary
+  // paused no-verdict claim still keeps its exact parked renderer.
+  const admissionHold = shared && (shared.execution === 'dormant'
+    || (shared.execution === 'blocked' && (!!extras?.uiStatusContext?.persistenceHold
+      || typeof state.loadHoldAt === 'number' || typeof state.supervisorPausedAt === 'number'
+      || (shared.provenance === 'runtime' && shared.blocker === extras?.uiStatusContext?.evidence?.recovery?.hold))));
   const rawInner = background
-    ?? (shared && ((state.goal?.status === 'auditing' && (shared.execution === 'blocked' || shared.execution === 'dormant')) || !needsLegacyWidget(state, audit, compact))
+    ?? (shared && (admissionHold || (state.goal?.status === 'auditing' && shared.execution === 'blocked') || !needsLegacyWidget(state, audit, compact))
       ? buildUiStatusCard(state, shared, now, theme, width, compact, extras, audit)
       : buildWidgetLinesInner(state, audit, now, theme, width, extras));
   const view = stateWorkView(state, observedWorkActivity(extras, now));

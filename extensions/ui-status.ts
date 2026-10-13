@@ -116,6 +116,18 @@ export function projectUiStatus(state: State, context: UiStatusContext): UiStatu
   if (context.persistenceHold) return finish('blocked', 'user', 'Resolve persistence failure before continuing; /glla status for details', context.persistenceHold);
   if (typeof state.supervisorPausedAt === 'number') return finish('blocked', 'user', '/glla resume releases the supervisor hold', 'Supervisor paused');
   if (typeof state.loadHoldAt === 'number') return finish('blocked', 'user', '/glla resume grants continuation consent', 'Held on session restore');
+  const evidence = context.evidence;
+  const matches = evidence && context.generation !== undefined && evidence.generation === context.generation
+    && evidence.ownerKey === ownerKey && validTime(evidence.observedAt, now)
+    && now - evidence.observedAt <= UI_OBSERVATION_FRESH_MS;
+  if (matches && evidence.session === 'closed') {
+    const prerequisite = goal?.status === 'paused' && goal.pauseKind !== 'wait' && goal.pauseKind !== 'standby';
+    return { ...finish('dormant', 'user', prerequisite
+      ? `Reopen project; ${goal.pauseSuggestedAction ?? (goal.pauseKind === 'decision' ? '/goal decide resolves the pending choice' : `${resume} only after resolving the saved prerequisite`)}`
+      : 'Reopen project; /glla status',
+    prerequisite && goal.pauseReason ? `Session observed closed; ${goal.pauseReason}` : 'Session observed closed'),
+    provenance: 'runtime' };
+  }
   const recovery = state.mainModelRecovery;
   const recoveryOwned = recovery && (recovery.owner?.kind === 'goal' ? recovery.owner.id === goal?.id
     : recovery.owner?.kind === 'loop' ? recovery.owner.startedAt === loop?.startedAt
@@ -149,14 +161,9 @@ export function projectUiStatus(state: State, context: UiStatusContext): UiStatu
     base.checkAt = goal!.pauseResumeAt;
     base.wakeOwner = 'GLLA assessment heartbeat';
   }
-  const evidence = context.evidence;
-  const matches = evidence && context.generation !== undefined && evidence.generation === context.generation
-    && evidence.ownerKey === ownerKey && validTime(evidence.observedAt, now)
-    && now - evidence.observedAt <= UI_OBSERVATION_FRESH_MS;
   if (matches) {
     base.provenance = 'runtime';
     if (validTime(evidence.lastActivityAt, now)) base.lastActivityAt = evidence.lastActivityAt;
-    if (evidence.session === 'closed') return finish('dormant', 'user', 'Reopen project; /glla status', 'Session observed closed');
     if (evidence.recovery?.hold) return finish('blocked', 'user', '/glla status for the required recovery action', evidence.recovery.hold);
     if (evidence.session === 'open') {
       if (background) {
