@@ -2,9 +2,16 @@
 
 ## Unreleased
 
-## 0.39.30 — truthful waiting, audit status and recovery (2026-10-12)
+## 0.39.31 — durable supervised recovery and truthful admission (2026-10-13)
 
-Includes all changes since published 0.39.28; 0.39.29 was an untagged development version.
+Includes all changes since published 0.39.28; 0.39.29 and 0.39.30 were untagged development versions.
+
+### Persistent supervised provider recovery
+
+- Goal, list and loop provider failures enter the shared durable paced retry owner immediately. Repeated full-chain retries retain the failing model's cadence; no attempt-count cutoff ends authorized recovery.
+- Reload preserves loop recovery ownership instead of activating queued work over it. Timer-slot and episode fences prevent stale callbacks from clearing replacement retries; healthy settlement cannot adopt a replaced owner or unpause an audit claim.
+- Deterministic regressions exercise 2,101 failures per work mode, durable retry readback, healthy host-event settlement, reload consent, explicit pause/cancel/stop, retained loop bounds and audit ownership. No live quota-exhausting requests are needed.
+- Admission and storage holds outrank cached audit liveness, while paused claims retain honest parked-review evidence and human prerequisites. Refresh stale UI, interruption and payload-size test fixtures without weakening semantic assertions; regenerate the runtime inventory.
 
 ### Waiting and automatic assessment
 
