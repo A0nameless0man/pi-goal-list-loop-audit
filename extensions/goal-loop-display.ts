@@ -1684,6 +1684,12 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   }
   if (status.actionability === 'user' || status.wakeOwner) prose('next', status.nextAction, 'dim');
   if (status.blocker) prose('why', status.blocker, 'warning');
+  // Admission holds own the action rail; the saved claim still needs its
+  // parked/no-verdict meaning without implying an auditor is running.
+  if (g && isCompletionAuditNoVerdict(g) && (status.execution === 'blocked' || status.execution === 'dormant')) {
+    rows.push(row('├─ ', 'completion audit: parked — no review recorded', 'warning'));
+    rows.push(row('│  ', 'the stored completion claim was not evaluated — the audit waits while the item is paused'));
+  }
   if (compact && status.actionability === 'user' && extras?.durableDeferRecommendation) {
     const judgment = buildDurableDeferDecisionLines(extras.durableDeferRecommendation, width);
     rows.push(row('├─ ', judgment[judgment.length - 1]!, 'dim'));
