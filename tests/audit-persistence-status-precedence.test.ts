@@ -96,13 +96,13 @@ test('closed admission preserves ordinary prerequisite and decision blockers wit
     delete state.goal!.pendingCompletion;
     const before = JSON.stringify(state);
     const extras = { uiStatusContext: { now, generation: 1, evidence: { ownerKey: uiStatusOwnerKey(state)!,
-      generation: 1, session: 'closed' as const, observedAt: now } } };
+      generation: 1, session: 'closed' as 'closed' | 'open', observedAt: now } } };
     const card = buildWidgetLines(state, null, now, undefined, 160, extras)!.join('\n');
     assert.match(card, /DORMANT/);
     assert.match(card, /Human approval is required/);
     assert.match(card, pauseKind === 'decision' ? /\/goal decide/ : /Resolve human approval/);
     assert.equal(JSON.stringify(state), before);
-    extras.uiStatusContext.evidence.session = 'open' as 'closed';
+    extras.uiStatusContext.evidence.session = 'open';
     const openCard = buildWidgetLines(state, null, now, undefined, 160, extras)!.join('\n');
     assert.match(openCard, /BLOCKED/);
     assert.match(openCard, /Human approval is required/);
