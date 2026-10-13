@@ -1138,7 +1138,9 @@ export function scheduleMainModelRecoveryTimer(ctx: ExtensionContext, delayMs: n
     const durableAt = Date.parse(state.mainModelRecovery?.retryAt ?? '');
     if (Number.isFinite(durableAt)) delayMs = Math.min(delayMs, Math.max(1000, durableAt - Date.now()));
   }
-  flags.mainModelRecoveryTimer = scheduleSessionTimeout(() => {
+  const timer = scheduleSessionTimeout(() => {
+    // A dequeued callback no longer owns the slot after a replacement arms.
+    if (flags.mainModelRecoveryTimer !== timer) return;
     flags.mainModelRecoveryTimer = null;
     // v0.35.15: `/glla pause` freezes automatic recovery probes — the
     // parked recovery claim stays durable and a manual /glla resume probes
@@ -1148,6 +1150,7 @@ export function scheduleMainModelRecoveryTimer(ctx: ExtensionContext, delayMs: n
     if (!fresh || !recovery || !recoveryEpisodeCurrent(recovery)) return;
     void probeMainModelRecovery(fresh).catch((err) => { if (isStaleApiError(err)) flags.extensionApiStale = true; });
   }, Math.max(1_000, delayMs));
+  flags.mainModelRecoveryTimer = timer;
   // Arm the optional hourly slot beside every normal recovery timer, not
   // only the initial park path. This covers fallback failures and later
   // failed probes while preserving one timer per slot.

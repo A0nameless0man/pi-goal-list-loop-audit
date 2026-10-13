@@ -7,7 +7,7 @@ import { tick } from './harness/mock-pi.js';
 import { __testOnlyResetProcessState } from '../extensions/loops/goal.js';
 import { state, persistStateLine } from '../extensions/goal-state.js';
 import { readState } from '../extensions/goal-loop-core.js';
-import { clearMainModelRecoveryTimer, mainModelRecoveryRuntimeStatus, probeMainModelRecovery, mainModelRecoverySucceeded } from '../extensions/goal-recovery.js';
+import { clearMainModelRecoveryTimer, mainModelRecoveryRuntimeStatus, probeMainModelRecovery } from '../extensions/goal-recovery.js';
 
 // Drive registered agent_end and the real durable recovery probe, not a retry
 // model. Advance only the cadence clock; no provider calls or quota requests.
@@ -32,6 +32,7 @@ for (const mode of ['goal', 'list', 'loop'] as const) {
           await pi.fire('agent_end', providerError('Retry failed after 15 attempts: 429 rate limit exceeded'), ctx);
           const recovery = state.mainModelRecovery;
           assert.ok(recovery?.retryAt, `failure ${n} has a durable paced retry`);
+          assert.equal(readState(cwd).mainModelRecovery?.retryAt, recovery.retryAt, `failure ${n} journal retains the retry deadline`);
           assert.equal(mainModelRecoveryRuntimeStatus()?.retryTimerArmed, true);
           assert.equal(recovery.manualResumeRequired, undefined);
           assert.ok(Date.parse(recovery.retryAt) > clock);
@@ -43,7 +44,8 @@ for (const mode of ['goal', 'list', 'loop'] as const) {
         }
         assert.ok(state.mainModelRecovery!.attempts > 2100);
         assert.ok(clock - realNow() > 24 * 3600000, 'episode outlives the legacy horizon');
-        mainModelRecoverySucceeded(ctx as unknown as ExtensionContext);
+        await pi.fire('tool_call', {}, ctx);
+        await pi.fire('agent_end', { messages: [{ role: 'assistant', stopReason: 'end_turn', content: [{ type: 'text', text: 'The provider is healthy again. Continuing the retained work; independent acceptance is still required.' }] }] }, ctx);
         const saved = readState(cwd);
         assert.equal(saved.mainModelRecovery, undefined);
         assert.deepEqual(saved.list, queue);
