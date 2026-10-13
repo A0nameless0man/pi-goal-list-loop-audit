@@ -4351,8 +4351,12 @@ test("v0.34.21 lifecycle: cold startup holds a recovered claim until explicit re
       },
     }),
   });
+  pi.sent.length = 0;
+  pi.userMessages.length = 0;
   const ctx = await freshSession(cwd, "startup");
   await tick();
+  assert.equal(pi.sent.length, 0, "cold parked claim dispatches no continuation");
+  assert.equal(pi.userMessages.length, 0, "cold parked claim dispatches no user turn");
   const goal = readState(cwd).goal as { status: string; pauseKind?: string; pauseReason?: string; pendingCompletion?: { phase?: string } };
   assert.equal(goal.status, "paused", "cold startup releases the MAIN instead of waiting in auditing");
   assert.equal(goal.pauseKind, "blocked", "the no-verdict hold is infrastructure-blocked");
@@ -4362,6 +4366,11 @@ test("v0.34.21 lifecycle: cold startup holds a recovered claim until explicit re
   assert.doesNotMatch(ledger, /"audit_recovery_started"/, "no recovery starts without lifecycle/explicit consent");
   assert.ok(ctx.ui.matching("Completion audit blocked — no verdict").length >= 1, "the hold is explained");
   assert.ok((ctx.ui.widgets["pi-glla"] as string[]).some((line) => line.includes("completion audit: parked — no review recorded")), "the widget names the parked completion review without claiming a verdict");
+  const card = (ctx.ui.widgets["pi-glla"] as string[]).join("\n");
+  assert.match(card, /BLOCKED/);
+  assert.match(card, /Held on session restore/);
+  assert.match(card, /continuation consent/);
+  assert.doesNotMatch(card, /Audit running|No action needed|RECOVERING/);
 });
 
 test("v0.35.x: validated session handoff auto-retries a parked completion audit", async () => {
