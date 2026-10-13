@@ -44,13 +44,20 @@ for (const mode of ['goal', 'list', 'loop'] as const) {
         }
         assert.ok(state.mainModelRecovery!.attempts > 2100);
         assert.ok(clock - realNow() > 24 * 3600000, 'episode outlives the legacy horizon');
+        if (originalLoop) assert.deepEqual({ startedAt: readState(cwd).loop?.startedAt, iteration: readState(cwd).loop?.iteration, history: readState(cwd).loop?.history, maxIterations: readState(cwd).loop?.maxIterations }, originalLoop, 'all dead turns preserve loop history and bounds');
         await pi.fire('tool_call', {}, ctx);
         await pi.fire('agent_end', { messages: [{ role: 'assistant', stopReason: 'end_turn', content: [{ type: 'text', text: 'The provider is healthy again. Continuing the retained work; independent acceptance is still required.' }] }] }, ctx);
         const saved = readState(cwd);
         assert.equal(saved.mainModelRecovery, undefined);
         assert.deepEqual(saved.list, queue);
         if (originalGoal) assert.deepEqual({ id: saved.goal?.id, objective: saved.goal?.objective, verificationContract: saved.goal?.verificationContract }, originalGoal);
-        if (originalLoop) assert.deepEqual({ startedAt: saved.loop?.startedAt, iteration: saved.loop?.iteration, history: saved.loop?.history, maxIterations: saved.loop?.maxIterations }, originalLoop);
+        if (originalLoop) {
+          assert.equal(saved.loop?.startedAt, originalLoop.startedAt);
+          assert.equal(saved.loop?.maxIterations, originalLoop.maxIterations);
+          assert.equal(saved.loop?.iteration, originalLoop.iteration + 1, 'only the healthy registered event consumes an iteration');
+          assert.deepEqual(saved.loop?.history.slice(0, originalLoop.history.length), originalLoop.history);
+          assert.equal(saved.loop?.history.length, originalLoop.history.length + 1, 'healthy work appends exactly one measurement');
+        }
       } finally { Date.now = realNow; }
       await tick(1200);
       assert.ok(pi.sent.length > 0, 'successful recovery delivers the retained work continuation');
