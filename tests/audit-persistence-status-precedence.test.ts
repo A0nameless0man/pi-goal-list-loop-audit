@@ -73,11 +73,33 @@ for (const hold of ['closed', 'load', 'persistence', 'supervisor'] as const) {
       assert.match(card, hold === 'closed' ? /DORMANT/ : /BLOCKED/);
       assert.match(card + footer, hold === 'closed' ? /Reopen project/ : hold === 'load' ? /continuation consent/ : hold === 'supervisor' ? /supervisor hold/ : /persistence failure/);
       assert.doesNotMatch(card + footer, /RECOVERING|Audit running|No action needed/);
+      assert.ok(card.split('\n').includes('├─ completion audit: parked — no review recorded'));
+      assert.match(card, /stored completion claim was not evaluated/);
       if (hold === 'closed') assert.match(card, /no verdict: silent host successor/);
       assert.equal(JSON.stringify(state), before, 'display cannot mutate or resume the stored claim');
     }
   });
 }
+
+test('cold startup load hold preserves the parked claim alongside host admission evidence', () => {
+  for (const session of ['open', 'closed'] as const) for (const compactAuditCard of [true, false]) {
+    const state = parkedFixture();
+    delete state.mainModelRecovery;
+    state.loadHoldAt = now;
+    const before = JSON.stringify(state);
+    const extras = { compactAuditCard, uiStatusContext: { now, generation: 1,
+      evidence: { ownerKey: uiStatusOwnerKey(state)!, generation: 1, session, observedAt: now } } };
+    const card = buildWidgetLines(state, null, now, undefined, 160, extras)!.join('\n');
+    const footer = buildStatusText(state, null, now, undefined, extras, 240)!;
+    assert.match(card + footer, /BLOCKED/);
+    assert.match(card, /Held on session restore/);
+    assert.match(card, /\/glla resume grants continuation consent/);
+    assert.ok(card.split('\n').includes('├─ completion audit: parked — no review recorded'));
+    assert.match(card, /stored completion claim was not evaluated/);
+    assert.doesNotMatch(card + footer, /Audit running|No action needed|RECOVERING/);
+    assert.equal(JSON.stringify(state), before, 'presentation cannot dispatch or change the saved claim');
+  }
+});
 
 test('ordinary cold parked no-verdict claim retains exact legacy wording without an admission hold', () => {
   const state = parkedFixture();
