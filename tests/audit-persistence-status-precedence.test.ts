@@ -43,3 +43,69 @@ test('persistence stop outranks cached live audit progress on compact and detail
     assert.equal(state.goal!.status, 'auditing', 'presentation must preserve the saved pending claim');
   }
 });
+
+function parkedFixture(): State {
+  const state = fixture();
+  Object.assign(state.goal!, { status: 'paused', pauseKind: 'blocked',
+    pauseReason: 'completion audit blocked — no verdict: silent host successor',
+    pauseSuggestedAction: 'The completion claim is stored; /goal resume starts exactly one fresh auditor.' });
+  state.goal!.pendingCompletion!.phase = 'recovery-pending';
+  state.mainModelRecovery = { primary: 'provider/primary', active: 'provider/primary', attempted: ['provider/primary'],
+    attempts: 2101, kind: 'goal', reason: 'provider unavailable', owner: { kind: 'goal', id: state.goal!.id },
+    retryAt: new Date(now + 60000).toISOString() };
+  return state;
+}
+
+for (const hold of ['closed', 'load', 'persistence', 'supervisor'] as const) {
+  test(`paused pending claim: ${hold} admission outranks legacy recovery rendering`, () => {
+    for (const compactAuditCard of [true, false]) {
+      const state = parkedFixture();
+      if (hold === 'load') state.loadHoldAt = now;
+      if (hold === 'supervisor') state.supervisorPausedAt = now;
+      const before = JSON.stringify(state);
+      const extras = { compactAuditCard, uiStatusContext: { now, generation: 1,
+        persistenceHold: hold === 'persistence' ? 'Audit cursor could not be saved' : undefined,
+        evidence: { ownerKey: uiStatusOwnerKey(state)!, generation: 1,
+          session: hold === 'closed' ? 'closed' as const : 'open' as const,
+          observedAt: now, lastActivityAt: now - 1000, turnActive: true } } };
+      const card = buildWidgetLines(state, progress, now, undefined, 160, extras)!.join('\n');
+      const footer = buildStatusText(state, progress, now, undefined, extras, 240)!;
+      assert.match(card, hold === 'closed' ? /DORMANT/ : /BLOCKED/);
+      assert.match(card + footer, hold === 'closed' ? /Reopen project/ : hold === 'load' ? /continuation consent/ : hold === 'supervisor' ? /supervisor hold/ : /persistence failure/);
+      assert.doesNotMatch(card + footer, /RECOVERING|Audit running|No action needed/);
+      if (hold === 'closed') assert.match(card, /no verdict: silent host successor/);
+      assert.equal(JSON.stringify(state), before, 'display cannot mutate or resume the stored claim');
+    }
+  });
+}
+
+test('ordinary cold parked no-verdict claim retains exact legacy wording without an admission hold', () => {
+  const state = parkedFixture();
+  delete state.mainModelRecovery;
+  const card = buildWidgetLines(state, null, now, undefined, 160, { uiStatusContext: { now } })!.join('\n');
+  assert.match(card, /completion audit: parked — no review recorded/);
+  assert.match(card, /completion claim was not evaluated/);
+  assert.doesNotMatch(card, /DORMANT|RECOVERING/);
+});
+
+test('closed admission preserves ordinary prerequisite and decision blockers without unpausing', () => {
+  for (const pauseKind of ['blocked', 'decision'] as const) {
+    const state = fixture();
+    Object.assign(state.goal!, { status: 'paused', pauseKind, pauseReason: 'Human approval is required',
+      pauseSuggestedAction: pauseKind === 'decision' ? '/goal decide resolves the pending choice' : 'Resolve human approval before /goal resume' });
+    delete state.goal!.pendingCompletion;
+    const before = JSON.stringify(state);
+    const extras = { uiStatusContext: { now, generation: 1, evidence: { ownerKey: uiStatusOwnerKey(state)!,
+      generation: 1, session: 'closed' as const, observedAt: now } } };
+    const card = buildWidgetLines(state, null, now, undefined, 160, extras)!.join('\n');
+    assert.match(card, /DORMANT/);
+    assert.match(card, /Human approval is required/);
+    assert.match(card, pauseKind === 'decision' ? /\/goal decide/ : /Resolve human approval/);
+    assert.equal(JSON.stringify(state), before);
+    extras.uiStatusContext.evidence.session = 'open' as 'closed';
+    const openCard = buildWidgetLines(state, null, now, undefined, 160, extras)!.join('\n');
+    assert.match(openCard, /BLOCKED/);
+    assert.match(openCard, /Human approval is required/);
+    assert.equal(JSON.stringify(state), before);
+  }
+});
