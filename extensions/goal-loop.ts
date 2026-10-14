@@ -144,7 +144,7 @@ export interface LoopDeps {
   mainModelRecoveryActive: () => boolean;
   manuallyResumeMainModelRecovery: (ctx: ExtensionContext) => boolean;
   notifyExternal: (ctx: ExtensionContext, message: string) => void;
-  persistState: (ctx: ExtensionContext) => void;
+  persistState: (ctx: ExtensionContext) => boolean;
   probeExtensionApiStale: () => boolean;
   probeMainModelRecovery: (ctx: ExtensionContext) => Promise<void>;
   releaseContinuationDispatchStandDown: () => void;

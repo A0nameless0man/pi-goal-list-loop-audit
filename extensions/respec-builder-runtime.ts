@@ -136,13 +136,14 @@ export async function runRespecBuilderAudit(ctx: ExtensionContext): Promise<void
   const retryInfrastructure = (liveCtx: ExtensionContext, error: string, failureClass: ReturnType<typeof auditorResultFailureClass>) => {
     if (persistenceRejected || supervisorPaused(state) || controller.signal.aborted || !state.loop?.active
         || state.loop.startedAt !== loop.startedAt || state.loop.builder !== builder || !host.context(liveCtx)) return;
-    const retry = nextInfrastructureRetry(builder.audit!.attemptId, failureClass, host.auditNow?.() ?? Date.now(), builder.audit!.infrastructureRetry);
+    const diagnosticClass = /auth|credential|api.?key|401|403/i.test(error) ? "auth" : /config|no auditor model|model.*(?:available|not found)|unset/i.test(error) ? "config" : failureClass;
+    const retry = nextInfrastructureRetry(builder.audit!.attemptId, diagnosticClass, host.auditNow?.() ?? Date.now(), builder.audit!.infrastructureRetry);
     const next = { ...builder, audit: { ...builder.audit!, infrastructureRetry: retry } };
     if (!commit(liveCtx, builder, next)) return;
     builder = next;
     retryCommitted = true;
     appendLedger(liveCtx.cwd, "respec_infrastructure_retry", { attemptId: retry.scopeId, ...retry });
-    try { liveCtx.ui.notify(`Project audit has no verdict (${failureClass}); automatic retry at ${new Date(retry.nextRetryAt).toISOString()}. Auth/config failures require repair, not approval.`, "warning"); } catch { /* durable retry survives UI failure */ }
+    try { liveCtx.ui.notify(`Project audit has no verdict (${diagnosticClass}); automatic retry at ${new Date(retry.nextRetryAt).toISOString()}. Auth/config failures require repair, not approval.`, "warning"); } catch { /* durable retry survives UI failure */ }
   };
   const publish = (patch: Partial<NonNullable<ReturnType<typeof getRespecAuditLive>>>) => {
     if (!state.loop?.active || state.loop.builder !== builder || !host.context(ctx)) return;

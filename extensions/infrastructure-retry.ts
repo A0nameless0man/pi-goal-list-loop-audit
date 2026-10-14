@@ -1,6 +1,6 @@
 /** Infrastructure failures end a bounded episode, never the supervision contract.
  * Counts are diagnostic and affect pacing only; admission belongs to the host. */
-export type InfrastructureFailureClass = "no-verdict" | "timeout" | "transport" | "provider";
+export type InfrastructureFailureClass = "no-verdict" | "timeout" | "transport" | "provider" | "auth" | "config";
 export interface InfrastructureRetry {
   scopeId: string;
   failureClass: InfrastructureFailureClass;
@@ -22,7 +22,7 @@ export function infrastructureRetryDelay(retry: InfrastructureRetry | undefined,
 export function sanitizeInfrastructureRetry(value: unknown, scopeId: string): InfrastructureRetry | undefined {
   if (!value || typeof value !== "object") return undefined;
   const r = value as InfrastructureRetry;
-  if (r.scopeId !== scopeId || !["no-verdict", "timeout", "transport", "provider"].includes(r.failureClass)
+  if (r.scopeId !== scopeId || !["no-verdict", "timeout", "transport", "provider", "auth", "config"].includes(r.failureClass)
       || ![r.firstFailureAt, r.lastFailureAt, r.nextRetryAt].every(n => typeof n === "number" && Number.isFinite(n) && n >= 0)
       || r.lastFailureAt < r.firstFailureAt || r.nextRetryAt < r.lastFailureAt) return undefined;
   return { scopeId, failureClass: r.failureClass, failures: Number.isFinite(r.failures) ? Math.min(1_000_000, Math.max(1, Math.floor(r.failures))) : 1,
