@@ -101,3 +101,76 @@ path rather than weakening admission assertions.
 
 No staged files; daemon owns automatic source/evidence commits. No history
 operations or release commands were performed.
+
+
+## Next coherent slice: admitted metric/audit loops
+
+Implemented typed measurement outcomes in `goal-loop.ts`: verified reading,
+successful invalid metric, or infrastructure/no-verdict. Throws, nonzero exits,
+missing codes and malformed stdout do not mutate numeric history, best/last,
+productive iteration, plateau or stuck state. Successful nonnumeric output
+retains the existing explicit invalid-metric brake; it is not numeric progress.
+Unknowns return before progress classification and all git operations.
+
+The admitted loop persists the shared retry envelope before its existing timer
+arms. Due measurement retries run only the measure, not another agent turn;
+counts affect capped pacing only. Timer identity, generation, cwd, claim/retry
+identity, stop/freeze/load gates and numeric-era ownership fence callbacks.
+Refinements invalidate the old retry; asynchronous measurements cannot attach to
+an object or metric era superseded while awaiting exec. An in-flight tick latch
+prevents duplicate measurement dispatch. Retry status is saved diagnostic
+metadata, never proof of a live worker. Bounds stop retries without destructive
+git cleanup, retaining uncommitted work. Persistence refusal rolls the retry
+transition back and arms nothing.
+
+The activation fallback no longer terminalizes error turns at
+`LOOP_MAX_CONSECUTIVE_ERRORS`: it durably paces them, while recognized provider
+errors continue through the existing main-model recovery owner. Explicit aborts
+retain their cap (including error envelopes positively identified as user aborts).
+No changes to credentials, providers, external project state or release metadata.
+
+Evidence added in `tests/loop-infrastructure-recovery.test.ts`: actual MockPi
+lifecycle/adapters and temp journals, **2105 failures each for metric and audit
+loops**, early duplicate wakes, journal reload checkpoints and final productive
+numeric recovery; repeated recognized provider errors and recovery; fallback
+errors beyond the former cap; stale timers; freeze/stop/token bounds; stale
+async refinement; actual future/overdue reload and cold no-consent; storage
+refusal via an unavailable runtime directory. These are simulated exec outages,
+not provider calls. Missing-code tests now explicitly assert preserved history
+instead of counting infrastructure toward the invalid-metric brake. Source
+pins retain exit-code and measure-timeout assertions.
+
+Validation:
+- `timeout 60s npm run check`: PASS.
+- Isolated-global, bounded targeted run of 11 files: **173 pass / 0 fail**,
+  approximately 21 seconds; `/tmp/glla-loop-gates.log` (ephemeral evidence).
+- New lifecycle file: **10 pass / 0 fail**, approximately 3 seconds.
+- Isolated-global `timeout 150s npm test`: **INCOMPLETE / TIMEOUT** after 150s;
+  no `(fail)` lines observed before SIGTERM. `/tmp/glla-full-fast.log` is
+  ephemeral evidence, not a completed full-suite result.
+
+Development diagnostics: the first combined targeted run caught an early-bound
+check bypassing ordinary terminal git preservation. Restricting that early check
+to infrastructure waits restored the existing terminal commit-failure assertion;
+the 173-test rerun passes. The cold fixture initially emitted shutdown without
+reason, which correctly consented a same-process successor. Explicit quit models
+a genuinely cold load: it retains active=false, zero timers and zero new execs;
+no consent assertion was weakened.
+
+### Remaining BLOCKERS / acceptance boundary
+
+- Completion audit `goal-auditor-hooks.ts` remains unchanged: ordinary one-shot,
+  aggressive horizon, provider retry eligibility and timer-plan persistence
+  require a separate ownership review. Ordinary goal completion limits must not
+  be silently widened under a loop-only continuity contract. All callers of the
+  existing arm-then-return scheduler still need transactional conversion.
+- Initial start baseline failures and proposal/refinement measurement probes
+  still use their pre-existing refusal contract. This admitted-loop slice does
+  not claim automatic recovery across those initial admission paths.
+- Full-suite/slow-suite review remains incomplete; no release check was run.
+- Bounds coverage here is token-bound behavioral coverage plus existing suites;
+  additional metric retry time/iteration-bound and explicit-abort stress cases
+  remain useful independent-review targets.
+
+The universal objective is **not complete**. Reviewer gate is still required.
+No staged files or history operations; the daemon remains commit owner.

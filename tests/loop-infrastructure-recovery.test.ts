@@ -5,7 +5,7 @@ import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import activate, { __testOnlyResetOwnerSession, __testOnlyResetStaleFlag } from "../extensions/loops/goal.js";
 import { __testOnlyLoopInfrastructureScheduler, clearLoopTimer, runLoopTick, scheduleLoopTick } from "../extensions/goal-loop.js";
 import { saveSettings } from "../extensions/goal-settings.js";
-import { state, replaceState, persistStateLine } from "../extensions/goal-state.js";
+import { state, replaceState } from "../extensions/goal-state.js";
 import { readState } from "../extensions/goal-loop-core.js";
 import { MockPi, makeMockCtx, seedLoop, seedState, tmpCwd } from "./harness/mock-pi.js";
 

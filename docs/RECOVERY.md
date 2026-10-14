@@ -110,10 +110,29 @@ Reloaded deadlines do not authorize execution by themselves. Legacy automatic
 load admission; deliberate user holds do not migrate. Storage refusal rolls
 back the transition and cannot authorize unjournaled dispatch.
 
-This slice covers **project increment audits**, not universal loop recovery.
-Completion-audit one-shot/horizon gates and metric/audit measurement/provider
-error cutoffs remain separate follow-up work. Do not infer that all loop
-lifecycles already satisfy the no-cutoff objective.
+## Metric and audit-loop measurement recovery
+
+An admitted metric loop (including `/loop audit`) distinguishes verified numeric
+readings, successful nonnumeric output, and infrastructure failures. Exec throws,
+nonzero exits, missing exit codes and malformed envelopes preserve best/last,
+history, iteration, plateau and stuck accounting. They journal a 5-second to
+5-minute capped retry before arming the existing timer, without a count/horizon
+cutoff. A due measurement retry re-runs the measure, not another agent turn;
+unknown output cannot trigger git regression or approval. Successful nonnumeric
+output still exercises the explicit invalid-metric brake.
+
+Fallback error turns outside main-model recovery now get the same durable pacing;
+recognized provider errors keep the existing main-model recovery owner. Explicit
+user aborts retain their finite stop cap. Retry status identifies the saved wait,
+not a live worker. Session consent, supervisor freezes, stop/pause, refinement
+ownership, storage refusal and loop bounds remain authoritative. A same-process
+reload successor may retain existing consent; a quit followed by a cold load
+without auto-resume does not gain consent from its saved deadline.
+
+These slices do **not** complete universal recovery. Initial `/loop start`
+baseline/proposal probes still refuse an unusable measurement; completion-audit
+one-shot/horizon gates remain separate follow-up work. Do not infer that all
+loop lifecycle entry points already satisfy the no-cutoff objective.
 
 ## Is an audit progressing?
 
