@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 0.39.32 — honest pause questions and a Designer session fallback (2026-10-14)
+
+### Pause cards ask instead of decreeing
+
+- A tweak suggestion inside a `pause_goal` `suggestedAction` now renders as a question in every action-bearing pause surface: `Question: should this tweak be applied? <command> — or reply with what you'd prefer instead.` The exact `/goal tweak` or `/list tweak` command is preserved verbatim for copy-paste, so acquiescing is still one command away.
+- The `pause_goal` contract now tells agents that a tweak rewrites the operator's objective or contract and must be phrased as a question, not an imperative `Run ...` order.
+- Non-tweak actions keep their existing imperative `Next:` line; only tweak commands are reframed.
+
+### Designer session last-fallback
+
+- The Designer model chain is primary → configured fallbacks → the live session model as an automatic last fallback. An explicitly selected primary still wins whenever it is eligible; the session is only pinned when the whole configured chain is ineligible.
+- The session entry is skipped when it is forbidden or already configured, so a chain never lists the session twice. A forbidden session model with no eligible configured ref still blocks registration instead of inheriting silently.
+- `configuredRefs` remains the operator's configured chain for settings surfaces; the automatic session fallback is appended only at selection time.
+
 ## 0.39.31 — durable supervised recovery and truthful admission (2026-10-13)
 
 Includes all changes since published 0.39.28; 0.39.29 and 0.39.30 were untagged development versions.
