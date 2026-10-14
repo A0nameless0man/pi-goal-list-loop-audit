@@ -89,6 +89,32 @@ restored but automation awaits your decision. Load the intended conversation,
 inspect its state, then resume. Enable **Auto-resume** in `/glla` only if you
 want automation to restart after future loads.
 
+## Project increment infrastructure retries
+
+A project increment audit that stalls, times out, cannot launch, has no verdict,
+or encounters authentication/configuration failure now retains its exact claim
+and active supervision. It journals a next-episode deadline before rearming the
+existing loop timer: 5 seconds initially, exponentially paced to a 5-minute cap.
+There is no failure-count or elapsed-recovery cutoff. Auth/config problems may
+need operator repair; GLLA neither changes credentials nor treats failure as
+approval. Status shows the durable failure class, count and retry due time,
+not a fictional live worker.
+
+Each configured candidate ladder remains finite within an episode. Only the
+next due, admitted episode clears its exhausted cursor and re-resolves current
+settings. Saved approval evidence is reconsulted before provider dispatch, so
+archive/outbox repair can settle the original verdict without another worker.
+Pause, stop, supervisor freeze, project bounds and cold-load consent still win.
+Reloaded deadlines do not authorize execution by themselves. Legacy automatic
+`audit infrastructure:` holds migrate only with explicit resume or existing
+load admission; deliberate user holds do not migrate. Storage refusal rolls
+back the transition and cannot authorize unjournaled dispatch.
+
+This slice covers **project increment audits**, not universal loop recovery.
+Completion-audit one-shot/horizon gates and metric/audit measurement/provider
+error cutoffs remain separate follow-up work. Do not infer that all loop
+lifecycles already satisfy the no-cutoff objective.
+
 ## Is an audit progressing?
 
 Read the auditor rows, rather than the main session's spinner alone:
@@ -98,6 +124,7 @@ Read the auditor rows, rather than the main session's spinner alone:
 | **Auditing**, recent activity | The detached auditor is producing events. Tool completions and changing evidence provide stronger progress evidence than elapsed time alone. A long duration alone does not establish a stall. |
 | Waiting on a tool, elapsed/timeout | A tool is still running. Its ticking timer is a wait indicator; timeout handling remains automatic. |
 | Waiting for dispatch | A saved claim exists, but no live worker activity is observed yet. Inspect status for restoration or recovery holds. |
+| No verdict · automatic retry | A project infrastructure episode ended; the saved deadline paces another episode. Auth/config may need repair. This is neither approval nor a live-worker indicator. |
 | **Audit held** | Automation parked with a recorded reason. Inspect `/loop status`, resolve the cause, then resume through the command shown. |
 | **Audit stopped** | The project was explicitly stopped. Resume is not offered for that stop. |
 | Completion review disapproved | The auditor found an unmet contract. Read its required fixes; repair work can continue automatically. Rejection does not mean approval is stuck. |

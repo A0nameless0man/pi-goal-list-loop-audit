@@ -513,19 +513,19 @@ test("project retry admission rolls back on refusal and honors freeze, stop, bou
   } finally { restore(); replaceState(f.original); }
 });
 
-for (const mode of ["cold", "pre-due", "overdue", "legacy"] as const) test(`real project restore ${mode} obeys consent, due and exact timer ownership`, async () => {
+for (const mode of ["cold", "pre-due", "overdue", "legacy", "legacy-cold", "user-stop"] as const) test(`real project restore ${mode} obeys consent, due and exact timer ownership`, async () => {
   const f = fixture(), pi = new MockPi();
   let now = Date.now(), resolutions = 0;
   const retryAt = mode === "overdue" ? now - 1 : now + 5000;
   const audit = { ...f.builder.audit!, infrastructureRetry: { scopeId: f.builder.audit!.attemptId, failureClass: "auth" as const, failures: 2,
     firstFailureAt: now - 10000, lastFailureAt: now - 10000, nextRetryAt: retryAt, pendingEpisode: true } };
-  replaceState({ ...state, loop: { ...state.loop!, active: mode !== "legacy", stopReason: mode === "legacy" ? "audit infrastructure: invalid credentials" : undefined,
-    builder: { ...f.builder, audit: mode === "legacy" ? f.builder.audit : audit } } });
+  replaceState({ ...state, loop: { ...state.loop!, active: !["legacy", "legacy-cold", "user-stop"].includes(mode), stopReason: mode === "user-stop" ? "stopped by user (/loop stop)" : mode.startsWith("legacy") ? "audit infrastructure: invalid credentials" : undefined,
+    builder: { ...f.builder, audit: mode.startsWith("legacy") ? f.builder.audit : audit } } });
   persistStateLine(f.cwd, state);
   __testOnlyResetOwnerSession(); __testOnlyResetStaleFlag();
   activate(pi.api);
   const globalSettings = fs.readFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, "utf8");
-  saveSettings("global", f.cwd, { autoResume: mode !== "cold" });
+  saveSettings("global", f.cwd, { autoResume: !["cold", "legacy-cold"].includes(mode) });
   const timers: { callback: () => void; delay: number; handle: NodeJS.Timeout }[] = [];
   const restoreScheduler = __testOnlyLoopInfrastructureScheduler(() => now, (callback, delay) => {
     const handle = setTimeout(() => {}, 1_000_000); handle.unref();
@@ -535,7 +535,7 @@ for (const mode of ["cold", "pre-due", "overdue", "legacy"] as const) test(`real
   try {
     await pi.fire("session_start", { reason: "startup" }, f.ctx);
     restoreRuntime = __testOnlyRespecAuditorRuntime({ auditNow: () => now, resolveModel: () => { resolutions++; return { model: undefined, error: "auth failed" }; } });
-    if (mode === "cold") {
+    if (["cold", "legacy-cold", "user-stop"].includes(mode)) {
       assert.equal(state.loop!.active, false);
       assert.equal(timers.length, 0);
       await runRespecBuilderAudit(f.ctx); assert.equal(resolutions, 0);
