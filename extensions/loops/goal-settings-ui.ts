@@ -1052,7 +1052,7 @@ function resyncDesignerRegistration(ctx: ExtensionContext, designerRequested = f
   try {
     const s = loadSettings(ctx.cwd);
     const config = resolveDesignerConfig(s);
-    const resolution = resolveDesignerModel(ctx, s);
+    const resolution = resolveDesignerModel(ctx, s, { reportBlocked: config.enabled !== false });
     const isForbidden = (ref: string) => isForbiddenModel(ref, s.forbiddenModels);
     const resolve = (ref: string): unknown => {
       const idx = ref.indexOf("/");
