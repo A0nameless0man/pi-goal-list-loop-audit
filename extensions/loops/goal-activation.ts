@@ -2974,7 +2974,7 @@ async function handleHotLengthExhaustion(
       // dead 429 turn; the v0.28.13/v0.29.4 exemptions only covered the
       // goal nudge counter). Skip the measure and refire — bounded, so a
       // real outage stops the loop honestly instead of burning turns.
-      const sr = lastA?.stopReason;
+      const sr = lastA?.stopReason === "error" && lastMainModelFailure?.nonRecoverableReason === "user-abort" ? "aborted" : lastA?.stopReason;
       if (sr === "error") {
         paceLoopInfrastructureFailure(ctx, "provider", "provider");
         return;

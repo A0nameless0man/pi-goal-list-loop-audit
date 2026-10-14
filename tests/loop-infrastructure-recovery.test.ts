@@ -74,21 +74,34 @@ for (const kind of [undefined, "audit"] as const) test(`${kind ?? "metric"} actu
   } finally { await f.close(); }
 });
 
-test("unclassified provider turns pace without productive accounting or terminal count cap", async () => {
+test("provider errors retain existing main-model recovery and recover without numeric accounting", async () => {
   const f = await fixture();
   try {
     for (let i = 0; i < 20; i++) {
-      await f.pi.fire("agent_end", { messages: [{ role: "assistant", stopReason: "error", content: [] }] }, f.ctx);
+      await f.pi.fire("agent_end", { messages: [{ role: "assistant", stopReason: "error", errorMessage: "unknown provider failure", content: [] }] }, f.ctx);
+      assert.equal(state.loop!.iteration, 1);
+      assert.equal(state.loop!.history.length, 1);
+      assert.ok(state.mainModelRecovery, "existing main-model owner retains the provider wait");
+      assert.equal(state.mainModelRecovery!.manualResumeRequired, undefined);
+    }
+    f.healthy();
+    await f.pi.fire("agent_end", { messages: [{ role: "assistant", stopReason: "end_turn", content: [{ type: "text", text: "Implemented and verified a productive recovery." }] }] }, f.ctx);
+    assert.equal(readState(f.cwd).loop!.bestValue, 11);
+    assert.equal(readState(f.cwd).loop!.infrastructureRetry, undefined);
+  } finally { await f.close(); }
+});
+
+test("loop error fallback outside main-model eligibility has pacing instead of count cutoff", async () => {
+  const f = await fixture();
+  try {
+    for (let i = 0; i < 20; i++) {
+      await f.pi.fire("agent_end", { messages: [{ role: "assistant", stopReason: "error", errorMessage: "output token limit exceeded", content: [] }] }, f.ctx);
       assert.equal(state.loop!.active, true);
       assert.equal(state.loop!.iteration, 1);
       assert.equal(state.loop!.infrastructureRetry!.failures, i + 1);
       assert.equal(state.loop!.infrastructureRetryKind, "provider");
       f.due();
     }
-    f.healthy();
-    await f.pi.fire("agent_end", { messages: [{ role: "assistant", stopReason: "end_turn", content: [{ type: "text", text: "Implemented and verified a productive recovery." }] }] }, f.ctx);
-    assert.equal(readState(f.cwd).loop!.bestValue, 11);
-    assert.equal(readState(f.cwd).loop!.infrastructureRetry, undefined);
   } finally { await f.close(); }
 });
 
