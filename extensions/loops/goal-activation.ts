@@ -779,6 +779,40 @@ function maybeScheduleUnsupervisedErrorRetry(
     return;
   }
   const failure = classifyMainModelFailure(raw);
+  // Carve-out: an already-paused goal whose pauseKind is NOT blocked is
+  // a provider-driven hold (wait quota reroute, error-class, decision).
+  // When the host then ends the turn with a non-recoverable error such as
+  // "This operation was aborted", the audit trail must record that the
+  // goal was already paused so the refusal can be distinguished from an
+  // active-turn non-recoverable abort. Without this, a wait-paused goal
+  // hit by a host abort records reason="non-recoverable" with no pause
+  // context and the operator sees only the host's "Error: aborted" line
+  // (which is upstream-rendered and outside GLLA's hooks). Capturing the
+  // pause context here is the GLLA-owned side of the contract: the
+  // upstream red "Error:" line is recorded in the audit as an
+  // upstream-only limitation. The blocked-pause case is handled by the
+  // existing `goal-blocked-paused` fence below for backward compatibility.
+  if (failure.kind === "non-recoverable" && state.goal?.status === "paused" && state.goal.pauseKind && state.goal.pauseKind !== "blocked") {
+    const pausedDisplay = `paused (${state.goal.pauseKind}) — host ended turn (${display})`;
+    appendLedger(ctx.cwd, "unsupervised_error_retry_refused", {
+      reason: "goal-paused-host-abort",
+      kind: failure.kind,
+      display: pausedDisplay,
+      pauseKind: state.goal.pauseKind,
+      pauseReason: state.goal.pauseReason,
+    });
+    const resumeCommand = activeGoalSurfaceCommand("resume");
+    const waitHint = state.goal.pauseKind === "wait" && state.goal.pauseResumeAt
+      ? ` Resume after the saved check (${state.goal.pauseResumeAt}).`
+      : ` ${resumeCommand} to continue.`;
+    ctx.ui.notify(
+      `glla: host ended the turn while the goal was paused (${state.goal.pauseKind}). The saved work is intact; the red "Error:" line is the host's own transport, not a GLLA retry.${waitHint}`,
+      "info",
+    );
+    notifyExternal(ctx,
+      `glla: paused (${state.goal.pauseKind}) — host turn ended with "${display}". Saved work intact; ${resumeCommand} continues.`);
+    return;
+  }
   // Carve-out: aborts and policy refusals never retry.
   if (failure.kind === "non-recoverable") {
     appendLedger(ctx.cwd, "unsupervised_error_retry_refused", { reason: "non-recoverable", kind: failure.kind, display });

@@ -204,6 +204,63 @@ test("'This operation was aborted' on a blocked-paused goal never reaches the re
     `the reason is one of the two fences: ${refused.value.reason}`);
 });
 
+test("'This operation was aborted' on a wait-paused goal records pause context and does not retry", async () => {
+  // v0.39.31: Screenshot_20261014_131941 showed a wait-paused goal whose
+  // host turn ended with the generic "This operation was aborted" line.
+  // The pre-fix code recorded reason="non-recoverable" with no pause
+  // context, leaving the operator with only the upstream red "Error:"
+  // line as a hint. The new carve-out distinguishes the two: a paused
+  // goal hit by a non-recoverable host abort records the pause kind and
+  // reason, fires an info notify, and never retries the turn.
+  fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify({ autoResume: true }));
+  cwd = tmpCwd();
+  seedState(cwd, {
+    goal: seedGoal({
+      id: "wait-paused-abort",
+      status: "paused",
+      pauseKind: "wait",
+      pauseReason: "Codex image-gen quota is still exhausted (HTTP 429 confirmed on probe after the resume).",
+      pauseResumeAt: "2026-10-14T13:57:36.341Z",
+    }),
+  });
+  const file = path.join(cwd, "session.jsonl");
+  const ctx = makeMockCtx(cwd, { sessionManager: { getBranch: () => [], getSessionFile: () => file } });
+  await pi.fire("session_start", { reason: "startup" }, ctx);
+  __testOnlySetUnsupervisedErrorRetryDelay(20);
+  await pi.fire("agent_end", { messages: [{ role: "assistant", content: [], stopReason: "error", errorMessage: "This operation was aborted" }] }, ctx);
+  await tick(150);
+  assert.equal(sentRetries().length, 0, "the wait-pause host abort never reaches the recovery loop");
+  const refused = ledger().filter((e) => e.type === "unsupervised_error_retry_refused").at(-1);
+  assert.ok(refused, "the refusal is ledgered");
+  assert.equal(refused.value.reason, "goal-paused-host-abort", "the new fence names the wait-pause + host-abort intersection");
+  assert.equal(refused.value.pauseKind, "wait", "the ledger records the pause kind so the audit trail distinguishes it from an active-turn abort");
+  assert.match(String(refused.value.pauseReason), /Codex image-gen quota/);
+  assert.match(String(refused.value.display), /paused \(wait\)/, "the GLLA-owned display names the pause kind in the ledger");
+  assert.match(String(refused.value.display), /This operation was aborted/, "the ledger retains the actual host text for forensics");
+  const infoNotice = ctx.ui.notifies.find((n) => /host ended the turn while the goal was paused/.test(n.message) && n.type === "info");
+  assert.ok(infoNotice, "the operator sees an info-level notify that names the pause kind, not the host's error");
+  assert.ok(/host's own transport/.test(infoNotice!.message), "the notify names the red 'Error:' line as upstream, not a GLLA retry");
+  assert.ok(!infoNotice!.message.includes("aborted"), "the operator-facing notify does not echo the host's 'aborted' text");
+});
+
+test("'This operation was aborted' on an ACTIVE (unpaused) goal does not reach the unsupervised-error-retry path", async () => {
+  // Counterpart: a genuine active-turn abort routes through the goal's
+  // own turn-handler (not the unsupervised lane), so no refuse event
+  // is recorded. The new carve-out only fires when the goal is already
+  // paused at the time the host turn ends.
+  fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify({ autoResume: true }));
+  cwd = tmpCwd();
+  seedState(cwd, { goal: seedGoal({ id: "active-abort", status: "active" }) });
+  const file = path.join(cwd, "session.jsonl");
+  const ctx = makeMockCtx(cwd, { sessionManager: { getBranch: () => [], getSessionFile: () => file } });
+  await pi.fire("session_start", { reason: "startup" }, ctx);
+  __testOnlySetUnsupervisedErrorRetryDelay(20);
+  await pi.fire("agent_end", { messages: [{ role: "assistant", content: [], stopReason: "error", errorMessage: "This operation was aborted" }] }, ctx);
+  await tick(150);
+  const refused = ledger().filter((e) => e.type === "unsupervised_error_retry_refused");
+  assert.equal(refused.length, 0, "active-turn aborts are owned by the goal's own turn handler, not the unsupervised lane");
+});
+
 test("policy refusals, auth, billing, and deterministic 400s refuse with a reason", async () => {
   const ctx = await boot();
   __testOnlySetUnsupervisedErrorRetryDelay(20);
