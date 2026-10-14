@@ -2986,21 +2986,8 @@ async function handleHotLengthExhaustion(
         appendLedger(ctx.cwd, "loop_turn_exempt_error", { stopReason: sr, consecutive: loop.consecutiveErrors, iteration: loop.iteration });
         const cap = LOOP_MAX_CONSECUTIVE_ABORTS;
         if (loop.consecutiveErrors >= cap) {
-          const providerFailure = lastMainModelFailure;
-          const durableProviderFailure = providerFailure
-            && (requiresMainModelRecovery(providerFailure)
-              || isMainModelFallbackFailure(providerFailure));
-          if (sr === "error" && durableProviderFailure) {
-            // Recoverable provider failures may rotate through backups; the
-            // bounded recovery envelope owns the loop instead of stopping on
-            // a dead turn.
-            parkMainModelAfterFailure(ctx, providerFailure);
-            if (state.mainModelRecovery) return;
-          }
           loop.active = false;
-          loop.stopReason = sr === "aborted"
-            ? `stopped by user — ${loop.consecutiveErrors} consecutive aborts (iteration ${loop.iteration} preserved; /loop resume to continue)`
-            : `provider errors — ${loop.consecutiveErrors} consecutive error turns (iteration ${loop.iteration} preserved; /loop resume when the provider recovers)`;
+          loop.stopReason = `stopped by user — ${loop.consecutiveErrors} consecutive aborts (iteration ${loop.iteration} preserved; /loop resume to continue)`;
           persistState(ctx);
           const recap = compactLoopCompletionSummary({ ...loop, historyLength: loop.history.length });
           ctx.ui.notify(`Loop stopped: ${loop.stopReason}\nRecap: ${recap}`, "warning");

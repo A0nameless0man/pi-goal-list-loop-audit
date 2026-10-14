@@ -364,7 +364,7 @@ export function paceLoopInfrastructureFailure(ctx: ExtensionContext, kind: "meas
   const previous = { ...loop };
   loop.infrastructureRetry = nextInfrastructureRetry(loopInfrastructureScopeId(loop), failureClass, infrastructureNow(), loop.infrastructureRetry);
   loop.infrastructureRetryKind = kind;
-  if (!persistState(ctx)) { Object.assign(loop, previous); return false; }
+  if (!persistState(ctx)) { loop.infrastructureRetry = previous.infrastructureRetry; loop.infrastructureRetryKind = previous.infrastructureRetryKind; return false; }
   appendLedger(ctx.cwd, "loop_infrastructure_wait", { kind, ...loop.infrastructureRetry });
   scheduleLoopTick(ctx);
   return true;
@@ -736,7 +736,15 @@ function sendLoopTurn(): void {
 }
 
 /** agent_end hook for loop 3: measure → judge → continue or stop. */
+let loopTickInFlight = false;
 async function runLoopTick(initialCtx: ExtensionContext, event?: any): Promise<void> {
+  if (loopTickInFlight) return;
+  loopTickInFlight = true;
+  try { await runLoopTickInner(initialCtx, event); }
+  finally { loopTickInFlight = false; }
+}
+
+async function runLoopTickInner(initialCtx: ExtensionContext, event?: any): Promise<void> {
   if (backgroundDispatchHeld(state) || supervisorPaused(state) || !state.loop?.active) return;
   if (infrastructureRetryDelay(state.loop.infrastructureRetry, infrastructureNow()) > 0) return;
   // v0.34.20: measurement/git work is asynchronous. Rebind the local
