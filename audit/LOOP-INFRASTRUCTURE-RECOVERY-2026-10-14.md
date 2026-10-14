@@ -98,7 +98,11 @@ counts affect capped pacing only. Timer identity, generation, cwd, claim/retry
 identity, stop/freeze/load gates and numeric-era ownership fence callbacks.
 Refinements invalidate the old retry; asynchronous measurements cannot attach to
 an object or metric era superseded while awaiting exec. An in-flight tick latch
-prevents duplicate measurement dispatch. Retry status is saved diagnostic
+prevents duplicate measurement dispatch. The original retry envelope saved only a broad failure class: it did NOT
+retain the actual stderr/exit/exception or project failure cause. The actual-cause
+objective was correctly rejected despite passing recovery tests. The subsequent
+repair is documented in [LOOP-INFRASTRUCTURE-DIAGNOSTICS-2026-10-14.md](LOOP-INFRASTRUCTURE-DIAGNOSTICS-2026-10-14.md).
+Retry status now includes bounded credential-redacted cause prose and remains
 metadata, never proof of a live worker. Bounds stop retries without destructive
 git cleanup, retaining uncommitted work. Persistence refusal rolls the retry
 transition back and arms nothing.

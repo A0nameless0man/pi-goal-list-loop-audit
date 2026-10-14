@@ -97,8 +97,16 @@ and active supervision. It journals a next-episode deadline before rearming the
 existing loop timer: 5 seconds initially, exponentially paced to a 5-minute cap.
 There is no failure-count or elapsed-recovery cutoff. Auth/config problems may
 need operator repair; GLLA neither changes credentials nor treats failure as
-approval. Status shows the durable failure class, count and retry due time,
-not a fictional live worker.
+approval. Status shows the durable failure class, count, retry deadline and bounded actual
+cause, not a fictional live worker. The pending project card places the cause
+beside its retry deadline, including after reload. Auth/config causes retain
+safe model/endpoint/permission details: they are not collapsed to “credentials”.
+Retry diagnostics are at most 600 characters of plain prose. Credentials,
+authorization headers, URL userinfo/query/fragment, signed URL parameters and
+PEM material are redacted before truncation. Objects and full exception stacks
+are not persisted; legacy retry diagnostics are re-redacted on reload. Redaction
+is a best-effort projection for marked secrets, not a promise to detect arbitrary
+unlabelled sensitive prose.
 
 Each configured candidate ladder remains finite within an episode. Only the
 next due, admitted episode clears its exhausted cursor and re-resolves current
@@ -116,6 +124,10 @@ An admitted metric loop (including `/loop audit`) distinguishes verified numeric
 readings from infrastructure/no-verdict failures. Empty, nonnumeric or nonfinite
 zero-exit output is a measurement configuration failure, not plateau evidence. Exec throws,
 nonzero exits, missing exit codes and malformed envelopes preserve best/last,
+with a safe diagnostic recording exit/stderr, absent/empty/nonfinite stdout or
+the executor exception message (not its stack). Recovery status retains that
+cause beside the retry deadline after journal reload. These diagnostics do not
+change retry ownership, counts, pacing, stop authority or bounds. They preserve
 history, iteration, plateau and stuck accounting. They journal a 5-second to
 5-minute capped retry before arming the existing timer, without a count/horizon
 cutoff. A due measurement retry re-runs the measure, not another agent turn;

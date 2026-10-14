@@ -18,6 +18,7 @@ export function safeDiagnostic(value: unknown, limit = 600): string | undefined 
     } catch { return "Structured error payload omitted"; }
   }
   text = text
+    .replace(/\{\s*["'][\s\S]*$/, "structured payload omitted")
     .replace(/https?:\/\/[^\s<>"']+/gi, url => url.replace(/(\/\/)[^/@\s]+@/, "$1[redacted]@").replace(/[?#].*$/, "?[redacted]"))
     .replace(/\b(?:authorization|proxy-authorization)\s*["']?\s*[:=]\s*(?:["'][^"']*(?:["']|$)|(?:Bearer|Basic)\s+[^\s,;]+|[^\s,;]+)/gi, "authorization=[redacted]")
     .replace(/\b(?:Bearer|Basic)\s+[^\s,;"']+/gi, "Bearer [redacted]")

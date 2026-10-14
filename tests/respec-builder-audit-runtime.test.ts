@@ -634,9 +634,17 @@ test("project retry causes survive actual journal reload and production recovery
   const f = fixture();
   let clock = Date.parse("2026-10-14T12:00:00Z");
   let error = "HTTP 401 model alpha scope denied; Authorization: Bearer PROJECT_SECRET";
-  const restore = __testOnlyRespecAuditorRuntime({ auditNow: () => clock, resolveModel: () => ({ error, model: undefined }) });
+  const restore = __testOnlyRespecAuditorRuntime({ auditNow: () => clock, resolveModel: () => {
+    if (error.startsWith("transport")) throw new Error(error);
+    return { error, model: undefined };
+  } });
   try {
-    for (const cause of [/HTTP 401 model alpha scope denied/, /No auditor model beta configured/]) {
+    for (const [message, cause] of [
+      ["HTTP 401 model alpha scope denied; Authorization: Bearer PROJECT_SECRET", /HTTP 401 model alpha scope denied/],
+      ["No auditor model beta configured; access_token=PROJECT_SECRET", /No auditor model beta configured/],
+      ["transport timeout connecting to local auditor; password=PROJECT_SECRET", /transport timeout connecting to local auditor/],
+    ] as const) {
+      error = message;
       await runRespecBuilderAudit(f.ctx);
       replaceState(readState(f.cwd));
       const builder = state.loop!.builder!;
@@ -651,7 +659,6 @@ test("project retry causes survive actual journal reload and production recovery
       assert.doesNotMatch(walk(path.join(f.cwd, ".pi-glla")), /PROJECT_SECRET/);
       assert.doesNotMatch(rows + status + JSON.stringify((f.ctx as any).ui), /PROJECT_SECRET/);
       clock = builder.audit!.infrastructureRetry!.nextRetryAt;
-      error = "No auditor model beta configured; access_token=PROJECT_SECRET";
     }
   } finally { restore(); replaceState(f.original); fs.rmSync(f.cwd, { recursive: true, force: true }); }
 });
