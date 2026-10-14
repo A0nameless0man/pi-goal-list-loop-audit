@@ -22,6 +22,7 @@ import * as path from "node:path";
 
 import activate, { __testOnlyResetOwnerSession } from "../extensions/loops/goal.js";
 import { readState } from "../extensions/goal-loop-core.js";
+import { saveSettings } from "../extensions/goal-settings.js";
 import { replaceState, state } from "../extensions/goal-state.js";
 import { MockPi, makeMockCtx, seedGoal, seedState, tmpCwd, tick } from "./harness/mock-pi.js";
 
@@ -34,6 +35,7 @@ function ledger(cwd: string): string {
 }
 
 async function boot(pi: MockPi, cwd: string) {
+  saveSettings("global", cwd, { autoResume: true, aggressiveMode: false });
   __testOnlyResetOwnerSession();
   const ctx = makeMockCtx(cwd, { sessionManager: { name: `repair-card-${Date.now()}-${Math.random()}` } });
   await pi.fire("session_start", { reason: "startup" }, ctx);
@@ -128,7 +130,7 @@ test("v0.35.22: when the loop ends, the blocked item becomes startable — /loop
 
 // v0.35.41 (audit finding): v0.35.22's "ends by ANY route … ANNOUNCE loudly"
 // contract was only wired into SOME stop routes — the stuck-ladder stop and
-// the provider-error/abort-cap stop notified the loop line but never
+// the explicit interrupt/abort-cap stop notified the loop line but never
 // announced queue resumption. Both tests drive the production stop routes.
 
 test("v0.35.41: the stuck-ladder stop also announces queued-list resumption", async () => {
@@ -156,7 +158,7 @@ test("v0.35.41: the stuck-ladder stop also announces queued-list resumption", as
   assert.match(unblocked[0]!.message, /clean up the README examples/);
 });
 
-test("v0.35.41: the provider-error cap stop also announces queued-list resumption", async () => {
+test("v0.35.41: explicit user interrupt cap stop announces queued-list resumption", async () => {
   const { cwd } = seedLoopAndItem();
   const pi = new MockPi();
   activate(pi.api);
@@ -165,18 +167,46 @@ test("v0.35.41: the provider-error cap stop also announces queued-list resumptio
 
   // Non-recoverable classification ("user interrupt") — the durable
   // main-model recovery envelope must NOT own this failure, so the error
-  // cap (6) stop route fires.
+  // abort cap (5) stop route fires.
   const deadTurn = { messages: [{ role: "assistant", content: [], stopReason: "error", errorMessage: "user interrupt" }] };
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 5; i++) {
     await pi.fire("agent_end", deadTurn, ctx);
     await tick();
   }
 
   const after = readState(cwd);
-  assert.ok(!after.loop?.active, "the error-cap stop ended the loop");
-  assert.match(after.loop?.stopReason ?? "", /provider errors/);
-  assert.ok(ctx.ui.notifies.some((notice) => notice.message.includes("Recap: Outcome:")), "provider-error stop includes the compact six-label recap");
+  assert.ok(!after.loop?.active, "the explicit interrupt cap ended the loop");
+  assert.equal(after.loop?.iteration, 1, "interrupts are not productive iterations");
+  assert.equal(after.loop?.infrastructureRetry, undefined, "explicit interrupts do not enter infrastructure recovery");
+  assert.equal(after.goal, null, "stop announces but does not activate the queue");
+  assert.match(after.loop?.stopReason ?? "", /stopped by user.*5 consecutive aborts/);
+  assert.ok(ctx.ui.notifies.some((notice) => notice.message.includes("Recap: Outcome:")), "explicit interrupt stop includes the compact six-label recap");
   const unblocked = ctx.ui.matching("can start again");
-  assert.equal(unblocked.length, 1, "the error-cap stop route announces the unblocked queue");
+  assert.equal(unblocked.length, 1, "the interrupt-cap stop route announces the unblocked queue");
   assert.match(unblocked[0]!.message, /clean up the README examples/);
+});
+
+
+test("provider outages retain loop supervision and queue until explicit user stop", async () => {
+  const { cwd } = seedLoopAndItem();
+  const pi = new MockPi();
+  activate(pi.api);
+  const ctx = await boot(pi, cwd);
+  wakeLoop();
+  const deadTurn = { messages: [{ role: "assistant", content: [], stopReason: "error", errorMessage: "unknown provider failure" }] };
+  for (let i = 0; i < 12; i++) {
+    await pi.fire("agent_end", deadTurn, ctx);
+    assert.equal(state.loop?.iteration, 1);
+    assert.ok(state.mainModelRecovery, "provider owner retains recovery beyond the former cap");
+    assert.equal(state.mainModelRecovery?.manualResumeRequired, undefined);
+    assert.equal(readState(cwd).goal, null, "queued work cannot replace the supervised loop");
+    assert.equal(ctx.ui.matching("can start again").length, 0);
+  }
+  assert.ok(readState(cwd).loop, "loop contract remains durable");
+  await pi.command("loop", "stop", ctx);
+  await tick(80);
+  assert.equal(readState(cwd).loop?.active, false);
+  assert.equal(readState(cwd).goal, null);
+  assert.equal(ctx.ui.matching("can start again").length, 1);
+  assert.match(ctx.ui.matching("can start again")[0]!.message, /clean up the README examples/);
 });
