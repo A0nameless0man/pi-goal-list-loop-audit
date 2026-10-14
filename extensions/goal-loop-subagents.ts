@@ -218,6 +218,10 @@ export function syncSubagentModelOverrides(opts: {
   thinking?: Record<string, string>;
   /** Explicit role selection; absent means Designer is off. */
   designerRequested?: boolean;
+  /** Dedicated Designer settings resolution. When present it wins over the
+   * generic Designer entries in `overrides`/`thinking`: disabled never
+   * registers; configured/requested registers with this model/thinking. */
+  designer?: { configured: boolean; disabled?: boolean; model?: string; thinking?: string };
 }): SubagentSyncResult {
   const result: SubagentSyncResult = { written: [], removed: [], skipped: [], repaired: [] };
   const overrides = opts.overrides ?? {};
@@ -270,7 +274,21 @@ export function syncSubagentModelOverrides(opts: {
     // Explicit pins are the only reason to copy a current built-in.
     // Designer is also opt-in: role selection or an explicit model/thinking
     // pin. A plain startup must not create or repair it automatically.
-    const desired = overrideModel !== undefined
+    // Dedicated Designer settings, when supplied, take precedence over the
+    // generic map entries for this role.
+    const desired = name === "Designer" && opts.designer
+      ? (opts.designer.disabled
+        ? undefined
+        : (opts.designerRequested === true || opts.designer.configured || opts.designer.model !== undefined || opts.designer.thinking !== undefined)
+          ? (() => {
+            try { return buildAgentOverrideMd(name, opts.designer!.model, opts.designer!.thinking); }
+            catch (error) {
+              result.skipped.push({ name, reason: error instanceof Error ? error.message : String(error) });
+              return undefined;
+            }
+          })()
+          : undefined)
+      : overrideModel !== undefined
       ? (() => {
         try { return buildAgentOverrideMd(name, overrideModel, thinkingPin); }
         catch (error) {
