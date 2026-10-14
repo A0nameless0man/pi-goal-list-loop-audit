@@ -103,9 +103,11 @@ test("a nonzero exit code with a parseable number is still rejected", async () =
   assert.equal(loop.bestValue, 10);
 });
 
- test("successful nonnumeric output remains an invalid metric, not infrastructure", async () => {
+test("successful nonnumeric output preserves accounting and enters paced no-verdict recovery", async () => {
   const { loop } = await tickWithMeasureResult({ code: 0, stdout: "no reading" });
-  assert.equal(loop.lastValue, null);
-  assert.equal(loop.consecutiveNullMeasures, 1);
-  assert.equal(loop.infrastructureRetry, undefined);
+  assert.equal(loop.lastValue, 10);
+  assert.equal(loop.bestValue, 10);
+  assert.equal(loop.history.length, 0);
+  assert.equal(loop.consecutiveNullMeasures ?? 0, 0);
+  assert.equal(loop.infrastructureRetry?.failures, 1);
 });
