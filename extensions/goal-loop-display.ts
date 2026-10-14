@@ -1,3 +1,4 @@
+import { safeDiagnostic } from "./safe-diagnostic.js";
 import { respecAuditObservation, respecAuditStatus, respecBlockerHeadline } from "./respec-builder-ui.js";
 /**
  * pi-goal-list-loop-audit — v0.9.0
@@ -1887,6 +1888,7 @@ function buildStatusTextBase(state: State, audit?: AuditDisplayProgress | null, 
   }
   if (state.loop?.active) {
     const l = state.loop;
+    if (l.infrastructureRetry) return `glla: loop no verdict · ${l.infrastructureRetry.failureClass} · ${safeDiagnostic(l.infrastructureRetry.diagnostic) ?? "No diagnostic recorded"} · retry ${new Date(l.infrastructureRetry.nextRetryAt).toISOString()}`;
     // v0.26.1: surface the refire streak — a spinning supervisor is the
     // zombie signature (hegemon incident: 619 refires, 0 turns).
     const stallSuffix = (extras?.stalls ?? 0) > 0 ? ` · ${paint(theme, "warning", `stalls:${extras!.stalls}`)}` : "";
@@ -3327,7 +3329,11 @@ function respecBuilderLines(loop: LoopState, now: number, theme?: DisplayTheme, 
   const narrowAction = stopped ? "Work stopped · /loop status" : allBlocked ? "/loop recheck · assess blockers" : !loop.active ? "/loop resume when ready · /loop status" : auditNeedsInspection ? 'Inspect audit · /loop status' : builder.phase === "auditing" ? "Independent audit pending · no action" : "Work continues · /loop pause";
   const progress = observation?.progress;
   const toolWait = observation?.toolWait;
-  const auditLines = loop.active && builder.phase === "auditing" ? progress ? [
+  const auditLines = loop.active && builder.phase === "auditing" ? builder.audit?.infrastructureRetry?.pendingEpisode ? [
+    respecAuditStatus(builder, now).split(" · cause:")[0]!,
+    `cause: ${safeDiagnostic(builder.audit.infrastructureRetry.diagnostic) ?? "No diagnostic recorded"}`,
+    `retry deadline: ${new Date(builder.audit.infrastructureRetry.nextRetryAt).toISOString()}`,
+  ] : progress ? [
     `auditor: ${toolWait ? `waiting on ${sanitizeDisplayText(progress.currentTool!)}` : observation!.label}${progress.round === 2 ? " · second pass" : ""} · ${sanitizeDisplayText(progress.model ?? "model pending")}`,
     ...(toolWait ? [`tool: ${sanitizeDisplayText(progress.currentTool!)} · ${Math.floor((now - progress.currentToolStartedAt!) / 1000)}s / ${Math.floor(progress.toolTimeoutMs! / 1000)}s budget`] : []),
     `audit elapsed ${Number.isFinite(progress.startedAt) && progress.startedAt <= now ? fmtElapsed(now - progress.startedAt) : 'unknown'}${progress.attemptStartedAt !== undefined && Number.isFinite(progress.attemptStartedAt) && progress.attemptStartedAt <= now ? ` · attempt ${fmtElapsed(now - progress.attemptStartedAt)}` : ''}`, 

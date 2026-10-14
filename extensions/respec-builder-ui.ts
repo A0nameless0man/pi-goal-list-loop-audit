@@ -1,3 +1,4 @@
+import { safeDiagnostic } from "./safe-diagnostic.js";
 import type { RespecBuilderState } from "./respec-builder.js";
 import { MAX_RENDER_LINE_CHARS } from "./terminal-summary-limits.js";
 import { sanitizeDisplayText } from "./goal-loop-core.js";
@@ -97,7 +98,7 @@ export function respecAuditStatus(builder: RespecBuilderState, now: number): str
   const observation = respecAuditObservation(builder, now);
   const { progress } = observation;
   const retry = builder.audit?.infrastructureRetry;
-  if (!progress && retry) return `auditor: no verdict · ${retry.failureClass} unresolved · automatic retry ${retry.nextRetryAt > now ? `in ${seconds(retry.nextRetryAt - now)}` : "due"} · failures ${retry.failures}`;
+  if (retry?.pendingEpisode || (!progress && retry)) return `auditor: no verdict · ${retry.failureClass} unresolved · automatic retry ${retry.nextRetryAt > now ? `in ${seconds(retry.nextRetryAt - now)}` : "due"} · failures ${retry.failures}${retry.diagnostic ? ` · cause: ${safeDiagnostic(retry.diagnostic)}` : ""}`;
   if (!progress) return "auditor: waiting for dispatch · no live worker observed";
   return `auditor: ${observation.label}${progress.round === 2 ? " · second pass" : ""} · ${sanitizeDisplayText(progress.model ?? "model pending")}`
     + (progress.attemptStartedAt !== undefined ? ` · attempt ${seconds(now - progress.attemptStartedAt)}` : "")

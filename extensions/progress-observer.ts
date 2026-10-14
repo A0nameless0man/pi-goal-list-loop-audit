@@ -1,3 +1,4 @@
+import { safeDiagnostic } from "./safe-diagnostic.js";
 import { createHash, randomUUID } from 'node:crypto';
 import type { State } from './goal-loop-core.js';
 
@@ -26,7 +27,7 @@ export interface ProgressReceipt {
   deltasTruncated?: boolean;
   signals?: { fileWrites: number; gitCommits: number; specItemProgress: number; currentHead?: string };
 }
-const redact = (value: string | undefined): string | undefined => value?.replace(/Bearer\s+\S+|\bsk-[\w-]+|(?:api[_-]?key|token|password|secret)\s*[:=]\s*\S+/gi, '[redacted]').slice(0, 160);
+const redact = (value: string | undefined): string | undefined => safeDiagnostic(value, 160);
 const count = (value: number | undefined): number | undefined => Number.isSafeInteger(value) && value! >= 0 ? value : undefined;
 interface Baseline { phase: ProgressPhase; at: number; tokens?: number; generation: number; requirements: Map<string, string>; receipt: ProgressReceipt }
 

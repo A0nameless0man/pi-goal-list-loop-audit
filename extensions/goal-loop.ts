@@ -1,3 +1,4 @@
+import { safeDiagnostic } from "./safe-diagnostic.js";
 import { infrastructureRetryDelay, nextInfrastructureRetry } from "./infrastructure-retry.js";
 import { respecAuditStatus, respecBlockerDetails, respecBlockerActions } from "./respec-builder-ui.js";
 import { respecBuilderContext } from "./respec-builder-context.js";
@@ -340,30 +341,32 @@ async function resolveLoopStartConflict(ctx: ExtensionContext, target: string): 
 /** Run the user's measure command. Orchestrator-side, never agent-side. */
 export type MeasurementOutcome =
   | { kind: "reading"; value: number }
-  | { kind: "infrastructure"; failureClass: "transport" | "no-verdict" | "config" };
+  | { kind: "infrastructure"; failureClass: "transport" | "no-verdict" | "config"; diagnostic: string };
 
 async function runMeasure(ctx: ExtensionContext, cmd: string): Promise<MeasurementOutcome> {
-  if (!flags.extensionApi || flags.extensionApiStale) return { kind: "infrastructure", failureClass: "transport" };
+  if (!flags.extensionApi || flags.extensionApiStale) return { kind: "infrastructure", failureClass: "transport", diagnostic: "Measurement executor unavailable or stale" };
   try {
     const result = await flags.extensionApi.exec("bash", ["-c", cmd], { cwd: ctx.cwd, timeout: MEASURE_TIMEOUT_MS });
     const r = result as any;
     const code = typeof r?.code === "number" ? r.code : (typeof r?.exitCode === "number" ? r.exitCode : 1);
-    if (code !== 0 || typeof r?.stdout !== "string") return { kind: "infrastructure", failureClass: "no-verdict" };
+    if (code !== 0 || typeof r?.stdout !== "string") return { kind: "infrastructure", failureClass: "no-verdict",
+      diagnostic: safeDiagnostic(`Measurement ${code !== 0 ? `exit ${code}` : "stdout missing"}${typeof r?.stderr === "string" && r.stderr.trim() ? `; stderr: ${r.stderr}` : ""}`)! };
     const value = parseMetric(r.stdout);
     // A successful process without a numeric verdict is still a broken
     // measurement contract, not a productive iteration or plateau evidence.
-    return value === null ? { kind: "infrastructure", failureClass: "config" } : { kind: "reading", value };
-  } catch {
-    return { kind: "infrastructure", failureClass: "transport" };
+    return value === null ? { kind: "infrastructure", failureClass: "config",
+      diagnostic: safeDiagnostic(`Measurement ${r.stdout.trim() ? "stdout is not a finite numeric verdict: " + r.stdout : "stdout empty"}${typeof r.stderr === "string" && r.stderr.trim() ? `; stderr: ${r.stderr}` : ""}`)! } : { kind: "reading", value };
+  } catch (error) {
+    return { kind: "infrastructure", failureClass: "transport", diagnostic: `Measurement exception: ${safeDiagnostic(error) ?? "executor failed without a message"}` };
   }
 }
 
 /** Commit the wait before the single timer owner is allowed to arm. */
-export function paceLoopInfrastructureFailure(ctx: ExtensionContext, kind: "measurement" | "provider", failureClass: "transport" | "no-verdict" | "config" | "provider"): boolean {
+export function paceLoopInfrastructureFailure(ctx: ExtensionContext, kind: "measurement" | "provider", failureClass: "transport" | "no-verdict" | "config" | "provider", diagnostic?: unknown): boolean {
   const loop = state.loop;
   if (!loop?.active) return false;
   const previous = { ...loop };
-  loop.infrastructureRetry = nextInfrastructureRetry(loopInfrastructureScopeId(loop), failureClass, infrastructureNow(), loop.infrastructureRetry);
+  loop.infrastructureRetry = nextInfrastructureRetry(loopInfrastructureScopeId(loop), failureClass, infrastructureNow(), loop.infrastructureRetry, diagnostic);
   loop.infrastructureRetryKind = kind;
   if (!persistState(ctx)) { loop.infrastructureRetry = previous.infrastructureRetry; loop.infrastructureRetryKind = previous.infrastructureRetryKind; return false; }
   appendLedger(ctx.cwd, "loop_infrastructure_wait", { kind, ...loop.infrastructureRetry });
@@ -811,7 +814,7 @@ async function runLoopTickInner(initialCtx: ExtensionContext, event?: any): Prom
   if (loop !== measuredLoop || loop.measureCmd !== measuredCommand || loopInfrastructureScopeId(loop) !== measuredScope || supervisorPaused(state) || backgroundDispatchHeld(state)) return;
   if (measurement?.kind === "infrastructure") {
     if (stopLoopAtInfrastructureBound(ctx)) return;
-    paceLoopInfrastructureFailure(ctx, "measurement", measurement.failureClass);
+    paceLoopInfrastructureFailure(ctx, "measurement", measurement.failureClass, measurement.diagnostic);
     return;
   }
   loop.infrastructureRetry = undefined;
@@ -1581,7 +1584,7 @@ async function cmdLoop(args: string, ctx: ExtensionContext): Promise<void> {
       `Loop: ${loopWorkView(loop, state).lifecycle === "waiting" ? "waiting" : loop.active ? "active" : isLifecycleHeldLoopReason(loop.stopReason) ? "held" : "stopped"} — ${displaySlice(loop.target, 80)}`,
       buildWorkLifecycleSummary({ ...state, goal: null }),
       `Metric: ${loop.measureCmd ? `${sanitizeDisplayText(loop.measureCmd)} (${loop.direction})` : "none — metricless spec loop (no plateau)"}`,
-      ...(loop.infrastructureRetry ? [`Infrastructure ${loop.infrastructureRetryKind}: ${loop.infrastructureRetry.failureClass} · failures ${loop.infrastructureRetry.failures} · retry ${new Date(loop.infrastructureRetry.nextRetryAt).toISOString()} (not a live worker)`] : []),
+      ...(loop.infrastructureRetry ? [`Infrastructure ${loop.infrastructureRetryKind}: ${loop.infrastructureRetry.failureClass}${loop.infrastructureRetry.diagnostic ? ` — ${safeDiagnostic(loop.infrastructureRetry.diagnostic)}` : ""} · failures ${loop.infrastructureRetry.failures} · retry ${new Date(loop.infrastructureRetry.nextRetryAt).toISOString()} (not a live worker)`] : []),
       `Iteration ${loop.iteration}/${loop.maxIterations > 0 ? loop.maxIterations : "∞"} · best ${loop.bestValue ?? "n/a"} · last ${loop.lastValue ?? "n/a"} · stall ${loop.stallCount}/${loop.plateauWindow}`,
     ];
     if (loop.backgroundWait) {
