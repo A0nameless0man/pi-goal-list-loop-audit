@@ -98,6 +98,18 @@ export interface Settings {
   drafterThinkingLevel?: "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
   /** Global-only ordered drafting fallback agents; the current session model is the final fallback. */
   drafterModelFallbacks?: string[];
+  /** Global-only explicit Designer enablement. true = keep the managed
+   * Designer registered; false = never register it (dedicated model picks
+   * are preserved); unset = on-demand (registers when a goal/list item/task
+   * asks for Designer, or when any dedicated Designer value is set). */
+  designerEnabled?: boolean;
+  /** Global-only primary model for the read-only Designer role. Unset = session model. */
+  designerModel?: string;
+  /** Global-only thinking level for the Designer role. Unset = inherit session. */
+  designerThinkingLevel?: "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
+  /** Global-only ordered Designer fallback agents; selection-time chain —
+   * the first eligible ref is written into Designer.md, then session inherit. */
+  designerModelFallbacks?: string[];
   /** Global-only primary model for the emergency compactor handoff brief. Unset → registry plan B. Never the session model (it is the stuck one). */
   compactorModel?: string;
   /** Global-only ordered emergency-compactor fallback agents; walked exactly like Main/drafter/auditor. No session last resort. */
@@ -367,6 +379,10 @@ export const GLOBAL_ONLY_KEYS: ReadonlySet<keyof Settings> = new Set([
   "drafterModel",
   "drafterThinkingLevel",
   "drafterModelFallbacks",
+  "designerEnabled",
+  "designerModel",
+  "designerThinkingLevel",
+  "designerModelFallbacks",
   "compactorModel",
   "compactorModelFallbacks",
   "compactionTokenThreshold",
@@ -540,6 +556,7 @@ export function normalizeLoadedSettings(settings: Settings): Settings {
   settings.mainModelFallbacks = normalizeMainModelFallbackRefs(settings.mainModelFallbacks);
   settings.mainModelFallbackThinkingLevels = normalizeMainFallbackThinking(settings.mainModelFallbackThinkingLevels, settings.mainModelFallbacks);
   settings.drafterModelFallbacks = normalizeMainModelFallbackRefs(settings.drafterModelFallbacks);
+  settings.designerModelFallbacks = normalizeMainModelFallbackRefs(settings.designerModelFallbacks);
   settings.compactorModelFallbacks = normalizeMainModelFallbackRefs(settings.compactorModelFallbacks);
   if (!Number.isSafeInteger(settings.compactionTokenThreshold) || (settings.compactionTokenThreshold ?? 0) <= 0) {
     delete settings.compactionTokenThreshold;
@@ -721,6 +738,12 @@ export function normalizeLoadedSettings(settings: Settings): Settings {
   if (settings.auditorThinkingLevel !== undefined && (typeof settings.auditorThinkingLevel !== "string" || !thinkingLadder.includes(settings.auditorThinkingLevel))) {
     delete settings.auditorThinkingLevel;
   }
+  if (settings.designerThinkingLevel !== undefined && (typeof settings.designerThinkingLevel !== "string" || !thinkingLadder.includes(settings.designerThinkingLevel))) {
+    delete settings.designerThinkingLevel;
+  }
+  if (typeof settings.designerEnabled !== "boolean") {
+    delete settings.designerEnabled;
+  }
   if (typeof settings.mechanicalLoadScale !== "boolean") {
     delete settings.mechanicalLoadScale;
   }
@@ -759,6 +782,9 @@ export function normalizeLoadedSettings(settings: Settings): Settings {
   }
   if (typeof settings.drafterModel !== "string" || settings.drafterModel.trim().length === 0) {
     delete settings.drafterModel;
+  }
+  if (typeof settings.designerModel !== "string" || settings.designerModel.trim().length === 0) {
+    delete settings.designerModel;
   }
   if (typeof settings.compactorModel !== "string" || settings.compactorModel.trim().length === 0) {
     delete settings.compactorModel;
@@ -800,6 +826,35 @@ function migrateLegacySettings(value: Partial<Settings>): Record<string, unknown
   delete migrated.hourlyQuotaProbe;
   delete migrated.mainModelFallbackOnRateLimit;
   delete migrated.quotaRetryMinutes;
+  // Designer parity: the generic per-type Designer pins were the pre-tab
+  // configuration surface. Copy them into the dedicated Designer keys on
+  // load (dedicated values win; an explicitly present dedicated fallback
+  // array, including [], wins over the legacy chain) and drop the legacy
+  // entries so the Subagents tab can never resurrect a second source of
+  // truth. Persisted cleanup happens on the next save, like the aliases
+  // above. The dedicated keys are global-only (Designer.md lives in the
+  // global agent dir), so only the global file's legacy entries survive.
+  const legacyOverrides = migrated.subagentModelOverrides as Record<string, unknown> | undefined;
+  const legacyThinking = migrated.subagentThinkingOverrides as Record<string, unknown> | undefined;
+  const legacyFallbacks = migrated.subagentFallbacks as Record<string, unknown> | undefined;
+  if (migrated.designerModel === undefined && typeof legacyOverrides?.Designer === "string" && legacyOverrides.Designer.trim()) {
+    migrated.designerModel = legacyOverrides.Designer;
+  }
+  if (migrated.designerThinkingLevel === undefined && typeof legacyThinking?.Designer === "string") {
+    migrated.designerThinkingLevel = legacyThinking.Designer;
+  }
+  if (migrated.designerModelFallbacks === undefined && Array.isArray(legacyFallbacks?.Designer)) {
+    migrated.designerModelFallbacks = legacyFallbacks.Designer;
+  }
+  const stripDesigner = (map: Record<string, unknown> | undefined): Record<string, unknown> | undefined => {
+    if (!map || !("Designer" in map)) return map;
+    const next = { ...map };
+    delete next.Designer;
+    return Object.keys(next).length > 0 ? next : undefined;
+  };
+  migrated.subagentModelOverrides = stripDesigner(legacyOverrides);
+  migrated.subagentThinkingOverrides = stripDesigner(legacyThinking);
+  migrated.subagentFallbacks = stripDesigner(legacyFallbacks);
   return migrated;
 }
 
@@ -837,6 +892,34 @@ export function loadGlobalSettings(): Settings {
   ) as unknown as Settings);
 }
 
+export interface DesignerConfig {
+  /** Explicit enablement: true = keep registered, false = never register,
+   * undefined = on-demand (register when asked or when configured). */
+  enabled?: boolean;
+  /** Any dedicated (or legacy-migrated) Designer value is present. */
+  configured: boolean;
+  /** Dedicated primary model ref; unset inherits the session model. */
+  model?: string;
+  /** Dedicated thinking level; unset inherits the session level. */
+  thinking?: Settings["designerThinkingLevel"];
+  /** Ordered selection-time fallback refs (primary excluded). */
+  fallbacks: string[];
+}
+
+/** Effective Designer configuration. Dedicated keys win per-field; the
+ * generic per-type Designer pins are read only as the pre-migration legacy
+ * shape (load-time migration normally folds them into the dedicated keys). */
+export function resolveDesignerConfig(settings: Settings): DesignerConfig {
+  const model = settings.designerModel ?? settings.subagentModelOverrides?.Designer;
+  const thinking = settings.designerThinkingLevel ?? settings.subagentThinkingOverrides?.Designer;
+  const fallbacks = normalizeMainModelFallbackRefs(settings.designerModelFallbacks ?? settings.subagentFallbacks?.Designer);
+  const configured = model !== undefined
+    || thinking !== undefined
+    || fallbacks.length > 0
+    || settings.designerEnabled === true;
+  return { enabled: settings.designerEnabled, configured, model, thinking, fallbacks };
+}
+
 /** Every provenance-tracked key (the /glla headless display + UI). */
 export const SETTINGS_KEYS: Array<keyof Settings> = [
   "stateRoot",
@@ -845,6 +928,10 @@ export const SETTINGS_KEYS: Array<keyof Settings> = [
   "drafterModel",
   "drafterThinkingLevel",
   "drafterModelFallbacks",
+  "designerEnabled",
+  "designerModel",
+  "designerThinkingLevel",
+  "designerModelFallbacks",
   "compactorModel",
   "compactorModelFallbacks",
   "compactionTokenThreshold",
@@ -1007,7 +1094,7 @@ export function saveSettings(scope: "global" | "project", cwd: string, patch: Pa
         continue;
       }
       if (v === undefined) delete next[k]; // key=unset removes the key
-      else if (k === "mainModelFallbacks" || k === "drafterModelFallbacks" || k === "compactorModelFallbacks" || k === "auditorModelFallbacks") next[k] = normalizeMainModelFallbackRefs(v);
+      else if (k === "mainModelFallbacks" || k === "drafterModelFallbacks" || k === "designerModelFallbacks" || k === "compactorModelFallbacks" || k === "auditorModelFallbacks") next[k] = normalizeMainModelFallbackRefs(v);
       else if (k === "subagentFallbacks" && v && typeof v === "object") {
         const normalized: Record<string, string[]> = {};
         for (const [agent, chain] of Object.entries(v as Record<string, unknown>)) {
