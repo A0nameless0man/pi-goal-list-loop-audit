@@ -138,6 +138,7 @@ test("v0.35.41: the stuck-ladder stop also announces queued-list resumption", as
   const pi = new MockPi();
   activate(pi.api);
   const ctx = await boot(pi, cwd);
+  pi.execHandler = () => ({ code: 0, stdout: "1", stderr: "" });
   // Pre-charge the stuck ladder to one intervention below the default cap
   // (5; aggressiveMode raises it, stock settings don't) — a CLEAN turn
   // would RESET consecutiveStuck, so the fired turn must itself classify as
@@ -167,9 +168,9 @@ test("v0.35.41: explicit user interrupt cap stop announces queued-list resumptio
 
   // Non-recoverable classification ("user interrupt") — the durable
   // main-model recovery envelope must NOT own this failure, so the error
-  // abort cap (5) stop route fires.
+  // abort cap (3) stop route fires.
   const deadTurn = { messages: [{ role: "assistant", content: [], stopReason: "error", errorMessage: "user interrupt" }] };
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 3; i++) {
     await pi.fire("agent_end", deadTurn, ctx);
     await tick();
   }
@@ -179,7 +180,7 @@ test("v0.35.41: explicit user interrupt cap stop announces queued-list resumptio
   assert.equal(after.loop?.iteration, 1, "interrupts are not productive iterations");
   assert.equal(after.loop?.infrastructureRetry, undefined, "explicit interrupts do not enter infrastructure recovery");
   assert.equal(after.goal, null, "stop announces but does not activate the queue");
-  assert.match(after.loop?.stopReason ?? "", /stopped by user.*5 consecutive aborts/);
+  assert.match(after.loop?.stopReason ?? "", /stopped by user.*3 consecutive aborts/);
   assert.ok(ctx.ui.notifies.some((notice) => notice.message.includes("Recap: Outcome:")), "explicit interrupt stop includes the compact six-label recap");
   const unblocked = ctx.ui.matching("can start again");
   assert.equal(unblocked.length, 1, "the interrupt-cap stop route announces the unblocked queue");

@@ -111,7 +111,9 @@ test("'operation was aborted' (without 'this') is also classified as non-recover
 test("the existing 'user abort' / 'cancelled by user' regex still works", () => {
   assert.equal(classifyMainModelFailure("user abort").kind, "non-recoverable");
   assert.equal(classifyMainModelFailure("cancelled by user").kind, "non-recoverable");
-  assert.equal(classifyMainModelFailure("user interrupt").kind, "non-recoverable");
+  for (const text of ["user abort", "cancelled by user", "user interrupt", "turn aborted: user interrupt"]) {
+    assert.equal(classifyMainModelFailure(text).nonRecoverableReason, "user-abort");
+  }
 });
 
 test("a transient 503 still classifies as transient (regression pin)", () => {
