@@ -251,7 +251,7 @@ export function classifyMainModelFailure(error: string | undefined, opts?: { isC
     return { kind: "transient", raw };
   }
   if (/^(?:auditor aborted\.?$|user (?:interrupt|abort)|cancelled by user)/i.test(evidence) || /user interrupt/.test(text)) {
-    return { kind: "non-recoverable", raw };
+    return { kind: "non-recoverable", raw, nonRecoverableReason: "user-abort" };
   }
   // v0.39.31 (incident Screenshot_20261012_111955): pi emits "This operation
   // was aborted" for user-Escape / context-cancel aborts. The existing
