@@ -591,7 +591,7 @@ test("v0.35.72: all loop measure entry points are bounded and reject failed nume
   // matching runGit, so a measure killed by its own timeout can never be
   // parsed as a reading and freeze the plateau stop.
   assert.match(runMeasure, /const code = typeof r\?\.code === "number" \? r\.code : \(typeof r\?\.exitCode === "number" \? r\.exitCode : 1\)/);
-  assert.match(runMeasure, /if \(code !== 0\) return null/);
+  assert.match(runMeasure, /if \(code !== 0 \|\| typeof r\?\.stdout !== "string"\) return \{ kind: "infrastructure", failureClass: "no-verdict" \}/);
   assert.match(runMeasure, /timeout: MEASURE_TIMEOUT_MS/);
 
   assert.match(TOOLS_RUNTIME, /async function probeLoopMeasure\(/);

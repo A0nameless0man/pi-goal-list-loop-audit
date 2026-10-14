@@ -582,7 +582,7 @@ function sendLoopTurn(): void {
     return;
   }
   const loop = state.loop!;
-  if (stopLoopAtInfrastructureBound(ctx)) return;
+  if (loop.infrastructureRetry && stopLoopAtInfrastructureBound(ctx)) return;
   if (infrastructureRetryDelay(loop.infrastructureRetry, infrastructureNow()) > 0) { scheduleLoopTick(ctx); return; }
   if (loop.infrastructureRetry && loop.infrastructureRetryKind === "measurement") { void runLoopTick(ctx); return; }
   if (loop.builder?.phase === "auditing") {

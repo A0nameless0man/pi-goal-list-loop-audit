@@ -66,25 +66,28 @@ async function tickWithMeasureResult(
     bestValue?: number;
     consecutiveNullMeasures?: number;
     history: { value: number | null }[];
+    infrastructureRetry?: { failures: number };
   };
   return { loop, measureCalls };
 }
 
-test("a measure result with no exit code is a NULL measure, not a reading", async () => {
+test("a measure result with no exit code preserves metric history and paces infrastructure recovery", async () => {
   // v0.38.104: the envelope carries stdout but NO numeric code at all — the
   // shape a killed measure produces. runMeasure must treat it as a failure.
   const { loop, measureCalls } = await tickWithMeasureResult({ stdout: "42\n" });
   assert.ok(measureCalls.some(([cmd]) => cmd === "bash"), "the measure actually ran");
-  assert.equal(loop.lastValue, null, "an exit-code-less measure is recorded as null, never as 42");
+  assert.equal(loop.lastValue, 10, "an exit-code-less measure leaves the prior reading intact");
   assert.equal(loop.bestValue, 10, "the best value is not moved by an unverified reading");
-  assert.equal(loop.consecutiveNullMeasures, 1, "it counts as a broken measure, toward the loud stop");
-  assert.equal(loop.history.at(-1)?.value, null);
+  assert.equal(loop.consecutiveNullMeasures ?? 0, 0, "infrastructure never advances the invalid-metric brake");
+  assert.equal(loop.history.length, 0);
+  assert.equal(loop.infrastructureRetry?.failures, 1);
 });
 
-test("an empty result envelope is also a NULL measure", async () => {
+test("an empty result envelope is infrastructure, not numeric evidence", async () => {
   const { loop } = await tickWithMeasureResult({});
-  assert.equal(loop.lastValue, null);
-  assert.equal(loop.consecutiveNullMeasures, 1);
+  assert.equal(loop.lastValue, 10);
+  assert.equal(loop.consecutiveNullMeasures ?? 0, 0);
+  assert.equal(loop.infrastructureRetry?.failures, 1);
 });
 
 test("a genuinely successful measure still records its number", async () => {
@@ -96,6 +99,13 @@ test("a genuinely successful measure still records its number", async () => {
 
 test("a nonzero exit code with a parseable number is still rejected", async () => {
   const { loop } = await tickWithMeasureResult({ code: 1, stdout: "7\n" });
-  assert.equal(loop.lastValue, null, "a failing measure is null even when its stdout has a number");
+  assert.equal(loop.lastValue, 10, "a failing measure preserves the prior reading even when stdout has a number");
   assert.equal(loop.bestValue, 10);
+});
+
+ test("successful nonnumeric output remains an invalid metric, not infrastructure", async () => {
+  const { loop } = await tickWithMeasureResult({ code: 0, stdout: "no reading" });
+  assert.equal(loop.lastValue, null);
+  assert.equal(loop.consecutiveNullMeasures, 1);
+  assert.equal(loop.infrastructureRetry, undefined);
 });
