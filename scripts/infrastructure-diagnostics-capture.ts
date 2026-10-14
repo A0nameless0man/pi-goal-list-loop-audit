@@ -31,7 +31,7 @@ try {
       iteration: 1, maxIterations: 0, plateauWindow: 5, stallCount: 0, bestValue: null, lastValue: null, history: [] } });
     persistStateLine(cwd, state);
     const ctx = { cwd, ui: { notify: () => {} } } as unknown as ExtensionContext;
-    registerRespecBuilderTools({ registerTool: () => {} } as any, { context: () => ctx, persist: () => persistStateLine(cwd, state),
+    registerRespecBuilderTools({ registerTool: () => {}, registerMessageRenderer: () => {} } as any, { context: () => ctx, persist: () => persistStateLine(cwd, state),
       wake: () => {}, finished: () => {}, wrapTool: tool => tool, auditNow: () => now, resolveModel: () => ({ model: undefined, error: error! }) });
     await runRespecBuilderAudit(ctx);
     const saved = readState(cwd);
