@@ -617,7 +617,9 @@ test("real stalled detached workers automatically journal a paced timeout episod
     assert.equal(respecBuilderAuditInFlight(f.cwd), false);
     assert.equal(f.counts().wakes, 1);
     const jobs = path.join(f.cwd, ".pi-glla", "audit-jobs");
-    assert.equal(fs.readdirSync(jobs).length, 2);
-    assert.ok(fs.readdirSync(jobs).every(name => !fs.existsSync(path.join(jobs, name, "result.json"))));
+    // The process adapter deliberately removes owned no-result scratch on
+    // cancellation. Distinct worker-confirmed attempt clocks prove two launches.
+    assert.equal(new Set(f.observations.filter(p => p.workerPhase === "running" && p.lastActivityAt !== undefined).map(p => p.attemptStartedAt)).size, 2);
+    assert.equal(fs.readdirSync(jobs).length, 0, "cancelled no-verdict jobs are cleaned, not retained as approvals");
   } finally { restore(); replaceState(f.original); }
 });
