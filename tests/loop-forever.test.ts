@@ -591,7 +591,15 @@ test("v0.35.72: all loop measure entry points are bounded and reject failed nume
   // matching runGit, so a measure killed by its own timeout can never be
   // parsed as a reading and freeze the plateau stop.
   assert.match(runMeasure, /const code = typeof r\?\.code === "number" \? r\.code : \(typeof r\?\.exitCode === "number" \? r\.exitCode : 1\)/);
-  assert.match(runMeasure, /if \(code !== 0 \|\| typeof r\?\.stdout !== "string"\) return \{ kind: "infrastructure", failureClass: "no-verdict" \}/);
+  // v0.39.32: a non-zero/missing exit code or a missing stdout string still fails
+  // closed into infrastructure — and now carries a bounded, redacted diagnostic
+  // so the operator sees WHICH failure it was instead of a bare class.
+  assert.match(runMeasure, /if \(code !== 0 \|\| typeof r\?\.stdout !== "string"\) return \{ kind: "infrastructure", failureClass: "no-verdict",/);
+  assert.match(runMeasure, /diagnostic: safeDiagnostic\(/);
+  // v0.39.32: a successful (exit 0) process that prints no finite number is a
+  // broken measurement CONTRACT, not a productive reading and not plateau
+  // evidence — it enters config/no-verdict recovery with its own cause.
+  assert.match(runMeasure, /return value === null \? \{ kind: "infrastructure", failureClass: "config",/);
   assert.match(runMeasure, /timeout: MEASURE_TIMEOUT_MS/);
 
   assert.match(TOOLS_RUNTIME, /async function probeLoopMeasure\(/);
