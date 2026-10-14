@@ -148,7 +148,7 @@ for (const mode of ["future", "overdue", "cold"] as const) test(`metric ${mode} 
   try {
     await runLoopTick(f.ctx);
     if (mode === "overdue") f.due();
-    await f.pi.fire("session_shutdown", {}, f.ctx);
+    await f.pi.fire("session_shutdown", { reason: mode === "cold" ? "quit" : "reload" }, f.ctx);
     f.timers.length = 0;
     saveSettings("global", f.cwd, { autoResume: mode !== "cold" });
     __testOnlyResetOwnerSession(); __testOnlyResetStaleFlag();
