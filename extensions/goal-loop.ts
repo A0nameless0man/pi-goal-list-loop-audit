@@ -471,6 +471,15 @@ function scheduleLoopTickUrgent(ctx: ExtensionContext): void {
   scheduleLoopTickWithUrgency(ctx, true);
 }
 
+let infrastructureNow = () => Date.now();
+/** Inject only the existing timer owner/clock; dispatch still uses production fences. */
+export function __testOnlyLoopInfrastructureScheduler(now: () => number, schedule: LoopDeps["scheduleSessionTimeout"]): () => void {
+  const priorNow = infrastructureNow, priorSchedule = scheduleSessionTimeout;
+  infrastructureNow = now;
+  scheduleSessionTimeout = schedule;
+  return () => { infrastructureNow = priorNow; scheduleSessionTimeout = priorSchedule; };
+}
+
 function scheduleLoopTickWithUrgency(ctx: ExtensionContext, urgent: boolean): void {
   if (backgroundDispatchHeld(state)) return;
   // v0.35.15: `/glla pause` freezes loop re-arms too — the supervisor's
@@ -506,7 +515,7 @@ function scheduleLoopTickWithUrgency(ctx: ExtensionContext, urgent: boolean): vo
   }
   const scheduled = state.loop!;
   const attemptId = scheduled.builder?.audit?.attemptId;
-  const retryDelay = infrastructureRetryDelay(scheduled.builder?.audit?.infrastructureRetry, Date.now());
+  const retryDelay = infrastructureRetryDelay(scheduled.builder?.audit?.infrastructureRetry, infrastructureNow());
   delay = Math.max(delay, retryDelay);
   let timer: NodeJS.Timeout;
   timer = scheduleSessionTimeout(() => {
@@ -546,7 +555,7 @@ function sendLoopTurn(): void {
   }
   const loop = state.loop!;
   if (loop.builder?.phase === "auditing") {
-    if (infrastructureRetryDelay(loop.builder.audit?.infrastructureRetry, Date.now()) > 0) { scheduleLoopTick(ctx); return; }
+    if (infrastructureRetryDelay(loop.builder.audit?.infrastructureRetry, infrastructureNow()) > 0) { scheduleLoopTick(ctx); return; }
     void runRespecBuilderAudit(ctx);
     return;
   }

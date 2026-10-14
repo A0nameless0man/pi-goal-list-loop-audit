@@ -8,7 +8,7 @@ import { registerRespecBuilderTools, runRespecBuilderAudit, respecProjectArchive
 import activate, { __testOnlyResetOwnerSession, __testOnlyResetStaleFlag } from "../extensions/loops/goal.js";
 import { __testOnlyHeartbeatTick } from "../extensions/goal-heartbeat.js";
 import { __testOnlySetLastActivityAt, __testOnlySetLastRealActivityAt } from "../extensions/loops/goal-ui.js";
-import { clearLoopTimer } from "../extensions/goal-loop.js";
+import { clearLoopTimer, scheduleLoopTick, __testOnlyLoopInfrastructureScheduler } from "../extensions/goal-loop.js";
 import { saveSettings } from "../extensions/goal-settings.js";
 import { cleanupDeadAuditJobs } from "../extensions/goal-loop-auditor-process.js";
 import { createRespecBuilder, adoptRespecRequirements, planRespecIncrement, claimRespecTask, beginRespecAudit } from "../extensions/respec-builder.js";
@@ -187,16 +187,19 @@ test("archive failure preserves approval evidence for settlement retry instead o
     fs.mkdirSync(archivePath, { recursive: true });
     await runRespecBuilderAudit(f.ctx);
     assert.equal(readState(f.cwd).loop!.builder!.phase, "auditing");
-    assert.equal(readState(f.cwd).loop!.active, false);
-    assert.deepEqual(f.counts(), { wakes: 0, finishes: 0 });
+    assert.equal(readState(f.cwd).loop!.active, true);
+    assert.ok(readState(f.cwd).loop!.builder!.audit!.infrastructureRetry);
+    assert.deepEqual(f.counts(), { wakes: 1, finishes: 0 });
     const jobs = fs.readdirSync(path.join(f.cwd, ".pi-glla", "audit-jobs"));
     fs.rmSync(archivePath, { recursive: true }); fs.unlinkSync(f.file);
+    const restoreClock = __testOnlyRespecAuditorRuntime({ auditNow: () => state.loop!.builder!.audit!.infrastructureRetry!.nextRetryAt });
     replaceState({ ...state, loop: { ...state.loop!, active: true, stopReason: undefined } });
     persistStateLine(f.cwd, state);
     await runRespecBuilderAudit(f.ctx);
     assert.equal(readState(f.cwd).loop!.builder!.phase, "complete");
     assert.deepEqual(fs.readdirSync(path.join(f.cwd, ".pi-glla", "audit-jobs")), jobs);
-    assert.deepEqual(f.counts(), { wakes: 0, finishes: 1 });
+    assert.deepEqual(f.counts(), { wakes: 1, finishes: 1 });
+    restoreClock();
   } finally { replaceState(f.original); }
 });
 
@@ -412,12 +415,14 @@ test("a corrupt summary outbox prevents terminal handoff and retains approved jo
     assert.equal(fs.readFileSync(store, "utf8"), "broken queue");
     const jobs = fs.readdirSync(path.join(f.cwd, ".pi-glla", "audit-jobs"));
     fs.unlinkSync(store); fs.unlinkSync(f.file);
+    const restoreClock = __testOnlyRespecAuditorRuntime({ auditNow: () => state.loop!.builder!.audit!.infrastructureRetry!.nextRetryAt });
     replaceState({ ...state, loop: { ...state.loop!, active: true, stopReason: undefined } });
     persistStateLine(f.cwd, state);
     await runRespecBuilderAudit(f.ctx);
     assert.equal(readState(f.cwd).loop!.builder!.phase, "complete");
     assert.deepEqual(fs.readdirSync(path.join(f.cwd, ".pi-glla", "audit-jobs")), jobs);
     assert.equal(f.summaries.length, 1);
+    restoreClock();
   } finally { replaceState(f.original); }
 });
 
@@ -433,4 +438,77 @@ test("project audit preserves live tool deadline and attempt clock through the r
     assert.ok(typeof observed.currentToolStartedAt === "number");
     assert.ok(typeof observed.attemptStartedAt === "number");
   } finally { replaceState(f.original); fs.rmSync(f.cwd, { recursive: true, force: true }); }
+});
+
+
+test("project adapter survives 2105 paced infrastructure episodes then a real worker recovers", async () => {
+  const f = fixture();
+  let clock = Date.now(), calls = 0;
+  const restore = __testOnlyRespecAuditorRuntime({ auditNow: () => clock, resolveModel: () => {
+    calls++;
+    if (calls % 3 === 0) throw new Error("local launch transport failure");
+    return { model: undefined, error: calls % 2 ? "invalid authentication credentials" : "No auditor model available in configuration" };
+  } });
+  try {
+    const originalClaim = JSON.stringify(f.builder.audit);
+    for (let i = 0; i < 2105; i++) {
+      await runRespecBuilderAudit(f.ctx);
+      const loop = state.loop!, audit = loop.builder!.audit!, retry = audit.infrastructureRetry!;
+      assert.equal(loop.active, true);
+      assert.equal(retry.failures, i + 1);
+      assert.ok(retry.nextRetryAt > clock && retry.nextRetryAt - clock <= 300000);
+      assert.equal(retry.pendingEpisode, true);
+      assert.equal(loop.iteration, 1);
+      assert.deepEqual(loop.builder!.requirements, f.builder.requirements);
+      assert.deepEqual(loop.builder!.tasks, f.builder.tasks);
+      assert.equal(loop.builder!.history, undefined);
+      const resolved = calls;
+      await Promise.all([runRespecBuilderAudit(f.ctx), runRespecBuilderAudit(f.ctx)]);
+      assert.equal(calls, resolved, "early concurrent wakes cannot resolve/spawn");
+      clock = retry.nextRetryAt;
+      if (i % 100 === 0) {
+        replaceState(readState(f.cwd));
+        assert.equal(state.loop!.builder!.audit!.infrastructureRetry!.nextRetryAt, clock);
+      }
+    }
+    const saved = readState(f.cwd).loop!;
+    assert.equal(saved.builder!.audit!.infrastructureRetry!.failures, 2105);
+    assert.equal(saved.builder!.audit!.attemptId, JSON.parse(originalClaim).attemptId);
+    assert.equal(fs.existsSync(path.join(f.cwd, ".pi-glla", "audit-jobs")), false);
+    restore();
+    const restoreClock = __testOnlyRespecAuditorRuntime({ auditNow: () => clock });
+    try { await runRespecBuilderAudit(f.ctx); } finally { restoreClock(); }
+    assert.equal(readState(f.cwd).loop!.builder!.phase, "complete");
+    assert.equal(fs.readdirSync(path.join(f.cwd, ".pi-glla", "audit-jobs")).length, 1);
+  } finally { restore(); replaceState(f.original); fs.rmSync(f.cwd, { recursive: true, force: true }); }
+});
+
+test("project retry admission rolls back on refusal and honors freeze, stop, bounds and ownership", async () => {
+  const env: Record<string, string> = {}, f = fixture(env);
+  let now = Date.now();
+  const restore = __testOnlyRespecAuditorRuntime({ auditNow: () => now, resolveModel: () => ({ model: undefined, error: "auth failed" }) });
+  try {
+    env.PERSIST_FAIL = "1";
+    const prior = JSON.stringify(state);
+    await runRespecBuilderAudit(f.ctx);
+    assert.equal(JSON.stringify(state), prior);
+    assert.equal(f.counts().wakes, 0);
+    delete env.PERSIST_FAIL;
+    await runRespecBuilderAudit(f.ctx);
+    const waiting = { ...state }, claim = state.loop!.builder!;
+    now = claim.audit!.infrastructureRetry!.nextRetryAt;
+    env.PERSIST_FAIL = "1";
+    await runRespecBuilderAudit(f.ctx);
+    assert.equal(state.loop!.builder, claim, "cursor reset refuses unjournaled episode");
+    delete env.PERSIST_FAIL;
+    replaceState({ ...waiting, supervisorPausedAt: now });
+    await runRespecBuilderAudit(f.ctx); assert.equal(state.loop!.builder, claim);
+    replaceState({ ...waiting, loop: { ...waiting.loop!, active: false, stopReason: "stopped by user" } });
+    await runRespecBuilderAudit(f.ctx); assert.equal(state.loop!.builder, claim);
+    replaceState({ ...waiting, loop: { ...waiting.loop!, maxIterations: 1 } });
+    await runRespecBuilderAudit(f.ctx); assert.equal(state.loop!.active, false);
+    assert.match(state.loop!.stopReason!, /max iterations/);
+    replaceState(waiting); f.disown();
+    await runRespecBuilderAudit(f.ctx); assert.equal(state.loop!.builder, claim);
+  } finally { restore(); replaceState(f.original); }
 });
