@@ -153,7 +153,8 @@ for (const mode of ["future", "overdue", "cold"] as const) test(`metric ${mode} 
     saveSettings("global", f.cwd, { autoResume: mode !== "cold" });
     __testOnlyResetOwnerSession(); __testOnlyResetStaleFlag();
     f.healthy();
-    await f.pi.fire("session_start", { reason: "startup" }, f.ctx);
+    const reloadedCtx = makeMockCtx(f.cwd, { sessionManager: { name: `reloaded-${Math.random()}` } });
+    await f.pi.fire("session_start", { reason: "startup" }, reloadedCtx);
     if (mode === "cold") {
       assert.equal(state.loop!.active, false);
       assert.equal(f.timers.length, 0);
