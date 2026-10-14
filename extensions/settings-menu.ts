@@ -45,7 +45,7 @@ import {
   DEFAULT_STALL_SHORT_WORDS,
   DEFAULT_ZOMBIE_RETRY_MAX_ATTEMPTS,
 } from "./goal-loop-backoff.ts";
-import type { Settings } from "./goal-settings.ts";
+import { resolveDesignerConfig, type Settings } from "./goal-settings.ts";
 import { MAX_MAIN_MODEL_FALLBACKS } from "./main-model-recovery.ts";
 import { resolveEffectiveSubagentModel, OVERRIDABLE_AGENT_TYPES } from "./goal-loop-subagents.ts";
 
@@ -59,6 +59,7 @@ export type SettingsSectionId =
   | "agents"
   | "main-agent"
   | "drafter"
+  | "designer"
   | "compactor"
   | "auditor"
   | "subagents"
@@ -74,6 +75,8 @@ export const SETTINGS_SECTIONS: readonly { id: SettingsSectionId; label: string 
   { id: "main-agent", label: "Main agent" },
   { id: "drafter", label: "Drafter" },
   { id: "compactor", label: "Compactor" },
+  { id: "auditor", label: "Auditor" },
+  { id: "designer", label: "Designer" },
   { id: "auditor", label: "Auditor" },
   { id: "subagents", label: "Subagents" },
   { id: "stall-brakes", label: "Stall brakes" },
