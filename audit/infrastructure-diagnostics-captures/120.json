@@ -1,0 +1,15 @@
+{
+  "width": 120,
+  "rows": 25,
+  "fixedNow": "2026-10-14T12:00:00.000Z",
+  "source": "Real project retry adapter -> isolated temporary durable journal -> readState -> production widget/status renderers; fixture, not live outage",
+  "fixtures": [
+    "Auth repair / model scope denied",
+    "Config repair / model missing"
+  ],
+  "capture": "real xterm on private Xvfb",
+  "pixels": [
+    1100,
+    533
+  ]
+}
