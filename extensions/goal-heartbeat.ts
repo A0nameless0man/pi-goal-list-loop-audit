@@ -1892,6 +1892,12 @@ function heartbeatTick(): void {
   // its continuation cannot start a turn and would eventually park healthy
   // detached work. Protect only the exact live dispatch, never an old claim.
   if (respecBuilderAuditInFlight(ctx.cwd)) return;
+  // A journaled retry wait is not a live worker, but it also isn't a lost
+  // main turn. The existing loop timer owns its deadline and re-arm fences.
+  if (state.loop?.active && state.loop.builder?.phase === "auditing" && state.loop.builder.audit?.infrastructureRetry) {
+    scheduleLoopTick(ctx);
+    return;
+  }
   noteActivity();
   flags.consecutiveStalls++;
   appendLedger(ctx.cwd, "heartbeat_refire", { nudgesSoFar: flags.heartbeatNudges, consecutiveStalls: flags.consecutiveStalls });

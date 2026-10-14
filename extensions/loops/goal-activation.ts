@@ -1,3 +1,4 @@
+import { nextInfrastructureRetry } from "../infrastructure-retry.js";
 import { respecBuilderContext } from "../respec-builder-context.js";
 import { replayRespecCompletionSummary } from "../respec-builder-runtime.js";
 /**
@@ -2275,6 +2276,17 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
     ) {
       ctx.ui.notify("Auto-resume fired (event: session start). Continue working.", "info");
     }
+    // Old automatic infrastructure parks are migratable only with lifecycle
+    // admission. User/bound holds never match this exact legacy reason.
+    if (state.loop && !state.loop.active && state.loop.builder?.phase === "auditing"
+        && state.loop.builder.audit && state.loop.stopReason?.startsWith("audit infrastructure:")
+        && (autoResume || explicitRecovery || sameProcessSuccessorResume)) {
+      const held = state.loop;
+      const audit = held.builder!.audit!;
+      state.loop = { ...held, active: true, stopReason: undefined, builder: { ...held.builder!, audit: { ...audit,
+        infrastructureRetry: audit.infrastructureRetry ?? nextInfrastructureRetry(audit.attemptId, "provider", Date.now()) } } };
+      if (!persistState(ctx)) state.loop = held;
+    }
     // [lifecycle 10/12] held-loop resume + audit-loop migrations
     // v0.29.11: loops stopped by the stale-handle terminal or the stall
     // escalation told the user "restart pi, then /loop start" — but a
@@ -2295,7 +2307,7 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
         && (autoResume || explicitRecovery || sameProcessSuccessorResume)) {
       const held = state.loop;
       state.loop = { ...held, active: true, stopReason: undefined };
-      persistState(ctx);
+      if (!persistState(ctx)) { state.loop = held; return; }
       releaseContinuationDispatchStandDown();
       appendLedger(ctx.cwd, "loop_auto_resumed_on_restore", {
         via: recoveryResume ? "recovery" : rebindResume ? "rebind" : handoffResume ? "handoff" : sameProcessSuccessorResume ? "same-process-successor" : "auto-resume",
@@ -2345,7 +2357,7 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
           `Resuming loop (iteration ${l.iteration}/${l.maxIterations > 0 ? l.maxIterations : "∞"}, best ${l.bestValue ?? "n/a"}, stall ${l.stallCount}/${l.plateauWindow}): ${displaySlice(l.target, 60)}`,
           "info",
         );
-        scheduleLoopTick(ctx);
+        if (persistState(ctx)) scheduleLoopTick(ctx);
       } else {
         state.loop = { ...l, active: false, stopReason: HELD_ON_RESTORE };
         persistState(ctx);

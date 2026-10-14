@@ -1,3 +1,4 @@
+import { infrastructureRetryDelay, nextInfrastructureRetry } from "./infrastructure-retry.js";
 import { respecAuditStatus, respecBlockerDetails, respecBlockerActions } from "./respec-builder-ui.js";
 import { respecBuilderContext } from "./respec-builder-context.js";
 /**
@@ -503,7 +504,17 @@ function scheduleLoopTickWithUrgency(ctx: ExtensionContext, urgent: boolean): vo
       delay = Math.max(delay, completedAt + intervalMs - Date.now());
     }
   }
-  loopTimer = scheduleSessionTimeout(() => sendLoopTurn(), Math.max(0, delay));
+  const scheduled = state.loop!;
+  const attemptId = scheduled.builder?.audit?.attemptId;
+  const retryDelay = infrastructureRetryDelay(scheduled.builder?.audit?.infrastructureRetry, Date.now());
+  delay = Math.max(delay, retryDelay);
+  let timer: NodeJS.Timeout;
+  timer = scheduleSessionTimeout(() => {
+    if (loopTimer !== timer || state.loop?.startedAt !== scheduled.startedAt
+        || state.loop.builder?.audit?.attemptId !== attemptId || freshCtx()?.cwd !== ctx.cwd) return;
+    sendLoopTurn();
+  }, Math.min(2_147_483_647, Math.max(0, delay)));
+  loopTimer = timer;
 }
 
 function sendLoopTurn(): void {
@@ -535,6 +546,7 @@ function sendLoopTurn(): void {
   }
   const loop = state.loop!;
   if (loop.builder?.phase === "auditing") {
+    if (infrastructureRetryDelay(loop.builder.audit?.infrastructureRetry, Date.now()) > 0) { scheduleLoopTick(ctx); return; }
     void runRespecBuilderAudit(ctx);
     return;
   }
@@ -730,7 +742,7 @@ async function runLoopTick(initialCtx: ExtensionContext, event?: any): Promise<v
     loop.tokensUsed = (loop.tokensUsed ?? 0) + sumNewAssistantTokens(event.messages as unknown[], flags.countedLoopTokenMessages);
   }
   if (loop.builder?.phase === "auditing") {
-    if (event) applyMetriclessTick(loop, nowIso());
+    if (event && !loop.builder.audit?.infrastructureRetry) applyMetriclessTick(loop, nowIso());
     persistState(ctx);
     if (!loop.active) {
       ctx.ui.notify(`Project held: ${loop.stopReason}; requirements remain unfinished. /loop status shows saved work.`, "warning");
@@ -1440,7 +1452,7 @@ async function cmdLoop(args: string, ctx: ExtensionContext): Promise<void> {
       const resumedAt = nowIso();
       state.loop = {
         ...stored,
-        ...(stored.builder?.audit && stored.stopReason?.startsWith("audit infrastructure:") ? { builder: { ...stored.builder, audit: { ...stored.builder.audit, candidateRef: undefined, attemptedRefs: undefined, retryCandidateRef: undefined, retryAttemptStarted: undefined, retryFailureClass: undefined } } } : {}),
+        ...(stored.builder?.audit && stored.stopReason?.startsWith("audit infrastructure:") && !stored.builder.audit.infrastructureRetry ? { builder: { ...stored.builder, audit: { ...stored.builder.audit, infrastructureRetry: nextInfrastructureRetry(stored.builder.audit.attemptId, "provider", Date.now()) } } } : {}),
         active: true,
         stopReason: undefined,
         completionSummary: undefined,
@@ -1453,7 +1465,7 @@ async function cmdLoop(args: string, ctx: ExtensionContext): Promise<void> {
         ...(resetTokenBudget ? { tokensUsed: 0 } : {}),
         ...(stored.builder && stored.stopReason?.startsWith("max iterations reached") ? { maxIterations: stored.iteration + stored.maxIterations } : {}),
       };
-      persistState(ctx);
+      if (!persistState(ctx)) { state.loop = stored; return; }
       if (resetTimeWindow || resetTokenBudget) {
         appendLedger(ctx.cwd, "loop_bound_window_reset", {
           timeWindow: resetTimeWindow,
