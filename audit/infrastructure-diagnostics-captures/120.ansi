@@ -5,21 +5,21 @@
 [38;5;244mLoop / Project · [0m[38;5;179mAuditing[0m · increment 1
 [38;5;244m├─ [0mExport project artifact
 [38;5;244m├─ [0m[38;5;179mauditor: no verdict · auth unresolved · automatic retry in 5s · failures 1[0m
-[38;5;244m├─ [0m[38;5;244mcause: HTTP 401 model alpha scope denied; authorization= redacted[0m
+[38;5;244m├─ [0m[38;5;244mcause: HTTP 401 model alpha scope denied; authorization=REDACTED[0m
 [38;5;244m├─ [0m[38;5;244mretry deadline: 2026-10-14T12:00:05.000Z[0m
 [38;5;244m├─ [0m[38;5;244mverified 0/1[0m · [38;5;179mremaining 1 · blocked 0[0m
 [38;5;244m├─ [0mclaim: Export implemented
 [38;5;244m└─ [0m[38;5;179mAudit execution unconfirmed · /loop status for activity and recovery details[0m
-glla: project no verdict · HTTP 401 model alpha scope denied; authorization= redacted · retry 2026-10-14T12:00:05.000Z
+glla: project no verdict · HTTP 401 model alpha scope denied; authorization=REDACTED · retry 2026-10-14T12:00:05.000Z
 
 [38;5;147m── Config repair / model missing[0m
 [38;5;244mLoop / Project · [0m[38;5;179mAuditing[0m · increment 1
 [38;5;244m├─ [0mExport project artifact
 [38;5;244m├─ [0m[38;5;179mauditor: no verdict · config unresolved · automatic retry in 5s · failures 1[0m
-[38;5;244m├─ [0m[38;5;244mcause: No auditor model beta configured; password= redacted[0m
+[38;5;244m├─ [0m[38;5;244mcause: No auditor model beta configured; password=REDACTED[0m
 [38;5;244m├─ [0m[38;5;244mretry deadline: 2026-10-14T12:00:05.000Z[0m
 [38;5;244m├─ [0m[38;5;244mverified 0/1[0m · [38;5;179mremaining 1 · blocked 0[0m
 [38;5;244m├─ [0mclaim: Export implemented
 [38;5;244m└─ [0m[38;5;179mAudit execution unconfirmed · /loop status for activity and recovery details[0m
-glla: project no verdict · No auditor model beta configured; password= redacted · retry 2026-10-14T12:00:05.000Z
+glla: project no verdict · No auditor model beta configured; password=REDACTED · retry 2026-10-14T12:00:05.000Z
 
