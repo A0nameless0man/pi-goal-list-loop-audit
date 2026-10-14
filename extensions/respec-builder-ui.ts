@@ -96,6 +96,8 @@ export function respecAuditObservation(builder: RespecBuilderState, now: number)
 export function respecAuditStatus(builder: RespecBuilderState, now: number): string {
   const observation = respecAuditObservation(builder, now);
   const { progress } = observation;
+  const retry = builder.audit?.infrastructureRetry;
+  if (!progress && retry) return `auditor: no verdict · ${retry.failureClass} unresolved · automatic retry ${retry.nextRetryAt > now ? `in ${seconds(retry.nextRetryAt - now)}` : "due"} · failures ${retry.failures}`;
   if (!progress) return "auditor: waiting for dispatch · no live worker observed";
   return `auditor: ${observation.label}${progress.round === 2 ? " · second pass" : ""} · ${sanitizeDisplayText(progress.model ?? "model pending")}`
     + (progress.attemptStartedAt !== undefined ? ` · attempt ${seconds(now - progress.attemptStartedAt)}` : "")

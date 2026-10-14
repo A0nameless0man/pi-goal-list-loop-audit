@@ -1,3 +1,4 @@
+import { sanitizeInfrastructureRetry } from "./infrastructure-retry.js";
 /**
  * pi-goal-list-loop-audit — v0.24.5
  * extensions/goal-loop-core.ts
@@ -3111,6 +3112,8 @@ export function readState(cwd: string): State {
   const loop = parsed.loop && typeof parsed.loop === "object"
     ? {
       ...parsed.loop,
+      ...(parsed.loop.builder?.audit ? { builder: { ...parsed.loop.builder, audit: { ...parsed.loop.builder.audit,
+        infrastructureRetry: sanitizeInfrastructureRetry(parsed.loop.builder.audit.infrastructureRetry, parsed.loop.builder.audit.attemptId) } } } : {}),
       // Legacy/manual loop snapshots sometimes omitted history. The loop
       // supervisor reads and appends it on every measured turn, so normalize
       // the durable boundary instead of allowing one malformed snapshot to

@@ -1,3 +1,4 @@
+import type { InfrastructureRetry } from "./infrastructure-retry.js";
 import type { GoalAuditorResult } from "./goal-loop-auditor.js";
 import { randomUUID } from "node:crypto";
 
@@ -30,6 +31,7 @@ export interface RespecBuilderState {
   history?: { cycle: number; tasks: RespecBuildTask[]; outcome: "approved" | "needs-work" | "replanned"; report: string; attemptId?: string }[];
   scopeChanges?: { revision: number; reason: string; removedIds: string[] }[];
   audit?: { attemptId: string; revision: number; requirementIds: string[]; claim: string; at: string;
+    infrastructureRetry?: InfrastructureRetry;
     candidateRef?: string; attemptedRefs?: string[]; retryCandidateRef?: string;
     retryAttemptStarted?: boolean; retryFailureClass?: "no-verdict" | "timeout" | "transport" | "provider" };
 }
