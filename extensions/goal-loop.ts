@@ -340,8 +340,7 @@ async function resolveLoopStartConflict(ctx: ExtensionContext, target: string): 
 /** Run the user's measure command. Orchestrator-side, never agent-side. */
 export type MeasurementOutcome =
   | { kind: "reading"; value: number }
-  | { kind: "invalid-metric" }
-  | { kind: "infrastructure"; failureClass: "transport" | "no-verdict" };
+  | { kind: "infrastructure"; failureClass: "transport" | "no-verdict" | "config" };
 
 async function runMeasure(ctx: ExtensionContext, cmd: string): Promise<MeasurementOutcome> {
   if (!flags.extensionApi || flags.extensionApiStale) return { kind: "infrastructure", failureClass: "transport" };
@@ -351,14 +350,16 @@ async function runMeasure(ctx: ExtensionContext, cmd: string): Promise<Measureme
     const code = typeof r?.code === "number" ? r.code : (typeof r?.exitCode === "number" ? r.exitCode : 1);
     if (code !== 0 || typeof r?.stdout !== "string") return { kind: "infrastructure", failureClass: "no-verdict" };
     const value = parseMetric(r.stdout);
-    return value === null ? { kind: "invalid-metric" } : { kind: "reading", value };
+    // A successful process without a numeric verdict is still a broken
+    // measurement contract, not a productive iteration or plateau evidence.
+    return value === null ? { kind: "infrastructure", failureClass: "config" } : { kind: "reading", value };
   } catch {
     return { kind: "infrastructure", failureClass: "transport" };
   }
 }
 
 /** Commit the wait before the single timer owner is allowed to arm. */
-export function paceLoopInfrastructureFailure(ctx: ExtensionContext, kind: "measurement" | "provider", failureClass: "transport" | "no-verdict" | "provider"): boolean {
+export function paceLoopInfrastructureFailure(ctx: ExtensionContext, kind: "measurement" | "provider", failureClass: "transport" | "no-verdict" | "config" | "provider"): boolean {
   const loop = state.loop;
   if (!loop?.active) return false;
   const previous = { ...loop };
@@ -1305,8 +1306,9 @@ async function startLoopFromConfig(ctx: ExtensionContext, cfg: LoopConfig): Prom
     }
   };
   // Baseline measurement before the first agent turn. A measure that
-  // produces no number is a footgun: without a baseline the loop burns stall
-  // iterations before plateau stops it. Refuse fast (force=1 overrides for
+  // produces no number has not established a usable measurement contract.
+  // Admission is separate from an active loop's no-verdict retry: refuse
+  // without consent (force=1 overrides for
   // measures that only work after the agent builds something first).
   // v0.23.0: metricless loops skip the baseline entirely — there is no
   // measure to run, and no plateau to protect.
