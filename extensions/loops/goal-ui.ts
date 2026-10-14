@@ -1,3 +1,4 @@
+import { respecAuditLiveScope } from "../respec-builder-ui.js";
 /**
  * pi-goal-list-loop-audit — v0.1.0
  * extensions/loops/goal-ui.ts
@@ -887,6 +888,7 @@ function refreshUI(ctx: ExtensionContext, force = false): void {
       } : {}),
     };
     const extras = {
+      respecAuditLiveScope: state.loop ? respecAuditLiveScope(ctx.cwd, state.loop.startedAt) : undefined,
       stalls: consecutiveStalls,
       recent: recentActions,
       // Audit 2026-09-07 (DECIDED: exceptions-only by default): `quiet`

@@ -1,3 +1,5 @@
+import * as path from "node:path";
+import { resolveGllaStateDir, stateRootPending } from "./glla-state-root.js";
 import { safeDiagnostic } from "./safe-diagnostic.js";
 import type { RespecBuilderState } from "./respec-builder.js";
 import { MAX_RENDER_LINE_CHARS } from "./terminal-summary-limits.js";
@@ -17,18 +19,39 @@ export interface RespecAuditLive {
   activity?: string;
   retryAt?: number;
 }
-const live = new Map<string, RespecAuditLive>();
-function key(builder: RespecBuilderState): string | undefined {
-  return builder.audit ? `${builder.projectId ?? "legacy"}:${builder.audit.attemptId}` : undefined;
+export interface RespecAuditLiveScope {
+  stateDir: string;
+  cwd: string;
+  startedAt: string;
 }
-export function setRespecAuditLive(builder: RespecBuilderState, value?: RespecAuditLive): void {
-  const id = key(builder);
-  if (!id) return;
-  if (value) live.set(id, value); else live.delete(id);
+/** Snapshot the admitted context without migrating or creating durable state. */
+export function respecAuditLiveScope(cwd: string, startedAt: string): RespecAuditLiveScope | undefined {
+  try {
+    if (stateRootPending()) return undefined;
+    return { stateDir: path.resolve(resolveGllaStateDir(cwd)), cwd: path.resolve(cwd), startedAt };
+  } catch { return undefined; }
 }
-export function getRespecAuditLive(builder: RespecBuilderState): RespecAuditLive | undefined {
-  const id = key(builder);
-  return id ? live.get(id) : undefined;
+const live = new Map<string, { owner: symbol; value?: RespecAuditLive }>();
+function key(builder: RespecBuilderState, scope?: RespecAuditLiveScope): string | undefined {
+  return scope && builder.audit ? JSON.stringify([path.resolve(scope.stateDir), path.resolve(scope.cwd),
+    scope.startedAt, builder.projectId ?? null, builder.audit.attemptId]) : undefined;
+}
+/** Only an admitted dispatch claims ownership. A superseded lease cannot publish or clear. */
+export function startRespecAuditLive(builder: RespecBuilderState, scope: RespecAuditLiveScope | undefined) {
+  const id = key(builder, scope), owner = Symbol("respec dispatch");
+  if (id) live.set(id, { owner });
+  return {
+    set(value: RespecAuditLive): void {
+      if (id && live.get(id)?.owner === owner) live.set(id, { owner, value });
+    },
+    clear(): void {
+      if (id && live.get(id)?.owner === owner) live.delete(id);
+    },
+  };
+}
+export function getRespecAuditLive(builder: RespecBuilderState, scope?: RespecAuditLiveScope): RespecAuditLive | undefined {
+  const id = key(builder, scope);
+  return id ? live.get(id)?.value : undefined;
 }
 const seconds = (ms: number) => `${Math.max(0, Math.floor(ms / 1000))}s`;
 function wrapBlockerText(text: string): string[] {
@@ -80,8 +103,8 @@ export function respecAuditToolWait(progress: RespecAuditLive | undefined, now: 
     || now - progress.currentToolStartedAt! >= progress.toolTimeoutMs!) return undefined;
   return `waiting on ${sanitizeDisplayText(progress.currentTool)} · ${seconds(now - progress.currentToolStartedAt!)} / ${seconds(progress.toolTimeoutMs!)} timeout`;
 }
-export function respecAuditObservation(builder: RespecBuilderState, now: number) {
-  const progress = getRespecAuditLive(builder);
+export function respecAuditObservation(builder: RespecBuilderState, now: number, scope?: RespecAuditLiveScope) {
+  const progress = getRespecAuditLive(builder, scope);
   const toolWait = respecAuditToolWait(progress, now);
   const age = progress?.lastActivityAt !== undefined && Number.isFinite(progress.lastActivityAt) && progress.lastActivityAt <= now
     ? now - progress.lastActivityAt : undefined;
@@ -94,8 +117,8 @@ export function respecAuditObservation(builder: RespecBuilderState, now: number)
     : phase === 'queued' ? 'starting · worker unconfirmed' : progress?.phase === 'retrying' ? 'retry waiting · execution unconfirmed' : 'execution unconfirmed');
   return { progress, toolWait, live, phase, tone, label, age };
 }
-export function respecAuditStatus(builder: RespecBuilderState, now: number): string {
-  const observation = respecAuditObservation(builder, now);
+export function respecAuditStatus(builder: RespecBuilderState, now: number, scope?: RespecAuditLiveScope): string {
+  const observation = respecAuditObservation(builder, now, scope);
   const { progress } = observation;
   const retry = builder.audit?.infrastructureRetry;
   if (retry?.pendingEpisode || (!progress && retry)) return `auditor: no verdict · ${retry.failureClass} unresolved · automatic retry ${retry.nextRetryAt > now ? `in ${seconds(retry.nextRetryAt - now)}` : "due"} · failures ${retry.failures}${retry.diagnostic ? ` · cause: ${safeDiagnostic(retry.diagnostic)}` : ""}`;

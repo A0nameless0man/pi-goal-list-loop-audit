@@ -1,4 +1,4 @@
-import { getRespecAuditLive } from "../extensions/respec-builder-ui.js";
+import { getRespecAuditLive, respecAuditLiveScope } from "../extensions/respec-builder-ui.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -42,7 +42,7 @@ function fixture(env: Record<string, string> = {}) {
   let wakes = 0, finishes = 0, owned = true, resolutions = 0;
   registerRespecBuilderTools(pi.api, { context: () => owned ? ctx : null, persist: () => env.PERSIST_FAIL ? false : persistStateLine(cwd, state), wake: () => { wakes++; }, finished: () => { finishes++; }, resolveModel: () => { resolutions++; return env.FAIL_PRIMARY ? { model: "test/primary", fallbackModels: [{ model: "test/backup", via: "configured fallback" }] } : { model: "test/provider-model" }; }, wrapTool: tool => tool,
     completed: (_ctx, _id, summary) => { if (env.SUMMARY_FAIL) throw new Error("Receipt failed"); summaries.push(summary); return true; },
-    refresh: () => { const value = state.loop?.builder && getRespecAuditLive(state.loop.builder); if (value) { progress.push(value.phase); observations.push({ ...value }); } },
+    refresh: () => { const value = state.loop?.builder && getRespecAuditLive(state.loop.builder, respecAuditLiveScope(cwd, startedAt)); if (value) { progress.push(value.phase); observations.push({ ...value }); } },
     auditSleep: async () => { if (env.FREEZE_RETRY) { replaceState({ ...state, supervisorPausedAt: Date.now() }); persistStateLine(cwd, state); } },
     auditRuntime: { command: process.execPath, workerPath: file, homeDir: cwd, pollIntervalMs: 10, heartbeatNoProgressMs: 5000, firstEventTimeoutMs: 5000, env } });
   return { cwd, ctx, startedAt, original, builder, file, counts: () => ({ wakes, finishes }), summaries, progress, observations, disown: () => { owned = false; }, resolutions: () => resolutions };
@@ -110,7 +110,7 @@ test("real detached protocol approval archives the intended project before termi
     assert.ok(f.progress.includes("running"));
     assert.ok(f.observations.filter(p => p.phase === "starting").every(p => p.lastActivityAt === undefined), "parent startup is not worker activity");
     assert.ok(f.observations.some(p => p.phase === "running" && p.lastActivityAt !== undefined));
-    assert.equal(getRespecAuditLive(f.builder), undefined);
+    assert.equal(getRespecAuditLive(f.builder, respecAuditLiveScope(f.cwd, f.startedAt)), undefined);
     assert.match(archive.builder.requirements[0].evidence.report, /artifact exists/);
     assert.deepEqual(f.counts(), { wakes: 0, finishes: 1 });
   } finally { replaceState(f.original); }

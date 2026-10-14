@@ -1,10 +1,11 @@
+const scope = { stateDir: "/test/.pi-glla", cwd: "/test", startedAt: "test-loop" };
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { visibleWidth } from '@earendil-works/pi-tui';
 import type { State } from '../extensions/goal-loop-core.js';
 import { buildStatusText, buildWidgetLines } from '../extensions/goal-loop-display.js';
 import { createRespecBuilder, adoptRespecRequirements, planRespecIncrement, claimRespecTask, beginRespecAudit } from '../extensions/respec-builder.js';
-import { setRespecAuditLive, type RespecAuditLive } from '../extensions/respec-builder-ui.js';
+import { startRespecAuditLive, type RespecAuditLive } from '../extensions/respec-builder-ui.js';
 import { uiStatusOwnerKey } from '../extensions/ui-status.js';
 
 const now = Date.parse('2026-10-11T21:00:00Z');
@@ -16,7 +17,7 @@ function fixture(): State {
     plateauWindow: 5, stallCount: 0, bestValue: null, lastValue: null, history: [], startedAt: new Date(now - 60000).toISOString() } };
 }
 function extras(state: State) {
-  return { compactAuditCard: true, maxWidgetLines: 8, uiStatusContext: { now, generation: 1,
+  return { respecAuditLiveScope: scope, compactAuditCard: true, maxWidgetLines: 8, uiStatusContext: { now, generation: 1,
     evidence: { ownerKey: uiStatusOwnerKey(state)!, generation: 1, session: 'open' as const, observedAt: now, turnActive: true } } };
 }
 
@@ -25,7 +26,8 @@ test('project is explicitly a loop, with visible clocks and bounded tool-wait ev
   const progress: RespecAuditLive = { phase: 'running', workerPhase: 'tool_executing', startedAt: now - 800000,
     currentTool: 'bash', currentToolStartedAt: now - 677000, lastActivityAt: now - 677000, toolTimeoutMs: 900000 };
   try {
-    setRespecAuditLive(builder, progress);
+    const telemetry = startRespecAuditLive(builder, scope);
+    telemetry.set( progress);
     for (const width of [40, 120]) {
       const card = buildWidgetLines(state, undefined, now, undefined, width, extras(state))!;
       assert.match(card[0]!, /Loop \/ Project/);
@@ -40,25 +42,27 @@ test('project is explicitly a loop, with visible clocks and bounded tool-wait ev
     assert.match(footer, /TOOL WAIT/);
     assert.match(footer, /loop \/ project/);
     assert.doesNotMatch(footer, /EXECUTION UNCONFIRMED/);
-  } finally { setRespecAuditLive(builder); }
+  } finally { telemetry.clear(); }
 });
 
 test('project auditor stale or missing activity cannot inherit a busy host running badge', () => {
   const state = fixture(); const builder = state.loop!.builder!;
   try {
     for (const [age, word] of [[40000, 'EXECUTION UNCONFIRMED'], [240000, 'AUDIT QUIET'], [7200000, 'AUDIT STALLED']] as const) {
-      setRespecAuditLive(builder, { phase: 'running', startedAt: now - age, lastActivityAt: now - age });
+      const telemetry = startRespecAuditLive(builder, scope);
+      telemetry.set( { phase: 'running', startedAt: now - age, lastActivityAt: now - age });
       const footer = buildStatusText(state, undefined, now, undefined, extras(state), 160)!;
       assert.ok(footer.includes(word), footer);
       const card = buildWidgetLines(state, undefined, now, undefined, 120, extras(state))!.join('\n');
       assert.doesNotMatch(card, /auditor: running|no action needed/i);
     }
-  } finally { setRespecAuditLive(builder); }
+  } finally { telemetry.clear(); }
 });
 
 test('stopped project excludes cached live worker and names the containing loop', () => {
   const state = fixture(); const builder = state.loop!.builder!;
-  setRespecAuditLive(builder, { phase: 'running', startedAt: now - 1000, lastActivityAt: now });
+  const telemetry = startRespecAuditLive(builder, scope);
+  telemetry.set( { phase: 'running', startedAt: now - 1000, lastActivityAt: now });
   state.loop!.active = false; state.loop!.stopReason = 'stopped by user (/loop stop)';
   try {
     const legacy = buildWidgetLines(state, undefined, now, undefined, 120)!.join('\n');
@@ -70,5 +74,5 @@ test('stopped project excludes cached live worker and names the containing loop'
       assert.match(card + footer, /\/loop respec/);
       if (configuration) assert.match(card + footer, /AUDIT STOPPED/);
     }
-  } finally { setRespecAuditLive(builder); }
+  } finally { telemetry.clear(); }
 });

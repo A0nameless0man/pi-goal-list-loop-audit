@@ -1,5 +1,5 @@
 import { safeDiagnostic } from "./safe-diagnostic.js";
-import { respecAuditObservation, respecAuditStatus, respecBlockerHeadline } from "./respec-builder-ui.js";
+import { respecAuditObservation, respecAuditStatus, respecBlockerHeadline, type RespecAuditLiveScope } from "./respec-builder-ui.js";
 /**
  * pi-goal-list-loop-audit — v0.9.0
  * extensions/goal-loop-display.ts
@@ -204,6 +204,7 @@ export interface ModelProvenanceDisplay {
 }
 
 export interface WidgetExtras {
+  respecAuditLiveScope?: RespecAuditLiveScope;
   /** Shared evidence projection supplied by the admitted runtime adapter. */
   uiStatusContext?: UiStatusContext;
   stalls?: number;
@@ -1475,7 +1476,7 @@ function uiExecutionLabel(status: UiStatus): string {
   return UI_HEALTH_LABEL[status.execution];
 }
 /** Detached activity must not inherit a busy parent host's RUNNING badge. */
-function projectDisplayStatus(state: State, audit: AuditDisplayProgress | null | undefined, context: UiStatusContext): UiStatus {
+function projectDisplayStatus(state: State, audit: AuditDisplayProgress | null | undefined, context: UiStatusContext, scope?: RespecAuditLiveScope): UiStatus {
   const status = projectUiStatus(state, context);
   const goal = state.goal;
   if (status.mode === 'project' && state.loop && projectExplicitlyStopped(state.loop) && status.blocker === state.loop.stopReason) {
@@ -1484,7 +1485,7 @@ function projectDisplayStatus(state: State, audit: AuditDisplayProgress | null |
   }
   if (status.execution === 'blocked' || status.execution === 'dormant') return status;
   if (status.mode === 'project' && state.loop?.builder?.phase === 'auditing') {
-    const observed = respecAuditObservation(state.loop.builder, context.now);
+    const observed = respecAuditObservation(state.loop.builder, context.now, scope);
     return { ...status, execution: observed.toolWait ? 'tool-wait' : observed.live ? 'running' : 'unconfirmed',
       lastActivityAt: observed.age !== undefined ? context.now - observed.age : undefined,
       auditPhase: observed.phase, auditLive: observed.live,
@@ -1744,7 +1745,7 @@ function buildTaskProgressText(goal: Goal): string {
 
 export function buildStatusText(state: State, audit?: AuditDisplayProgress | null, now = Date.now(), theme?: DisplayTheme, extras?: WidgetExtras, width?: number): string | undefined {
   audit = scopedAuditProgress(state, audit, extras);
-  const shared = extras?.uiStatusContext ? projectDisplayStatus(state, audit, { ...extras.uiStatusContext, now }) : undefined;
+  const shared = extras?.uiStatusContext ? projectDisplayStatus(state, audit, { ...extras.uiStatusContext, now }, extras.respecAuditLiveScope) : undefined;
   // Adapter boundary: background waits, waiting-only queues, live audit
   // objects and stale-handle interruptions keep their exact legacy lines
   // (behavioral pins) — disjoint states, so the renderers never contradict.
@@ -1886,7 +1887,7 @@ function buildStatusTextBase(state: State, audit?: AuditDisplayProgress | null, 
     const stopped = projectExplicitlyStopped(l);
     const retry = builder.audit?.infrastructureRetry;
     if (l.active && builder.phase === "auditing" && retry?.pendingEpisode) return `glla: project no verdict · ${safeDiagnostic(retry.diagnostic) ?? retry.failureClass} · retry ${new Date(retry.nextRetryAt).toISOString()}`;
-    return `glla: project ${paint(theme, builder.phase === "complete" ? "success" : !l.active ? "warning" : "accent", !l.active && builder.phase === "auditing" ? stopped ? "audit stopped — /loop status" : "audit held — /loop resume" : builder.phase)}${l.active || builder.phase === "complete" || builder.phase === "auditing" ? "" : stopped ? " · stopped" : " · held"} · increment ${builder.cycle} · verified ${coverage.verified}/${coverage.total} · remaining ${coverage.remaining} · blocked ${coverage.blocked}${l.active && builder.phase === "auditing" ? ` · ${respecAuditStatus(builder, now)}` : ""}`;
+    return `glla: project ${paint(theme, builder.phase === "complete" ? "success" : !l.active ? "warning" : "accent", !l.active && builder.phase === "auditing" ? stopped ? "audit stopped — /loop status" : "audit held — /loop resume" : builder.phase)}${l.active || builder.phase === "complete" || builder.phase === "auditing" ? "" : stopped ? " · stopped" : " · held"} · increment ${builder.cycle} · verified ${coverage.verified}/${coverage.total} · remaining ${coverage.remaining} · blocked ${coverage.blocked}${l.active && builder.phase === "auditing" ? ` · ${respecAuditStatus(builder, now, extras?.respecAuditLiveScope)}` : ""}`;
   }
   if (state.loop?.active) {
     const l = state.loop;
@@ -2257,7 +2258,7 @@ export function responsiveWidget(renderRows: (width: number, maxRows: number) =>
 
 export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | null, now = Date.now(), theme?: DisplayTheme, width?: number, extras?: WidgetExtras): string[] | undefined {
   audit = scopedAuditProgress(state, audit, extras);
-  const shared = extras?.uiStatusContext ? projectDisplayStatus(state, audit, { ...extras.uiStatusContext, now }) : undefined;
+  const shared = extras?.uiStatusContext ? projectDisplayStatus(state, audit, { ...extras.uiStatusContext, now }, extras.respecAuditLiveScope) : undefined;
   const background = shared?.execution === 'blocked' || shared?.execution === 'dormant' ? undefined : backgroundWidget(state, theme, width);
   const compact = extras?.compactAuditCard !== false;
   // Admission/storage stops outrank legacy parked claims too; an ordinary
@@ -2419,7 +2420,7 @@ function waitingListLines(state: State, theme?: DisplayTheme, width?: number): s
 }
 
 function buildWidgetLinesInner(state: State, audit?: AuditDisplayProgress | null, now = Date.now(), theme?: DisplayTheme, width?: number, extras?: WidgetExtras): string[] | undefined {
-  if (state.loop?.builder && state.loop.builder.phase !== "complete" && (state.loop.active || !state.goal)) return respecBuilderLines(state.loop, now, theme, width);
+  if (state.loop?.builder && state.loop.builder.phase !== "complete" && (state.loop.active || !state.goal)) return respecBuilderLines(state.loop, now, theme, width, extras?.respecAuditLiveScope);
   if (state.loop?.active) return loopLines(state.loop, now, theme, width, extras);
   if (state.loop && !state.loop.active && state.mainModelRecovery?.kind === "loop") return parkedLoopRecoveryLines(state.loop, state.mainModelRecovery, now, theme, width, extras?.mainModelFallbacks, extras?.mainModelRecoveryRuntime);
   if (!state.goal && state.mainModelRecovery) return standaloneRecoveryLines(state.mainModelRecovery, now, theme, width, extras?.mainModelFallbacks, extras?.mainModelRecoveryRuntime);
@@ -2861,7 +2862,7 @@ function goalLines(g: Goal, state: State, audit: AuditDisplayProgress | null | u
     : icon;
   const head = `${headIcon} ${truncateObjective(displayObjective(g.objective), objBudget)} ${paint(theme, "dim", "·")} ${segsText}`;
   const lines = g.status === 'auditing'
-    ? uiStatusCardHead(state, projectDisplayStatus(state, audit, { ...extras?.uiStatusContext, now }), now, theme, width).rows
+    ? uiStatusCardHead(state, projectDisplayStatus(state, audit, { ...extras?.uiStatusContext, now }, extras?.respecAuditLiveScope), now, theme, width).rows
     : [head];
   // Activity-first card: on an auditing goal the auditor's live state
   // (phase, last-progress age, tool/budget, model/thinking, next action)
@@ -3315,11 +3316,11 @@ function projectExplicitlyStopped(loop: LoopState): boolean {
   return !loop.active && !!loop.stopReason?.startsWith("stopped by user (/loop ");
 }
 
-function respecBuilderLines(loop: LoopState, now: number, theme?: DisplayTheme, width?: number): string[] {
+function respecBuilderLines(loop: LoopState, now: number, theme?: DisplayTheme, width?: number, scope?: RespecAuditLiveScope): string[] {
   const builder = loop.builder!;
   const stopped = projectExplicitlyStopped(loop);
   const coverage = respecCoverage(builder);
-  const observation = loop.active && builder.phase === 'auditing' ? respecAuditObservation(builder, now) : undefined;
+  const observation = loop.active && builder.phase === 'auditing' ? respecAuditObservation(builder, now, scope) : undefined;
   const tone = !loop.active ? 'warning' : observation?.tone ?? 'accent';
   const phase = !loop.active && builder.phase === "auditing" ? stopped ? "Audit stopped" : "Audit held" : observation?.toolWait ? 'Audit tool wait' : observation?.phase === 'quiet' ? 'Audit quiet' : observation?.phase === 'stalled' ? 'Audit stalled' : builder.phase === "planning" ? "Planning" : builder.phase[0]!.toUpperCase() + builder.phase.slice(1);
   const current = builder.tasks.find(t => t.status === "pending") ?? builder.tasks.at(-1);
@@ -3332,7 +3333,7 @@ function respecBuilderLines(loop: LoopState, now: number, theme?: DisplayTheme, 
   const progress = observation?.progress;
   const toolWait = observation?.toolWait;
   const auditLines = loop.active && builder.phase === "auditing" ? builder.audit?.infrastructureRetry?.pendingEpisode ? [
-    respecAuditStatus(builder, now).split(" · cause:")[0]!,
+    respecAuditStatus(builder, now, scope).split(" · cause:")[0]!,
     `cause: ${safeDiagnostic(builder.audit.infrastructureRetry.diagnostic) ?? "No diagnostic recorded"}`,
     `retry deadline: ${new Date(builder.audit.infrastructureRetry.nextRetryAt).toISOString()}`,
   ] : progress ? [
@@ -3340,7 +3341,7 @@ function respecBuilderLines(loop: LoopState, now: number, theme?: DisplayTheme, 
     ...(toolWait ? [`tool: ${sanitizeDisplayText(progress.currentTool!)} · ${Math.floor((now - progress.currentToolStartedAt!) / 1000)}s / ${Math.floor(progress.toolTimeoutMs! / 1000)}s budget`] : []),
     `audit elapsed ${Number.isFinite(progress.startedAt) && progress.startedAt <= now ? fmtElapsed(now - progress.startedAt) : 'unknown'}${progress.attemptStartedAt !== undefined && Number.isFinite(progress.attemptStartedAt) && progress.attemptStartedAt <= now ? ` · attempt ${fmtElapsed(now - progress.attemptStartedAt)}` : ''}`, 
     `last activity: ${observation?.age !== undefined ? `${fmtElapsed(observation.age)} ago` : "not observed"}${progress.activity ? ` · ${sanitizeDisplayText(progress.activity)}` : ""}${progress.retryAt !== undefined ? ` · retry in ${fmtElapsed(Math.max(0, progress.retryAt - now))}` : ""}`,
-  ] : [respecAuditStatus(builder, now)] : [];
+  ] : [respecAuditStatus(builder, now, scope)] : [];
   const title = `${paint(theme, 'dim', 'Loop / Project · ')}${paint(theme, tone, phase)}`;
   return [
     `${theme?.bold ? theme.bold(title) : title}${loop.active || builder.phase === "auditing" ? "" : stopped ? " · stopped" : " · held"} · increment ${builder.cycle}`,

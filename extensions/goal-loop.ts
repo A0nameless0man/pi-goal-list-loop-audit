@@ -1,6 +1,6 @@
 import { safeDiagnostic } from "./safe-diagnostic.js";
 import { infrastructureRetryDelay, nextInfrastructureRetry } from "./infrastructure-retry.js";
-import { respecAuditStatus, respecBlockerDetails, respecBlockerActions } from "./respec-builder-ui.js";
+import { respecAuditLiveScope, respecAuditStatus, respecBlockerDetails, respecBlockerActions } from "./respec-builder-ui.js";
 import { respecBuilderContext } from "./respec-builder-context.js";
 /**
  * goal-loop.ts — Loop 3 machinery: /loop command, tick engine, git finish.
@@ -1595,7 +1595,7 @@ async function cmdLoop(args: string, ctx: ExtensionContext): Promise<void> {
     if (loop.builder) {
       const coverage = respecCoverage(loop.builder);
       lines.push(`Project: ${loop.builder.phase} · increment ${loop.builder.cycle} · verified ${coverage.verified}/${coverage.total} · remaining ${coverage.remaining} · blocked ${coverage.blocked}`);
-      if (loop.active && loop.builder.phase === "auditing") lines.push(respecAuditStatus(loop.builder, Date.now()));
+      if (loop.active && loop.builder.phase === "auditing") lines.push(respecAuditStatus(loop.builder, Date.now(), respecAuditLiveScope(ctx.cwd, loop.startedAt)));
       if (!loop.builder.requirements.length) lines.push("Requirements: intended scope is still being drafted.");
       for (const requirement of loop.builder.requirements) {
         lines.push(`${sanitizeDisplayText(requirement.id)} [${requirement.status}]: ${sanitizeDisplayText(requirement.text)}`);

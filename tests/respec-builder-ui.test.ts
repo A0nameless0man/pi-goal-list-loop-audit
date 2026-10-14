@@ -1,3 +1,4 @@
+const scope = { stateDir: "/test/.pi-glla", cwd: "/test", startedAt: "test-loop" };
 import * as path from "node:path";
 import { loadThemeFromPath } from "../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/theme.js";
 import { registerSummaryRenderer } from "../extensions/summary-renderer.js";
@@ -6,7 +7,7 @@ import { stripTerminalSequences, type Component } from "@earendil-works/pi-tui";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createRespecBuilder, adoptRespecRequirements, planRespecIncrement, claimRespecTask, beginRespecAudit, settleRespecAudit } from "../extensions/respec-builder.js";
-import { getRespecAuditLive, setRespecAuditLive, respecAuditStatus, respecCompletionSummary } from "../extensions/respec-builder-ui.js";
+import { getRespecAuditLive, startRespecAuditLive, respecAuditStatus, respecCompletionSummary } from "../extensions/respec-builder-ui.js";
 import { buildWidgetLines } from "../extensions/goal-loop-display.js";
 import type { State } from "../extensions/goal-loop-core.js";
 import { visibleWidth } from "@earendil-works/pi-tui";
@@ -17,18 +18,19 @@ function pending() {
 }
 test("live telemetry is claim-fenced and missing telemetry never implies a running worker", () => {
   const builder = pending();
-  assert.match(respecAuditStatus(builder, 5000), /waiting for dispatch/);
-  setRespecAuditLive(builder, { phase: "retrying", model: "provider/model", startedAt: 1000, lastActivityAt: 2000, retryAt: 7000, activity: "retry: timeout" });
+  assert.match(respecAuditStatus(builder, 5000, scope), /waiting for dispatch/);
+  const telemetry = startRespecAuditLive(builder, scope);
+  telemetry.set( { phase: "retrying", model: "provider/model", startedAt: 1000, lastActivityAt: 2000, retryAt: 7000, activity: "retry: timeout" });
   try {
-    assert.match(respecAuditStatus(builder, 5000), /retry waiting · execution unconfirmed · provider\/model · total 4s · last activity 3s ago · retry: timeout · retry in 2s/);
-    assert.equal(getRespecAuditLive({ ...builder, audit: { ...builder.audit!, attemptId: "new-claim" } }), undefined);
+    assert.match(respecAuditStatus(builder, 5000, scope), /retry waiting · execution unconfirmed · provider\/model · total 4s · last activity 3s ago · retry: timeout · retry in 2s/);
+    assert.equal(getRespecAuditLive({ ...builder, audit: { ...builder.audit!, attemptId: "new-claim" } }, scope), undefined);
     const state = { goal: null, list: [], loop: { builder, active: true, target: builder.vision, startedAt: "now", iteration: 1, maxIterations: 0, plateauWindow: 5, stallCount: 0, bestValue: null, lastValue: null, history: [] } } as State;
     for (const width of [1, 20, 40, 80, 120]) {
-      const lines = buildWidgetLines(state, null, 5000, undefined, width)!;
+      const lines = buildWidgetLines(state, null, 5000, undefined, width, { respecAuditLiveScope: scope })!;
       assert.ok(lines.every(line => visibleWidth(line) <= Math.max(0, width - 2)));
       if (width >= 80) { assert.match(lines.join("\n"), /auditor: retry waiting · execution unconfirmed/); assert.match(lines.join("\n"), /last activity:/); }
     }
-  } finally { setRespecAuditLive(builder); }
+  } finally { telemetry.clear(); }
 });
 test("completion summary requires proof and includes acceptance, shipped capability and evidence", () => {
   const builder = pending();

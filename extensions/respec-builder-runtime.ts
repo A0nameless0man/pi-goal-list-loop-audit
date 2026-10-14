@@ -15,7 +15,7 @@ import type { LoopState } from "./goal-loop-forever.js";
 import { dispatchAuditorAllowedExtensions } from "./auditor-extensions.js";
 import { resolveAuditorThinkingLevel } from "./auditor-thinking.js";
 import { runDetachedGoalCompletionAuditor, runAuditorFallbackWithPolicy, readCompletedCompletionAudit, newDetachedAuditJobAttemptId, writeAtomicJson, auditorResultFailureClass, effectiveToolTimeoutMs, DEFAULT_AUDITOR_TOOL_TIMEOUT_MS, type AuditorProcessRuntime } from "./goal-loop-auditor-process.js";
-import { setRespecAuditLive, getRespecAuditLive, respecCompletionSummary, respecBlockerActions } from "./respec-builder-ui.js";
+import { startRespecAuditLive, respecAuditLiveScope, getRespecAuditLive, respecCompletionSummary, respecBlockerActions } from "./respec-builder-ui.js";
 import { respecIncrementAuditGoal } from "./respec-builder-audit.js";
 import { adoptRespecRequirements, beginRespecAudit, blockRespecRequirement, replanRespecWork, unblockRespecRequirement, refineRespecRequirements, claimRespecTask, planRespecIncrement, settleRespecAudit, type RespecBuilderState } from "./respec-builder.js";
 
@@ -133,6 +133,8 @@ export async function runRespecBuilderAudit(ctx: ExtensionContext): Promise<void
   const controller = new AbortController();
   running.set(key, controller);
   const auditStartedAt = Date.now();
+  const liveScope = respecAuditLiveScope(ctx.cwd, loop.startedAt);
+  const telemetry = startRespecAuditLive(builder, liveScope);
   let retryCommitted = false, persistenceRejected = false;
   const retryInfrastructure = (liveCtx: ExtensionContext, error: string, failureClass: ReturnType<typeof auditorResultFailureClass>) => {
     if (persistenceRejected || supervisorPaused(state) || controller.signal.aborted || !state.loop?.active
@@ -147,8 +149,9 @@ export async function runRespecBuilderAudit(ctx: ExtensionContext): Promise<void
     try { liveCtx.ui.notify(`Project audit has no verdict (${diagnosticClass}): ${retry.diagnostic ?? "No diagnostic supplied"}; automatic retry at ${new Date(retry.nextRetryAt).toISOString()}. Auth/config failures require repair, not approval.`, "warning"); } catch { /* durable retry survives UI failure */ }
   };
   const publish = (patch: Partial<NonNullable<ReturnType<typeof getRespecAuditLive>>>) => {
-    if (!state.loop?.active || state.loop.builder !== builder || !host.context(ctx)) return;
-    setRespecAuditLive(builder, { phase: "waiting", startedAt: auditStartedAt, ...getRespecAuditLive(builder), ...patch });
+    if (controller.signal.aborted || !state.loop?.active || state.loop.startedAt !== loop.startedAt || state.loop.builder !== builder || !host.context(ctx)
+      || JSON.stringify(respecAuditLiveScope(ctx.cwd, loop.startedAt)) !== JSON.stringify(liveScope)) return;
+    telemetry.set( { phase: "waiting", startedAt: auditStartedAt, ...getRespecAuditLive(builder, liveScope), ...patch });
     try { host.refresh?.(ctx); } catch { /* display failure cannot discard audit evidence */ }
   };
   publish({ phase: "waiting" });
@@ -230,7 +233,7 @@ export async function runRespecBuilderAudit(ctx: ExtensionContext): Promise<void
   } finally {
     if (boundTimer) clearTimeout(boundTimer);
     running.delete(key);
-    setRespecAuditLive(initialBuilder);
+    telemetry.clear();
     const current = state.loop;
     // An explicit resume may arrive before cancelled-job cleanup completes.
     // Re-arm only the same live claim, after releasing its dispatch latch.
