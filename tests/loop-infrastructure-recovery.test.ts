@@ -240,11 +240,11 @@ for (const stdout of ["", "Authentication required: invalid API key", "not-a-num
 test("initial missing baseline refuses admission; explicit force admits and recovers without a baseline", async () => {
   const f = await fixture();
   try {
-    replaceState({ ...state, loop: null });
+    replaceState({ ...state, loop: undefined });
     f.pi.execHandler = () => ({ code: 0, stdout: "", stderr: "" });
     const cfg = { target: "build metric first", measureCmd: "echo metric", direction: "max" as const, plateauWindow: 3, maxIterations: 0, branch: false };
     assert.equal(await startLoopFromConfig(f.ctx, cfg), false);
-    assert.equal(state.loop, null, "invalid draft did not silently start");
+    assert.equal(state.loop, undefined, "invalid draft did not silently start");
     assert.equal(await startLoopFromConfig(f.ctx, { ...cfg, force: true }), true);
     clearLoopTimer();
     for (let i = 0; i < 8; i++) {
