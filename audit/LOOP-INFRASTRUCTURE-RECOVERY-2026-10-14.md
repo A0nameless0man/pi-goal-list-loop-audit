@@ -203,3 +203,54 @@ current six behavioral contract areas, prior P0 repairs and raw passing release
 log. The active universal-recovery goal is not terminalized by this document;
 completion still requires the detached goal auditor. No publication or history
 operations were performed.
+
+## Actual-cause diagnostics follow-up (auditor rejection)
+
+The detached auditor rejected the first completion claim: the objective's
+"show their actual cause" clause was not met, because measurement failures
+discarded exit/stderr/exception detail and project retries kept only a broad
+class, leaving authentication, configuration, nonzero-exit and timeout causes
+indistinguishable after reload. The rejection was correct.
+
+Implemented in `audit/LOOP-INFRASTRUCTURE-DIAGNOSTICS-2026-10-14.md`: a bounded,
+credential-redacted diagnostic on the shared retry envelope
+(`extensions/safe-diagnostic.ts`), preserved for measurement exit/stderr/
+exception/missing-metric outcomes and project auth/config/transport/timeout
+failures, re-redacted on reload sanitization, and rendered beside the pending
+retry deadline in the project widget/status, `/loop status` and loop status.
+Actual journal-reload behavioral tests distinguish authentication, configuration,
+nonzero exit, empty/nonfinite stdout and thrown timeout causes for metric, audit
+and project adapters; sanitizer tests cover marked secrets, URLs/signatures, PEM,
+headers, control/markup, oversized strings, Error messages, stacks and objects.
+The current production project recovery UI is captured from the real adapter,
+journal reload and production renderer through an isolated xterm/Xvfb fixture
+(`audit/infrastructure-diagnostics-captures/`), explicitly labelled a fixture
+rather than a live outage. Marker-based redaction does not detect arbitrary
+unlabelled secrets, and pre-existing journal bytes are projected, not rewritten.
+
+## Final verified release gate
+
+Two harness truths surfaced while proving the gate, fixed without weakening any
+assertion:
+
+- The 2101-failure provider-exhaustion integration tests in
+  `tests/supervised-provider-exhaustion-runtime.test.ts` need minutes per mode.
+  The runner's uniform 60s per-test ceiling failed them on a loaded host even at
+  the pre-recovery baseline (verified against an archived baseline copy). They
+  now declare an explicit per-test budget, the file is registered in
+  `tests/slow-files.mjs`, and every original assertion is unchanged.
+- A source pin in `tests/loop-forever.test.ts` matched the old literal
+  `runMeasure` return shape; it now pins the fail-closed contract including the
+  preserved diagnostic and the new nonnumeric-stdout config branch.
+  `docs/RUNTIME-INVENTORY.md` was regenerated after the runtime changes.
+
+Isolated, bounded final run (unique `GLLA_GLOBAL_SETTINGS_PATH` set before
+preload): `timeout 1500 npm run release:check` — **exit 0**,
+`/tmp/glla-final4-release.log`. Raw evidence: **3887 pass / 1 skip / 0 fail**
+across 416 files; the single skip is the env-gated auto-committer daemon test.
+The chain includes the full serialized suite, `tsc --noEmit`, the jiti
+state-binding repro, offline auditor extension loading, runtime inventory
+validation, package dry-run and installed-package smoke. `npm run check` passes
+and `git diff --check` is clean. No publication, version bump or release was
+performed. The active universal-recovery goal is not terminalized by this
+document; completion still requires the detached goal auditor.
