@@ -215,6 +215,7 @@ test("non-tweak blocked reminders keep the imperative Next line", () => {
   assert.match(text, /Next: Open the popup and record the result/);
   assert.doesNotMatch(text, /Question:/);
 });
+test("decision reminder rendering agrees with its transcript when no action was supplied", () => {
   const reminder = buildActionReminder({ kind: "decision", reason: "Choose the rollout approach.", resumeCommand: "/goal resume" });
   assert.match(reminder.content, /Choose an option in the decision card/);
   const rendered = renderReminder(reminder);
