@@ -30,6 +30,19 @@ export interface ActionReminderPresentation {
   parkState: ActionReminderParkState;
 }
 
+/** A tweak proposal rewrites the operator's objective or contract, so it is
+a question for the operator — never an imperative decree. Field 2026-10-14
+(hellhunter screenshot): an agent-authored `Run '/goal tweak "..."'`
+suggested action rendered verbatim as `Next: Run ...`, reading as an order
+to rewrite the contract. Frame it as a question while preserving the exact
+command verbatim for copy-paste. Returns undefined for non-tweak actions. */
+const TWEAK_COMMAND = /\/(?:goal|list)\s+tweak\b/i;
+export function frameTweakSuggestion(action: string): string | undefined {
+  const trimmed = action.trim();
+  if (!TWEAK_COMMAND.test(trimmed)) return undefined;
+  return `Question: should this tweak be applied? ${trimmed} — or reply with what you'd prefer instead.`;
+}
+
 export interface ActionReminderCopy {
   content: string;
   details: ActionReminderDetails;
@@ -182,7 +195,7 @@ export function buildPausePresentation(input: {
     return {
       heading: "Goal safely parked — handling your new request now",
       why,
-      next: `Next: ${displayed.action || displayed.resumeCommand}`,
+      next: frameTweakSuggestion(displayed.action) ?? `Next: ${displayed.action || displayed.resumeCommand}`,
       resumeCommand: displayed.resumeCommand,
       parkState: displayed.parkState,
     };
@@ -210,7 +223,7 @@ export function buildPausePresentation(input: {
       heading: "Decision needed — work is safely parked",
       why,
       next: displayed.action
-        ? `Next: ${displayed.action}`
+        ? (frameTweakSuggestion(displayed.action) ?? `Next: ${displayed.action}`)
         : "Choose an option in the decision card, then resume.",
       resumeCommand: displayed.resumeCommand,
       parkState: displayed.parkState,
@@ -219,7 +232,7 @@ export function buildPausePresentation(input: {
   return {
     heading: "Action needed — work is safely parked",
     why,
-    next: `Next: ${displayed.action || displayed.resumeCommand}`,
+    next: frameTweakSuggestion(displayed.action) ?? `Next: ${displayed.action || displayed.resumeCommand}`,
     resumeCommand: displayed.resumeCommand,
     parkState: displayed.parkState,
   };
