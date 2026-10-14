@@ -112,7 +112,7 @@ test("migration: dedicated values win and an explicit empty fallback array beats
   }
 });
 
-test("resolveDesignerModel: primary, then fallbacks, then session inherit; forbidden session blocks", () => {
+test("resolveDesignerModel: primary, then fallbacks, then automatic session last-fallback; forbidden session blocks", () => {
   const cwd = tmpDir("glla-designer-resolve-");
   const base = { forbiddenModels: [] as string[] };
 
@@ -133,8 +133,9 @@ test("resolveDesignerModel: primary, then fallbacks, then session inherit; forbi
     fakeCtx(cwd, [{ provider: "anthropic", id: "session" }], { provider: "anthropic", id: "session" }),
     { ...base, designerModel: "openai/missing" } as Settings,
   );
-  assert.equal(inherit.selectedRef, undefined);
-  assert.equal(inherit.blocked, false, "an eligible session model is inherited, not blocked");
+  assert.equal(inherit.selectedRef, "anthropic/session");
+  assert.equal(inherit.blocked, false, "an eligible session model is pinned as the automatic last fallback, not blocked");
+  assert.deepEqual(inherit.configuredRefs, ["openai/missing"], "the automatic session fallback is a selection-time append, not a configured ref");
 
   const blocked = resolveDesignerModel(
     fakeCtx(cwd, [{ provider: "anthropic", id: "session" }], { provider: "anthropic", id: "session" }),
@@ -142,6 +143,28 @@ test("resolveDesignerModel: primary, then fallbacks, then session inherit; forbi
   );
   assert.equal(blocked.selectedRef, undefined);
   assert.equal(blocked.blocked, true, "a forbidden session model must never be inherited silently");
+});
+
+test("resolveDesignerModel: selected primary wins over session; session is not duplicated when already configured", () => {
+  const cwd = tmpDir("glla-designer-resolve-session-");
+  const base = { forbiddenModels: [] as string[] };
+
+  // Both the configured primary and the session are eligible: the selected
+  // primary is used first, the session never jumps the queue.
+  const primaryFirst = resolveDesignerModel(
+    fakeCtx(cwd, [{ provider: "openai", id: "primary" }, { provider: "anthropic", id: "session" }], { provider: "anthropic", id: "session" }),
+    { ...base, designerModel: "openai/primary", designerModelFallbacks: ["openai/missing"] } as Settings,
+  );
+  assert.equal(primaryFirst.selectedRef, "openai/primary");
+  assert.equal(primaryFirst.blocked, false);
+
+  // The session model configured as the primary resolves once, not twice.
+  const alreadyConfigured = resolveDesignerModel(
+    fakeCtx(cwd, [{ provider: "anthropic", id: "session" }], { provider: "anthropic", id: "session" }),
+    { ...base, designerModel: "anthropic/session" } as Settings,
+  );
+  assert.equal(alreadyConfigured.selectedRef, "anthropic/session");
+  assert.deepEqual(alreadyConfigured.configuredRefs, ["anthropic/session"]);
 });
 
 test("migration: junk dedicated values do not block the legacy pin, and project-scoped legacy pins are dropped", () => {
