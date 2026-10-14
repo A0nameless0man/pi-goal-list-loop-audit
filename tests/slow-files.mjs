@@ -14,6 +14,7 @@
 
 export const SLOW_TEST_FILES = [
   "tests/behavioral-orchestrator.test.ts", // 106s — the whale: full-harness lifecycle matrix
+  "tests/supervised-provider-exhaustion-runtime.test.ts", // ~110s — 2101-failure provider-exhaustion integration stress per mode
   "tests/drafting-handoff.test.ts", // 37s
   "tests/completion-communication.test.ts", // 33s
   "tests/auditor-process.test.ts", // 21s — real worker spawns

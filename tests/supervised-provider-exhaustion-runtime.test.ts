@@ -13,8 +13,16 @@ import { clearMainModelRecoveryTimer, mainModelRecoveryRuntimeStatus, probeMainM
 // model. Advance only the cadence clock; no provider calls or quota requests.
 afterEach(() => __testOnlyResetProcessState());
 
+// 2101 simulated failures per mode. This is a real integration stress test:
+// every iteration fires a live agent_end, persists durable recovery state and
+// runs the recovery probe, so the wall-clock cost is minutes on a loaded host.
+// The runner's default 60s per-test cap is a suite-hygiene ceiling, not an
+// assertion: give this test its own budget instead of weakening it. Every
+// behavioral assertion is unchanged.
+const STRESS_TEST_TIMEOUT_MS = 300_000;
+
 for (const mode of ['goal', 'list', 'loop'] as const) {
-  test(`${mode}: 2101 provider exhaustion failures preserve work then continue`, async () => {
+  test(`${mode}: 2101 provider exhaustion failures preserve work then continue`, { timeout: STRESS_TEST_TIMEOUT_MS }, async () => {
     await withPressureSession(async (pi, ctx, cwd) => {
       fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, JSON.stringify({ autoResume: true, aggressiveMode: false, mainModelFallbacks: [], hourlyRetryProbe: false }));
       ctx.getContextUsage = () => ({ tokens: 1000, contextWindow: 272000, percent: 1 });
