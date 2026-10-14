@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import activate, { __testOnlyResetOwnerSession, __testOnlyResetStaleFlag } from "../extensions/loops/goal.js";
-import { __testOnlyLoopInfrastructureScheduler, clearLoopTimer, runLoopTick, scheduleLoopTick } from "../extensions/goal-loop.js";
+import { __testOnlyLoopInfrastructureScheduler, clearLoopTimer, runLoopTick, scheduleLoopTick, startLoopFromConfig } from "../extensions/goal-loop.js";
 import { saveSettings } from "../extensions/goal-settings.js";
 import { state, replaceState } from "../extensions/goal-state.js";
 import { readState } from "../extensions/goal-loop-core.js";
@@ -185,4 +185,82 @@ test("measurement retry persistence refusal rolls RAM back and arms no timer", a
     fs.unlinkSync(root); fs.renameSync(backup, root);
     await f.close();
   }
+});
+
+
+for (const stdout of ["", "Authentication required: invalid API key", "not-a-number"])
+  test(`zero-exit ${JSON.stringify(stdout)} retries beyond plateau and recovers`, async () => {
+    const f = await fixture();
+    const original = JSON.parse(JSON.stringify(state.loop));
+    let measures = 0;
+    const git: string[][] = [];
+    f.pi.execHandler = (cmd, args) => {
+      if (cmd !== "bash") { git.push(args); return { code: 0, stdout: "", stderr: "" }; }
+      measures++;
+      return { code: 0, stdout: measures <= 12 ? stdout : "11", stderr: "" };
+    };
+    try {
+      for (let i = 0; i < 12; i++) {
+        await runLoopTick(f.ctx);
+        assert.equal(measures, i + 1);
+        const saved = readState(f.cwd).loop!;
+        for (const key of ["iteration", "bestValue", "lastValue", "stallCount", "consecutiveStuck", "history"] as const)
+          assert.deepEqual(saved[key], original[key], key);
+        assert.equal(saved.active, true);
+        assert.equal(saved.infrastructureRetry!.failureClass, "config");
+        assert.equal(saved.infrastructureRetry!.failures, i + 1);
+        const delay = Math.min(300_000, 5_000 * 2 ** Math.min(6, i));
+        assert.equal(saved.infrastructureRetry!.nextRetryAt, f.now() + delay);
+        assert.equal(f.timers.at(-1)!.delay, delay);
+        await runLoopTick(f.ctx);
+        assert.equal(measures, i + 1, "early wake cannot measure");
+        assert.deepEqual(git, [], "no-verdict cannot run git");
+        f.due();
+      }
+      const wake = f.timers.at(-1)!;
+      wake.callback(); wake.callback(); await settle();
+      const recovered = readState(f.cwd).loop!;
+      assert.equal(measures, 13);
+      assert.equal(recovered.iteration, original.iteration + 1);
+      assert.equal(recovered.bestValue, 11);
+      assert.equal(recovered.history.length, original.history.length + 1);
+      assert.equal(recovered.infrastructureRetry, undefined);
+      assert.equal(recovered.active, true);
+      // The next missing verdict remains stoppable, and its callback loses ownership.
+      f.pi.execHandler = () => ({ code: 0, stdout, stderr: "" });
+      await runLoopTick(f.ctx);
+      const stoppedWake = f.timers.at(-1)!;
+      await f.pi.command("loop", "stop", f.ctx);
+      f.due(); stoppedWake.callback(); await settle();
+      assert.equal(readState(f.cwd).loop!.active, false);
+      assert.equal(readState(f.cwd).loop!.iteration, recovered.iteration);
+    } finally { await f.close(); }
+  });
+
+test("initial missing baseline refuses admission; explicit force admits and recovers without a baseline", async () => {
+  const f = await fixture();
+  try {
+    replaceState({ ...state, loop: null });
+    f.pi.execHandler = () => ({ code: 0, stdout: "", stderr: "" });
+    const cfg = { target: "build metric first", measureCmd: "echo metric", direction: "max" as const, plateauWindow: 3, maxIterations: 0, branch: false };
+    assert.equal(await startLoopFromConfig(f.ctx, cfg), false);
+    assert.equal(state.loop, null, "invalid draft did not silently start");
+    assert.equal(await startLoopFromConfig(f.ctx, { ...cfg, force: true }), true);
+    clearLoopTimer();
+    for (let i = 0; i < 8; i++) {
+      await runLoopTick(f.ctx);
+      const saved = readState(f.cwd).loop!;
+      assert.equal(saved.iteration, 0);
+      assert.equal(saved.bestValue, null);
+      assert.equal(saved.lastValue, null);
+      assert.deepEqual(saved.history, []);
+      assert.equal(saved.active, true);
+      f.due();
+    }
+    f.pi.execHandler = () => ({ code: 0, stdout: "7", stderr: "" });
+    await runLoopTick(f.ctx);
+    assert.equal(readState(f.cwd).loop!.bestValue, 7);
+    assert.equal(readState(f.cwd).loop!.iteration, 1);
+    assert.equal(readState(f.cwd).loop!.infrastructureRetry, undefined);
+  } finally { await f.close(); }
 });
