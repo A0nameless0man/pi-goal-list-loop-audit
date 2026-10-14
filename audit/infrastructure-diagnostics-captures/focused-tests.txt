@@ -1,0 +1,89 @@
+bun test v1.3.14 (0d9b296a)
+
+tests/respec-builder-display.test.ts:
+(pass) a stopped project audit exposes its hold reason instead of implying a running auditor [7.64ms]
+(pass) project cards expose phase, unfinished coverage and recorded blockers within narrow widths [3.17ms]
+(pass) an explicitly stopped project audit does not advertise an unavailable resume [0.35ms]
+(pass) completed project dismisses both live UI surfaces while preserving other work [1.08ms]
+(pass) project tool waits show a ticking deadline and separate attempt/total clocks [1.01ms]
+(pass) blocker inspection retains late operator instructions and distinguishes recorded claims from verification [0.94ms]
+(pass) automatic blocker actions lead with a short obstacle and keep long diagnostics in details [0.56ms]
+
+tests/respec-builder-audit-runtime.test.ts:
+(pass) a stale audit wake does not resolve a model or launch a worker [94.73ms]
+(pass) a time bound cancels an in-flight worker and retains unfinished requirements [33.89ms]
+(pass) real detached protocol approval archives the intended project before terminal handoff [89.59ms]
+(pass) real detached disapproval carries findings into a durable unfinished next cycle [77.10ms]
+(pass) a semantic approval rejected by the regression shield reports needs work [63.36ms]
+(pass) completed job is recovered after reloading an unsettled claim without another spawn [73.57ms]
+(pass) pausing during an actual worker run prevents late approval from settling the project [16.79ms]
+(pass) archive failure preserves approval evidence for settlement retry instead of launching another audit [75.56ms]
+(pass) concurrent wake paths dispatch only one worker for the exact durable claim [173.57ms]
+(pass) respec uses the shared bounded retry/fallback policy and journals its candidate cursor [192.23ms]
+(pass) an exhausted token bound holds the project before spawning an auditor or claiming completion [0.96ms]
+(pass) actual project lifecycle reaches detached verification through agent_end [1671.26ms]
+(pass) actual project lifecycle reaches detached verification through /glla resume of a stalled audit [1730.90ms]
+(pass) terminal summary delivery failure preserves a replayable durable summary [80.26ms]
+(pass) a failed builder journal commit restores the complete prior RAM state [1.19ms]
+(pass) a supervisor freeze prevents a new project audit dispatch [0.72ms]
+(pass) rapid pause/resume discards the cancelled worker result and rearms the saved claim [93.31ms]
+(pass) an undelivered project summary survives replacement by a new project [69.38ms]
+(pass) freezing supervision between auditor attempts prevents retry and fallback dispatch [67.57ms]
+(pass) a corrupt summary outbox prevents terminal handoff and retains approved job evidence [91.52ms]
+(pass) project audit preserves live tool deadline and attempt clock through the real worker bridge [325.88ms]
+(pass) project adapter survives 2105 paced infrastructure episodes then a real worker recovers [1387.29ms]
+(pass) project retry admission rolls back on refusal and honors freeze, stop, bounds and ownership [2.66ms]
+(pass) real project restore cold obeys consent, due and exact timer ownership [19.63ms]
+(pass) real project restore pre-due obeys consent, due and exact timer ownership [25.66ms]
+(pass) real project restore overdue obeys consent, due and exact timer ownership [17.03ms]
+(pass) real project restore legacy obeys consent, due and exact timer ownership [18.04ms]
+(pass) real project restore legacy-cold obeys consent, due and exact timer ownership [25.48ms]
+(pass) real project restore user-stop obeys consent, due and exact timer ownership [18.06ms]
+(pass) exhausted finite worker chain resets only at the next due admitted episode [659.00ms]
+(pass) real stalled detached workers automatically journal a paced timeout episode [300.29ms]
+(pass) project retry causes survive actual journal reload and production recovery UI without credentials [6.63ms]
+
+tests/infrastructure-retry.test.ts:
+(pass) infrastructure envelope sanitizes scope, deadlines, counts and unknown sensitive fields [0.32ms]
+(pass) project status reports durable no-verdict auth wait without claiming a live worker [0.17ms]
+(pass) retry sanitizer re-redacts legacy prose, bounds controls and excludes objects/stacks [0.52ms]
+
+tests/project-audit-status-consistency.test.ts:
+(pass) project is explicitly a loop, with visible clocks and bounded tool-wait evidence [4.01ms]
+(pass) project auditor stale or missing activity cannot inherit a busy host running badge [0.81ms]
+(pass) stopped project excludes cached live worker and names the containing loop [0.57ms]
+
+tests/loop-infrastructure-recovery.test.ts:
+(pass) metric actual adapter survives 2105 infrastructure episodes then productive recovery [983.93ms]
+(pass) audit actual adapter survives 2105 infrastructure episodes then productive recovery [865.07ms]
+(pass) provider errors retain existing main-model recovery and recover without numeric accounting [46.53ms]
+(pass) loop error fallback outside main-model eligibility has pacing instead of count cutoff [17.62ms]
+(pass) queued metric callbacks obey freeze, stop and bounds, and superseded callbacks cannot run [32.36ms]
+(pass) a stale async measurement after refinement cannot attach a reading or git regression [13.10ms]
+(pass) metric future lifecycle reload respects saved due date and consent [45.66ms]
+(pass) metric overdue lifecycle reload respects saved due date and consent [42.88ms]
+(pass) metric cold lifecycle reload respects saved due date and consent [29.79ms]
+(pass) measurement retry persistence refusal rolls RAM back and arms no timer [45.74ms]
+(pass) zero-exit "" retries beyond plateau and recovers [60.94ms]
+(pass) zero-exit "Authentication required: invalid API key" retries beyond plateau and recovers [156.09ms]
+(pass) zero-exit "not-a-number" retries beyond plateau and recovers [203.85ms]
+(pass) initial missing baseline refuses admission; explicit force admits and recovers without a baseline [50.21ms]
+(pass) metric adapter journals actionable causes and renders them after reload [42.51ms]
+(pass) audit adapter journals actionable causes and renders them after reload [109.70ms]
+
+tests/progress-telemetry.test.ts:
+(pass) observer retains pre-reset iteration signals and current version, and never alters a snapshot that failed to land [5.60ms]
+(pass) observer preserves receipt identity, intervals and redacted blocked reasons after journaling [2.31ms]
+(pass) observer tolerates runtime/telemetry exceptions without rolling back the accepted state [0.26ms]
+(pass) replacement generation breaks the interval inference fence and old activity is not attributed to a new session [0.21ms]
+(pass) projected interval durations aggregate but never claim a previous run started the current one [0.18ms]
+
+tests/respec-builder-ui.test.ts:
+(pass) live telemetry is claim-fenced and missing telemetry never implies a running worker [17.61ms]
+(pass) completion summary requires proof and includes acceptance, shipped capability and evidence [0.69ms]
+(pass) actual project summaries render semantic headings, bold and no italics in both themes [120.18ms]
+(pass) large project summaries stay within the shared receipt transport and disclose omissions [19.37ms]
+
+ 70 pass
+ 0 fail
+Ran 70 tests across 7 files. [11.05s]
