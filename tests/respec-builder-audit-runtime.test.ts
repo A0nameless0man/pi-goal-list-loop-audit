@@ -577,6 +577,115 @@ for (const mode of ["cold", "pre-due", "overdue", "legacy", "legacy-cold", "user
 });
 
 
+for (const action of ["pause", "cancel"] as const) test(`legacy infrastructure-held project resumes, reloads a paced timeout retry, and honors /loop ${action}`, async () => {
+  const f = fixture(), pi = new MockPi();
+  let now = Date.now(), resolutions = 0;
+  const legacyBuilder = { ...f.builder, audit: { ...f.builder.audit!, candidateRef: "test/provider-model", attemptedRefs: ["test/provider-model"] } };
+  replaceState({ ...state, loop: { ...state.loop!, active: false,
+    stopReason: "audit infrastructure: Auditor stalled: no activity/progress for 10m; auto-cancelled detached job",
+    builder: legacyBuilder } });
+  persistStateLine(f.cwd, state);
+  __testOnlyResetOwnerSession(); __testOnlyResetStaleFlag(); activate(pi.api);
+  const globalSettings = fs.readFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, "utf8");
+  saveSettings("global", f.cwd, { autoResume: false });
+  const timers: { callback: () => void; delay: number; handle: NodeJS.Timeout }[] = [];
+  const restoreScheduler = __testOnlyLoopInfrastructureScheduler(() => now, (callback, delay) => {
+    const handle = setTimeout(() => {}, 1_000_000); handle.unref();
+    timers.push({ callback, delay, handle }); return handle;
+  });
+  let restoreRuntime = () => {};
+  let pending: Promise<void> | undefined;
+  const assertClaim = () => {
+    const saved = readState(f.cwd).loop!;
+    assert.equal(saved.builder!.phase, "auditing");
+    assert.equal(saved.builder!.audit!.attemptId, f.builder.audit!.attemptId);
+    assert.equal(saved.builder!.audit!.claim, f.builder.audit!.claim);
+    assert.equal(saved.builder!.revision, f.builder.revision);
+    assert.deepEqual(saved.builder!.requirements, f.builder.requirements);
+    assert.deepEqual(saved.builder!.tasks, f.builder.tasks);
+    assert.equal(saved.iteration, 1);
+    assert.equal(saved.builder!.history, undefined);
+  };
+  try {
+    await pi.fire("session_start", { reason: "startup" }, f.ctx);
+    restoreRuntime = __testOnlyRespecAuditorRuntime({ auditNow: () => now,
+      resolveModel: () => { resolutions++; return { model: "test/provider-model" }; }, auditSleep: async () => {},
+      auditRuntime: { command: process.execPath, workerPath: f.file, homeDir: f.cwd, pollIntervalMs: 10,
+        heartbeatNoProgressMs: 50, firstEventTimeoutMs: 5000, env: { RESULT_DELAY: "10000" } } });
+    assert.equal(state.loop!.active, false, "cold restore needs consent");
+    assert.equal(state.loop!.builder!.audit!.infrastructureRetry, undefined);
+    await runRespecBuilderAudit(f.ctx); assert.equal(resolutions, 0);
+    await pi.command("loop", "resume", f.ctx);
+    assertClaim();
+    const migrated = readState(f.cwd).loop!.builder!.audit!;
+    assert.equal(state.loop!.active, true);
+    assert.equal(state.loop!.stopReason, undefined);
+    assert.equal(migrated.infrastructureRetry!.scopeId, migrated.attemptId);
+    assert.equal(migrated.infrastructureRetry!.failures, 1);
+    assert.equal(migrated.infrastructureRetry!.pendingEpisode, true);
+    assert.ok(migrated.infrastructureRetry!.nextRetryAt > now);
+    assert.deepEqual(migrated.attemptedRefs, legacyBuilder.audit.attemptedRefs, "migration retains the old cursor until due");
+    await Promise.all([runRespecBuilderAudit(f.ctx), runRespecBuilderAudit(f.ctx)]);
+    assert.equal(resolutions, 0, "early wakes neither resolve nor spawn");
+    assert.equal(fs.existsSync(path.join(f.cwd, ".pi-glla", "audit-jobs")), false);
+    now = migrated.infrastructureRetry!.nextRetryAt;
+    await runRespecBuilderAudit(f.ctx);
+    assert.equal(resolutions, 1, "due migration resets the exhausted legacy cursor and dispatches");
+    assertClaim();
+    const retry = readState(f.cwd).loop!.builder!.audit!.infrastructureRetry!;
+    assert.equal(retry.failureClass, "timeout");
+    assert.equal(retry.failures, 2);
+    assert.equal(retry.pendingEpisode, true);
+    assert.ok(retry.nextRetryAt > now);
+    assert.match(retry.diagnostic!, /Auditor stalled/);
+    assert.equal(state.loop!.active, true, "timeout must not return to legacy manual parking");
+    assert.equal(respecBuilderAuditInFlight(f.cwd), false);
+    const oldOwner = timers.at(-1)!;
+    await pi.fire("session_shutdown", { reason: "reload" }, f.ctx);
+    saveSettings("global", f.cwd, { autoResume: true });
+    await pi.fire("session_start", { reason: "startup" }, f.ctx);
+    assertClaim();
+    assert.deepEqual(readState(f.cwd).loop!.builder!.audit!.infrastructureRetry, retry);
+    assert.equal(state.loop!.active, true);
+    now = retry.nextRetryAt;
+    const beforeStale = fs.readFileSync(path.join(f.cwd, ".pi-glla", "active.jsonl"), "utf8");
+    oldOwner.callback(); await Promise.resolve();
+    assert.equal(resolutions, 1, "pre-reload owner cannot dispatch even after due");
+    assert.equal(fs.readFileSync(path.join(f.cwd, ".pi-glla", "active.jsonl"), "utf8"), beforeStale);
+    assert.equal(readState(f.cwd).loop!.completionSummary, undefined, "retry is not completion");
+    restoreRuntime();
+    restoreRuntime = __testOnlyRespecAuditorRuntime({ auditNow: () => now,
+      resolveModel: () => { resolutions++; return { model: "test/provider-model" }; }, auditSleep: async () => {},
+      auditRuntime: { command: process.execPath, workerPath: f.file, homeDir: f.cwd, pollIntervalMs: 10,
+        heartbeatNoProgressMs: 5000, firstEventTimeoutMs: 5000, env: { RESULT_DELAY: "10000" } } });
+    pending = runRespecBuilderAudit(f.ctx);
+    const jobs = path.join(f.cwd, ".pi-glla", "audit-jobs"), deadline = Date.now() + 10000;
+    while (!fs.readdirSync(jobs).some(name => fs.existsSync(path.join(jobs, name, "progress.json")))) {
+      if (Date.now() > deadline) throw new Error("Reloaded worker did not publish progress");
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    assert.equal(resolutions, 2);
+    await pi.command("loop", action, f.ctx);
+    await pending; pending = undefined;
+    assertClaim();
+    assert.equal(readState(f.cwd).loop!.active, false);
+    assert.match(readState(f.cwd).loop!.stopReason!, /(?:paused|stopped) by user/);
+    assert.match(readState(f.cwd).loop!.completionSummary!, /Unresolved: (?:paused|stopped) by user/);
+    assert.equal(respecBuilderAuditInFlight(f.cwd), false);
+    assert.ok(fs.readdirSync(jobs).every(name => !fs.existsSync(path.join(jobs, name, "result.json"))), "cancelled worker cannot publish approval");
+    await runRespecBuilderAudit(f.ctx); assert.equal(resolutions, 2, "explicit stop prevents another retry");
+    assert.equal(fs.existsSync(respecProjectArchivePath(f.cwd, f.startedAt, f.builder.revision)), false);
+  } finally {
+    cancelRespecBuilderAudit(f.cwd, f.startedAt); await pending;
+    clearLoopTimer(); for (const timer of timers) clearTimeout(timer.handle);
+    restoreRuntime(); restoreScheduler();
+    fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, globalSettings);
+    await pi.fire("session_shutdown", { reason: "test-end" }, f.ctx);
+    __testOnlyResetOwnerSession(); __testOnlyResetStaleFlag(); replaceState(f.original);
+    fs.rmSync(f.cwd, { recursive: true, force: true });
+  }
+});
+
 test("exhausted finite worker chain resets only at the next due admitted episode", async () => {
   const env: Record<string, string> = { FAIL_ALL: "1" }, f = fixture(env);
   let clock = Date.now();
