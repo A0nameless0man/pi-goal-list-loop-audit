@@ -1884,6 +1884,8 @@ function buildStatusTextBase(state: State, audit?: AuditDisplayProgress | null, 
   if (state.loop?.builder && state.loop.builder.phase !== "complete" && (state.loop.active || !state.goal)) {
     const l = state.loop, builder = l.builder!, coverage = respecCoverage(builder);
     const stopped = projectExplicitlyStopped(l);
+    const retry = builder.audit?.infrastructureRetry;
+    if (l.active && builder.phase === "auditing" && retry?.pendingEpisode) return `glla: project no verdict · ${safeDiagnostic(retry.diagnostic) ?? retry.failureClass} · retry ${new Date(retry.nextRetryAt).toISOString()}`;
     return `glla: project ${paint(theme, builder.phase === "complete" ? "success" : !l.active ? "warning" : "accent", !l.active && builder.phase === "auditing" ? stopped ? "audit stopped — /loop status" : "audit held — /loop resume" : builder.phase)}${l.active || builder.phase === "complete" || builder.phase === "auditing" ? "" : stopped ? " · stopped" : " · held"} · increment ${builder.cycle} · verified ${coverage.verified}/${coverage.total} · remaining ${coverage.remaining} · blocked ${coverage.blocked}${l.active && builder.phase === "auditing" ? ` · ${respecAuditStatus(builder, now)}` : ""}`;
   }
   if (state.loop?.active) {

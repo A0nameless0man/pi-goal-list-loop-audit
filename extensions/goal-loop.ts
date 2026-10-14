@@ -350,7 +350,7 @@ async function runMeasure(ctx: ExtensionContext, cmd: string): Promise<Measureme
     const r = result as any;
     const code = typeof r?.code === "number" ? r.code : (typeof r?.exitCode === "number" ? r.exitCode : 1);
     if (code !== 0 || typeof r?.stdout !== "string") return { kind: "infrastructure", failureClass: "no-verdict",
-      diagnostic: safeDiagnostic(`Measurement ${code !== 0 ? `exit ${code}` : "stdout missing"}${typeof r?.stderr === "string" && r.stderr.trim() ? `; stderr: ${r.stderr}` : ""}`)! };
+      diagnostic: safeDiagnostic(`Measurement ${typeof r?.code !== "number" && typeof r?.exitCode !== "number" ? "exit code missing" : code !== 0 ? `exit ${code}` : "stdout missing"}${typeof r?.stderr === "string" && r.stderr.trim() ? `; stderr: ${r.stderr}` : ""}`)! };
     const value = parseMetric(r.stdout);
     // A successful process without a numeric verdict is still a broken
     // measurement contract, not a productive iteration or plateau evidence.
