@@ -3112,6 +3112,8 @@ export function readState(cwd: string): State {
   const loop = parsed.loop && typeof parsed.loop === "object"
     ? {
       ...parsed.loop,
+      infrastructureRetry: sanitizeInfrastructureRetry(parsed.loop.infrastructureRetry, `${parsed.loop.startedAt}:loop:${parsed.loop.refinements?.length ?? 0}`),
+      infrastructureRetryKind: ["measurement", "provider"].includes(parsed.loop.infrastructureRetryKind) ? parsed.loop.infrastructureRetryKind : undefined,
       ...(parsed.loop.builder?.audit ? { builder: { ...parsed.loop.builder, audit: { ...parsed.loop.builder.audit,
         infrastructureRetry: sanitizeInfrastructureRetry(parsed.loop.builder.audit.infrastructureRetry, parsed.loop.builder.audit.attemptId) } } } : {}),
       // Legacy/manual loop snapshots sometimes omitted history. The loop

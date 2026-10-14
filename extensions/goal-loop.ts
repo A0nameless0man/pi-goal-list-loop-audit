@@ -53,6 +53,7 @@ import {
   LoopState,
   LoopTickOutcome,
   applyMeasurement,
+  loopInfrastructureScopeId,
   applyMetriclessTick,
   auditMeasureCmd,
   auditTarget,
@@ -337,24 +338,50 @@ async function resolveLoopStartConflict(ctx: ExtensionContext, target: string): 
 }
 
 /** Run the user's measure command. Orchestrator-side, never agent-side. */
-async function runMeasure(ctx: ExtensionContext, cmd: string): Promise<number | null> {
-  if (!flags.extensionApi || flags.extensionApiStale) return null;
+export type MeasurementOutcome =
+  | { kind: "reading"; value: number }
+  | { kind: "invalid-metric" }
+  | { kind: "infrastructure"; failureClass: "transport" | "no-verdict" };
+
+async function runMeasure(ctx: ExtensionContext, cmd: string): Promise<MeasurementOutcome> {
+  if (!flags.extensionApi || flags.extensionApiStale) return { kind: "infrastructure", failureClass: "transport" };
   try {
     const result = await flags.extensionApi.exec("bash", ["-c", cmd], { cwd: ctx.cwd, timeout: MEASURE_TIMEOUT_MS });
     const r = result as any;
-    // v0.38.104: fail CLOSED like runGit below. A result envelope with no
-    // numeric code/exitCode (a measure killed by MEASURE_TIMEOUT_MS, a
-    // non-standard envelope) used to default to 0 — success — so partial
-    // stdout from a hung measure was parsed as a real reading, could set
-    // bestValue, and permanently suppressed the plateau stop. A broken
-    // measure must count as a null measure, never as a value.
     const code = typeof r?.code === "number" ? r.code : (typeof r?.exitCode === "number" ? r.exitCode : 1);
-    if (code !== 0) return null;
-    const stdout = r?.stdout ?? "";
-    return parseMetric(String(stdout));
+    if (code !== 0 || typeof r?.stdout !== "string") return { kind: "infrastructure", failureClass: "no-verdict" };
+    const value = parseMetric(r.stdout);
+    return value === null ? { kind: "invalid-metric" } : { kind: "reading", value };
   } catch {
-    return null;
+    return { kind: "infrastructure", failureClass: "transport" };
   }
+}
+
+/** Commit the wait before the single timer owner is allowed to arm. */
+export function paceLoopInfrastructureFailure(ctx: ExtensionContext, kind: "measurement" | "provider", failureClass: "transport" | "no-verdict" | "provider"): boolean {
+  const loop = state.loop;
+  if (!loop?.active) return false;
+  const previous = { ...loop };
+  loop.infrastructureRetry = nextInfrastructureRetry(loopInfrastructureScopeId(loop), failureClass, infrastructureNow(), loop.infrastructureRetry);
+  loop.infrastructureRetryKind = kind;
+  if (!persistState(ctx)) { Object.assign(loop, previous); return false; }
+  appendLedger(ctx.cwd, "loop_infrastructure_wait", { kind, ...loop.infrastructureRetry });
+  scheduleLoopTick(ctx);
+  return true;
+}
+
+function stopLoopAtInfrastructureBound(ctx: ExtensionContext): boolean {
+  const loop = state.loop!;
+  let reason: string | undefined;
+  if (loop.timeLimitHours !== undefined && infrastructureNow() - Date.parse(loop.startedAt) >= loop.timeLimitHours * 3_600_000) reason = `time bound reached (${loop.timeLimitHours}h)`;
+  else if (loop.tokenBudget !== undefined && (loop.tokensUsed ?? 0) >= loop.tokenBudget) reason = "token budget exhausted";
+  else if (loop.maxIterations > 0 && loop.iteration >= loop.maxIterations) reason = `max iterations reached (${loop.maxIterations})`;
+  if (!reason) return false;
+  const previous = { ...loop };
+  loop.active = false; loop.stopReason = reason;
+  if (!persistState(ctx)) Object.assign(loop, previous);
+  clearLoopTimer();
+  return true;
 }
 
 /** git wrapper for branch=1 mode. Returns bounded stdout/stderr; never throws. */
@@ -516,11 +543,12 @@ function scheduleLoopTickWithUrgency(ctx: ExtensionContext, urgent: boolean): vo
   const scheduled = state.loop!;
   const attemptId = scheduled.builder?.audit?.attemptId;
   const retryDelay = infrastructureRetryDelay(scheduled.builder?.audit?.infrastructureRetry, infrastructureNow());
-  delay = Math.max(delay, retryDelay);
+  delay = Math.max(delay, retryDelay, infrastructureRetryDelay(scheduled.infrastructureRetry, infrastructureNow()));
+  const retry = scheduled.infrastructureRetry;
   let timer: NodeJS.Timeout;
   timer = scheduleSessionTimeout(() => {
     if (loopTimer !== timer || state.loop?.startedAt !== scheduled.startedAt
-        || state.loop.builder?.audit?.attemptId !== attemptId || freshCtx()?.cwd !== ctx.cwd) return;
+        || state.loop.builder?.audit?.attemptId !== attemptId || state.loop.infrastructureRetry !== retry || freshCtx()?.cwd !== ctx.cwd) return;
     sendLoopTurn();
   }, Math.min(2_147_483_647, Math.max(0, delay)));
   loopTimer = timer;
@@ -554,6 +582,9 @@ function sendLoopTurn(): void {
     return;
   }
   const loop = state.loop!;
+  if (stopLoopAtInfrastructureBound(ctx)) return;
+  if (infrastructureRetryDelay(loop.infrastructureRetry, infrastructureNow()) > 0) { scheduleLoopTick(ctx); return; }
+  if (loop.infrastructureRetry && loop.infrastructureRetryKind === "measurement") { void runLoopTick(ctx); return; }
   if (loop.builder?.phase === "auditing") {
     if (infrastructureRetryDelay(loop.builder.audit?.infrastructureRetry, infrastructureNow()) > 0) { scheduleLoopTick(ctx); return; }
     void runRespecBuilderAudit(ctx);
@@ -706,7 +737,8 @@ function sendLoopTurn(): void {
 
 /** agent_end hook for loop 3: measure → judge → continue or stop. */
 async function runLoopTick(initialCtx: ExtensionContext, event?: any): Promise<void> {
-  if (backgroundDispatchHeld(state)) return;
+  if (backgroundDispatchHeld(state) || supervisorPaused(state) || !state.loop?.active) return;
+  if (infrastructureRetryDelay(state.loop.infrastructureRetry, infrastructureNow()) > 0) return;
   // v0.34.20: measurement/git work is asynchronous. Rebind the local
   // context after every await or abandon the tick; never let a replacement
   // session inherit the agent_end context.
@@ -761,8 +793,19 @@ async function runLoopTick(initialCtx: ExtensionContext, event?: any): Promise<v
     return;
   }
   const metricless = !loop.measureCmd;
-  const value = metricless ? null : await runMeasure(ctx, loop.measureCmd!);
+  if (stopLoopAtInfrastructureBound(ctx)) return;
+  const measuredLoop = loop;
+  const measuredCommand = loop.measureCmd;
+  const measurement = metricless ? null : await runMeasure(ctx, loop.measureCmd!);
   if (!rebindLoop()) return;
+  if (loop !== measuredLoop || loop.measureCmd !== measuredCommand || supervisorPaused(state) || backgroundDispatchHeld(state)) return;
+  if (measurement?.kind === "infrastructure") {
+    paceLoopInfrastructureFailure(ctx, "measurement", measurement.failureClass);
+    return;
+  }
+  loop.infrastructureRetry = undefined;
+  loop.infrastructureRetryKind = undefined;
+  const value = measurement?.kind === "reading" ? measurement.value : null;
   // Hypothesis line (pi-autoresearch's good idea): the agent's stated intent
   // for the turn goes into the ledger, making loop history auditable.
   let hypothesis: string | undefined;
@@ -1258,7 +1301,8 @@ async function startLoopFromConfig(ctx: ExtensionContext, cfg: LoopConfig): Prom
   // v0.23.0: metricless loops skip the baseline entirely — there is no
   // measure to run, and no plateau to protect.
   const metricless = !cfg.measureCmd;
-  const baseline = metricless || cfg.deferBaseline ? null : await runMeasure(ctx, cfg.measureCmd);
+  const baselineOutcome = metricless || cfg.deferBaseline ? null : await runMeasure(ctx, cfg.measureCmd);
+  const baseline = baselineOutcome?.kind === "reading" ? baselineOutcome.value : null;
   if (!metricless && !cfg.deferBaseline && baseline === null && !(cfg as { force?: boolean }).force) {
     ctx.ui.notify(
       `/loop start refused: the measure produced no number.\nCommand: ${cfg.measureCmd}\nFix it so it prints exactly one number, or re-run with force=1 if it only works after the agent builds something first.\n(Non-numeric goal — research, docs, features? Use /goal: the independent auditor verifies semantically. /loop only believes a number.)`,
@@ -1525,6 +1569,7 @@ async function cmdLoop(args: string, ctx: ExtensionContext): Promise<void> {
       `Loop: ${loopWorkView(loop, state).lifecycle === "waiting" ? "waiting" : loop.active ? "active" : isLifecycleHeldLoopReason(loop.stopReason) ? "held" : "stopped"} — ${displaySlice(loop.target, 80)}`,
       buildWorkLifecycleSummary({ ...state, goal: null }),
       `Metric: ${loop.measureCmd ? `${sanitizeDisplayText(loop.measureCmd)} (${loop.direction})` : "none — metricless spec loop (no plateau)"}`,
+      ...(loop.infrastructureRetry ? [`Infrastructure ${loop.infrastructureRetryKind}: ${loop.infrastructureRetry.failureClass} · failures ${loop.infrastructureRetry.failures} · retry ${new Date(loop.infrastructureRetry.nextRetryAt).toISOString()} (not a live worker)`] : []),
       `Iteration ${loop.iteration}/${loop.maxIterations > 0 ? loop.maxIterations : "∞"} · best ${loop.bestValue ?? "n/a"} · last ${loop.lastValue ?? "n/a"} · stall ${loop.stallCount}/${loop.plateauWindow}`,
     ];
     if (loop.backgroundWait) {

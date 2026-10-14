@@ -434,6 +434,7 @@ import {
   runLoopTick,
   scheduleLoopTick,
   startLoopFromConfig,
+  paceLoopInfrastructureFailure,
   type LoopDeps,
   type LoopFlags,
 } from "../goal-loop.js";
@@ -2974,12 +2975,16 @@ async function handleHotLengthExhaustion(
       // goal nudge counter). Skip the measure and refire — bounded, so a
       // real outage stops the loop honestly instead of burning turns.
       const sr = lastA?.stopReason;
-      if (sr === "error" || sr === "aborted") {
+      if (sr === "error") {
+        paceLoopInfrastructureFailure(ctx, "provider", "provider");
+        return;
+      }
+      if (sr === "aborted") {
         const loop = state.loop!;
         loop.consecutiveErrors = (loop.consecutiveErrors ?? 0) + 1;
         persistState(ctx);
         appendLedger(ctx.cwd, "loop_turn_exempt_error", { stopReason: sr, consecutive: loop.consecutiveErrors, iteration: loop.iteration });
-        const cap = sr === "aborted" ? LOOP_MAX_CONSECUTIVE_ABORTS : LOOP_MAX_CONSECUTIVE_ERRORS;
+        const cap = LOOP_MAX_CONSECUTIVE_ABORTS;
         if (loop.consecutiveErrors >= cap) {
           const providerFailure = lastMainModelFailure;
           const durableProviderFailure = providerFailure

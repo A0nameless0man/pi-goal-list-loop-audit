@@ -114,6 +114,9 @@ export interface LoopState {
    * with 13 open findings, polis with 3+, hellhunter stuck-stopped at
    * iter 93 — every counted turn was a dead 429 turn. */
   consecutiveErrors?: number;
+  /** Durable pacing only; measurement episodes never create numeric history. */
+  infrastructureRetry?: import("./infrastructure-retry.js").InfrastructureRetry;
+  infrastructureRetryKind?: "measurement" | "provider";
   /** v0.29.19: audit plateau reprieves used so far (open findings remain
    * = the well isn't dry, so the plateau stop stands down). Bounded by
    * AUDIT_PLATEAU_MAX_REPRIEVES — the next plateau stop stands, honestly
@@ -829,4 +832,9 @@ export const LOOP_AUDIT_MARKER = "iteration by iteration — FIX-FIRST";
 export function projectAuditTarget(focus?: string): string {
   const scope = focus && focus.trim() ? focus.trim() : "the current project rooted at the cwd where pi was opened (treat any nested .git as a separate project boundary — do not walk into parent or sibling projects)";
   return `${GOAL_AUDIT_ONESHOT_MARKER}. Scope: ${scope}. Primary target is the current project under cwd; external code outside cwd may be READ only to diagnose a failure that blocks the current project, and a finding about external code is valid only when it affects the current project. (1) Run a FRESH audit pass over the codebase — spawn AT LEAST 3 scout subagents in ONE message, one per subsystem, so the survey runs in parallel instead of serial through your own context — each with a TIGHT brief: named directories under cwd, a ~30-40 tool-use budget, and a ~150-line report cap ('if you near the token limit, stop and report what you have') — hunting real problems: bugs, broken flows, regressions, drift between docs and code, dead code, security holes. Not style nits, not speculative refactors. (2) Append every NEW finding to ${AUDIT_FINDINGS_REL} (create the file on the first finding; append-only — never delete, rewrite, or reorder existing lines; never re-report a finding already listed), classified: "- [ ] FIX: SEVERITY: short description (file:line)" for bugs and polish — whether to fix these is NOT a decision — and "- [?] DECIDE: short description (what the choice is, what each side costs)" for direction, trade-offs, and scope questions where two reasonable answers exist. (3) Fix every NEW FIX finding from this pass — real fixes, committed with the repo's configured identity on the current branch (no invented identities or branches) — then check the box: "- [x] … — fixed in <commit>". (4) Change NOTHING for DECIDE findings — RAISE them instead: if any "- [?]" findings exist, present each one to the user with ask_user_question BEFORE calling complete_goal (one question per finding, options from the finding's own two sides plus "Defer"; prose numbered list if ask_user_question is unavailable; Esc = Defer), then record every answer in ${AUDIT_FINDINGS_REL} — replace the "- [?]" line with "- [x] DECIDED: <what was chosen> (<date>)" (or "- [x] DEFERRED") so it stops re-surfacing — and queue any chosen work with list_add. (5) Honesty law: never fabricate findings to look busy; never check a box without the fix commit existing; never silently turn a DECIDE into a fix. Done when: the audit pass is complete, every new FIX finding has a fix commit and a checked box in ${AUDIT_FINDINGS_REL}, and every DECIDE finding has been raised to the user and recorded as DECIDED/DEFERRED (or the report states plainly that none were found).`;
+}
+
+/** Refinements fence retries from superseded metric eras. */
+export function loopInfrastructureScopeId(loop: Pick<LoopState, "startedAt" | "refinements">): string {
+  return `${loop.startedAt}:loop:${loop.refinements?.length ?? 0}`;
 }
