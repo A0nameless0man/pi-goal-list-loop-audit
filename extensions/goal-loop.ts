@@ -801,13 +801,14 @@ async function runLoopTickInner(initialCtx: ExtensionContext, event?: any): Prom
     return;
   }
   const metricless = !loop.measureCmd;
-  if (stopLoopAtInfrastructureBound(ctx)) return;
+  if (loop.infrastructureRetry && stopLoopAtInfrastructureBound(ctx)) return;
   const measuredLoop = loop;
   const measuredCommand = loop.measureCmd;
   const measurement = metricless ? null : await runMeasure(ctx, loop.measureCmd!);
   if (!rebindLoop()) return;
   if (loop !== measuredLoop || loop.measureCmd !== measuredCommand || supervisorPaused(state) || backgroundDispatchHeld(state)) return;
   if (measurement?.kind === "infrastructure") {
+    if (stopLoopAtInfrastructureBound(ctx)) return;
     paceLoopInfrastructureFailure(ctx, "measurement", measurement.failureClass);
     return;
   }
