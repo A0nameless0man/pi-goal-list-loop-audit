@@ -1,3 +1,4 @@
+import { safeDiagnostic } from "./safe-diagnostic.js";
 import { nextInfrastructureRetry, infrastructureRetryDelay } from "./infrastructure-retry.js";
 import { randomUUID, createHash } from "node:crypto";
 import { mkdir } from "node:fs/promises";
@@ -224,7 +225,7 @@ export async function runRespecBuilderAudit(ctx: ExtensionContext): Promise<void
   } catch (error) {
     const liveCtx = host.context(ctx);
     if (!controller.signal.aborted && liveCtx && state.loop?.startedAt === loop.startedAt && state.loop.builder === builder && state.loop.active) {
-      retryInfrastructure(liveCtx, String(error), "transport");
+      retryInfrastructure(liveCtx, safeDiagnostic(error) ?? "Project audit launch failed without a message", "transport");
     }
   } finally {
     if (boundTimer) clearTimeout(boundTimer);

@@ -19,10 +19,10 @@ export function safeDiagnostic(value: unknown, limit = 600): string | undefined 
   }
   text = text
     .replace(/https?:\/\/[^\s<>"']+/gi, url => url.replace(/(\/\/)[^/@\s]+@/, "$1[redacted]@").replace(/[?#].*$/, "?[redacted]"))
-    .replace(/\b(?:authorization|proxy-authorization)\s*["']?\s*[:=]\s*(?:["'][^"']*["']|(?:Bearer|Basic)\s+[^\s,;]+|[^\s,;]+)/gi, "authorization=[redacted]")
+    .replace(/\b(?:authorization|proxy-authorization)\s*["']?\s*[:=]\s*(?:["'][^"']*(?:["']|$)|(?:Bearer|Basic)\s+[^\s,;]+|[^\s,;]+)/gi, "authorization=[redacted]")
     .replace(/\b(?:Bearer|Basic)\s+[^\s,;"']+/gi, "Bearer [redacted]")
     .replace(/\bsk-[\w-]+/g, "[redacted]")
-    .replace(/\b(api[\s_-]?key|access[\s_-]?token|refresh[\s_-]?token|token|password|passwd|secret|credential(?:s)?|cookie|signature|x-amz-[\w-]+)\s*["']?\s*[:=]\s*(?:["'][^"']*["']|[^\s,;]+)/gi, "$1=[redacted]")
+    .replace(/\b(api[\s_-]?key|access[\s_-]?token|refresh[\s_-]?token|token|password|passwd|secret|credential(?:s)?|cookie|signature|x-amz-[\w-]+)\s*["']?\s*[:=]\s*(?:["'][^"']*(?:["']|$)|[^\s,;]+)/gi, "$1=[redacted]")
     .replace(/<[^>]*(?:>|$)/g, " ")
     .replace(/[`*_\[\]{}]/g, " ")
     .replace(/\s+/g, " ").trim();

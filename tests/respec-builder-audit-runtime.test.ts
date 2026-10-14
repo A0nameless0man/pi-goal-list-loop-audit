@@ -612,6 +612,10 @@ test("real stalled detached workers automatically journal a paced timeout episod
     assert.equal(loop.active, true);
     assert.equal(loop.builder!.phase, "auditing");
     assert.equal(loop.builder!.audit!.infrastructureRetry!.failureClass, "timeout");
+    assert.match(loop.builder!.audit!.infrastructureRetry!.diagnostic!, /Auditor stalled.*(?:activity|progress)/);
+    replaceState(readState(f.cwd));
+    assert.match(respecAuditStatus(state.loop!.builder!, Date.now()), /Auditor stalled/);
+    assert.match(buildWidgetLines(state, null, Date.now(), undefined, 120, { maxWidgetLines: 20 })!.join("\n"), /cause: Auditor stalled/);
     assert.ok(loop.builder!.audit!.infrastructureRetry!.nextRetryAt > Date.now());
     assert.equal(loop.builder!.requirements[0]!.status, "open");
     assert.equal(respecBuilderAuditInFlight(f.cwd), false);

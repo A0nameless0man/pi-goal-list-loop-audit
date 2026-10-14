@@ -20,7 +20,7 @@ const captures: { name: string; saved: ReturnType<typeof readState> }[] = [];
 try {
   for (const [name, error] of [
     ['Auth repair / model scope denied', 'HTTP 401 model alpha scope denied; Authorization: Bearer FIXTURE_SECRET'],
-    ['Config repair / model missing', 'No auditor model beta configured; API-key=FIXTURE_SECRET'],
+    ['Config repair / model missing', 'No auditor model beta configured; password=FIXTURE_SECRET'],
   ]) {
     const cwd = path.join(root, name!.startsWith('Auth') ? 'auth' : 'config');
     fs.mkdirSync(cwd);
