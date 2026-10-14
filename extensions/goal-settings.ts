@@ -837,13 +837,16 @@ function migrateLegacySettings(value: Partial<Settings>): Record<string, unknown
   const legacyOverrides = migrated.subagentModelOverrides as Record<string, unknown> | undefined;
   const legacyThinking = migrated.subagentThinkingOverrides as Record<string, unknown> | undefined;
   const legacyFallbacks = migrated.subagentFallbacks as Record<string, unknown> | undefined;
-  if (migrated.designerModel === undefined && typeof legacyOverrides?.Designer === "string" && legacyOverrides.Designer.trim()) {
+  // Junk dedicated values (null, wrong type) count as absent here —
+  // normalization deletes them later, and the legacy pin must not be lost
+  // just because a hand-edited dedicated key is dead.
+  if ((typeof migrated.designerModel !== "string" || !migrated.designerModel.trim()) && typeof legacyOverrides?.Designer === "string" && legacyOverrides.Designer.trim()) {
     migrated.designerModel = legacyOverrides.Designer;
   }
-  if (migrated.designerThinkingLevel === undefined && typeof legacyThinking?.Designer === "string") {
+  if (typeof migrated.designerThinkingLevel !== "string" && typeof legacyThinking?.Designer === "string") {
     migrated.designerThinkingLevel = legacyThinking.Designer;
   }
-  if (migrated.designerModelFallbacks === undefined && Array.isArray(legacyFallbacks?.Designer)) {
+  if (!Array.isArray(migrated.designerModelFallbacks) && Array.isArray(legacyFallbacks?.Designer)) {
     migrated.designerModelFallbacks = legacyFallbacks.Designer;
   }
   const stripDesigner = (map: Record<string, unknown> | undefined): Record<string, unknown> | undefined => {

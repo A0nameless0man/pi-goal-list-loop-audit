@@ -87,7 +87,8 @@ void MONITOR_CHECK_INTERVAL_MS; // deprecated throttle — scheduling is now eve
 import { VISION_ASSIST_GUIDANCE } from "./vision-assist.js";
 import { pressureAttemptPending, flushPressureAttempt } from './context-pressure-attempt.js';
 import { maybeCompactTranscriptAtBoundary, readHandoffBriefExcerpt } from "./goal-compactor.js";
-import { loadSettings } from "./goal-settings.js";
+import { loadSettings, resolveDesignerConfig } from "./goal-settings.js";
+import { resolveDesignerModel } from "./designer-model.js";
 import { clearLoopTimer, isLoopActive, scheduleLoopTick } from "./goal-loop.js";
 import { attemptFreshSessionRecovery, mainModelRecoveryActive, recoverMainModelFromSendStorm } from "./goal-recovery.js";
 import { isCompactionInFlightSince, sendStormEscalateMs } from "./main-model-recovery.js";
@@ -1646,8 +1647,16 @@ export function sendContinuation(goalId: string): void {
     const nextTask = findNextPendingTask(goalForSend.taskList?.tasks ?? []);
     if (goalForSend.agentRole === "designer" || nextTask?.agentRole === "designer") {
       const settings = loadSettings(ctx.cwd);
-      if (!ensureRequestedDesigner({ agentDir: defaultAgentDir(), model: settings.subagentModelOverrides?.Designer, thinking: settings.subagentThinkingOverrides?.Designer })) {
-        ctx.ui.notify("Selected Designer could not be registered; the requested design checkpoint remains in the prompt for an inline fallback.", "warning");
+      const designerConfig = resolveDesignerConfig(settings);
+      if (designerConfig.enabled === false) {
+        ctx.ui.notify("Designer is disabled on the /glla Designer tab; the requested design checkpoint remains in the prompt for an inline fallback.", "warning");
+      } else {
+        const designerResolution = resolveDesignerModel(ctx as any, settings);
+        if (designerResolution.blocked) {
+          ctx.ui.notify("Designer not registered: the session model is forbidden and no eligible Designer model is configured; the requested design checkpoint remains in the prompt for an inline fallback.", "warning");
+        } else if (!ensureRequestedDesigner({ agentDir: defaultAgentDir(), model: designerResolution.selectedRef, thinking: designerConfig.thinking })) {
+          ctx.ui.notify("Selected Designer could not be registered; the requested design checkpoint remains in the prompt for an inline fallback.", "warning");
+        }
       }
     }
     const { content, kind } = buildContinuationContent(goalForSend, { resync, firstSend: continuationInitialFullSentFor !== goalId });

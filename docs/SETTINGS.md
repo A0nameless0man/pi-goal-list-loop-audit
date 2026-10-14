@@ -63,7 +63,9 @@ copies are ignored (GLLA reads the global file for these policies):
 `stateRoot`, `mainModelFallbacks`, `mainModelFallbackThinkingLevels`, `mainModelRetryMinutes`,
 `mainModelFailback`, `mainModelPrimaryProbeMinutes`, `hourlyRetryProbe`,
 `autoResume`, `drafterModel`, `drafterThinkingLevel`,
-`drafterModelFallbacks`, `compactorModel`, `compactorModelFallbacks`,
+`drafterModelFallbacks`, `designerEnabled`, `designerModel`,
+`designerThinkingLevel`, `designerModelFallbacks`,
+`compactorModel`, `compactorModelFallbacks`,
 `compactionTokenThreshold`,
 `auditorModelFallbacks`, `auditorToolTimeoutMs`, `auditorStallMs`,
 `auditJobRetentionMs`, `auditSpotCheckRate`, `auditorStrictChallenge`, `auditorInspection`.
@@ -90,6 +92,10 @@ This authority boundary applies before settings-value normalization.
 | `drafterModel` | unset (session) | Drafting-only primary model. Global-only. |
 | `drafterThinkingLevel` | unset (inherit) | Thinking level for the drafting agent. Global-only. |
 | `drafterModelFallbacks` | `[]` | Ordered drafting fallbacks; session model is final. Global-only. |
+| `designerEnabled` | unset (on-demand) | Explicit Designer enablement: `true` keeps the managed read-only Designer registered, `false` never registers it (model picks are kept), unset registers on demand when a goal/list item/task asks for Designer or a Designer model is set. Global-only. |
+| `designerModel` | unset (session) | Primary model for the Designer design-checkpoint role. Global-only. |
+| `designerThinkingLevel` | unset (inherit) | Thinking level for the Designer role; picked with the model on the Designer tab. Global-only. |
+| `designerModelFallbacks` | `[]` | Ordered Designer fallbacks, resolved at registration time: the first eligible ref is written into `Designer.md`, then session inherit. Global-only. |
 | `compactorModel` | unset (plan B) | Emergency-compactor primary; never the session model. Global-only. |
 | `compactorModelFallbacks` | `[]` | Ordered compactor fallbacks; no session last resort. Global-only. |
 | `compactionTokenThreshold` | `200000` | Positive context-token target for opportunistic transcript compaction at the next idle boundary, between work turns or list items. Waits while tools, audits, or queued messages own the host; respects pause and abort. Global-only. |
@@ -143,6 +149,12 @@ This authority boundary applies before settings-value normalization.
 | `toolOverrides` | unset | Per-tool allow/hide/per-tool-config overrides. |
 | `contextCheckpointProjection` | `false` (off) | Per-turn `context`-hook splice of a bounded continuation checkpoint. Off (default) leaves the transcript append-only so the provider prefix-cache holds; the fresh continuation prompt still carries live state. On restores the legacy projection (busts the cache). |
 | `reviewer` | legacy | Deprecated alias for `postaudit`; migrated on load, `postaudit` wins. |
+
+## Designer
+
+The read-only Designer role (goal/list items and tasks marked `Agent: Designer`) is configured on its own `/glla` **Designer** tab — enablement, the Designer agent (model + thinking, picked together like the Drafter), ordered fallback models, the effective resolution, and whether the managed `Designer.md` is currently registered in the pi agent dir. The generic Designer pins that used to live on the Subagents tab (`subagentModelOverrides.Designer`, `subagentThinkingOverrides.Designer`, `subagentFallbacks.Designer`) are migrated into the dedicated `designer*` keys on load: dedicated values win (an explicit `designerModelFallbacks: []` beats a legacy chain), the legacy entries are removed, and other roles' pins are untouched. Because `Designer.md` lives in the global agent dir, the dedicated keys are global-only; a legacy project-scoped Designer pin no longer applies.
+
+Enablement is tri-state: on keeps Designer registered, off never registers it (your model picks are preserved, and a marked item falls back to the inline design checkpoint with a warning), and on-demand (unset) registers it when work asks for it or a Designer model/thinking/fallback is configured. Registration resolves the model at write time — primary → fallbacks → session inherit — and if no configured ref is eligible and the session model itself is forbidden, Designer is not registered and the operator is warned rather than silently inheriting a forbidden model. A user-owned `Designer.md` (no glla marker) is never overwritten or removed.
 
 ## Tool visibility and execution options
 

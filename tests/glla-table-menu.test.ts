@@ -120,9 +120,11 @@ test("grouped entry points can open a specific settings section", () => {
   assert.ok(component.visibleRows().every((row) => row.section === "stall-brakes"));
 });
 
-test("render: tabs row lists all 8 sections", () => {
+test("render: tabs row lists all 9 sections", () => {
   const { component } = makeComponent(SAMPLE_ROWS);
-  const lines = component.render(120);
+  // Width 160: nine tabs with row counts no longer fit 120 cols, where the
+  // bar deliberately degrades to the ‹ Active › · n/9 pager.
+  const lines = component.render(160);
   // Tabs row is index 1 (after title).
   for (const s of SETTINGS_SECTIONS) {
     assert.match(lines[1]!, new RegExp(s.label.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")), `tabs row mentions ${s.label}`);
@@ -381,7 +383,7 @@ test("structural: Class implements Component (has render + invalidate + handleIn
   assert.equal(typeof component.invalidate, "function");
 });
 
-test("structural: buildSettingsRows returns ≥20 rows across all 8 sections (coverage)", () => {
+test("structural: buildSettingsRows returns ≥20 rows across all 9 sections (coverage)", () => {
   const rows = buildSettingsRows({} as Settings, {});
   assert.ok(rows.length >= 20, `expected ≥20 rows, got ${rows.length}`);
 });
@@ -391,8 +393,8 @@ test("structural: buildSettingsRows returns ≥20 rows across all 8 sections (co
 /* --------------------------------------------------------------------- */
 
 test("render: tab bar is color-only (v0.28.19: brackets dropped), all sections present", () => {
-  const { component } = makeComponent(SAMPLE_ROWS, 120);
-  const tabs = component.render(120)[1]!;
+  const { component } = makeComponent(SAMPLE_ROWS, 160);
+  const tabs = component.render(160)[1]!;
   for (const s of SETTINGS_SECTIONS) {
     assert.ok(tabs.includes(s.label), `tab bar must name ${s.label}: ${tabs}`);
   }

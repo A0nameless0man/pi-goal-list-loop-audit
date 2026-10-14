@@ -15,6 +15,7 @@
 import { test } from "node:test";
 import * as assert from "node:assert/strict";
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { handleSettingChoice } from "../extensions/loops/goal.js";
 import { globalSettingsPath, loadSettings, projectSettingsPath, saveSettings, settingsProvenance } from "../extensions/goal-settings.js";
@@ -446,6 +447,57 @@ test("drafter agent picker immediately offers model-specific thinking and persis
   }
 });
 
+test("Designer tab: model picker persists dedicated model+thinking and registers Designer.md; disabling unregisters it", async () => {
+  const prevAgentDir = process.env.PI_CODING_AGENT_DIR;
+  const agentDir = fs.mkdtempSync(path.join(os.tmpdir(), "glla-designer-editor-"));
+  process.env.PI_CODING_AGENT_DIR = agentDir;
+  try {
+    restoreGlobal();
+    const ctx = makeMockCtx(tmpCwd()) as any;
+    const session = { provider: "anthropic", id: "session", reasoning: true };
+    const designer = {
+      provider: "openai",
+      id: "designer",
+      reasoning: true,
+      thinkingLevelMap: { xhigh: "xhigh", max: "max" },
+    };
+    ctx.model = session;
+    ctx.thinkingLevel = "high";
+    ctx.modelRegistry = {
+      find(provider: string, id: string) {
+        return provider === "openai" && id === "designer" ? designer : provider === "anthropic" && id === "session" ? session : undefined;
+      },
+      getAvailable() { return [session, designer]; },
+      hasConfiguredAuth() { return true; },
+    };
+    ctx.ui.customImpl = async () => ({ kind: "model", ref: "openai/designer" });
+    ctx.ui.selectImpl = async (title: string) => title.startsWith("Designer thinking") ? "medium — ~8k tokens" : undefined;
+    await handleSettingChoice("designerModel", ctx as ExtensionContext);
+    const saved = readGlobal();
+    assert.equal(saved.designerModel, "openai/designer");
+    assert.equal(saved.designerThinkingLevel, "medium");
+    const designerFile = path.join(agentDir, "agents", "Designer.md");
+    assert.ok(fs.existsSync(designerFile), "picking a Designer agent registers Designer.md immediately");
+    const content = fs.readFileSync(designerFile, "utf-8");
+    assert.match(content, /^model: openai\/designer$/m);
+    assert.match(content, /^thinking: medium$/m);
+
+    ctx.ui.selectImpl = async (title: string) => title.startsWith("Designer enabled") ? "off — never register Designer (model picks are kept)" : undefined;
+    await handleSettingChoice("designerEnabled", ctx as ExtensionContext);
+    assert.equal(readGlobal().designerEnabled, false);
+    assert.equal(readGlobal().designerModel, "openai/designer", "disabling keeps the model pick");
+    assert.ok(!fs.existsSync(designerFile), "disabling unregisters Designer.md");
+
+    ctx.ui.selectImpl = async (title: string) => title.startsWith("Designer enabled") ? "on-demand — register when a goal/list item/task asks for Designer" : undefined;
+    await handleSettingChoice("designerEnabled", ctx as ExtensionContext);
+    assert.ok(!("designerEnabled" in readGlobal()), "on-demand restores the tri-state default");
+  } finally {
+    if (prevAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+    else process.env.PI_CODING_AGENT_DIR = prevAgentDir;
+    restoreGlobal();
+  }
+});
+
 test("T4: input editor validation — auditCap rejects garbage loudly, accepts integers, clears on empty", async () => {
   try {
     const ctx = makeMockCtx(tmpCwd());
@@ -636,11 +688,10 @@ test("audit 2026-09-26: subagent thinking editor pins, inherits, and rejects gar
     const ctx = makeMockCtx(tmpCwd());
     ctx.ui.selectImpl = async () => "high — ";
     await handleSettingChoice("subagentThinkingOverrides.Designer", ctx as unknown as ExtensionContext);
-    assert.equal((readGlobal() as { subagentThinkingOverrides?: Record<string, string> }).subagentThinkingOverrides?.Designer, "high", "the Designer thinking pin saves");
-
-    ctx.ui.selectImpl = async () => "session — inherit current session level (default)";
-    await handleSettingChoice("subagentThinkingOverrides.Designer", ctx as unknown as ExtensionContext);
-    assert.ok(!("subagentThinkingOverrides" in readGlobal()), "inherit clears the map when empty");
+    // Designer parity: the legacy per-type pin is migrated into the dedicated
+    // key on save — the generic map no longer carries a Designer entry.
+    assert.equal((readGlobal() as { designerThinkingLevel?: string }).designerThinkingLevel, "high", "the Designer thinking pin migrates to the dedicated key");
+    assert.ok(!("subagentThinkingOverrides" in readGlobal()), "the legacy map is stripped of Designer on save");
 
     ctx.ui.selectImpl = async () => "ultra — ";
     await handleSettingChoice("subagentThinkingOverrides.scout", ctx as unknown as ExtensionContext);

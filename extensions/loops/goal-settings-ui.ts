@@ -189,10 +189,12 @@ import {
   loadGlobalSettings,
   loadSettings,
   projectSettingsPath,
+  resolveDesignerConfig,
   saveSettings as persistSettings,
   settingsProvenance,
   type Settings,
 } from "../goal-settings.js";
+import { resolveDesignerModel } from "../designer-model.js";
 import { ModelSelector } from "../model-selector.js";
 import { getSupportedThinkingLevels } from "@earendil-works/pi-ai/compat";
 
@@ -300,8 +302,10 @@ import {
 import { buildStatusText, buildWidgetLines, type AuditDisplayProgress } from "../goal-loop-display.js";
 import {
   defaultAgentDir,
+  designerFileState,
   OVERRIDABLE_AGENT_TYPES,
   resolveEffectiveSubagentModel,
+  resolveSubagentOverrideRef,
   syncSubagentModelOverrides,
   type SubagentModelStrategy,
 } from "../goal-loop-subagents.js";
@@ -760,6 +764,11 @@ async function openSettingsUI(ctx: ExtensionContext, initialSection?: SettingsSe
       sessionModel,
       sessionThinkingLevel: ctx.thinkingLevel ?? "off",
       thinkingLevelsByRef: menuThinkingLevelsByRef(ctx),
+      designerFileState: designerFileState(defaultAgentDir()),
+      designerResolved: (() => {
+        const resolution = resolveDesignerModel(ctx, settings, { reportBlocked: false });
+        return { selectedRef: resolution.selectedRef, blocked: resolution.blocked };
+      })(),
     });
     const id = await promptSettingsMenu(ctx, rows, initialSection, initialSelectedId);
     // Reopen the chosen row's tab after its editor closes.
@@ -1033,6 +1042,54 @@ function parseToolOverrideValueLocal(s: string): unknown {
     try { return JSON.parse(trimmed); } catch { /* fall through */ }
   }
   return trimmed;
+}
+
+/** Re-run the subagent sync after a Designer-tab edit so Designer.md
+ * registers/unregisters immediately, with the dedicated Designer config
+ * winning over the (migrated-away) generic Designer map entries. Other
+ * roles are passed through untouched, exactly as at session start. */
+function resyncDesignerRegistration(ctx: ExtensionContext, designerRequested = false): void {
+  try {
+    const s = loadSettings(ctx.cwd);
+    const config = resolveDesignerConfig(s);
+    const resolution = resolveDesignerModel(ctx, s);
+    const isForbidden = (ref: string) => isForbiddenModel(ref, s.forbiddenModels);
+    const resolve = (ref: string): unknown => {
+      const idx = ref.indexOf("/");
+      if (idx <= 0) return undefined;
+      try { return (ctx.modelRegistry as any)?.find?.(ref.slice(0, idx), ref.slice(idx + 1)); } catch { return undefined; }
+    };
+    const fallbackOverrides: Record<string, string> = {};
+    if (s.subagentFallbacks) {
+      for (const [name, chain] of Object.entries(s.subagentFallbacks)) {
+        if (name === "Designer") continue;
+        const picked = resolveSubagentOverrideRef(name, chain, resolve, isForbidden);
+        if (picked) fallbackOverrides[name] = picked;
+      }
+    }
+    const merged = { ...(s.subagentModelOverrides ?? {}), ...fallbackOverrides };
+    delete merged.Designer;
+    const thinking = { ...(s.subagentThinkingOverrides ?? {}) };
+    delete thinking.Designer;
+    syncSubagentModelOverrides({
+      agentDir: defaultAgentDir(),
+      strategy: s.subagentModelStrategy ?? "inherit-parent",
+      overrides: merged,
+      thinking,
+      designerRequested: designerRequested || config.enabled === true,
+      designer: {
+        configured: config.configured,
+        disabled: config.enabled === false || resolution.blocked,
+        model: resolution.selectedRef,
+        thinking: config.thinking,
+      },
+    });
+    if (resolution.blocked && config.enabled !== false) {
+      ctx.ui.notify("Designer not registered: the session model is forbidden and no eligible Designer model is configured — pick a Designer agent on the Designer tab.", "warning");
+    }
+  } catch (err) {
+    ctx.ui.notify(`glla Designer sync failed: ${err instanceof Error ? err.message : String(err)}`, "warning");
+  }
 }
 
 export async function handleSettingChoice(id: string, ctx: ExtensionContext): Promise<void> {
@@ -1388,6 +1445,75 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
         else if (!raw) saveSettings("global", ctx, { mainModelPrimaryProbeMinutes: undefined });
         else ctx.ui.notify(`primary probe minutes must be a positive integer, got: ${v}`, "warning");
       }
+      return;
+    }
+    case "designerEnabled": {
+      const current = loadSettings(ctx.cwd).designerEnabled;
+      const pick = await ctx.ui.select("Designer enabled — the managed read-only Designer agent", [
+        `on — keep Designer registered${current === true ? " (current)" : ""}`,
+        `on-demand — register when a goal/list item/task asks for Designer${current === undefined ? " (current)" : ""}`,
+        `off — never register Designer (model picks are kept)${current === false ? " (current)" : ""}`,
+      ]);
+      if (pick === undefined) return;
+      saveSettings("global", ctx, { designerEnabled: pick.startsWith("on —") ? true : pick.startsWith("off —") ? false : undefined });
+      resyncDesignerRegistration(ctx);
+      const now = loadSettings(ctx.cwd).designerEnabled;
+      ctx.ui.notify(`Designer ${now === true ? "enabled — registered now" : now === false ? "disabled — unregistered; it will not be created for design checkpoints" : "on-demand — registers when a goal/list item/task asks for it"}. Applies to NEW pi sessions for agent availability.`, "info");
+      return;
+    }
+    case "designerModel": {
+      const pick = await promptModelRef(ctx, "Designer agent — read-only design checkpoint only", "provider/model-id — empty keeps the current session model", { excludeRefs: normalizeModelRefs(loadSettings(ctx.cwd).forbiddenModels) });
+      if (pick === undefined) return;
+      const pickedModel = resolvePickedModel(ctx, pick);
+      const currentThinking = loadSettings(ctx.cwd).designerThinkingLevel;
+      const levels = auditorThinkingLevels(pickedModel);
+      let pickedThinking: ConfiguredThinkingLevel | undefined;
+      let inheritThinking = false;
+      if (levels.length <= 1) {
+        ctx.ui.notify(`Designer agent: ${pick.kind === "session" ? "session model (override cleared)" : pick.ref} — this model exposes no thinking levels (the checkpoint runs with thinking off).`, "info");
+      } else {
+        const inherited = ctx.thinkingLevel ?? "high";
+        const preferred = currentThinking ?? inherited;
+        const thinking = await ctx.ui.select(
+          "Designer thinking — READ-ONLY DESIGN CHECKPOINT ONLY (your session thinking is unchanged)",
+          drafterThinkingChoiceOptions(
+            levels,
+            levels.includes(preferred) ? preferred : levels.includes("high") ? "high" : levels[levels.length - 1],
+            currentThinking === undefined,
+          ),
+        );
+        if (thinking?.startsWith("session —")) inheritThinking = true;
+        else if (thinking) pickedThinking = thinking.split(" ")[0] as ConfiguredThinkingLevel;
+      }
+      saveSettings("global", ctx, {
+        designerModel: pick.kind === "session" ? undefined : pick.ref,
+        ...(inheritThinking ? { designerThinkingLevel: undefined } : pickedThinking ? { designerThinkingLevel: pickedThinking } : {}),
+      });
+      resyncDesignerRegistration(ctx);
+      ctx.ui.notify(
+        `Designer agent: ${pick.kind === "session" ? "session model (override cleared)" : pick.ref}${inheritThinking ? " · thinking inherited from the session" : pickedThinking ? ` · thinking ${pickedThinking}` : ""} — main, drafter, and auditor agents are unchanged.`,
+        "info",
+      );
+      return;
+    }
+    case "designerModelFallbacks": {
+      const global = loadGlobalSettings();
+      const current = normalizeMainModelFallbackRefs(global.designerModelFallbacks);
+      const refs = await promptModelRefs(
+        ctx,
+        `Designer fallback models (up to ${MAX_MAIN_MODEL_FALLBACKS}) — ordered; the first eligible ref is written into Designer.md, then session inherit; forbidden models are hidden`,
+        current,
+        { excludeRefs: normalizeModelRefs(loadSettings(ctx.cwd).forbiddenModels), maxSelections: MAX_MAIN_MODEL_FALLBACKS, currentRef: modelRef(ctx.model) },
+      );
+      if (refs === undefined) return;
+      saveSettings("global", ctx, { designerModelFallbacks: refs.length ? refs : undefined });
+      resyncDesignerRegistration(ctx);
+      ctx.ui.notify(refs.length ? `Designer fallback models saved: ${refs.join(" → ")}.` : "Designer fallback models cleared — the primary (or session inherit) remains.", "info");
+      return;
+    }
+    case "designerEffective":
+    case "designerRegistered": {
+      ctx.ui.notify("Read-only — change Designer enablement or its agent on this tab; this row just reports the live state.", "info");
       return;
     }
     case "drafterModel": {

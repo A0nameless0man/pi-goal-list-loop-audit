@@ -348,6 +348,19 @@ export function syncSubagentModelOverrides(opts: {
   return result;
 }
 
+/** Live state of <agentDir>/agents/Designer.md for the settings tab: the
+ * managed file GLLA would register, a user-owned file it never touches, or
+ * absent. */
+export function designerFileState(agentDir: string): "managed" | "user-owned" | "absent" {
+  const file = path.join(agentDir, "agents", "Designer.md");
+  if (!fs.existsSync(file)) return "absent";
+  try {
+    return hasManagedMarker(fs.readFileSync(file, "utf-8")) ? "managed" : "user-owned";
+  } catch {
+    return "user-owned";
+  }
+}
+
 /** Register only an explicitly selected live Designer checkpoint. No other
  * agent definition is changed; user-owned files are never overwritten. */
 export function ensureRequestedDesigner(opts: { agentDir: string; model?: string; thinking?: string }): boolean {

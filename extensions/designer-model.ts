@@ -26,10 +26,13 @@ export interface DesignerModelResolution {
 }
 
 /** Resolve the Designer model for the next Designer.md write. Never makes a
- * provider request; eligibility is registry presence + configured auth. */
+ * provider request; eligibility is registry presence + configured auth.
+ * `reportBlocked: false` suppresses the ledger entry — pure display paths
+ * (settings menu rendering) must not ledger on every repaint. */
 export function resolveDesignerModel(
   ctx: Pick<ExtensionContext, "modelRegistry" | "model" | "cwd">,
   settings: Pick<Settings, "designerModel" | "designerThinkingLevel" | "designerModelFallbacks" | "designerEnabled" | "subagentModelOverrides" | "subagentThinkingOverrides" | "subagentFallbacks" | "forbiddenModels">,
+  opts?: { reportBlocked?: boolean },
 ): DesignerModelResolution {
   const config = resolveDesignerConfig(settings as Settings);
   const configuredRefs = normalizeMainModelFallbackRefs([
@@ -45,7 +48,7 @@ export function resolveDesignerModel(
   }
   const currentRef = modelRef(ctx.model as any);
   const blocked = !!currentRef && forbidden(currentRef);
-  if (blocked) {
+  if (blocked && opts?.reportBlocked !== false) {
     appendLedger(ctx.cwd, "forbidden_model_switch", { scope: "designer", ref: currentRef, via: "session-inherit", blocked: true });
   }
   return { configuredRefs, blocked };

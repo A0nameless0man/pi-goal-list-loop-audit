@@ -114,9 +114,12 @@ export interface MenuSubagentContext {
   sessionThinkingLevel?: string;
   /** Known model capabilities, keyed by lowercase provider/model ref. */
   thinkingLevelsByRef?: Readonly<Record<string, readonly string[]>>;
-  /** Whether the managed Designer.md currently exists in the agent dir
-   * (computed by the caller; the row builder itself stays pure). */
-  designerRegistered?: boolean;
+  /** Live Designer.md state in the agent dir (computed by the caller; the
+   * row builder itself stays pure). */
+  designerFileState?: "managed" | "user-owned" | "absent";
+  /** Eligibility-resolved Designer model for the next registration
+   * (computed by the caller via resolveDesignerModel). */
+  designerResolved?: { selectedRef?: string; blocked: boolean };
 }
 
 function modelThinkingText(
@@ -186,9 +189,15 @@ export function buildSettingsRows(
   const designerChain = [designerConfig.model, ...designerConfig.fallbacks].filter((ref): ref is string => !!ref?.trim());
   const designerEffective = designerConfig.enabled === false
     ? "off — Designer will not register"
-    : designerChain.length
-      ? `${designerChain.join(" → ")} → session inherit (last resort)`
-      : `${sessionRef} (inherits session)`;
+    : subagent.designerResolved?.blocked
+      ? "blocked — session model is forbidden and no eligible Designer model is configured"
+      : subagent.designerResolved?.selectedRef
+        ? `${subagent.designerResolved.selectedRef} · first eligible of the configured chain`
+        : subagent.designerResolved
+          ? `${sessionRef} (inherits session)`
+          : designerChain.length
+            ? `${designerChain.join(" → ")} → session inherit (last resort)`
+            : `${sessionRef} (inherits session)`;
   // v0.38.10: the compactor never runs on the session model (it is the
   // stuck one) — unset means registry plan B, not a session lease.
   const compactorRef = settings.compactorModel?.trim() ? settings.compactorModel : "registry plan B";
@@ -459,9 +468,9 @@ export function buildSettingsRows(
       id: "designerRegistered",
       section: "designer",
       label: "Designer.md registered",
-      valueText: subagent.designerRegistered === undefined ? "unknown" : subagent.designerRegistered ? "registered" : "not registered",
+      valueText: subagent.designerFileState === "managed" ? "registered" : subagent.designerFileState === "user-owned" ? "user-owned file present" : subagent.designerFileState === "absent" ? "not registered" : "unknown",
       sourceText: "runtime",
-      description: "whether the managed read-only Designer agent file currently exists in the pi agent dir (a user-owned Designer.md without the glla marker is never touched)",
+      description: "whether the managed read-only Designer agent file currently exists in the pi agent dir (a user-owned Designer.md without the glla marker is reported as user-owned and never touched)",
     },
   );
 

@@ -225,10 +225,12 @@ import {
   loadGlobalSettings,
   loadSettings,
   projectSettingsPath,
+  resolveDesignerConfig,
   saveSettings,
   settingsProvenance,
   type Settings,
 } from "../goal-settings.js";
+import { resolveDesignerModel } from "../designer-model.js";
 import {
   curateAuditReviewSources,
   normalizeObjective,
@@ -2013,17 +2015,33 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
       const fallbackOverrides: Record<string, string> = {};
       if (s.subagentFallbacks) {
         for (const [name, chain] of Object.entries(s.subagentFallbacks)) {
+          // Designer has dedicated settings now: its chain is resolved by
+          // resolveDesignerModel (primary wins over fallbacks — the old
+          // merge let a chain ref override the explicit pin).
+          if (name === "Designer") continue;
           const picked = resolveSubagentOverrideRef(name, chain, resolve, isForbidden);
           if (picked) fallbackOverrides[name] = picked;
         }
       }
       const mergedOverrides = { ...(s.subagentModelOverrides ?? {}), ...fallbackOverrides };
+      delete mergedOverrides.Designer;
+      const designerConfig = resolveDesignerConfig(s);
+      const designerResolution = resolveDesignerModel(ctx as any, s, { reportBlocked: designerConfig.enabled !== false });
+      if (designerResolution.blocked && designerConfig.enabled !== false) {
+        ctx.ui.notify("Designer not registered: the session model is forbidden and no eligible Designer model is configured — pick a Designer agent on the /glla Designer tab.", "warning");
+      }
       const sync = syncSubagentModelOverrides({
         agentDir: defaultAgentDir(),
         strategy: s.subagentModelStrategy ?? "inherit-parent",
         overrides: mergedOverrides,
         thinking: s.subagentThinkingOverrides,
         designerRequested: state.goal?.agentRole === "designer" || state.goal?.taskList?.tasks.some(task => task.status !== "complete" && task.agentRole === "designer") === true,
+        designer: {
+          configured: designerConfig.configured,
+          disabled: designerConfig.enabled === false || designerResolution.blocked,
+          model: designerResolution.selectedRef,
+          thinking: designerConfig.thinking,
+        },
       });
       for (const skip of sync.skipped) {
         const overrideFailureCopy = providerErrorPresentation(skip.reason, "recovery");
