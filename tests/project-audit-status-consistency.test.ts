@@ -25,8 +25,8 @@ test('project is explicitly a loop, with visible clocks and bounded tool-wait ev
   const state = fixture(); const builder = state.loop!.builder!;
   const progress: RespecAuditLive = { phase: 'running', workerPhase: 'tool_executing', startedAt: now - 800000,
     currentTool: 'bash', currentToolStartedAt: now - 677000, lastActivityAt: now - 677000, toolTimeoutMs: 900000 };
+  const telemetry = startRespecAuditLive(builder, scope);
   try {
-    const telemetry = startRespecAuditLive(builder, scope);
     telemetry.set( progress);
     for (const width of [40, 120]) {
       const card = buildWidgetLines(state, undefined, now, undefined, width, extras(state))!;
@@ -47,9 +47,9 @@ test('project is explicitly a loop, with visible clocks and bounded tool-wait ev
 
 test('project auditor stale or missing activity cannot inherit a busy host running badge', () => {
   const state = fixture(); const builder = state.loop!.builder!;
+  const telemetry = startRespecAuditLive(builder, scope);
   try {
     for (const [age, word] of [[40000, 'EXECUTION UNCONFIRMED'], [240000, 'AUDIT QUIET'], [7200000, 'AUDIT STALLED']] as const) {
-      const telemetry = startRespecAuditLive(builder, scope);
       telemetry.set( { phase: 'running', startedAt: now - age, lastActivityAt: now - age });
       const footer = buildStatusText(state, undefined, now, undefined, extras(state), 160)!;
       assert.ok(footer.includes(word), footer);

@@ -65,8 +65,8 @@ test("project tool waits show a ticking deadline and separate attempt/total cloc
   const now = 2000000;
   const state = { goal: null, list: [], loop: { builder, active: true, target: builder.vision, startedAt: new Date(now - 900000).toISOString(), iteration: 1, maxIterations: 0, plateauWindow: 5, stallCount: 0, bestValue: null, lastValue: null, history: [] } } as State;
   const progress = { phase: "running" as const, workerPhase: "running", round: 2 as const, startedAt: now - 900000, attemptStartedAt: now - 180000, currentTool: "bash", currentToolStartedAt: now - 90000, toolTimeoutMs: 300000, lastActivityAt: now - 90000 };
+  const telemetry = startRespecAuditLive(builder, scope);
   try {
-    const telemetry = startRespecAuditLive(builder, scope);
     telemetry.set( progress);
     const card = stripTerminalSequences(buildWidgetLines(state, null, now, undefined, 250, { respecAuditLiveScope: scope })!.join("\n"));
     assert.match(card, /waiting on bash.*second pass/);
