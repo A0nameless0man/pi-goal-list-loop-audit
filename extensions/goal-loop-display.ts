@@ -3332,7 +3332,7 @@ function respecBuilderLines(loop: LoopState, now: number, theme?: DisplayTheme, 
     ...(toolWait ? [`tool: ${sanitizeDisplayText(progress.currentTool!)} · ${Math.floor((now - progress.currentToolStartedAt!) / 1000)}s / ${Math.floor(progress.toolTimeoutMs! / 1000)}s budget`] : []),
     `audit elapsed ${Number.isFinite(progress.startedAt) && progress.startedAt <= now ? fmtElapsed(now - progress.startedAt) : 'unknown'}${progress.attemptStartedAt !== undefined && Number.isFinite(progress.attemptStartedAt) && progress.attemptStartedAt <= now ? ` · attempt ${fmtElapsed(now - progress.attemptStartedAt)}` : ''}`, 
     `last activity: ${observation?.age !== undefined ? `${fmtElapsed(observation.age)} ago` : "not observed"}${progress.activity ? ` · ${sanitizeDisplayText(progress.activity)}` : ""}${progress.retryAt !== undefined ? ` · retry in ${fmtElapsed(Math.max(0, progress.retryAt - now))}` : ""}`,
-  ] : ["auditor: waiting for dispatch · no live worker observed"] : [];
+  ] : [respecAuditStatus(builder, now)] : [];
   const title = `${paint(theme, 'dim', 'Loop / Project · ')}${paint(theme, tone, phase)}`;
   return [
     `${theme?.bold ? theme.bold(title) : title}${loop.active || builder.phase === "auditing" ? "" : stopped ? " · stopped" : " · held"} · increment ${builder.cycle}`,

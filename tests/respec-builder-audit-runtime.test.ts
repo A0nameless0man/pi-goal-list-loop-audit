@@ -23,7 +23,7 @@ const req = JSON.parse(await readFile(dir + "/request.json", "utf8"));
 async function atomic(file, data) { await writeFile(file + ".tmp", JSON.stringify(data)); await rename(file + ".tmp", file); }
 await atomic(dir + "/progress.json", { protocolVersion: 1, attemptId: req.attemptId, requestHash: req.requestHash, phase: "running", elapsedMs: 1, lastActivityAt: Date.now(), toolCalls: [], recentOutput: [], ...(process.env.TOOL_WAIT ? { currentTool: "bash", currentToolStartedAt: Date.now(), toolTimeoutMs: 300000, currentToolTimeoutMs: 1200000, round: 2 } : {}) });
 if (process.env.RESULT_DELAY) await new Promise(resolve => setTimeout(resolve, Number(process.env.RESULT_DELAY)));
-const output = process.env.INCOMPLETE_EVIDENCE ? "Looks good\\n<approved/>" : process.env.FAIL_PRIMARY && req.model.includes("primary") ? "no verdict from primary" : process.env.NEEDS_WORK ? "<evidence>\\nInvalid credentials accepted\\n</evidence>\\n<disapproved/>" : "<evidence>\\nartifact exists\\n</evidence>\\n<approved/>";
+const output = process.env.INCOMPLETE_EVIDENCE ? "Looks good\\n<approved/>" : (process.env.FAIL_ALL || process.env.FAIL_PRIMARY && req.model.includes("primary")) ? "no verdict from primary" : process.env.NEEDS_WORK ? "<evidence>\\nInvalid credentials accepted\\n</evidence>\\n<disapproved/>" : "<evidence>\\nartifact exists\\n</evidence>\\n<approved/>";
 await atomic(dir + "/result.json", { protocolVersion: 1, attemptId: req.attemptId, requestHash: req.requestHash, goalRevision: req.goalRevision, ok: true, output, model: req.model, thinkingLevel: req.thinkingLevel, challenge: "confirmed", toolCalls: [{ name: "read", argsPrefix: "{}", finishedAt: Date.now() }] });
 `;
 
@@ -574,4 +574,50 @@ for (const mode of ["cold", "pre-due", "overdue", "legacy"] as const) test(`real
     await pi.fire("session_shutdown", { reason: "test-end" }, f.ctx);
     __testOnlyResetOwnerSession(); __testOnlyResetStaleFlag(); replaceState(f.original);
   }
+});
+
+
+test("exhausted finite worker chain resets only at the next due admitted episode", async () => {
+  const env: Record<string, string> = { FAIL_ALL: "1" }, f = fixture(env);
+  let clock = Date.now();
+  const restore = __testOnlyRespecAuditorRuntime({ auditNow: () => clock });
+  try {
+    await runRespecBuilderAudit(f.ctx);
+    const exhausted = state.loop!.builder!.audit!;
+    assert.deepEqual(exhausted.attemptedRefs, ["test/provider-model"]);
+    const jobs = path.join(f.cwd, ".pi-glla", "audit-jobs");
+    assert.equal(fs.readdirSync(jobs).length, 2);
+    await runRespecBuilderAudit(f.ctx);
+    assert.equal(state.loop!.builder!.audit, exhausted);
+    assert.equal(fs.readdirSync(jobs).length, 2);
+    clock = exhausted.infrastructureRetry!.nextRetryAt;
+    await runRespecBuilderAudit(f.ctx);
+    assert.equal(fs.readdirSync(jobs).length, 4);
+    assert.equal(state.loop!.builder!.audit!.infrastructureRetry!.failures, 2);
+    delete env.FAIL_ALL;
+    clock = state.loop!.builder!.audit!.infrastructureRetry!.nextRetryAt;
+    await runRespecBuilderAudit(f.ctx);
+    assert.equal(readState(f.cwd).loop!.builder!.phase, "complete");
+    assert.equal(fs.readdirSync(jobs).length, 5);
+  } finally { restore(); replaceState(f.original); }
+});
+
+test("real stalled detached workers automatically journal a paced timeout episode", async () => {
+  const f = fixture({ RESULT_DELAY: "10000" });
+  const restore = __testOnlyRespecAuditorRuntime({ auditRuntime: { command: process.execPath, workerPath: f.file, homeDir: f.cwd,
+    pollIntervalMs: 10, heartbeatNoProgressMs: 50, firstEventTimeoutMs: 5000, env: { RESULT_DELAY: "10000" } } });
+  try {
+    await runRespecBuilderAudit(f.ctx);
+    const loop = readState(f.cwd).loop!;
+    assert.equal(loop.active, true);
+    assert.equal(loop.builder!.phase, "auditing");
+    assert.equal(loop.builder!.audit!.infrastructureRetry!.failureClass, "timeout");
+    assert.ok(loop.builder!.audit!.infrastructureRetry!.nextRetryAt > Date.now());
+    assert.equal(loop.builder!.requirements[0]!.status, "open");
+    assert.equal(respecBuilderAuditInFlight(f.cwd), false);
+    assert.equal(f.counts().wakes, 1);
+    const jobs = path.join(f.cwd, ".pi-glla", "audit-jobs");
+    assert.equal(fs.readdirSync(jobs).length, 2);
+    assert.ok(fs.readdirSync(jobs).every(name => !fs.existsSync(path.join(jobs, name, "result.json"))));
+  } finally { restore(); replaceState(f.original); }
 });
