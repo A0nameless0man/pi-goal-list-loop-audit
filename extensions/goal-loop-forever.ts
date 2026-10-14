@@ -108,8 +108,8 @@ export interface LoopState {
   consecutiveNullMeasures?: number;
   /** v0.29.19: consecutive provider-error/user-abort turns. Exempt from
    * stall/stuck/plateau accounting (the model never got a say — a dead
-   * turn is not evidence about the work); capped so an outage stops the
-   * loop with an honest reason instead of burning turns forever. Field
+   * turn is not evidence about the work). Explicit user aborts keep their
+   * finite cap; infrastructure uses a separate durable paced envelope. Field
    * 2026-07-31 (MiniMax token-plan 429 storm): hegemon false-plateau'd
    * with 13 open findings, polis with 3+, hellhunter stuck-stopped at
    * iter 93 — every counted turn was a dead 429 turn. */
@@ -250,6 +250,8 @@ export function applyRefinement(
 ): void {
   loop.refinements = loop.refinements ?? [];
   loop.refinements.push(refinement);
+  loop.infrastructureRetry = undefined;
+  loop.infrastructureRetryKind = undefined;
   loop.target = refinement.newTarget;
   const measureChanged = refinement.newMeasureCmd !== refinement.oldMeasureCmd;
   loop.measureCmd = refinement.newMeasureCmd;

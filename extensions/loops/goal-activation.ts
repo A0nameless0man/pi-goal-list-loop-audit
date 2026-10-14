@@ -2972,8 +2972,8 @@ async function handleHotLengthExhaustion(
       // hegemon false-plateau'd with 13 open findings, polis with 3+,
       // hellhunter stuck-stopped at iter 93 — every counted turn was a
       // dead 429 turn; the v0.28.13/v0.29.4 exemptions only covered the
-      // goal nudge counter). Skip the measure and refire — bounded, so a
-      // real outage stops the loop honestly instead of burning turns.
+      // goal nudge counter). Infrastructure gets a durable paced wait;
+      // explicit user aborts retain their finite stop authority.
       const sr = lastA?.stopReason === "error" && lastMainModelFailure?.nonRecoverableReason === "user-abort" ? "aborted" : lastA?.stopReason;
       if (sr === "error") {
         paceLoopInfrastructureFailure(ctx, "provider", "provider");

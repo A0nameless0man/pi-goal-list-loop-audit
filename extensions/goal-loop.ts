@@ -379,7 +379,7 @@ function stopLoopAtInfrastructureBound(ctx: ExtensionContext): boolean {
   if (!reason) return false;
   const previous = { ...loop };
   loop.active = false; loop.stopReason = reason;
-  if (!persistState(ctx)) Object.assign(loop, previous);
+  if (!persistState(ctx)) { loop.active = previous.active; loop.stopReason = previous.stopReason; }
   clearLoopTimer();
   return true;
 }
@@ -756,7 +756,7 @@ async function runLoopTickInner(initialCtx: ExtensionContext, event?: any): Prom
   let ctx: ExtensionContext = initial;
   const rebind = (): boolean => {
     const current = freshCtxForGeneration(generation);
-    if (!current) return false;
+    if (!current || current.cwd !== initial.cwd) return false;
     ctx = current;
     return true;
   };
@@ -804,9 +804,10 @@ async function runLoopTickInner(initialCtx: ExtensionContext, event?: any): Prom
   if (loop.infrastructureRetry && stopLoopAtInfrastructureBound(ctx)) return;
   const measuredLoop = loop;
   const measuredCommand = loop.measureCmd;
+  const measuredScope = loopInfrastructureScopeId(loop);
   const measurement = metricless ? null : await runMeasure(ctx, loop.measureCmd!);
   if (!rebindLoop()) return;
-  if (loop !== measuredLoop || loop.measureCmd !== measuredCommand || supervisorPaused(state) || backgroundDispatchHeld(state)) return;
+  if (loop !== measuredLoop || loop.measureCmd !== measuredCommand || loopInfrastructureScopeId(loop) !== measuredScope || supervisorPaused(state) || backgroundDispatchHeld(state)) return;
   if (measurement?.kind === "infrastructure") {
     if (stopLoopAtInfrastructureBound(ctx)) return;
     paceLoopInfrastructureFailure(ctx, "measurement", measurement.failureClass);
