@@ -177,8 +177,21 @@ Commands use a unique `GLLA_GLOBAL_SETTINGS_PATH` set BEFORE preload.
 - Eight-file targeted run: **165 pass / 0 fail**, 14s,
   `/tmp/glla-loop-repair-targeted.log`.
 - Initial typecheck caught a test-only null/undefined mismatch; corrected.
-- Typecheck and full release recheck pending below; prior full status remains
-  FAILED until a completed recheck proves otherwise. No publication requested.
+- Parent corrected the remaining obsolete nonnumeric expectation to assert preserved
+  best/last/history and durable recovery. The provider-exhaustion healthy fixture
+  now returns a numeric reading: a healthy model alone is not metric evidence.
+- Full suite after those corrections: **3883 pass / 1 skip / 0 fail**, 416 files;
+  the skip is `commit survives the auto-committer daemon`, explicitly env-gated.
+  The first green-suite release chain exposed stale generated inventory, regenerated
+  with `node scripts/generate-inventory.mjs` rather than bypassing its check.
+- Final isolated `timeout 1200 npm run release:check`: **PASS, exit 0**,
+  `/tmp/glla-loop-verified-release.log`. This includes the full suite, typecheck,
+  jiti state-binding repro, offline auditor extension loading, inventory validation,
+  package dry-run and package smoke. No publication, version bump or release.
+- `git diff --check`: PASS. Separate `npm run check`, inventory and pack dry-run
+  also pass. Ephemeral command logs are not substitutes for reproducible commands.
 
-Reviewer acceptance is required; the active universal-recovery goal is not
-terminalized by this document. No staged files or history operations.
+The independent first rehearsal blocked missing metrics, user-interrupt handling
+and two release tests; each finding has now been repaired and behaviorally tested.
+Final independent source review is pending. The active universal-recovery goal is
+not terminalized by this document. No staged files or history operations.
