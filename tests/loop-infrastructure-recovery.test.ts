@@ -169,3 +169,20 @@ for (const mode of ["future", "overdue", "cold"] as const) test(`metric ${mode} 
     }
   } finally { await f.close(); }
 });
+
+test("measurement retry persistence refusal rolls RAM back and arms no timer", async () => {
+  const f = await fixture();
+  const root = `${f.cwd}/.pi-glla`, backup = `${f.cwd}/saved-runtime`;
+  try {
+    fs.renameSync(root, backup); fs.writeFileSync(root, "blocked storage");
+    await runLoopTick(f.ctx);
+    assert.equal(state.loop!.infrastructureRetry, undefined);
+    assert.equal(state.loop!.infrastructureRetryKind, undefined);
+    assert.equal(state.loop!.iteration, 1);
+    assert.equal(state.loop!.history.length, 1);
+    assert.equal(f.timers.length, 0);
+  } finally {
+    fs.unlinkSync(root); fs.renameSync(backup, root);
+    await f.close();
+  }
+});
