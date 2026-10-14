@@ -512,3 +512,63 @@ test("project retry admission rolls back on refusal and honors freeze, stop, bou
     await runRespecBuilderAudit(f.ctx); assert.equal(state.loop!.builder, claim);
   } finally { restore(); replaceState(f.original); }
 });
+
+for (const mode of ["cold", "pre-due", "overdue", "legacy"] as const) test(`real project restore ${mode} obeys consent, due and exact timer ownership`, async () => {
+  const f = fixture(), pi = new MockPi();
+  let now = Date.now(), resolutions = 0;
+  const retryAt = mode === "overdue" ? now - 1 : now + 5000;
+  const audit = { ...f.builder.audit!, infrastructureRetry: { scopeId: f.builder.audit!.attemptId, failureClass: "auth" as const, failures: 2,
+    firstFailureAt: now - 10000, lastFailureAt: now - 10000, nextRetryAt: retryAt, pendingEpisode: true } };
+  replaceState({ ...state, loop: { ...state.loop!, active: mode !== "legacy", stopReason: mode === "legacy" ? "audit infrastructure: invalid credentials" : undefined,
+    builder: { ...f.builder, audit: mode === "legacy" ? f.builder.audit : audit } } });
+  persistStateLine(f.cwd, state);
+  __testOnlyResetOwnerSession(); __testOnlyResetStaleFlag();
+  activate(pi.api); saveSettings("project", f.cwd, { autoResume: mode !== "cold" });
+  const timers: { callback: () => void; delay: number; handle: NodeJS.Timeout }[] = [];
+  const restoreScheduler = __testOnlyLoopInfrastructureScheduler(() => now, (callback, delay) => {
+    const handle = setTimeout(() => {}, 1_000_000); handle.unref();
+    timers.push({ callback, delay, handle }); return handle;
+  });
+  let restoreRuntime = () => {};
+  try {
+    await pi.fire("session_start", { reason: "startup" }, f.ctx);
+    restoreRuntime = __testOnlyRespecAuditorRuntime({ auditNow: () => now, resolveModel: () => { resolutions++; return { model: undefined, error: "auth failed" }; } });
+    if (mode === "cold") {
+      assert.equal(state.loop!.active, false);
+      assert.equal(timers.length, 0);
+      await runRespecBuilderAudit(f.ctx); assert.equal(resolutions, 0);
+      return;
+    }
+    assert.equal(state.loop!.active, true);
+    assert.ok(readState(f.cwd).loop!.builder!.audit!.infrastructureRetry);
+    assert.ok(timers.length > 0);
+    const first = timers.at(-1)!;
+    assert.ok(mode === "overdue" ? first.delay === 0 : first.delay > 0);
+    // Early callback must rearm rather than dispatch even if already queued.
+    if (mode !== "overdue") { first.callback(); await Promise.resolve(); assert.equal(resolutions, 0); }
+    now = state.loop!.builder!.audit!.infrastructureRetry!.nextRetryAt;
+    scheduleLoopTick(f.ctx);
+    const stale = timers.at(-1)!;
+    const currentLoop = state.loop!;
+    replaceState({ ...state, loop: { ...currentLoop, builder: { ...currentLoop.builder!, audit: { ...currentLoop.builder!.audit!, attemptId: "superseding-claim" } } } });
+    stale.callback(); assert.equal(resolutions, 0);
+    replaceState({ ...state, loop: currentLoop });
+    scheduleLoopTick(f.ctx);
+    const due = timers.at(-1)!;
+    due.callback(); due.callback();
+    await Promise.resolve(); await Promise.resolve();
+    assert.equal(resolutions, 1, "same callback cannot dispatch twice");
+    const after = readState(f.cwd).loop!;
+    assert.equal(after.active, true);
+    assert.ok(after.builder!.audit!.infrastructureRetry!.nextRetryAt > now);
+    const shutdownCallback = timers.at(-1)!;
+    await pi.fire("session_shutdown", { reason: "test-end" }, f.ctx);
+    shutdownCallback.callback(); await Promise.resolve();
+    assert.equal(resolutions, 1, "old session callback loses timer ownership");
+  } finally {
+    clearLoopTimer(); for (const timer of timers) clearTimeout(timer.handle);
+    restoreRuntime(); restoreScheduler();
+    await pi.fire("session_shutdown", { reason: "test-end" }, f.ctx);
+    __testOnlyResetOwnerSession(); __testOnlyResetStaleFlag(); replaceState(f.original);
+  }
+});
