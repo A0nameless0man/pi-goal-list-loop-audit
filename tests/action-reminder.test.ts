@@ -4,6 +4,7 @@ import { visibleWidth } from "@earendil-works/pi-tui";
 import {
   buildAbortedAssistantNotice,
   buildActionReminder,
+  frameTweakSuggestion,
   registerActionReminderRenderer,
   type ActionReminderCopy,
 } from "../extensions/action-reminder.js";
@@ -179,7 +180,41 @@ test("reminder rendering bounds narrow rows and strips terminal commands", () =>
   }
 });
 
-test("decision reminder rendering agrees with its transcript when no action was supplied", () => {
+test("tweak suggestions are posed as questions, never imperative orders", () => {
+  const reminder = buildActionReminder({
+    kind: "blocked",
+    reason: "Contract-conflict: the verification command can never reach the auditor.",
+    action: `Run '/goal tweak "5. update the contract"'`,
+    resumeCommand: "/list resume",
+  });
+  const text = renderReminder(reminder);
+  assert.match(text, /Question: should this tweak be applied\?/);
+  assert.match(text, /Run '\/goal tweak "5\. update the contract"'/);
+  assert.doesNotMatch(text, /Next: Run/);
+  // The exact command survives verbatim for copy-paste.
+  assert.ok(text.includes(`Run '/goal tweak "5. update the contract"'`));
+});
+
+test("frameTweakSuggestion only fires on tweak commands", () => {
+  assert.equal(frameTweakSuggestion("Open the popup and record the result."), undefined);
+  assert.equal(frameTweakSuggestion("/goal resume"), undefined);
+  assert.equal(frameTweakSuggestion(""), undefined);
+  const framed = frameTweakSuggestion(`Run '/list tweak "drop item 3"'`);
+  assert.ok(framed?.startsWith("Question: should this tweak be applied?"));
+  assert.ok(framed?.includes(`Run '/list tweak "drop item 3"'`));
+});
+
+test("non-tweak blocked reminders keep the imperative Next line", () => {
+  const reminder = buildActionReminder({
+    kind: "blocked",
+    reason: "The native browser popup needs a manual observation.",
+    action: "Open the popup and record the result.",
+    resumeCommand: "/list resume",
+  });
+  const text = renderReminder(reminder);
+  assert.match(text, /Next: Open the popup and record the result/);
+  assert.doesNotMatch(text, /Question:/);
+});
   const reminder = buildActionReminder({ kind: "decision", reason: "Choose the rollout approach.", resumeCommand: "/goal resume" });
   assert.match(reminder.content, /Choose an option in the decision card/);
   const rendered = renderReminder(reminder);
