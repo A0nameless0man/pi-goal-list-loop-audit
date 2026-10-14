@@ -4,6 +4,7 @@ import * as fs from "node:fs";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import activate, { __testOnlyResetOwnerSession, __testOnlyResetStaleFlag } from "../extensions/loops/goal.js";
 import { __testOnlyLoopInfrastructureScheduler, clearLoopTimer, runLoopTick, scheduleLoopTick } from "../extensions/goal-loop.js";
+import { saveSettings } from "../extensions/goal-settings.js";
 import { state, replaceState, persistStateLine } from "../extensions/goal-state.js";
 import { readState } from "../extensions/goal-loop-core.js";
 import { MockPi, makeMockCtx, seedLoop, seedState, tmpCwd } from "./harness/mock-pi.js";
@@ -149,7 +150,7 @@ for (const mode of ["future", "overdue", "cold"] as const) test(`metric ${mode} 
     if (mode === "overdue") f.due();
     await f.pi.fire("session_shutdown", {}, f.ctx);
     f.timers.length = 0;
-    fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, JSON.stringify({ autoResume: mode !== "cold" }));
+    saveSettings("global", f.cwd, { autoResume: mode !== "cold" });
     __testOnlyResetOwnerSession(); __testOnlyResetStaleFlag();
     f.healthy();
     await f.pi.fire("session_start", { reason: "startup" }, f.ctx);
