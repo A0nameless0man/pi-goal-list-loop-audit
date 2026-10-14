@@ -32,6 +32,40 @@ test("live telemetry is claim-fenced and missing telemetry never implies a runni
     }
   } finally { telemetry.clear(); }
 });
+test("live telemetry is scoped to its own root so a copied project identity cannot read or erase another root's worker", () => {
+  const builder = pending();
+  const sameIdentity = { ...builder, projectId: builder.projectId };
+  const rootA = { stateDir: "/projects/a/.pi-glla", cwd: "/projects/a", startedAt: "loop-a" };
+  const rootB = { stateDir: "/projects/b/.pi-glla", cwd: "/projects/b", startedAt: "loop-b" };
+  const leaseA = startRespecAuditLive(sameIdentity, rootA);
+  const leaseB = startRespecAuditLive(sameIdentity, rootB);
+  try {
+    leaseA.set({ phase: "running", model: "provider/model", startedAt: 1000, lastActivityAt: 2000 });
+    assert.equal(getRespecAuditLive(sameIdentity, rootA)?.phase, "running", "the owning root keeps its own telemetry");
+    assert.equal(getRespecAuditLive(sameIdentity, rootB), undefined, "a different root cannot read another root's live worker");
+    const other = { goal: null, list: [], loop: { builder: sameIdentity, active: true, target: sameIdentity.vision, startedAt: rootB.startedAt, iteration: 1, maxIterations: 0, plateauWindow: 5, stallCount: 0, bestValue: null, lastValue: null, history: [] } } as State;
+    const own = { ...other, loop: { ...other.loop!, startedAt: rootA.startedAt } } as State;
+    assert.match(buildWidgetLines(own, null, 5000, undefined, 120, { respecAuditLiveScope: rootA })!.join("\n"), /auditor: running/);
+    assert.doesNotMatch(buildWidgetLines(other, null, 5000, undefined, 120, { respecAuditLiveScope: rootB })!.join("\n"), /auditor: running/);
+    leaseB.clear();
+    assert.equal(getRespecAuditLive(sameIdentity, rootA)?.phase, "running", "clearing a foreign root cannot erase the owner's telemetry");
+  } finally { leaseA.clear(); leaseB.clear(); }
+  assert.equal(getRespecAuditLive(sameIdentity, rootA), undefined);
+  assert.equal(getRespecAuditLive(sameIdentity, rootB), undefined);
+});
+test("stale-attempt and missing-telemetry projections stay honest across roots", () => {
+  const builder = pending();
+  const root = { stateDir: "/projects/a/.pi-glla", cwd: "/projects/a", startedAt: "loop-a" };
+  const otherRoot = { stateDir: "/projects/b/.pi-glla", cwd: "/projects/b", startedAt: "loop-a" };
+  const superseded = { ...builder, audit: { ...builder.audit!, attemptId: "another-claim" } };
+  const lease = startRespecAuditLive(builder, root);
+  try {
+    lease.set({ phase: "running", model: "provider/model", startedAt: 1000, lastActivityAt: 2000 });
+    assert.equal(getRespecAuditLive(superseded, root), undefined, "a superseded attempt cannot inherit live telemetry");
+    assert.equal(getRespecAuditLive(builder, otherRoot), undefined, "another root's identical attempt cannot inherit live telemetry");
+    assert.match(respecAuditStatus(superseded, 5000, root), /waiting for dispatch/);
+  } finally { lease.clear(); }
+});
 test("completion summary requires proof and includes acceptance, shipped capability and evidence", () => {
   const builder = pending();
   assert.throws(() => respecCompletionSummary(builder, "archive.json"));

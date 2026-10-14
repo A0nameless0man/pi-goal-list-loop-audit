@@ -278,6 +278,23 @@ let continuationScheduledFor: string | null = null;
 
 let lastContinuationSentAt = 0;
 
+/** v0.38.118: per-goal fingerprint of the audit evidence already delivered
+ * in this process. An unchanged last audit on a steady-state turn must NOT
+ * force another full send — the model has the audit content in its
+ * transcript already. The fingerprint invalidates on every accepted full
+ * dispatch that contained the report, and on `resetContinuationInitialSend`.
+ * First-send and cross-process handling are owned by the
+ * `continuationInitialFullSentFor` latch; this is the in-process dedupe. */
+interface AuditEvidenceFingerprint { attemptId: string | undefined; revision: number | undefined; reportChars: number; }
+const deliveredAuditFingerprints = new Map<string, AuditEvidenceFingerprint>();
+function auditEvidenceFingerprint(lastAudit: { attemptId?: string; revision?: number; report?: string } | undefined): AuditEvidenceFingerprint | undefined {
+  if (!lastAudit || typeof lastAudit.report !== "string") return undefined;
+  return { attemptId: lastAudit.attemptId, revision: lastAudit.revision, reportChars: lastAudit.report.length };
+}
+function auditFingerprintEqual(a: AuditEvidenceFingerprint, b: AuditEvidenceFingerprint | undefined): boolean {
+  return !!b && a.attemptId === b.attemptId && a.revision === b.revision && a.reportChars === b.reportChars;
+}
+
 /** v0.38.94 (field 2026-09-22: 909 full 28KB sends in one session):
  * goal id whose initial full brief already landed this session, or null.
  * Previously `firstSend` was computed as `lastContinuationSentAt === 0`,
@@ -293,6 +310,13 @@ let continuationInitialFullSentFor: string | null = null;
  * brief, so the next send for the restored goal goes full again. */
 export function resetContinuationInitialSend(): void {
   continuationInitialFullSentFor = null;
+  deliveredAuditFingerprints.clear();
+}
+export function __testOnlyRecordDeliveredAudit(goalId: string, fp: AuditEvidenceFingerprint | undefined): void {
+  if (fp) deliveredAuditFingerprints.set(goalId, fp); else deliveredAuditFingerprints.delete(goalId);
+}
+export function __testOnlyGetDeliveredAudit(goalId: string): AuditEvidenceFingerprint | undefined {
+  return deliveredAuditFingerprints.get(goalId);
 }
 
 // Audit 2026-09-07 (MEDIUM): wall-clock of the last genuine user-role
@@ -1478,7 +1502,10 @@ export function needsFullContinuation(goal: Goal): boolean {
   if (goal.autoResumedAt) return true;
   if (!auditorSurfaceSuppressed() && goal.pendingTasks && goal.pendingTasks.length > 0) return true;
   const lastAudit = goal.auditHistory?.[goal.auditHistory.length - 1];
-  if (lastAudit && lastAudit.report && !auditorSurfaceSuppressed()) return true;
+  if (lastAudit && lastAudit.report && !auditorSurfaceSuppressed()) {
+    const fp = auditEvidenceFingerprint(lastAudit);
+    if (!fp || !auditFingerprintEqual(fp, deliveredAuditFingerprints.get(goal.id))) return true;
+  }
   if (
     !auditorSurfaceSuppressed() &&
     goal.status === "active" &&
@@ -1669,7 +1696,11 @@ export function sendContinuation(goalId: string): void {
     if (!dispatchAccepted(ctx, attempt)) return;
     // v0.38.94: flip the initial-send latch only once a full payload has
     // actually dispatched — a failed send must not burn the one full brief.
-    if (kind === "full" || kind === "full+resync") continuationInitialFullSentFor = goalId;
+    if (kind === "full" || kind === "full+resync") {
+      continuationInitialFullSentFor = goalId;
+      const fp = auditEvidenceFingerprint(goalForSend.auditHistory?.[goalForSend.auditHistory.length - 1]);
+      if (fp) deliveredAuditFingerprints.set(goalId, fp);
+    }
     continuationRearmStreak = 0; continuationRearmSince = 0; // v0.28.5 (E3): an accepted dispatch clears the storm
     appendLedger(ctx.cwd, "goal_continuation_sent", { goalId, attemptId: attempt.id, generation: attempt.generation, kind, payloadChars: content.length, ...(busyBypass ? { busyBypass: true } : {}) });
     // v0.35.37 (audit finding): the welcome-back recovery notice must fire

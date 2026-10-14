@@ -3477,9 +3477,20 @@ async function handleHotLengthExhaustion(
     dispatchStartAcknowledged(ctx, "before_agent_start", event?.prompt);
     if (typeof event?.prompt === "string" && event.prompt.trim() && !event.prompt.startsWith("glla:")) {
       const prompt = event.prompt;
-      fallbackContinuationCancelled = false;
-      interruptedTurnPrompt = { generation: sessionGeneration, cwd: ctx.cwd, owner: sessionManagerId(ctx),
-        text: prompt.length <= 4000 ? prompt : `${prompt.slice(0, 2000)}\n[Request excerpt; read the complete original request in conversation.]\n${prompt.slice(-2000)}` };
+      // v0.38.118: a GLLA continuation or resync arriving as the first
+      // prompt of a fresh turn must NOT overwrite the captured original
+      // user request. The dispatch marker (`[GOAL CHECKPOINT goalId=...]`)
+      // is appended to every continuation; the resync sentinel is a
+      // separate dispatch payload. Detect both and leave the prior capture
+      // alone so a real user request survives ordinary retry/recovery.
+      const isGllaDispatch = /^\s*\[GOAL CHECKPOINT goalId=/.test(prompt) || /^\s*\[POST-COMPACTION RESYNC\]/m.test(prompt);
+      if (isGllaDispatch && interruptedTurnPrompt && interruptedTurnPrompt.generation === sessionGeneration) {
+        // Preserve the existing capture verbatim; do not overwrite with a dispatch payload.
+      } else {
+        fallbackContinuationCancelled = false;
+        interruptedTurnPrompt = { generation: sessionGeneration, cwd: ctx.cwd, owner: sessionManagerId(ctx),
+          text: prompt.length <= 4000 ? prompt : `${prompt.slice(0, 2000)}\n[Request excerpt; read the complete original request in conversation.]\n${prompt.slice(-2000)}` };
+      }
     }
     // A held project's contract must remain visible to ordinary user turns.
     // Empty conversation history does not imply absence of saved project work.
