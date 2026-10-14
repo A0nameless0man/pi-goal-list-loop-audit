@@ -312,6 +312,15 @@ in-flight selections, active/queued host turns, absent timers, and
 supervisor/load/context/stale-extension/persistence holds. Selection alone
 is never reported as provider success.
 
+When the host ends a turn with an abort error while the goal is already
+paused (for example a quota-driven `wait` pause), GLLA records the refusal
+with the pause kind and reason (`goal-paused-host-abort`) instead of a bare
+non-recoverable entry, sends no retry, and notifies that the red `Error:`
+line is the host's own transport — not a GLLA retry and not a new failure.
+An abort on an active turn keeps the plain non-recoverable record, so the
+two cases stay distinguishable in the journal. A blocked pause keeps its
+separate `goal-blocked-paused` record.
+
 ## No objective to resume—but a recovery message remains
 
 An objective, its completion claim, and provider recovery are separate state.
