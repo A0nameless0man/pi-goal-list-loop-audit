@@ -5,8 +5,8 @@
 Confirmed objective: automatic paced recovery from every infrastructure error,
 including auth/config, across all loop lifecycles without a count cutoff.
 Explicit stop/pause/freeze, bounds, persistence and reload consent remain
-independent authority. This is a **first project-audit slice**, not completion
-of the universal objective. No credentials, providers, Pi core, other plugins,
+independent authority. The implemented slice covers admitted project, metric and audit-loop
+infrastructure recovery; admission and independent stop authority remain separate. No credentials, providers, Pi core, other plugins,
 release metadata, branches, identities or history were changed.
 
 The supplied watchdog incident is GLLA-owned at the recovery boundary: the
@@ -83,33 +83,13 @@ A restore fixture initially used project autoResume; its failure exposed the
 existing global-only policy, and the test now uses the isolated global settings
 path rather than weakening admission assertions.
 
-## Remaining BLOCKERS for the overall objective (parent-owned next slices)
-
-- Completion audit retry gates in `extensions/loops/goal-auditor-hooks.ts`
-  still have ordinary one-shot/aggressive recovery-horizon eligibility. Shared
-  pacing alone does not remove those gates.
-- `runMeasure` in `extensions/goal-loop.ts` still collapses infrastructure to
-  `number | null`; null readings can hit the measurement brake in
-  `extensions/goal-loop-forever.ts`. A typed metric adapter must preserve best,
-  history and productive accounting, and avoid regression actions on unknowns.
-- Unclassified provider-error loop turns in
-  `extensions/loops/goal-activation.ts` still have a finite-stop seam; recognized
-  main-model recovery is separate. Parent is tracing/implementing that seam.
-- Broader integration/full-suite review remains required; this slice does not
-  claim the universal recovery goal is complete. Persistence refusal cannot
-  make unavailable storage durable or authorize unjournaled work.
-
-No staged files; daemon owns automatic source/evidence commits. No history
-operations or release commands were performed.
-
-
 ## Next coherent slice: admitted metric/audit loops
 
-Implemented typed measurement outcomes in `goal-loop.ts`: verified reading,
-successful invalid metric, or infrastructure/no-verdict. Throws, nonzero exits,
+Implemented typed measurement outcomes in `goal-loop.ts`: verified reading or
+infrastructure/no-verdict. Throws, nonzero exits,
 missing codes and malformed stdout do not mutate numeric history, best/last,
-productive iteration, plateau or stuck state. Successful nonnumeric output
-retains the existing explicit invalid-metric brake; it is not numeric progress.
+productive iteration, plateau or stuck state. Zero-exit empty, nonnumeric and nonfinite output now enters config/no-verdict
+recovery too, preserving productive accounting rather than hitting the plateau brake.
 Unknowns return before progress classification and all git operations.
 
 The admitted loop persists the shared retry envelope before its existing timer
@@ -157,20 +137,48 @@ reason, which correctly consented a same-process successor. Explicit quit models
 a genuinely cold load: it retains active=false, zero timers and zero new execs;
 no consent assertion was weakened.
 
-### Remaining BLOCKERS / acceptance boundary
+### Current complete slice / acceptance boundary
 
-- Completion audit `goal-auditor-hooks.ts` remains unchanged: ordinary one-shot,
-  aggressive horizon, provider retry eligibility and timer-plan persistence
-  require a separate ownership review. Ordinary goal completion limits must not
-  be silently widened under a loop-only continuity contract. All callers of the
-  existing arm-then-return scheduler still need transactional conversion.
-- Initial start baseline failures and proposal/refinement measurement probes
-  still use their pre-existing refusal contract. This admitted-loop slice does
-  not claim automatic recovery across those initial admission paths.
-- Full-suite/slow-suite review remains incomplete; no release check was run.
-- Bounds coverage here is token-bound behavioral coverage plus existing suites;
-  additional metric retry time/iteration-bound and explicit-abort stress cases
-  remain useful independent-review targets.
+- Admitted project, metric and audit loops recover infrastructure/no-verdict,
+  including auth/config and unknown errors, without count/horizon termination.
+- Initial baseline/proposal probes intentionally refuse invalid drafts before
+  admission. Explicit force or audit deferred-baseline admission is separate
+  consent; behavioral coverage proves admitted missing-baseline recovery.
+- `Goal.pendingCompletion` completion hooks are goal-only, not loop gates.
+  No goal completion eligibility was modified or claimed as a loop blocker.
+- Explicit user interrupt/abort diagnostics now carry `user-abort`, preserving
+  the existing three-abort stop authority and queued-list announcement. Generic
+  provider outages retain supervised loop ownership beyond the old error cap;
+  the queue stays inactive until explicit stop, which announces availability.
+- External providers/credentials, host availability and unavailable storage are
+  not repaired. Bounds, pauses, cold-load consent and durable admission still win.
 
-The universal objective is **not complete**. Reviewer gate is still required.
-No staged files or history operations; the daemon remains commit owner.
+## Focused repair evidence
+
+Independent prior release check `/tmp/glla-loop-review-release.log` was **FAILED**:
+3876 pass / 1 skip / 2 fail, before downstream release checks. Failures were a
+stuck fixture without actual admission and explicit interrupt classification.
+The repaired stuck fixture now admits via isolated global autoResume and supplies
+an actual numeric measurement. Assertions still require the real stuck stop,
+recap and queued-list availability. The interrupt test retains actual abort
+semantics, preserved accounting and queue announcement; a separate generic
+provider test checks supervised ownership and no queue activation.
+
+Added actual-adapter cases drive each zero-exit empty/auth-text/not-number output
+12 times (beyond plateauWindow), checking exact due dates, early duplicate wakes,
+no git operations, durable accounting and one subsequent productive reading.
+They also prove explicit stop fences the retained callback. Missing-baseline
+coverage refuses unconsented admission then exercises explicit-force recovery.
+Classifier tests pin all existing explicit interrupt spellings to user-abort.
+
+Commands use a unique `GLLA_GLOBAL_SETTINGS_PATH` set BEFORE preload.
+- First focused run: 37 pass / 2 fail (fixture lacked numeric measurement and
+  expected the wrong abort cap); corrected without weakening behavior assertions.
+- Eight-file targeted run: **165 pass / 0 fail**, 14s,
+  `/tmp/glla-loop-repair-targeted.log`.
+- Initial typecheck caught a test-only null/undefined mismatch; corrected.
+- Typecheck and full release recheck pending below; prior full status remains
+  FAILED until a completed recheck proves otherwise. No publication requested.
+
+Reviewer acceptance is required; the active universal-recovery goal is not
+terminalized by this document. No staged files or history operations.

@@ -113,13 +113,14 @@ back the transition and cannot authorize unjournaled dispatch.
 ## Metric and audit-loop measurement recovery
 
 An admitted metric loop (including `/loop audit`) distinguishes verified numeric
-readings, successful nonnumeric output, and infrastructure failures. Exec throws,
+readings from infrastructure/no-verdict failures. Empty, nonnumeric or nonfinite
+zero-exit output is a measurement configuration failure, not plateau evidence. Exec throws,
 nonzero exits, missing exit codes and malformed envelopes preserve best/last,
 history, iteration, plateau and stuck accounting. They journal a 5-second to
 5-minute capped retry before arming the existing timer, without a count/horizon
 cutoff. A due measurement retry re-runs the measure, not another agent turn;
-unknown output cannot trigger git regression or approval. Successful nonnumeric
-output still exercises the explicit invalid-metric brake.
+unknown output cannot trigger git regression or approval. Missing metrics retain
+the same productive accounting and retry until a numeric verdict returns.
 
 Fallback error turns outside main-model recovery now get the same durable pacing;
 recognized provider errors keep the existing main-model recovery owner. Explicit
@@ -129,10 +130,18 @@ ownership, storage refusal and loop bounds remain authoritative. A same-process
 reload successor may retain existing consent; a quit followed by a cold load
 without auto-resume does not gain consent from its saved deadline.
 
-These slices do **not** complete universal recovery. Initial `/loop start`
-baseline/proposal probes still refuse an unusable measurement; completion-audit
-one-shot/horizon gates remain separate follow-up work. Do not infer that all
-loop lifecycle entry points already satisfy the no-cutoff objective.
+Initial `/loop start` and proposal probes intentionally refuse an unusable
+baseline before admission; they do not silently start invalid drafts. Explicit
+`force=1` or the audit route's deferred-baseline admission permits missing-baseline
+work; once admitted it retries without consuming iterations until a valid
+measurement seeds the baseline. Goal completion audits use
+`Goal.pendingCompletion`, not loop state: their one-shot/horizon eligibility is
+out of this loop recovery scope, not an unresolved loop gate.
+
+This covers admitted project, metric and audit-loop infrastructure recovery,
+including auth/config and unknown errors. It does not authorize initial admission,
+bypass explicit interrupt/abort authority or user/load/supervisor holds, repair
+external providers, or guarantee dispatch while storage or the host is unavailable.
 
 ## Is an audit progressing?
 
