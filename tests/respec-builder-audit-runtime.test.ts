@@ -623,3 +623,31 @@ test("real stalled detached workers automatically journal a paced timeout episod
     assert.equal(fs.readdirSync(jobs).length, 0, "cancelled no-verdict jobs are cleaned, not retained as approvals");
   } finally { restore(); replaceState(f.original); }
 });
+
+import { buildWidgetLines, buildStatusText } from "../extensions/goal-loop-display.js";
+import { respecAuditStatus } from "../extensions/respec-builder-ui.js";
+test("project retry causes survive actual journal reload and production recovery UI without credentials", async () => {
+  const f = fixture();
+  let clock = Date.parse("2026-10-14T12:00:00Z");
+  let error = "HTTP 401 model alpha scope denied; Authorization: Bearer PROJECT_SECRET";
+  const restore = __testOnlyRespecAuditorRuntime({ auditNow: () => clock, resolveModel: () => ({ error, model: undefined }) });
+  try {
+    for (const cause of [/HTTP 401 model alpha scope denied/, /No auditor model beta configured/]) {
+      await runRespecBuilderAudit(f.ctx);
+      replaceState(readState(f.cwd));
+      const builder = state.loop!.builder!;
+      assert.match(builder.audit!.infrastructureRetry!.diagnostic!, cause);
+      assert.match(respecAuditStatus(builder, clock), cause);
+      const rows = buildWidgetLines(state, null, clock, undefined, 120, { maxWidgetLines: 20 })!.join("\n");
+      assert.match(rows, cause);
+      assert.match(rows, /retry deadline: 2026-10-14/);
+      const status = buildStatusText(state, null, clock, undefined, undefined, 120)!;
+      assert.match(status, cause);
+      const walk = (dir: string): string => fs.readdirSync(dir, { withFileTypes: true }).map(e => e.isDirectory() ? walk(path.join(dir, e.name)) : fs.readFileSync(path.join(dir, e.name), "utf8")).join("\n");
+      assert.doesNotMatch(walk(path.join(f.cwd, ".pi-glla")), /PROJECT_SECRET/);
+      assert.doesNotMatch(rows + status + JSON.stringify((f.ctx as any).ui), /PROJECT_SECRET/);
+      clock = builder.audit!.infrastructureRetry!.nextRetryAt;
+      error = "No auditor model beta configured; access_token=PROJECT_SECRET";
+    }
+  } finally { restore(); replaceState(f.original); fs.rmSync(f.cwd, { recursive: true, force: true }); }
+});

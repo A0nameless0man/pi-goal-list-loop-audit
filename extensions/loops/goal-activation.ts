@@ -2976,7 +2976,7 @@ async function handleHotLengthExhaustion(
       // explicit user aborts retain their finite stop authority.
       const sr = lastA?.stopReason === "error" && lastMainModelFailure?.nonRecoverableReason === "user-abort" ? "aborted" : lastA?.stopReason;
       if (sr === "error") {
-        paceLoopInfrastructureFailure(ctx, "provider", "provider", lastA?.errorMessage);
+        paceLoopInfrastructureFailure(ctx, "provider", "provider", rawLastA?.errorMessage);
         return;
       }
       if (sr === "aborted") {

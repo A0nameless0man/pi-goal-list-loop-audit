@@ -264,3 +264,32 @@ test("initial missing baseline refuses admission; explicit force admits and reco
     assert.equal(readState(f.cwd).loop!.infrastructureRetry, undefined);
   } finally { await f.close(); }
 });
+
+import { buildStatusText } from "../extensions/goal-loop-display.js";
+for (const kind of [undefined, "audit"] as const) test(`${kind ?? "metric"} adapter journals actionable causes and renders them after reload`, async () => {
+  const f = await fixture(kind);
+  const cases = [
+    { result: { code: 7, stdout: "", stderr: "HTTP 401 model alpha denied; API-key=METRIC_SECRET" }, cause: /exit 7; stderr: HTTP 401 model alpha denied/ },
+    { result: { code: 8, stdout: "", stderr: "configuration missing export path; password=METRIC_SECRET" }, cause: /exit 8; stderr: configuration missing export path/ },
+    { result: { code: 0, stdout: "", stderr: "" }, cause: /stdout empty/ },
+    { result: { code: 0, stderr: "metric source missing" }, cause: /stdout missing; stderr: metric source missing/ },
+    { result: { code: 0, stdout: "Infinity", stderr: "" }, cause: /not a finite numeric verdict: Infinity/ },
+    { result: new Error("timeout connecting to metric host; Bearer METRIC_SECRET"), cause: /timeout connecting to metric host/ },
+  ];
+  try {
+    for (const c of cases) {
+      f.pi.execHandler = () => { if (c.result instanceof Error) throw c.result; return c.result as any; };
+      await runLoopTick(f.ctx);
+      replaceState(readState(f.cwd)); // actual journal projection, not the RAM envelope
+      assert.match(state.loop!.infrastructureRetry!.diagnostic!, c.cause);
+      const display = buildStatusText(state, null, f.now())!;
+      assert.match(display, c.cause);
+      assert.match(display, /retry 20/);
+      assert.doesNotMatch(display, /METRIC_SECRET/);
+      const walk = (dir: string): string => fs.readdirSync(dir, { withFileTypes: true }).map(e => e.isDirectory() ? walk(`${dir}/${e.name}`) : fs.readFileSync(`${dir}/${e.name}`, "utf8")).join("\n");
+      assert.doesNotMatch(walk(`${f.cwd}/.pi-glla`), /METRIC_SECRET/);
+      assert.doesNotMatch(JSON.stringify((f.ctx as any).ui), /METRIC_SECRET/);
+      f.due();
+    }
+  } finally { await f.close(); }
+});
