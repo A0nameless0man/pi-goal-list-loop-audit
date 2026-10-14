@@ -523,7 +523,9 @@ for (const mode of ["cold", "pre-due", "overdue", "legacy"] as const) test(`real
     builder: { ...f.builder, audit: mode === "legacy" ? f.builder.audit : audit } } });
   persistStateLine(f.cwd, state);
   __testOnlyResetOwnerSession(); __testOnlyResetStaleFlag();
-  activate(pi.api); saveSettings("project", f.cwd, { autoResume: mode !== "cold" });
+  activate(pi.api);
+  const globalSettings = fs.readFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, "utf8");
+  saveSettings("global", f.cwd, { autoResume: mode !== "cold" });
   const timers: { callback: () => void; delay: number; handle: NodeJS.Timeout }[] = [];
   const restoreScheduler = __testOnlyLoopInfrastructureScheduler(() => now, (callback, delay) => {
     const handle = setTimeout(() => {}, 1_000_000); handle.unref();
@@ -568,6 +570,7 @@ for (const mode of ["cold", "pre-due", "overdue", "legacy"] as const) test(`real
   } finally {
     clearLoopTimer(); for (const timer of timers) clearTimeout(timer.handle);
     restoreRuntime(); restoreScheduler();
+    fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, globalSettings);
     await pi.fire("session_shutdown", { reason: "test-end" }, f.ctx);
     __testOnlyResetOwnerSession(); __testOnlyResetStaleFlag(); replaceState(f.original);
   }

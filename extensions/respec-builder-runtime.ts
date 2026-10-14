@@ -48,7 +48,7 @@ export function respecBuilderAuditInFlight(cwd: string): boolean {
 }
 
 /** Hermetic process tests retain the production ownership/commit/tool adapters. */
-export function __testOnlyRespecAuditorRuntime(overrides: Pick<Host, "auditRuntime" | "auditSleep" | "auditNow" | "resolveModel">): () => void {
+export function __testOnlyRespecAuditorRuntime(overrides: Partial<Pick<Host, "auditRuntime" | "auditSleep" | "auditNow" | "resolveModel">>): () => void {
   const previous = host;
   const configured = { ...host, ...overrides };
   host = configured;
