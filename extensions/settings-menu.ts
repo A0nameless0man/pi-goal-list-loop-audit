@@ -77,7 +77,6 @@ export const SETTINGS_SECTIONS: readonly { id: SettingsSectionId; label: string 
   { id: "compactor", label: "Compactor" },
   { id: "auditor", label: "Auditor" },
   { id: "designer", label: "Designer" },
-  { id: "auditor", label: "Auditor" },
   { id: "subagents", label: "Subagents" },
   { id: "stall-brakes", label: "Stall brakes" },
   { id: "other", label: "Other" },
@@ -115,6 +114,9 @@ export interface MenuSubagentContext {
   sessionThinkingLevel?: string;
   /** Known model capabilities, keyed by lowercase provider/model ref. */
   thinkingLevelsByRef?: Readonly<Record<string, readonly string[]>>;
+  /** Whether the managed Designer.md currently exists in the agent dir
+   * (computed by the caller; the row builder itself stays pure). */
+  designerRegistered?: boolean;
 }
 
 function modelThinkingText(
@@ -178,6 +180,15 @@ export function buildSettingsRows(
   // in the auditor fallback row's final-resort slot.
   const drafterRef = settings.drafterModel?.trim() ? settings.drafterModel : "session model";
   const drafterThinking = settings.drafterThinkingLevel ?? sessionThinking;
+  const designerConfig = resolveDesignerConfig(settings);
+  const designerRef = designerConfig.model?.trim() ? designerConfig.model : "session model";
+  const designerThinking = designerConfig.thinking ?? sessionThinking;
+  const designerChain = [designerConfig.model, ...designerConfig.fallbacks].filter((ref): ref is string => !!ref?.trim());
+  const designerEffective = designerConfig.enabled === false
+    ? "off — Designer will not register"
+    : designerChain.length
+      ? `${designerChain.join(" → ")} → session inherit (last resort)`
+      : `${sessionRef} (inherits session)`;
   // v0.38.10: the compactor never runs on the session model (it is the
   // stuck one) — unset means registry plan B, not a session lease.
   const compactorRef = settings.compactorModel?.trim() ? settings.compactorModel : "registry plan B";
@@ -403,12 +414,64 @@ export function buildSettingsRows(
     },
   );
 
+  // ── Designer ──
+  // First-class parity with Drafter/Compactor/Auditor: the dedicated tab
+  // owns enablement, the primary pick (thinking rides along, as with the
+  // Drafter), the fallback chain, effective resolution, and whether the
+  // managed Designer.md is currently registered. Designer is therefore
+  // excluded from the generic Subagents loops below — one source of truth.
+  rows.push(
+    {
+      id: "designerEnabled",
+      section: "designer",
+      label: "Designer enabled",
+      valueText: designerConfig.enabled === true ? "on" : designerConfig.enabled === false ? "off" : "on-demand",
+      sourceText: src("designerEnabled"),
+      description: "on: keep Designer registered · off: never register (model picks are kept) · on-demand: register when a goal/list item/task asks for Designer or a Designer model is set",
+    },
+    {
+      id: "designerModel",
+      section: "designer",
+      label: "Designer agent",
+      valueText: modelThinkingText(designerRef, designerThinking, subagent),
+      sourceText: src("designerModel"),
+      description: "read-only design-checkpoint agent (goal/list/task items marked Agent: Designer); thinking is picked with the model; unset inherits the session model",
+    },
+    {
+      id: "designerModelFallbacks",
+      section: "designer",
+      label: `Designer fallback models (up to ${MAX_MAIN_MODEL_FALLBACKS})`,
+      valueText: designerConfig.fallbacks.length
+        ? `${designerConfig.fallbacks.length}/${MAX_MAIN_MODEL_FALLBACKS} · ${designerConfig.fallbacks.map((ref, index) => `${index + 1}. ${modelThinkingText(ref, designerThinking, subagent)}`).join(" → ")}`
+        : `0/${MAX_MAIN_MODEL_FALLBACKS} · ${designerRef} · ${designerThinking} (session inherit last resort)`,
+      sourceText: src("designerModelFallbacks"),
+      description: "ordered and deselectable: Designer primary → fallback 1 → fallback 2…; the first eligible ref is written into Designer.md at registration, then session inherit",
+    },
+    {
+      id: "designerEffective",
+      section: "designer",
+      label: "Effective resolution",
+      valueText: designerEffective,
+      sourceText: "runtime",
+      description: "model the next Designer registration will carry, given enablement, the configured chain, and session inheritance",
+    },
+    {
+      id: "designerRegistered",
+      section: "designer",
+      label: "Designer.md registered",
+      valueText: subagent.designerRegistered === undefined ? "unknown" : subagent.designerRegistered ? "registered" : "not registered",
+      sourceText: "runtime",
+      description: "whether the managed read-only Designer agent file currently exists in the pi agent dir (a user-owned Designer.md without the glla marker is never touched)",
+    },
+  );
+
   // ── Subagent fallback chains (v0.34.115) ──
   // Fallback chains are editable for every embedded agent type. This is
   // intentionally broader than KNOWN_PINNED_DEFAULT_AGENTS: current
   // pi-subagents built-ins do not have hidden model pins, but their explicit
   // fallback chains are still valid settings and have menu dispatchers.
-  for (const name of OVERRIDABLE_AGENT_TYPES) {
+  // Designer is excluded: its chain lives on the Designer tab.
+  for (const name of OVERRIDABLE_AGENT_TYPES.filter((name) => name !== "Designer")) {
     const chain = settings.subagentFallbacks?.[name] ?? [];
     rows.push({
       id: `subagentFallbacks:${name}`,
@@ -656,7 +719,7 @@ export function buildSettingsRows(
     description:
       "quiet shows troubled workers only + the count line (default — healthy fan-out lives on the fleet panel); rich shows all worker rows; compact shows the count line only — HUNG is never silent",
   });
-  for (const name of OVERRIDABLE_AGENT_TYPES) {
+  for (const name of OVERRIDABLE_AGENT_TYPES.filter((name) => name !== "Designer")) {
     rows.push({
       id: `subagentModelOverrides.${name}`,
       section: "subagents",
@@ -666,7 +729,7 @@ export function buildSettingsRows(
       description: "provider/model pin; always wins over strategy",
     });
   }
-  for (const name of OVERRIDABLE_AGENT_TYPES) {
+  for (const name of OVERRIDABLE_AGENT_TYPES.filter((name) => name !== "Designer")) {
     rows.push({
       id: `subagentThinkingOverrides.${name}`,
       section: "subagents",
@@ -685,7 +748,7 @@ export function buildSettingsRows(
     // resolutions.
     valueText: (() => {
       const strip = (r: string) => r.replace(/ \([^)]*\)$/, "").replace(/^\((.*)\)$/, "$1");
-      const parts = OVERRIDABLE_AGENT_TYPES.map((name) => resolveEffectiveSubagentModel(name, settings, subagent.sessionModel)).map(strip);
+      const parts = OVERRIDABLE_AGENT_TYPES.map((name) => name === "Designer" ? designerEffective : resolveEffectiveSubagentModel(name, settings, subagent.sessionModel)).map(strip);
       return parts.every((p) => p === parts[0]) ? parts[0]! : parts.join(" · ");
     })(),
     sourceText: "runtime",
