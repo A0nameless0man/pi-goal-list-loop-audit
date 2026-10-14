@@ -45,6 +45,9 @@ for (const mode of ['goal', 'list', 'loop'] as const) {
         assert.ok(state.mainModelRecovery!.attempts > 2100);
         assert.ok(clock - realNow() > 24 * 3600000, 'episode outlives the legacy horizon');
         if (originalLoop) assert.deepEqual({ startedAt: readState(cwd).loop?.startedAt, iteration: readState(cwd).loop?.iteration, history: readState(cwd).loop?.history, maxIterations: readState(cwd).loop?.maxIterations }, originalLoop, 'all dead turns preserve loop history and bounds');
+        // Provider recovery alone is not numeric evidence: the healthy loop
+        // measurement must also return a verified reading.
+        if (mode === 'loop') pi.execHandler = () => ({ code: 0, stdout: '2\n', stderr: '' });
         await pi.fire('tool_call', {}, ctx);
         await pi.fire('agent_end', { messages: [{ role: 'assistant', stopReason: 'end_turn', content: [{ type: 'text', text: 'The provider is healthy again. Continuing the retained work; independent acceptance is still required.' }] }] }, ctx);
         const saved = readState(cwd);
