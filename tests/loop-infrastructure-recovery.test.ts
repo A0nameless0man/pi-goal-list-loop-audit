@@ -141,3 +141,29 @@ test("a stale async measurement after refinement cannot attach a reading or git 
     assert.deepEqual(git, []);
   } finally { await f.close(); }
 });
+
+for (const mode of ["future", "overdue", "cold"] as const) test(`metric ${mode} lifecycle reload respects saved due date and consent`, async () => {
+  const f = await fixture();
+  try {
+    await runLoopTick(f.ctx);
+    if (mode === "overdue") f.due();
+    await f.pi.fire("session_shutdown", {}, f.ctx);
+    f.timers.length = 0;
+    fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, JSON.stringify({ autoResume: mode !== "cold" }));
+    __testOnlyResetOwnerSession(); __testOnlyResetStaleFlag();
+    f.healthy();
+    await f.pi.fire("session_start", { reason: "startup" }, f.ctx);
+    if (mode === "cold") {
+      assert.equal(state.loop!.active, false);
+      assert.equal(f.timers.length, 0);
+      await runLoopTick(f.ctx); assert.equal(f.calls(), 1);
+    } else {
+      assert.equal(state.loop!.active, true);
+      assert.equal(f.timers.at(-1)!.delay, mode === "overdue" ? 0 : state.loop!.infrastructureRetry!.nextRetryAt - f.now());
+      f.due();
+      const wake = f.timers.at(-1)!; wake.callback(); wake.callback(); await settle();
+      assert.equal(f.calls(), 2);
+      assert.equal(readState(f.cwd).loop!.bestValue, 11);
+    }
+  } finally { await f.close(); }
+});
