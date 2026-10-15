@@ -9,6 +9,7 @@
 
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { sanitizeDisplayText } from "./goal-loop-core.js";
+import { isJsonContainerPrefix } from "./json-container-prefix.js";
 
 export type QuotaSignal = "rate-limit" | "plan-quota" | "billing";
 
@@ -117,9 +118,9 @@ export interface ProviderErrorPresentation {
 // to keep standing alone (and are the ones that actually carry secrets).
 const PROVIDER_SENSITIVE_MARKER = /\b(?:401|403|408|409|429)\b|api[\s_-]*key|authorization|token[\s_-]*plan|rate[\s_-]*limit|too[\s_-]+many[\s_-]+requests|usage[\s_-]*limit|quota|insufficient[\s_-]+(?:credits?|balance)|key[\s_-]*limit|retry[\s_-]*after|request[\s_-]*(?:id|identifier)|\b(?:https?\s*\/?\s*|status(?:[_\s-]?code)?\s*[:=]?\s*|code\s*[:=]\s*)(5\d\d)\b|\b5\d\d\s+(?:internal\s+server|server\s+error|bad\s+gateway|gateway\s+timeout|service\s+unavailable)\b/i;
 
-/** v0.38.104: redaction cascade budget, as a fraction of the report's lines
- * with a small absolute floor. A provider payload redacts in full; a report
- * that merely QUOTES one must not be deleted to satisfy a leak check. */
+/** Historical v0.38.104 preservation baselines, retained for compatibility.
+ * Report redaction now uses explicit payload/field ownership, not a global
+ * budget that can expire and release a later secret. */
 export const SANITIZE_MAX_REDACTION_RATIO = 0.15;
 export const SANITIZE_MIN_REDACTION_LINES = 12;
 
@@ -218,15 +219,20 @@ export function sanitizeProviderAuditReport(report: string | undefined): string 
     "i",
   );
   const structuredLine = /["']?(?:status(?:code)?|error(?:message)?|message|detail|reason|request[\s_-]*(?:id|identifier)|retry[\s_-]*after|reset[\s_-]*(?:at|after))\b["']?\s*[:=]/i;
-  // Count JSON delimiters without treating braces inside a quoted value as
-  // structure. A provider marker is often emitted on its own line followed
-  // by a multiline payload, so `pendingJsonLines` enters the next balanced
-  // block instead of redacting only the marker line.
-  const bracketDelta = (line: string): number => {
-    let delta = 0;
+  // Syntactic key/value labels may carry an existing provider prefix, never
+  // create one. Anchoring excludes narrative/list annotations such as [HIGH].
+  const bodyLabel = /^\s*(?:["']?[\w.-]+(?:[ \t]+[\w.-]+)*["']?\s*[:=]\s*)?$/;
+  // Canonical audit severities are HIGH/MED/LOW (RequiredFixSeverity), with
+  // MEDIUM and priority-tag aliases retained for older/structured reports.
+  const reportBoundary = /^(?:#{1,6}\s|```|\d+\.\s+(?:\*\*)?\[(?:HIGH|MED(?:IUM)?|LOW|P[0-3])\])/i;
+  // Locate delimiters without treating braces in quoted values as structure.
+  // Provider-prefix context can introduce a body across a short blank/fence gap.
+  const jsonDelimiters = (line: string): Array<{ char: string; column: number }> => {
+    const delimiters: Array<{ char: string; column: number }> = [];
     let quoted = false;
     let escaped = false;
-    for (const char of line) {
+    for (let column = 0; column < line.length; column++) {
+      const char = line[column]!;
       if (escaped) {
         escaped = false;
         continue;
@@ -240,69 +246,117 @@ export function sanitizeProviderAuditReport(report: string | undefined): string 
         continue;
       }
       if (quoted) continue;
-      if (char === "{" || char === "[") delta++;
-      else if (char === "}" || char === "]") delta--;
+      if (char === "{" || char === "[" || char === "}" || char === "]") delimiters.push({ char, column });
     }
-    return delta;
+    return delimiters;
   };
-
-  let jsonDepth = 0;
   let pendingJsonLines = 0;
   const reportLines = report.split(/\r?\n/);
-  // v0.38.104: bound the redaction cascade.
-  //
-  // Field 2026-09-28 (hellhunter): `structuredLine` matches `reason:`,
-  // `message:`, `detail:`, `error:` — vocabulary an auditor report is FULL of
-  // when it quotes test output — and once a line is marked, `jsonDepth` follows
-  // braces through the rest of the document. A REPORT was therefore treated as
-  // if it WERE a provider payload: one 23 659-character report sanitized down
-  // to 12 614 with 185 redaction tags, destroying the two real [HIGH] required
-  // fixes the agent was supposed to act on.
-  //
-  // A genuine provider payload is small and its JSON closes. A report does not.
-  // So once redaction has consumed its budget the cascade stops and the
-  // remaining text is passed through the display sanitizer (which still
-  // strips control bytes) rather than deleted. The marked LINE is always still
-  // redacted, so the leak the budget exists to prevent — a raw provider payload
-  // — is still prevented.
-  const redactionBudget = Math.max(
-    SANITIZE_MIN_REDACTION_LINES,
-    Math.floor(reportLines.length * SANITIZE_MAX_REDACTION_RATIO),
-  );
-  let redactedLines = 0;
-  let budgetExhausted = false;
-  return reportLines.map((line) => {
+  // Resolve payload ownership once, at exact delimiter boundaries. The line
+  // projection must not count braces again: trailing annotations are not part
+  // of a completed body and cannot reopen its ownership.
+  const providerPayloadLines = new Set<number>();
+  const markPayload = (start: number, end: number): void => {
+    for (let j = start; j <= end; j++) providerPayloadLines.add(j);
+  };
+  const jsonCandidates: Array<{ line: number; column: number; opener: string; owned: boolean }> = [];
+  const finishTruncatedPayloads = (end: number): void => {
+    for (const candidate of jsonCandidates) {
+      if (candidate.owned) markPayload(candidate.line, end);
+    }
+    jsonCandidates.length = 0;
+  };
+  let providerPrefix = false;
+  let prefixGapLines = 0;
+  for (let i = 0; i < reportLines.length; i++) {
+    const line = reportLines[i]!;
     const trimmed = line.trim();
-    const providerMarked = providerLine.test(line);
-    const structuredMarked = structuredLine.test(line);
-    const beginsJson = /^[{[]/.test(trimmed);
-    const inJson = jsonDepth > 0;
-    const entersPendingJson = pendingJsonLines > 0 && beginsJson;
-    // A DIRECT marker (a real provider secret/request id/rate-limit) ALWAYS
-    // redacts. The budget bounds the CASCADE -- a line swallowed only because
-    // it followed something else -- and never a direct marker. The first
-    // version conflated the two and released live secrets past the budget.
-    const direct = providerMarked;
-    let marked = direct;
-    if (!direct) {
-      if (budgetExhausted) {
-        marked = false;
-        jsonDepth = 0;
-        pendingJsonLines = 0;
-      } else {
-        // Keys like status/message/reason also occur in ordinary test and
-        // host-audit evidence. They continue a provider payload only AFTER
-        // an actual provider marker; they cannot start redaction themselves.
-        marked = inJson || entersPendingJson || (pendingJsonLines > 0 && structuredMarked);
-        if (marked && redactedLines >= redactionBudget) {
-          budgetExhausted = true;
-          jsonDepth = 0;
-          pendingJsonLines = 0;
-          marked = false;
-        }
+    if (reportBoundary.test(trimmed)) {
+      finishTruncatedPayloads(i - 1);
+      // A finding/heading ends prefix ownership too; an opening JSON fence
+      // alone may bridge the short marker-to-body gap.
+      if (!/^```(?:json)?\s*$/i.test(trimmed)) providerPrefix = false;
+    }
+    let contextStart = 0;
+    for (const { char, column } of jsonDelimiters(line)) {
+      if (char === "{" || char === "[") {
+        const prefix = line.slice(contextStart, column);
+        jsonCandidates.push({
+          line: i, column, opener: char,
+          owned: (providerPrefix && bodyLabel.test(prefix))
+            || providerLine.test(prefix) || jsonCandidates.some(candidate => candidate.owned),
+        });
+        providerPrefix = false;
+        continue;
+      }
+      const candidate = jsonCandidates[jsonCandidates.length - 1];
+      // A malformed closer cannot release an identified body early.
+      if (!candidate || (candidate.opener === "{" ? char !== "}" : char !== "]")) continue;
+      jsonCandidates.pop();
+      providerPrefix = false;
+      contextStart = column + 1;
+      if (candidate.owned) {
+        markPayload(candidate.line, i);
+        continue;
+      }
+      const block = candidate.line === i
+        ? line.slice(candidate.column, column + 1)
+        : [reportLines[candidate.line]!.slice(candidate.column),
+          ...reportLines.slice(candidate.line + 1, i), line.slice(0, column + 1)].join("\n");
+      if (!providerLine.test(block)) continue;
+      try {
+        // Unmarked objects can acquire ownership from a later field, but only
+        // if they are actual JSON, not ordinary status/reason-shaped prose.
+        JSON.parse(block);
+        markPayload(candidate.line, i);
+      } catch { /* Ordinary/incomplete unmarked evidence is not a provider body. */ }
+    }
+    if (providerLine.test(line)) {
+      for (let j = 0; j < jsonCandidates.length; j++) {
+        const candidate = jsonCandidates[j]!;
+        if (candidate.owned) continue;
+        const prefix = [reportLines[candidate.line]!.slice(candidate.column),
+          ...reportLines.slice(candidate.line + 1, i + 1)].join("\n");
+        // Claim recognizable JSON before the transport finishes, even when
+        // cut off inside a string, escape or scalar token. A real prefix grammar
+        // rejects prose; guessing closing delimiters alone misses these cases.
+        if (isJsonContainerPrefix(prefix)) candidate.owned = true;
       }
     }
-    if (marked) redactedLines++;
+    if (!trimmed || /^```(?:json)?\s*$/i.test(trimmed)) {
+      if (++prefixGapLines > 2) providerPrefix = false;
+    } else {
+      // A consumed marker cannot introduce a later unrelated example or an
+      // unmatched trailing annotation. A NEW marker after a body still can.
+      providerPrefix = providerLine.test(line.slice(contextStart));
+      prefixGapLines = 0;
+    }
+  }
+  finishTruncatedPayloads(reportLines.length - 1);
+  let credentialValuePending = false;
+  // Explicit payload/field ownership replaces the old global line budget.
+  // A budget could release later secrets, while generic status/reason keys
+  // could consume it on innocent findings. Only actual provider markers and
+  // their bounded field/payload continuations now initiate redaction. Payload
+  // delimiters and report boundaries end ownership, not unrelated line counts.
+  return reportLines.map((line, index) => {
+    const trimmed = line.trim();
+    if (reportBoundary.test(trimmed) && !/^```(?:json)?\s*$/i.test(trimmed)) pendingJsonLines = 0;
+    const credentialValue = credentialValuePending && !!trimmed && !reportBoundary.test(trimmed);
+    // A scheme on its own is not the credential; retain ownership of the next
+    // value line. Request IDs and API-key assignments can split just as headers
+    // do. Headings terminate the field so actual findings remain readable.
+    if (trimmed && !/^```(?:json)?\s*$/i.test(trimmed)
+      && !/^["']?(?:Bearer|Basic)["']?\s*$/i.test(trimmed)) credentialValuePending = false;
+    if (/^\s*["']?(?:authorization|api[\s_-]*key|request[\s_-]*(?:id|identifier))["']?\s*[:=]\s*(?:["']?(?:Bearer|Basic)["']?)?\s*$/i.test(line)) credentialValuePending = true;
+    const providerMarked = providerLine.test(line);
+    const structuredMarked = structuredLine.test(line);
+    const inPayload = providerPayloadLines.has(index);
+    // Ordinary status/reason/message keys never initiate redaction. A known
+    // body, sensitive field or directly marked line cannot spend a budget and
+    // thereby release a later secret.
+    const marked = providerMarked || inPayload || credentialValue
+      || (pendingJsonLines > 0 && structuredMarked);
 
     if (!marked) {
       // Permit a blank line or a fenced-code opener between a standalone
@@ -310,20 +364,16 @@ export function sanitizeProviderAuditReport(report: string | undefined): string 
       // state across ordinary prose. Even unmarked provider prose crosses a
       // terminal boundary, so strip ANSI/OSC/control bytes before returning.
       if (pendingJsonLines > 0) {
-        if (!trimmed || /^```(?:json)?\s*$/i.test(trimmed)) return sanitizeDisplayText(line);
+        if (!trimmed || /^```(?:json)?\s*$/i.test(trimmed)) {
+          pendingJsonLines--;
+          return sanitizeDisplayText(line);
+        }
         pendingJsonLines = 0;
       }
       return sanitizeDisplayText(line);
     }
 
-    const delta = bracketDelta(line);
-    if (inJson || entersPendingJson) {
-      jsonDepth = Math.max(0, jsonDepth + delta);
-      pendingJsonLines = 0;
-    } else if (providerMarked && delta > 0) {
-      jsonDepth = delta;
-      pendingJsonLines = 0;
-    } else if (providerMarked && delta === 0 && !beginsJson) {
+    if (providerMarked && !inPayload) {
       // A bare `403`/`429` or `Token Plan` line may introduce the payload on
       // the next line. Only wait a couple of lines so a later unrelated JSON
       // example is never swallowed by an old marker.

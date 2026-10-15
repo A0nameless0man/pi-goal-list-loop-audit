@@ -27,6 +27,76 @@ import {
   SANITIZE_MIN_REDACTION_LINES,
 } from "../extensions/quota-retry.ts";
 
+test("truncation within provider strings and escapes cannot release preceding fields", () => {
+  for (const token of [
+    '"HTTP 429 rate limit', '"HTTP 429 escape\\', '"HTTP 429 escape\\u0',
+    '"HTTP 429 escape\\u00', '"HTTP 429 quote\\"',
+  ]) {
+    for (const suffix of ["", "\n## Required fixes\n1. [MED] Get user authorization."]) {
+      const report = '{\n  "account": "synthetic-private-account",\n  "error": {"message": ' + token + suffix;
+      const safe = sanitizeProviderAuditReport(report);
+      assert.ok(!safe.includes("synthetic-private-account"), token);
+      if (suffix) assert.ok(safe.includes(suffix.trimStart()));
+    }
+  }
+});
+
+test("truncated JSON acquires provider ownership from internal markers without releasing leading fields", () => {
+  for (const opener of ["{", "[\n{", "{ incomplete excerpt\n{"]) {
+    for (const marker of ['"status": 429,', '"status": 503,', '"error": {"message":"HTTP 429"},']) {
+      for (const suffix of ["", "\n## Required fixes\n1. [HIGH] Get user authorization."]) {
+        const report = [
+          opener, '  "account": "synthetic-private-account",', marker,
+          '  "organization": "synthetic-private-organization"',
+        ].join("\n") + suffix;
+        const safe = sanitizeProviderAuditReport(report);
+        assert.ok(!safe.includes("synthetic-private-account"), `${opener}: ${marker}`);
+        assert.ok(!safe.includes("synthetic-private-organization"), `${opener}: ${marker}`);
+        if (suffix) assert.ok(safe.includes(suffix.trimStart()));
+      }
+    }
+  }
+});
+
+test("all numbered audit severity findings survive truncated provider bodies and pending credentials", () => {
+  for (const severity of ["HIGH", "MED", "LOW", "MEDIUM", "P0", "P1", "P2", "P3"]) {
+    for (const bold of ["", "**"]) {
+      const finding = `1. ${bold}[${severity}]${bold} Get user authorization; reason: ordinary test evidence.`;
+      for (const prefix of ['HTTP 429\n{\n  "account": "synthetic-private-account"', "Authorization:\nBearer"]) {
+        const safe = sanitizeProviderAuditReport(`${prefix}\n${finding}\n2. [HIGH] Keep findings.`);
+        assert.ok(!safe.includes("synthetic-private-account"));
+        assert.ok(safe.includes(finding), `${severity}, ${bold}, ${prefix}`);
+        assert.ok(safe.includes("2. [HIGH] Keep findings."));
+      }
+    }
+  }
+});
+
+test("pending provider context crosses anchored transport labels, but labels alone never claim bodies", () => {
+  const finding = "1. [HIGH] Get user authorization.";
+  for (const label of ["response:", "body:", "payload:", "Response body:", '"data":', "transport_result ="]) {
+    for (const ending of ["}", ""]) {
+      const body = [
+        `${label} {`,
+        '  "account": "synthetic-private-account",',
+        '  "organization": "synthetic-private-organization"',
+        ending, finding,
+      ].join("\n");
+      assert.equal(sanitizeProviderAuditReport(body), body, "labels without provider context are ordinary evidence");
+      for (const gap of [[], ["", "```json"]]) {
+        const report = [
+          ...Array.from({ length: 40 }, () => "HTTP 503 Service Unavailable"),
+          "HTTP 429", ...gap, body,
+        ].join("\n");
+        const safe = sanitizeProviderAuditReport(report);
+        assert.ok(!safe.includes("synthetic-private-account"), label);
+        assert.ok(!safe.includes("synthetic-private-organization"), label);
+        assert.ok(safe.includes(finding), label);
+      }
+    }
+  }
+});
+
 test("contract authorization findings and ordinary JSON evidence remain actionable", () => {
   // db-gateway's live report lost two HIGH required fixes merely because
   // they requested user authorization; status-shaped host evidence vanished too.
@@ -54,6 +124,131 @@ test("authorization credentials still redact in reports, including past the casc
     const safe = sanitizeProviderAuditReport(report);
     assert.ok(safe.includes("Get user authorization"));
     assert.ok(!safe.includes("private"), secret);
+  }
+});
+
+test("complete provider JSON redacts fields before its marker and beyond the cascade budget", () => {
+  const payload = [
+    "{",
+    '  "account": "private-account-before-marker",',
+    '  "error": { "message": "429 rate limit" },',
+    ...Array.from({ length: 30 }, (_, i) => `  "field${i}": "private-field-${i}",`),
+    '  "organization": "private-organization-at-end"',
+    "}",
+  ].join("\n");
+  const report = "## Evidence\n```json\n" + payload + "\n```\n## Required fixes\nGet user authorization to amend the test.";
+  const safe = sanitizeProviderAuditReport(report);
+  assert.ok(!safe.includes("private-"), "the whole provider object must stay private, not just marker-bearing fields");
+  assert.ok(safe.includes("Get user authorization to amend the test."));
+});
+
+test("a fresh multiline provider payload still redacts after earlier redactions exhaust the budget", () => {
+  const report = [
+    ...Array.from({ length: 40 }, () => "HTTP 503 Service Unavailable"),
+    "403",
+    "```json",
+    "{",
+    '  "account": "private-late-account",',
+    '  "organization": "private-late-organization"',
+    "}",
+    "```",
+    "## Required fixes",
+    "Get user authorization to amend the test.",
+  ].join("\n");
+  const safe = sanitizeProviderAuditReport(report);
+  assert.ok(!safe.includes("private-"), "an exhausted exploratory budget must not release a later payload");
+  assert.ok(safe.includes("Get user authorization to amend the test."));
+});
+
+test("split authorization credential values are not released as ordinary prose", () => {
+  for (const header of ["Authorization:", '\"authorization\":']) {
+    const safe = sanitizeProviderAuditReport([
+      "## Evidence", header, '  "Bearer private-split-value"',
+      "## Required fixes", "Get user authorization to amend the test.",
+    ].join("\n"));
+    assert.ok(!safe.includes("private-split-value"));
+    assert.ok(safe.includes("Get user authorization to amend the test."));
+  }
+});
+
+test("split credential schemes and request-id assignments protect the actual value", () => {
+  for (const prefix of ["Authorization:\nBearer", "Authorization: Basic", "request_id:", "api_key:"]) {
+    for (const earlier of ["", Array.from({ length: 40 }, () => "HTTP 503 Service Unavailable\n").join("")]) {
+      const report = `${earlier}${prefix}\nsynthetic-private-value\n## Required fixes\nGet user authorization.`;
+      const safe = sanitizeProviderAuditReport(report);
+      assert.ok(!safe.includes("synthetic-private-value"), prefix);
+      assert.ok(safe.includes("## Required fixes\nGet user authorization."));
+    }
+  }
+});
+
+test("a provider prefix expires before unrelated structured evidence", () => {
+  for (const gap of ["\n\n\n\n", "\n```json\n\n\n"]) {
+    const evidence = '{"status":"pass","message":"ordinary test evidence"}';
+    assert.ok(sanitizeProviderAuditReport(`403${gap}${evidence}`).includes(evidence));
+  }
+});
+
+test("an incomplete excerpt cannot hide a later complete provider JSON object", () => {
+  for (const excerpt of ["{ incomplete excerpt", "{", "[ incomplete excerpt"]) {
+    const report = [excerpt, "", "{",
+      '  "account": "synthetic-private-account",',
+      '  "status": 429', "}",
+      "## Required fixes", "Get user authorization.",
+    ].join("\n");
+    const safe = sanitizeProviderAuditReport(report);
+    assert.ok(!safe.includes("synthetic-private-account"), excerpt);
+    assert.ok(safe.includes("Get user authorization."));
+  }
+});
+
+test("labeled multiline provider payloads redact fully after budget exhaustion", () => {
+  for (const label of ["HTTP 429 response: ", "Provider error (HTTP 503): ", "request_id=req-synthetic response: "]) {
+    for (const suffix of ["", " trailing transport context"]) {
+      const report = [
+        ...Array.from({ length: 40 }, () => "HTTP 503 Service Unavailable"),
+        `${label}{`,
+        '  "account": "synthetic-private-account",',
+        '  "organization": "synthetic-private-organization"',
+        `}${suffix}`,
+        "## Required fixes", "Get user authorization to amend the test.",
+      ].join("\n");
+      const safe = sanitizeProviderAuditReport(report);
+      assert.ok(!safe.includes("synthetic-private-account"), label);
+      assert.ok(!safe.includes("synthetic-private-organization"), label);
+      assert.ok(safe.includes("Get user authorization to amend the test."));
+    }
+  }
+});
+
+test("identified provider JSON continuation stays private even when truncated or malformed", () => {
+  for (const ending of ["", "}"]) {
+    const report = [
+      ...Array.from({ length: 40 }, () => "HTTP 503 Service Unavailable"),
+      "HTTP 429 response: {",
+      '  "account": "synthetic-private-account"',
+      '  "organization": "synthetic-private-organization"',
+      ending,
+      "## Required fixes", "Get user authorization to amend the test.",
+    ].join("\n");
+    const safe = sanitizeProviderAuditReport(report);
+    assert.ok(!safe.includes("synthetic-private-"));
+    assert.ok(safe.includes("## Required fixes\nGet user authorization to amend the test."));
+  }
+});
+
+test("trailing annotations after a completed payload do not consume subsequent findings", () => {
+  const finding = "1. [HIGH] Get user authorization to amend the contract.";
+  for (const payload of [
+    'HTTP 429 response: {"account":"synthetic-private"} [unfinished citation',
+    'HTTP 429 response: {\n  "account":"synthetic-private"\n} [unfinished citation',
+    'HTTP 429 response: {\n  "account":"synthetic-private", "status":429\n} [unfinished citation',
+    'HTTP 429 response: {"account":"synthetic-private"}\nHTTP 503 Service Unavailable',
+    '{ incomplete excerpt\nHTTP 429 response: {"account":"synthetic-private"} [unfinished citation',
+  ]) {
+    const safe = sanitizeProviderAuditReport(`${payload}\n${finding}`);
+    assert.ok(!safe.includes("synthetic-private"));
+    assert.ok(safe.includes(finding), payload);
   }
 });
 

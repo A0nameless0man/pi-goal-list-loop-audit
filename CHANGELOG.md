@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.39.33 — deterministic audit persistence and private actionable feedback (2026-10-15)
+
+### Final-audit recovery and actionable feedback
+
+- Make durable goal markdown clock-independent: audit ages and retry countdowns use the saved snapshot time. Crossing a clock boundary between write and readback no longer falsely fails the auditor cursor's persistence check and stops automatic recovery. Live UI clocks remain live; real persistence and ownership checks remain enforced.
+- Preserve report findings that request user authorization and ordinary status-shaped test/host evidence. Explicit provider-body and credential-field ownership replaces the expiring global redaction budget: leading fields, late/labeled payloads, split credentials and truncated JSON remain private without swallowing later HIGH/MED/LOW findings. An iterative JSON-prefix recognizer validates incomplete strings, escapes, tokens and containers; short provider-error privacy policy is unchanged.
+- Add clock-boundary/readback, legacy timestamp, JSON-prefix truncation and report preservation/privacy regressions. Regenerate the runtime inventory for the shipped source.
+- Retain read-only fleet triage and a timestamped two-project recheck: the formerly parked claims survived external recovery and received disapprovals, while newer audits were active at the final sample. Local clock-regression proof does not establish every historical cursor warning's cause; see `audit/LIVE-PROJECT-FINAL-AUDIT-TRIAGE-2026-10-15.md`.
+- Installing the fix does not reload other sessions, repair provider access, waive semantic objections or release intentional holds. Any claim still parked requires explicit supported recovery in its owning session after corrected code is loaded; do not duplicate an audit already running.
+
 ## 0.39.32 — honest pause questions and a Designer session fallback (2026-10-14)
 
 ### Pause cards ask instead of decreeing
