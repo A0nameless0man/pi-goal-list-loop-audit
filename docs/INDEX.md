@@ -31,7 +31,7 @@
 ## Versions and shipped content
 
 [CHANGELOG.md](../CHANGELOG.md) records the release history from
-v0.35.14–v0.39.33, including deterministic final-audit persistence,
+v0.35.14–v0.39.34, including deterministic final-audit persistence,
 provider-report preservation/privacy fixes and untagged v0.39.29 development changes; the npm registry remains the publication authority. `/glla version` reports the loaded version
 and registry comparison. A checkout can contain changes not yet published.
 

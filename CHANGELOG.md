@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.39.34 — auditor fallback policy and honest settings display (2026-10-15)
+
 ### Auditor policy and settings truth
 
 - Apply forbidden-model policy to resolved canonical auditor identities and the implicit session last resort, so bare aliases and an exhausted configured ladder cannot resurrect a forbidden model.
