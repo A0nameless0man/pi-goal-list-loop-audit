@@ -58,7 +58,7 @@ for (const command of ["loop", "glla"]) {
       await tick(150);
       assert.ok(
         ctx.ui.matching("Retrying the saved main-model recovery now").length > 0,
-        `expected the saved recovery to be retried, got: ${ctx.ui.messages.map(m => m.message).join("\n")}`,
+        "expected the saved recovery to be retried",
       );
       assert.equal(ctx.ui.matching("Nothing to resume").length, 0, "must not shrug while saved recovery exists");
       assert.equal(ctx.ui.matching("No held loop to resume").length, 0, "must not shrug while saved recovery exists");

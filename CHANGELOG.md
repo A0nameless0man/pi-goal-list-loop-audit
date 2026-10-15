@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Stranded parked-loop recovery resume
+
+- `/glla resume` and `/loop resume` now retry a saved loop-kind
+  main-model recovery that lost its timer (e.g. across a session
+  restart) and carries no manual flag, instead of answering
+  "Nothing to resume" / "No held loop to resume" while the widget
+  promised "/loop resume retries the recovery". Paused/active/
+  auditing goals keep their existing resume paths.
+  (`tests/loop-parked-recovery-resume.test.ts`)
+
 ## 0.39.34 — auditor fallback policy and honest settings display (2026-10-15)
 
 ### Auditor policy and settings truth

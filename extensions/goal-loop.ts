@@ -1458,6 +1458,22 @@ async function cmdLoop(args: string, ctx: ExtensionContext): Promise<void> {
       void probeMainModelRecovery(ctx);
       return;
     }
+    // v0.39.35 (field 2026-10-15, junk-runner): a parked loop whose saved
+    // recovery lost its timer (a restart drops in-memory timers; the retry
+    // then sits held on unrestored context) and carries no manual flag is
+    // stranded — the widget still promises "/loop resume retries the
+    // recovery" but every resume verb shrugged. An explicit resume re-arms
+    // the probe exactly like the armed-timer branch above; the probe itself
+    // stays gated (supervisor pause, load hold, episode currency).
+    if (state.mainModelRecovery?.kind === "loop"
+      && ((state.mainModelRecovery.attempts ?? 0) > 0 || !!state.mainModelRecovery.firstFailureAt)
+      && state.loop) {
+      clearMainModelRecoveryTimer();
+      flags.continuationDispatchStoodDown = false;
+      ctx.ui.notify("Retrying the saved main-model recovery now — one provider probe, then the configured fallback models if needed.", "info");
+      void probeMainModelRecovery(ctx);
+      return;
+    }
     // /loop with no args (or /loop resume, v0.28.22) → resume a held loop
     // if one is waiting; otherwise draft the loop config (metric design is
     // the whole game for a long-running loop; never start one blind).

@@ -2904,6 +2904,21 @@ async function cmdGllaResume(ctx: ExtensionContext): Promise<void> {
     void probeMainModelRecovery(ctx);
     return;
   }
+  // v0.39.35 (field 2026-10-15, junk-runner): same stranded recovery as
+  // the /loop resume entry — saved loop-kind work, no timer, no manual
+  // flag, supervised target reduced to a parked loop (goal terminal or
+  // absent). Without this, /glla resume fell through to "Nothing to
+  // resume" while the widget promised a retry. Paused/active/auditing
+  // goals keep their existing resume paths below.
+  if (state.mainModelRecovery?.kind === "loop"
+    && ((state.mainModelRecovery.attempts ?? 0) > 0 || !!state.mainModelRecovery.firstFailureAt)
+    && state.loop && (!state.goal || ["complete", "aborted"].includes(state.goal.status))) {
+    clearMainModelRecoveryTimer();
+    flags.continuationDispatchStoodDown = false;
+    ctx.ui.notify("Retrying the saved main-model recovery now — one provider probe, then the configured fallback models if needed.", "info");
+    void probeMainModelRecovery(ctx);
+    return;
+  }
   const g = state.goal;
   const goalResumable = g && g.status === "paused";
   const loopResumable = isHeldLoopResumable(state.loop);
