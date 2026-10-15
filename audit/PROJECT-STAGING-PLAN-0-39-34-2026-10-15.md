@@ -35,3 +35,29 @@ For each row:
 4. Verify `/glla version` reports 0.39.34
 
 If any step fails, stop the row and report; do not auto-retry.
+
+## Result
+
+Step 1 ran for all 10 clean projects (neonbreak, polis,
+capture-anime-girls, hellhunter, studio, junk-runner, outpost-eden,
+deathrun, hegemon, platform); `pi list` now shows the npm copy at
+`/home/dracon/.pi/agent/npm/node_modules/pi-goal-list-loop-audit`
+0.39.34 alongside the local dev symlink
+`/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit` (also 0.39.34 on
+main). A per-project `node_modules/pi-goal-list-loop-audit/package.json`
+is **not** created because pi uses the global agent extension dir;
+projects pick up the version through the global install or local dev
+symlink. Steps 2-4 require a session `/reload` per project; this loop
+cannot perform them from the GLLA repo cwd. The owner of each
+project's session must run `/reload` so the new module is loaded. The
+tracked audit entry for this staging lives at
+`audit/PROJECT-STAGING-PLAN-0-39-34-2026-10-15.md` plus a per-project
+provider-recovery record will be appended once each project session
+sees the bump.
+
+## Not touched
+
+- darklord, doomtap, endless-td, db-gateway: live audit worker
+  running; install would race an active job.
+- freeport, eve: paused wait/blocked; install is reversible but
+  recovery is gated on the saved hold reason.
