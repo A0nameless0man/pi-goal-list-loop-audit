@@ -27,6 +27,36 @@ import {
   SANITIZE_MIN_REDACTION_LINES,
 } from "../extensions/quota-retry.ts";
 
+test("contract authorization findings and ordinary JSON evidence remain actionable", () => {
+  // db-gateway's live report lost two HIGH required fixes merely because
+  // they requested user authorization; status-shaped host evidence vanished too.
+  const report = [
+    "## Required fixes",
+    "1. **[HIGH]** Get explicit user authorization to amend the credential grep contract.",
+    "2. **[HIGH]** Line 221 needs its fixed-in reference.",
+    "3. **[HIGH]** The 12 vs 13 file-count mismatch needs user authorization, not an assumed waiver.",
+    "## Evidence",
+    '"dg_service": { "status": "pass", "active_state": "active" }',
+    "mode=local, verdict=pass, host_side.status=skipped",
+    "sample reason: a test failed, not a provider payload",
+  ].join("\n");
+  assert.equal(sanitizeProviderAuditReport(report), report);
+});
+
+test("authorization credentials still redact in reports, including past the cascade budget", () => {
+  for (const secret of [
+    "Authorization: Bearer sk-private",
+    '\"authorization\": \"Basic private-credential\"',
+    "authorization=private-value",
+    "Authorization Bearer private-value",
+  ]) {
+    const report = auditorReport("Get user authorization to amend the contract.", 400) + "\n" + secret;
+    const safe = sanitizeProviderAuditReport(report);
+    assert.ok(safe.includes("Get user authorization"));
+    assert.ok(!safe.includes("private"), secret);
+  }
+});
+
 /** The hellhunter shape: a real report quoting error-shaped test output. */
 function auditorReport(requiredFixes: string, quoteLines = 120): string {
   const quotes = Array.from({ length: quoteLines }, (_, i) =>

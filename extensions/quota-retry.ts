@@ -206,8 +206,15 @@ export function sanitizeProviderDisplayText(value: string): string {
  */
 export function sanitizeProviderAuditReport(report: string | undefined): string {
   if (!report) return "";
+  // Reports discuss user authorization as a contract decision. Only an
+  // authorization credential/header is sensitive here, not that ordinary word.
+  // Keep the stricter short provider-error projection unchanged.
+  const reportMarker = PROVIDER_SENSITIVE_MARKER.source.replace(
+    "authorization",
+    String.raw`authorization(?:["']?\s*[:=]|\s+(?:Bearer|Basic)\s)`,
+  );
   const providerLine = new RegExp(
-    `${PROVIDER_SENSITIVE_MARKER.source}|request[\\s_-]*(?:id|identifier)|rate_limit_error|insufficient_quota`,
+    `${reportMarker}|request[\\s_-]*(?:id|identifier)|rate_limit_error|insufficient_quota`,
     "i",
   );
   const structuredLine = /["']?(?:status(?:code)?|error(?:message)?|message|detail|reason|request[\s_-]*(?:id|identifier)|retry[\s_-]*after|reset[\s_-]*(?:at|after))\b["']?\s*[:=]/i;
@@ -283,7 +290,10 @@ export function sanitizeProviderAuditReport(report: string | undefined): string 
         jsonDepth = 0;
         pendingJsonLines = 0;
       } else {
-        marked = inJson || structuredMarked || entersPendingJson;
+        // Keys like status/message/reason also occur in ordinary test and
+        // host-audit evidence. They continue a provider payload only AFTER
+        // an actual provider marker; they cannot start redaction themselves.
+        marked = inJson || entersPendingJson || (pendingJsonLines > 0 && structuredMarked);
         if (marked && redactedLines >= redactionBudget) {
           budgetExhausted = true;
           jsonDepth = 0;

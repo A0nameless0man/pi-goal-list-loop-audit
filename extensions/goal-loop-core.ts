@@ -3669,7 +3669,15 @@ export function renderGoalMarkdown(goal: Goal): string {
     // it is projected from the same helper every live surface uses — so the
     // durable record can never read "running" for a claim a restart will
     // demote, or "recovery-pending" for one that is merely starting.
-    const lifecycle = auditLifecycleProjection(goal.pendingCompletion);
+    // This is a durable snapshot, not a ticking UI. updateGoal verifies the
+    // write by rendering it again after journaling; using Date.now here made
+    // a second-boundary crossing look like a failed cursor write and parked
+    // healthy recovery permanently. Keep ages/deadlines anchored to this
+    // snapshot. Live status surfaces still project against the current time.
+    const snapshotAt = [goal.updatedAt, goal.createdAt, goal.pendingCompletion.at]
+      .map((at) => Date.parse(at ?? ""))
+      .find((at) => Number.isFinite(at)) ?? 0;
+    const lifecycle = auditLifecycleProjection(goal.pendingCompletion, { now: snapshotAt });
     const phase = lifecycle?.phase ?? "recovery-pending";
     lines.push(`**Completion audit**: ${auditLifecycleLine(lifecycle) ?? phase}`);
     if (goal.pendingCompletion.attemptId) lines.push(`**Completion audit attempt**: \`${goal.pendingCompletion.attemptId}\``);
