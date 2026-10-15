@@ -672,7 +672,10 @@ export function resolveAuditorModel(
       || modelRef(tryRef(primaryRef).model)?.toLowerCase() === currentRef.toLowerCase());
   const addCandidate = (candidateRef: string, model: any, via: string): void => {
     const key = modelRef(model)?.toLowerCase() ?? candidateRef.toLowerCase();
-    if (seenModels.has(key)) return;
+    // Enforce policy at the resolved-model boundary too: bare aliases may
+    // hide a forbidden provider-qualified ref, and the implicit session tail
+    // does not pass through ModelSelector's configured-ref filter.
+    if (forbidden(candidateRef) || forbidden(key) || seenModels.has(key)) return;
     seenModels.add(key);
     candidates.push({ ref: candidateRef, model, via });
   };
@@ -724,7 +727,7 @@ export function resolveAuditorModel(
     }
     return { model: first.model, via: first.via, fallbackModels: candidates.slice(1) };
   }
-  return { model: undefined, error: "no session model and no auditorModel configured — set one with /glla → Auditor model" };
+  return { model: undefined, error: "no eligible auditor model — configured models and session are unavailable or forbidden; set an allowed model with /glla → Auditor model" };
 }
 
 // Model selection is explicit and bounded: primary pin → ordered fallback

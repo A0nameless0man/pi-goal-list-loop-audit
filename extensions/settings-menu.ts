@@ -201,7 +201,8 @@ export function buildSettingsRows(
   // v0.38.10: the compactor never runs on the session model (it is the
   // stuck one) — unset means registry plan B, not a session lease.
   const compactorRef = settings.compactorModel?.trim() ? settings.compactorModel : "registry plan B";
-  const auditorRef = settings.auditorModel?.trim() ? settings.auditorModel : "session model";
+  const auditorRef = settings.auditorModel?.trim() ? settings.auditorModel
+    : settings.auditorModelFallbacks?.length ? "fallback chain (first eligible)" : "session model";
   // An unset auditor level follows the live parent dial. This keeps the
   // detached verifier at the same effective reasoning level as the main
   // agent (including max) without preventing an explicit auditor override.
@@ -500,7 +501,7 @@ export function buildSettingsRows(
       label: "Auditor agent",
       valueText: modelThinkingText(auditorRef, auditorThinking, subagent),
       sourceText: src("auditorModel"),
-      description: "provider/model override for the isolated auditor agent — the fallback chain below runs after this primary; its thinking defaults to the parent session",
+      description: "provider/model override for the isolated auditor agent; unset primary tries configured fallbacks before the session last resort. Thinking defaults to the parent session; duplicate refs do not create independent backups.",
     },
     {
       id: "auditorModelFallbacks",
