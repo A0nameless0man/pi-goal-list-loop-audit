@@ -34,6 +34,14 @@ Version receipts span 0.39.30–0.39.33. Installing a new package does not repla
 3. Honest settings need to distinguish a configured primary from an actual selection. A menu label must not imply session inheritance if the configured backup list is tried first, nor claim its thinking cap is the selected auditor's effective cap.
 4. Keep diagnostics narrowly allowlisted; avoid dumping environments, auth files or raw prompts/provider payloads. Recorded security incidents are operator follow-ups, not grounds for automated key/account/OS changes in GLLA.
 
+## Current /glla configuration observation
+
+A narrowly allowlisted read of the canonical global file confirmed no auditor primary pin, fallback `meta/muse-spark-1.3-contributor`, same-model swap off and requested thinking xhigh. This is exactly the fallback-only shape exercised by the new display tests. Global settings were not changed. No read of a model name proves usable quota or independent capacity.
+
+## Unrelated post-release repository change
+
+The repository also contains post-release commit `aa5827f1`, removing 13 generic dracon filter patterns from `.gitattributes` and 13 corresponding re-include exceptions from `.gitignore`. This is **not part of this repair** and was not authored or reverted by this investigation. A commit's daemon-style message alone does not establish the actor or intent. The net privacy/ignore impact is not established here; do not infer that a secret was published or that removing a re-include exception is itself a leak. Record it for separate operator/sync-policy review before sweeping the whole post-release delta into a future release. No daemon, OS, upstream plugin or git-history repair was attempted.
+
 ## Verified GLLA defects and implemented corrections
 
 ### 1. Forbidden session and bare alias re-entry
