@@ -114,6 +114,39 @@ function result(overrides: Partial<GoalAuditorResult> = {}): GoalAuditorResult {
   };
 }
 
+test("forbidden session models never re-enter the auditor ladder as last resort", async () => {
+  await withFakeContext(({ ctx, primary, fallback1, forbiddenRef }) => {
+    ctx.model = forbiddenRef;
+    for (const swap of [true, false]) {
+      const resolved = resolveAuditorModel(ctx, "test/primary", ["test/fallback-1"], swap);
+      assert.equal(resolved.model, primary);
+      assert.deepEqual((resolved.fallbackModels ?? []).map(candidate => candidate.model), [fallback1]);
+    }
+  });
+});
+
+test("a forbidden session cannot resurrect an exhausted configured auditor chain", async () => {
+  await withFakeContext(({ ctx, forbiddenRef }) => {
+    ctx.model = forbiddenRef;
+    for (const ref of ["test/forbidden", "forbidden"]) {
+      for (const swap of [true, false]) {
+        const resolved = resolveAuditorModel(ctx, ref, [], swap);
+        assert.equal(resolved.model, undefined, `${ref}, swap=${swap}`);
+        assert.deepEqual(resolved.fallbackModels ?? [], []);
+        assert.match(resolved.error ?? "", /eligible|forbidden/i);
+      }
+    }
+  });
+});
+
+test("provider-qualified forbidden policy also rejects bare auditor aliases", async () => {
+  await withFakeContext(({ ctx, fallback1, session }) => {
+    const resolved = resolveAuditorModel(ctx, "forbidden", ["test/fallback-1"], false);
+    assert.equal(resolved.model, fallback1);
+    assert.deepEqual((resolved.fallbackModels ?? []).map(candidate => candidate.model), [session]);
+  });
+});
+
 test("auditor ordered fallback refs retain order and use the main normalizer", async () => {
   await withFakeContext(({ ctx, primary, fallback1, fallback2, session }) => {
     const resolved = resolveAuditorModel(ctx, "test/primary", ["test/fallback-1", "test/fallback-2"], true);

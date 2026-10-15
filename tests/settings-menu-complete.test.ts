@@ -178,6 +178,17 @@ test("inherited drafter and auditor model rows identify the session category", (
   assert.equal(byId.get("auditorModel")?.valueText, "session model · high");
 });
 
+test("fallback-only auditor configuration does not masquerade as session inheritance", () => {
+  const rows = buildSettingsRows(
+    { auditorModelFallbacks: ["provider/backup"], auditorSameSessionSwap: false } as Settings,
+    EMPTY_PROV,
+    { sessionModel: "provider/session", sessionThinkingLevel: "max" },
+  );
+  const row = rows.find(candidate => candidate.id === "auditorModel")!;
+  assert.equal(row.valueText, "fallback chain (first eligible) · max");
+  assert.match(row.description, /unset primary.*fallbacks.*before.*session/i);
+});
+
 test("all embedded subagent types expose editable fallback-chain rows", () => {
   const rows = buildSettingsRows(
     {

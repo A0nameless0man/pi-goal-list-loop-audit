@@ -58,6 +58,23 @@ test("headless /glla shows the effective auditor thinking level with its why", a
   await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
 });
 
+test("headless fallback-only auditors do not claim the session thinking cap is effective", async () => {
+  const cwd = tmpCwd();
+  fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify({
+    aggressiveMode: false, auditorModelFallbacks: ["agnes/agnes-3.0-flash"],
+    auditorSameSessionSwap: false,
+  }));
+  const ctx = await boot(cwd);
+  try {
+    await pi.command("glla", "", ctx);
+    const text = headlessText(ctx);
+    assert.match(text, /auditorThinkingEffective: pending \(requested max \[session-inherit\]; configured fallbacks precede session; per-model support checked at dispatch\)/);
+    assert.doesNotMatch(text, /auditorThinkingEffective: max \(.*capabilities unknown/);
+  } finally {
+    await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
+  }
+});
+
 test("headless /glla honors an explicit thinking setting and unknown models", async () => {
   const cwd = tmpCwd();
   fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify({ aggressiveMode: false, auditorThinkingLevel: "medium", auditorModel: "agnes/agnes-3.0-flash" }));
