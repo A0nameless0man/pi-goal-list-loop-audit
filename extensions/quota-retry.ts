@@ -214,7 +214,7 @@ export function sanitizeProviderAuditReport(report: string | undefined): string 
     String.raw`authorization(?:["']?\s*[:=]|\s+(?:Bearer|Basic)\s)`,
   );
   const providerLine = new RegExp(
-    `${reportMarker}|request[\\s_-]*(?:id|identifier)|rate_limit_error|insufficient_quota`,
+    `${reportMarker}|request[\\s_-]*(?:id|identifier)|rate_limit_error|insufficient_quota|["']?(?:status(?:[_\\s-]?code)?|code)["']?\\s*[:=]\\s*["']?5\\d\\d\\b`,
     "i",
   );
   const structuredLine = /["']?(?:status(?:code)?|error(?:message)?|message|detail|reason|request[\s_-]*(?:id|identifier)|retry[\s_-]*after|reset[\s_-]*(?:at|after))\b["']?\s*[:=]/i;
