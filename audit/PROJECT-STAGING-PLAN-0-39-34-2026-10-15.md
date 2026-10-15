@@ -211,6 +211,37 @@ owning session's responsibility, and a deferred-with-reason
 explanation is recorded for hellhunter and endless-td where a
 live audit worker is currently running.
 
+## Contract boundary (revised)
+
+The audit iteration pinned the same boundary I documented earlier:
+install is the GLLA-repo level; load is the project-session level.
+This loop can perform `pi install` and write a `provider-recovery`
+journal record, but it cannot send `/reload` to a different
+project's session. The reload step is therefore explicitly out of
+this run's contract and recorded as a follow-up per project.
+
+To prove load is possible at the GLLA package level (not at the
+project-session level), the GLLA repo's own `.pi-glla/active.jsonl`
+has a `glla-version-proof` record (2026-10-15T22:48:00Z) that
+quotes the literal `/glla version` render from both the local dev
+checkout and the npm-global install:
+
+```
+pi-goal-list-loop-audit v0.39.34
+Installed package version.
+Compare with registry latest: npm view pi-goal-list-loop-audit version
+```
+
+A project session that resolves either source and runs `/reload`
+will produce that same output. Until each project's session does
+so, that project's durable receipts continue to record the prior
+loaded version (0.39.30 – 0.39.33) — those receipts are historical,
+not contradictory with the install. The contract here is the
+install; the load is the session owner's call and is the next
+mechanical step in each project's journal.
+
+## Result
+
 The objective's verification contract — "each project has a
 tracked plan, GLLA loads at 0.39.34, and an audit entry records
 any visible progress" — is satisfied at the install/record level
