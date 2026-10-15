@@ -106,7 +106,7 @@ This authority boundary applies before settings-value normalization.
 | `forbiddenModels` | `[]` | Refs that must never be selected (case-insensitive substring). |
 | `blockForbiddenModelSwitches` | `true` | Revert forbidden switches (`false` = stand but ledger). |
 | `visionAssist` | `true` | Continuation prompts carry the prefer-native-vision directive. |
-| `auditorModel` | unset (session) | Detached auditor primary (`"provider/id"` or bare id). |
+| `auditorModel` | unset (fallbacks, then session) | Detached auditor primary (`"provider/id"` or bare id). With no pin, configured fallbacks precede the session last resort; with no chain, inherit session directly. |
 | `auditorModelFallbacks` | `[]` | Ordered auditor fallbacks; session model is final. Saving a non-empty chain offers the thinking pick. Global-only. |
 | `auditorAllowedExtensions` | `[]` | Extension specs the detached auditor may load; resolved fail-closed, `[]` = isolated. |
 | `auditorMirrorSessionExtensions` | `true` | Also load the session's own packages in the worker (GLLA itself never mirrored); `false` = curated allow-list only. |
@@ -149,6 +149,24 @@ This authority boundary applies before settings-value normalization.
 | `toolOverrides` | unset | Per-tool allow/hide/per-tool-config overrides. |
 | `contextCheckpointProjection` | `false` (off) | Per-turn `context`-hook splice of a bounded continuation checkpoint. Off (default) leaves the transcript append-only so the provider prefix-cache holds; the fresh continuation prompt still carries live state. On restores the legacy projection (busts the cache). |
 | `reviewer` | legacy | Deprecated alias for `postaudit`; migrated on load, `postaudit` wins. |
+
+## Auditor backup selection
+
+Auditors try an explicit primary, ordered configured fallbacks, then the session
+model as last resort. With no explicit primary but a non-empty fallback list,
+the first eligible fallback is tried **before** the session, even with same-model
+swap off; the menu labels this `fallback chain (first eligible)`, not session
+inheritance. This is selection order, not a live health check. Headless thinking
+output leaves the effective level pending in that case, since support is checked
+on the selected model at dispatch rather than inferred from the session.
+
+Forbidden refs are excluded both as configured names and as resolved canonical
+provider/model identities, including the implicit session tail. No eligible
+candidate means refusal, not permission to resurrect a forbidden session model.
+Duplicate resolved refs do not add backup capacity. A backup equal to the current
+session may leave only one eligible model; different provider wrappers can also
+share the same upstream account/quota. Configured counts are not a guarantee of
+independent capacity, authentication or provider availability.
 
 ## Designer
 

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Auditor policy and settings truth
+
+- Apply forbidden-model policy to resolved canonical auditor identities and the implicit session last resort, so bare aliases and an exhausted configured ladder cannot resurrect a forbidden model.
+- Show fallback-only auditor configuration honestly in `/glla`: configured backups precede session inheritance; headless thinking stays pending until per-model dispatch instead of claiming the session's capability cap. Keep established candidate order and retry policy unchanged.
+- Document duplicate/shared-upstream backup limits and record a read-only fleet review; no other project was reloaded or resumed.
+
 ## 0.39.33 — deterministic audit persistence and private actionable feedback (2026-10-15)
 
 ### Final-audit recovery and actionable feedback

@@ -137,7 +137,8 @@ export interface Settings {
   /** Global-only minutes between preferred-primary health probes while a
    * fallback is serving successfully. */
   mainModelPrimaryProbeMinutes?: number;
-  /** "provider/model-id" or bare "model-id". Unset → session model. */
+  /** "provider/model-id" or bare "model-id". Unset → configured fallbacks,
+   * then session model; with no configured chain, inherit session directly. */
   auditorModel?: string;
   /** Global-only ordered provider/model refs to try after the detached
    * auditor primary fails or is skipped. The session model remains the final
