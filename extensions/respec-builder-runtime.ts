@@ -159,7 +159,7 @@ export async function runRespecBuilderAudit(ctx: ExtensionContext): Promise<void
   const boundTimer = remainingMs !== undefined && Number.isFinite(remainingMs) && remainingMs > 0 && remainingMs <= 2147483647
     ? setTimeout(() => { if (state.loop?.startedAt === loop.startedAt && state.loop.builder === builder && parkProjectBound(ctx)) controller.abort(); }, remainingMs + 1) : undefined;
   try {
-    const goal = respecIncrementAuditGoal(builder, builder.projectId ?? loop.startedAt, nowIso());
+    const goal = respecIncrementAuditGoal(builder, builder.projectId ?? loop.startedAt, nowIso(), loop.durableSolution);
     const settings = loadSettings(ctx.cwd);
     const saved = readCompletedCompletionAudit(ctx.cwd, goal, settings.auditorStrictChallenge);
     const resolved = host.resolveModel(ctx);
