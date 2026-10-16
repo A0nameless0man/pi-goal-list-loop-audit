@@ -1,4 +1,5 @@
 import { safeDiagnostic } from "./safe-diagnostic.js";
+import { DURABLE_SOLUTION_POLICY, solutionJudgmentBrief } from "./durable-solution.js";
 import { infrastructureRetryDelay, nextInfrastructureRetry } from "./infrastructure-retry.js";
 import { respecAuditLiveScope, respecAuditStatus, respecBlockerDetails, respecBlockerActions } from "./respec-builder-ui.js";
 import { respecBuilderContext } from "./respec-builder-context.js";
@@ -447,8 +448,9 @@ async function parkLoopOnWrongBranch(ctx: ExtensionContext, loop: LoopState, whe
 }
 
 export function loopPrompt(loop: LoopState, regressionNote: string, strategyNote: string, boundsNote: string, interventionNote = "", variantNote = "", hypothesisNote = "", refineHintNote = ""): string {
+  const solutionPolicy = `${DURABLE_SOLUTION_POLICY}\n\n${solutionJudgmentBrief(loop.durableSolution)}\n\n`;
   if (loop.builder) {
-    return loadPromptWhole("goal-loop-respec-builder.md")
+    return solutionPolicy + loadPromptWhole("goal-loop-respec-builder.md")
       .replace(/\$\{ITERATION\}/g, String(loop.iteration + 1))
       .replace(/\$\{BUILDER_PHASE\}/g, loop.builder.phase)
       .replace(/\$\{SPEC_FILE\}/g, () => loop.specFile ?? "SPEC.md")
@@ -461,7 +463,7 @@ export function loopPrompt(loop: LoopState, regressionNote: string, strategyNote
   // cannot draft to nowhere: fall through to the standard prompt instead
   // of throwing on path.basename(undefined) and killing the dispatch.
   if (respecNeedsDraftPhase(loop) && loop.specFile) {
-    return loadPromptWhole("goal-loop-respec-draft.md")
+    return solutionPolicy + loadPromptWhole("goal-loop-respec-draft.md")
       .replace(/\$\{SPEC_FILE\}/g, loop.specFile!)
       .replace(/\$\{ITERATION\}/g, String(loop.iteration + 1))
       .replace(/\$\{BOUNDS_NOTE\}/g, boundsNote)
@@ -472,7 +474,7 @@ export function loopPrompt(loop: LoopState, regressionNote: string, strategyNote
   // anti-doorknob rules instead of anti-gaming rules.
   const metricless = !loop.measureCmd;
   const tmpl = loadPromptWhole(metricless ? "goal-loop-forever-metricless.md" : "goal-loop-forever.md");
-  return tmpl
+  return solutionPolicy + tmpl
     .replace(/\$\{ITERATION\}/g, String(loop.iteration + 1))
     .replace(/\$\{TARGET\}/g, loop.target)
     .replace(/\$\{MEASURE_CMD\}/g, loop.measureCmd ?? "none")
