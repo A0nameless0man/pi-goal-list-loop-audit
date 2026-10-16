@@ -49,6 +49,13 @@ for (const mode of ['goal', 'list', 'loop'] as const) {
           clearMainModelRecoveryTimer();
           await probeMainModelRecovery(ctx as unknown as ExtensionContext);
           assert.equal(mode === 'loop' ? state.loop?.active : state.goal?.status === 'active', true);
+          // The per-test budget is 300s, but the suite's no-output watchdog
+          // is 180s. Emit bounded progress ONLY after real durable assertions
+          // pass; a stuck event/probe must still go silent and be terminated.
+          // Do not use a timer heartbeat, raise limits or reduce 2101 cycles.
+          if (n === 0 || (n + 1) % 250 === 0 || n === 2100) {
+            console.error(`[provider-exhaustion] ${mode}: ${n + 1}/2101 durable failure/probe cycles verified`);
+          }
         }
         assert.ok(state.mainModelRecovery!.attempts > 2100);
         assert.ok(clock - realNow() > 24 * 3600000, 'episode outlives the legacy horizon');
