@@ -4004,6 +4004,17 @@ function registerAgentTools(pi: any): void {
       if (newTarget === loop.target && newMeasure === loop.measureCmd && !specChange) {
         return { content: [{ type: "text", text: "Refinement proposed no changes — provide a new target, a new measureCmd, a spec change, or any combination." }], details: {} };
       }
+      let originalSpec: string | undefined;
+      let proposedSpec: string | undefined;
+      if (specChange && loop.specFile) {
+        try {
+          originalSpec = fs.readFileSync(loop.specFile, "utf8");
+          proposedSpec = p.specText?.trim() ? p.specText.trim() + "\n" : originalSpec;
+          if (p.specAppend?.trim()) proposedSpec += (proposedSpec.endsWith("\n") ? "" : "\n") + p.specAppend.trim() + "\n";
+        } catch {
+          return { content: [{ type: "text", text: "Cannot inspect the current spec for scope confirmation; no refinement was applied." }], details: {}, isError: true };
+        }
+      }
       // Measure change → orchestrator test-runs the new command first.
       let newBaseline: number | null = null;
       let testOutput = "";
@@ -4023,7 +4034,7 @@ function registerAgentTools(pi: any): void {
       try {
           confirmed = await liveCtx.ui.confirm(
             "Confirm loop spec refinement",
-          `Rationale: ${sanitizeDisplayText(p.rationale)}\n\nTarget:\n  old: ${sanitizeDisplayText(loop.target)}\n  new: ${sanitizeDisplayText(newTarget)}\n\nMeasure:\n  old: ${sanitizeDisplayText(loop.measureCmd ?? "none")}\n  new: ${sanitizeDisplayText(newMeasure)}${newMeasure !== loop.measureCmd ? `\n  test-run (already executed once by the orchestrator): ${sanitizeDisplayText(testOutput).slice(0, 120)} → ${newBaseline}` : ""}${specChange ? `\n\nSpec file (${sanitizeDisplayText(loop.specFile ?? "")}:\n  ${p.specText?.trim() ? `REPLACE with ${p.specText!.trim().length} chars` : ""}${p.specText?.trim() && p.specAppend?.trim() ? " + " : ""}${p.specAppend?.trim() ? `APPEND: ${sanitizeDisplayText(p.specAppend!.trim()).slice(0, 120)}` : ""}` : ""}\n\nThe loop ${wasActive ? "keeps running" : "stays stopped until /loop resume"} against the refined spec (iteration ${loop.iteration} so far). Apply?`,
+          `Rationale: ${sanitizeDisplayText(p.rationale)}\n\nTarget:\n  old: ${sanitizeDisplayText(loop.target)}\n  new: ${sanitizeDisplayText(newTarget)}\n\nMeasure:\n  old: ${sanitizeDisplayText(loop.measureCmd ?? "none")}\n  new: ${sanitizeDisplayText(newMeasure)}${newMeasure !== loop.measureCmd ? `\n  test-run (already executed once by the orchestrator): ${sanitizeDisplayText(testOutput).slice(0, 120)} → ${newBaseline}` : ""}${specChange ? `\n\nSpec file (${sanitizeDisplayText(loop.specFile ?? "")}:\n  ${p.specText?.trim() ? `REPLACE with ${p.specText!.trim().length} chars` : ""}${p.specText?.trim() && p.specAppend?.trim() ? " + " : ""}${p.specAppend?.trim() ? `APPEND: ${sanitizeDisplayText(p.specAppend!.trim()).slice(0, 120)}` : ""}` : ""}\n\nThe loop ${wasActive ? "keeps running" : "stays stopped until /loop resume"} against the refined spec (iteration ${loop.iteration} so far). Apply?` + (specChange ? `\n\nCURRENT SPEC:\n${sanitizeDisplayText(originalSpec ?? "")}\n\nPROPOSED SPEC:\n${sanitizeDisplayText(proposedSpec ?? "")}` : ""),
           );
       } catch {
         confirmed = false;
@@ -4042,9 +4053,8 @@ function registerAgentTools(pi: any): void {
       let nextSpecChecked = loop.specFile ? countCheckedSpecItems(loop.specFile) ?? undefined : undefined;
       if (specChange && loop.specFile) {
         try {
-          let spec = fs.readFileSync(loop.specFile, "utf8");
-          if (p.specText?.trim()) spec = p.specText.trim() + "\n";
-          if (p.specAppend?.trim()) spec += (p.specText?.trim() ? "" : spec.endsWith("\n") ? "" : "\n") + p.specAppend.trim() + "\n";
+          if (fs.readFileSync(loop.specFile, "utf8") !== originalSpec) throw new Error("The spec changed during confirmation; no refinement was applied.");
+          const spec = proposedSpec!;
           const temp = `${loop.specFile}.${process.pid}.${Date.now()}.tmp`;
           try {
             fs.writeFileSync(temp, spec, { encoding: "utf8", flag: "wx" });
