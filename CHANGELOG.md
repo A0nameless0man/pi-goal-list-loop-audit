@@ -1,10 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Empty (next batch goes here)
+
+Promote this section to a dated release heading as part of the next release
+contract run. It must exist as the canonical place to capture changes between
+published versions; the release-contract test enforces exactly one such
+section at the time of release.
+
 ## 0.39.35 — durable-solution authority and evidence (2026-10-16)
 
 ### Durable-solution authority and evidence
-
-- Share typed, target/revision-bound judgment across goal, list, ordinary loop
 
 - Share typed, target/revision-bound judgment across goal, list, ordinary loop
   and project loop. Require concrete evidence and a named durable correction;
