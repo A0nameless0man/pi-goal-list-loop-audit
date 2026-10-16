@@ -129,7 +129,7 @@ test("shared continuation and both auditor paths require independent evidence, n
   assert.match(continuation, /executor assertion/);
   assert.ok(continuation.includes(deferred.followUp!));
   const building = planRespecIncrement(loop.builder!, [{ id: "T1", text: "round trip", requirementIds: ["R1"] }]);
-  const auditing = beginRespecAudit(claimRespecTask(building, "T1"), "attempt", "2026-10-16T13:30:00Z", "adapter works");
+  const auditing = beginRespecAudit(claimRespecTask(building, "T1"), "attempt", "adapter works");
   const projectGoal = respecIncrementAuditGoal(auditing, loop.startedAt, "2026-10-16T13:30:00Z", loop.durableSolution);
   const projectAudit = buildGoalAuditorPrompt(projectGoal, "done", "tests pass");
   assert.match(projectAudit, /independently verify its blocker, safety, rollback and checks/);
