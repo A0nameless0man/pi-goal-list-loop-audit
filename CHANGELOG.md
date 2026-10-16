@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.39.35 — durable-solution authority and evidence (2026-10-16)
 
 ### Durable-solution authority and evidence
+
+- Share typed, target/revision-bound judgment across goal, list, ordinary loop
 
 - Share typed, target/revision-bound judgment across goal, list, ordinary loop
   and project loop. Require concrete evidence and a named durable correction;
