@@ -9,7 +9,7 @@ import { loopPrompt } from "../extensions/goal-loop.js";
 import { buildGoalAuditorPrompt } from "../extensions/goal-loop-auditor.js";
 import { respecIncrementAuditGoal } from "../extensions/respec-builder-audit.js";
 import { createRespecBuilder, adoptRespecRequirements, planRespecIncrement, claimRespecTask, beginRespecAudit } from "../extensions/respec-builder.js";
-import { judgmentMatchesTarget, admitSolutionJudgment, type SolutionJudgmentInput } from "../extensions/durable-solution.js";
+import { judgmentMatchesTarget, admitSolutionJudgment, normalizeSolutionJudgment, type SolutionJudgmentInput } from "../extensions/durable-solution.js";
 import { resumeSettlingCompletionAudit } from "../extensions/loops/goal-auditor-hooks.js";
 import { MockPi, makeMockCtx, seedGoal, seedLoop, seedState, tmpCwd } from "./harness/mock-pi.js";
 
@@ -201,9 +201,52 @@ test("recovered approval with unfinished deferred tasks returns to rework, not a
   assert.ok(after.pendingTasks!.some(task => task.includes("Inspect runtime")));
   assert.equal(after.pauseReason, undefined);
   assert.equal(fs.existsSync(`${cwd}/.pi-glla/archive/${before.id}.md`), false);
+  // Reconciliation must not release an explicit human hold or overwrite why.
+  seedState(cwd, { goal: { ...after, status: "paused", pauseKind: "blocked", pauseReason: "Operator asked to hold this work", pauseSuggestedAction: "Wait for explicit authorization", pendingCompletion: { completionSummary: "done", at, attemptId: "held-approval", phase: "settling", verdictAt: at } } });
+  __testOnlyLoadState(cwd);
+  assert.equal(resumeSettlingCompletionAudit(ctx as unknown as ExtensionContext), "parked");
+  assert.equal(readState(cwd).goal!.status, "paused");
+  assert.equal(readState(cwd).goal!.pauseReason, "Operator asked to hold this work");
+  assert.equal(readState(cwd).goal!.pendingCompletion, undefined);
 });
 
+for (const consent of [false, true]) {
+  test(`committed task replacement requires specific consent (${consent}) and preserves the contract`, async () => {
+    const { cwd, pi, ctx } = harness("goal");
+    seedState(cwd, { goal: { ...state.goal!, taskList: { version: 1, tasks: [{ id: "1", title: "Original committed task", status: "pending" }] } } });
+    __testOnlyLoadState(cwd);
+    const before = readState(cwd).goal!;
+    fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, JSON.stringify({ autoAcceptDrafts: true }));
+    let asked = 0;
+    ctx.ui.confirmImpl = async (_title, body) => {
+      asked++; assert.ok(body.includes(before.verificationContract!));
+      assert.match(body, /Original committed task/); assert.match(body, /Reverify current round trip/);
+      return consent;
+    };
+    await pi.runTool("propose_task_list", { replaceExisting: true, tasks: [{ title: "Reverify current round trip" }] }, ctx);
+    assert.equal(asked, 1);
+    const after = readState(cwd).goal!;
+    assert.equal(after.objective, before.objective);
+    assert.equal(after.verificationContract, before.verificationContract);
+    assert.equal(after.revision, consent ? 5 : 4);
+    assert.equal(after.taskList!.tasks[0]!.title, consent ? "Reverify current round trip" : "Original committed task");
+    assert.equal(after.taskList!.tasks[0]!.status, "pending");
+    assert.equal(after.pendingCompletion, undefined);
+    if (consent) assert.match(fs.readFileSync(`${cwd}/.pi-glla/active.jsonl`, "utf8"), /committed_tasks_amended/);
+  });
+}
+
 for (const mode of ["goal", "loop"] as const) {
+  test(`${mode}: malformed persisted judgments cannot become host-verified evidence on restore`, () => {
+    const { cwd } = harness(mode);
+    const malformed = { version: 1, authority: "host-verified", choice: "inline", target: null, evidence: "synthetic marker" };
+    seedState(cwd, mode === "goal" ? { goal: { ...state.goal!, durableSolution: malformed } } : { loop: { ...state.loop!, durableSolution: malformed } });
+    __testOnlyLoadState(cwd);
+    assert.equal(judgment(cwd), undefined);
+    assert.equal(state.goal?.durableSolution ?? state.loop?.durableSolution, undefined);
+    assert.equal(normalizeSolutionJudgment({ ...malformed, authority: "executor-assertion" }), undefined);
+  });
+
   test(`${mode}: failed journal persistence grants no typed decision or workaround authority`, async () => {
     const { cwd, pi, ctx } = harness(mode);
     const before = JSON.stringify(state);

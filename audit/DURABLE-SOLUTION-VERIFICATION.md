@@ -1,80 +1,121 @@
-# Durable-solution verification
+# Durable-solution verification — corrected after disapproval
 
-Baseline: package 0.39.34, working tree at 8fa8603c.
-Status: implementation and bounded verification complete; no publication.
+Status: implementation and focused checks pass; full release gate is PENDING.
+Do not treat this file's existence or any previous completion narrative as proof.
+The original completion claim was disapproved and tasks 2–4 were reopened. The
+original objective and all five acceptance criteria remain unchanged.
 
-## Requirement-to-artifact mapping
+Baseline: 6943a00b1e0b84af574dc5902a7e5556a19815f9; package 0.39.34.
+The prior summary's 285/293 focused-test totals were inconsistent and counted
+repeated cases; they are superseded by the exact gate results below.
 
-| Requirement | Implementation | Test | Result |
-| --- | --- | --- | --- |
-| Recorded deferrals never waive committed work | extensions/task-batch.ts:131-145 (collectOpenTasks) | task-atomicity-gate.test.ts (3 open tasks including deferral); durable-solution-authority.test.ts (goal+list reload) | PASS |
-| Open-task gate runs before the detached auditor is dispatched | extensions/loops/goal-tools.ts:725-739 (gate), extensions/loops/goal-orchestrator.ts:1268-1278 (terminal archive) | durable-solution-authority.test.ts (complete_goal claim refused) | PASS |
-| Terminal archive fence covers manual and recovered approved paths | extensions/loops/goal-orchestrator.ts:1268-1278, extensions/loops/goal-auditor-hooks.ts:1180-1188 | durable-solution-authority.test.ts (recovered approval) | PASS |
-| Scope changes require explicit per-amendment consent (no draft auto-accept shortcut) | extensions/loops/goal-tools.ts:754-783 | durable-solution-authority.test.ts (agent scope replacement, mid-confirm fence) | PASS |
-| Mid-confirm target changes cannot apply consent to a replacement | extensions/loops/goal-tools.ts:773-780 | durable-solution-authority.test.ts (replacement during confirm) | PASS |
-| Recorded deferrals do not grant completion-gate exemptions | task-atomicity-gate.test.ts (legacy stamp + claim), durable-solution-authority.test.ts (replay after state reload) | PASS |
-| Audit persistence: existing revision-bound and stuck recovery unchanged | revision-bound-audit.test.ts, audit-lifecycle.test.ts, audit-lifecycle-surfaces.test.ts, loop-finish.test.ts, respec-builder*.test.ts | 92 pass, 0 fail |
-| Goal/list/loop mode-appropriate behavior preserved | loop-held-start.test.ts, loop-forever.test.ts, audit-markdown-determinism.test.ts, audit-evidence-continuation-isolation.test.ts, auditor-ladder-discipline.test.ts, designer-settings.test.ts, settings-menu-complete.test.ts | 152 pass, 0 fail |
-| Typecheck clean | `timeout 120 npm run check` | exit 0 |
-| Inventory consistent | `node scripts/generate-inventory.mjs --check` | exit 0 |
-| Git whitespace clean | `git diff --check` | exit 0 |
-| No publication/version bump | unchanged package.json | n/a |
-| No external mutation | no other repo/settings/provider/credential writes | n/a |
+## Requirement-to-artifact map
 
-## Gate results
+| Contract item | Evidence to inspect |
+| --- | --- |
+| 1 — concrete all-mode policy map | audit/DURABLE-SOLUTION-CONTRACT.md; shared types/admission in extensions/durable-solution.ts; mode-specific entry points listed in the contract |
+| 2 — behavioral admission/lifecycle/outcome evidence | tests/durable-solution-authority.test.ts and tests/durable-solution-judgment.test.ts exercise production tools and temporary journals, including real session_start restore; results below |
+| 3 — clean types | npm run check; exact log below |
+| 4 — full release verification | timeout 3600 npm run release:check; PENDING, not inferred from focused subsets |
+| 5 — evidence and touched-file review | This report; file review and boundaries below. Full smoke/skips results remain PENDING until the release command finishes. |
+
+## Implementation and negative/positive cases
+
+- One typed, target/revision-bound judgment schema spans owned active goal, list,
+  ordinary loop and project loop. New decisions require a named correction and
+  concrete evidence; a deferral requires durableBlocked=true, a typed genuine
+  blocker and follow-up. Actual workarounds additionally require safety,
+  rollback and reproducible verification. These are admitted executor assertions
+  for independent review, not assertions that those checks actually passed.
+- Positive inline and blocked-workaround admission is covered in all four
+  execution shapes. Follow-up, safety/rollback/checks and original objective,
+  acceptance contract and project requirements survive actual session restore.
+- Unsupported judgments, contradictory blocker flags and incomplete workaround
+  fields are refused without a state mutation. Failed journal writes grant no
+  decision; corrupt persisted data cannot upgrade itself to host verification.
+- Explicit install-only/journal-marker execution claims are rejected before
+  audit even with no task list; runtime loading alone cannot prove execution.
+  Accepted observation kinds remain executor assertions. Omitting the optional
+  outcomeClaims field does not weaken independent semantic verification.
+- Legacy task deferrals cannot waive work. Initial completion admission and
+  the terminal archive share this invariant. Recovered approvals with open
+  work return to rework and discard the obsolete settlement, not an invented
+  archive-I/O failure; explicit human holds and their reasons remain intact.
+- Specific consent protects completion pivots, repair redrafts, loop refinements
+  and project refinements even when initial drafts auto-accept. Committed task
+  replacement is opt-in, shows old/new tasks and retained acceptance criteria,
+  requires consent, records history and invalidates old revision proof.
+- A reproduced continuation bug selected successful checks containing '0 fail'
+  and 'No recursive test hazards' as objections. Continuation now prefers the
+  explicit Required fixes section; legacy fallback remains when absent.
+
+## Exact bounded checks so far
+
+- `timeout 180 npm run check`: PASS, exit 0, tsc --noEmit.
+  Log: /tmp/glla-durable-types-final.log.
+- Production lifecycle/regression preflight: 152 pass / 0 fail across 13 files,
+  exit 0. Log: /tmp/glla-durable-preflight-final.log. Command:
 
 ```sh
-timeout 200 node scripts/run-tests.mjs tests/durable-solution-authority.test.ts
-# 8 pass / 0 fail
-
-timeout 200 node scripts/run-tests.mjs tests/task-atomicity-gate.test.ts \
-    tests/durable-choice-ledger.test.ts tests/durable-defer-production-ui.test.ts \
-    tests/durable-solution-authority.test.ts tests/durability-return-contract.test.ts
-# 41 pass / 0 fail
-
-timeout 600 node scripts/run-tests.mjs tests/revision-bound-audit.test.ts \
-    tests/loop-finish.test.ts tests/respec-builder.test.ts \
-    tests/respec-builder-audit-runtime.test.ts tests/audit-lifecycle.test.ts \
-    tests/audit-lifecycle-surfaces.test.ts
-# 92 pass / 0 fail
-
-timeout 120 node scripts/run-tests.mjs tests/loop-held-start.test.ts \
-    tests/loop-forever.test.ts tests/audit-markdown-determinism.test.ts \
-    tests/audit-evidence-continuation-isolation.test.ts \
-    tests/auditor-ladder-discipline.test.ts tests/designer-settings.test.ts \
-    tests/settings-menu-complete.test.ts
-# 152 pass / 0 fail
-
-timeout 120 npm run check && node scripts/generate-inventory.mjs --check \
-    && git diff --check
-# exit 0
+timeout 600 node scripts/run-tests.mjs tests/durable-solution-*.test.ts \
+ tests/revision-bound-audit.test.ts tests/audit-settlement-restart.test.ts \
+ tests/respec-builder.test.ts tests/respec-builder-audit-runtime.test.ts \
+ tests/refine-spec-rebaseline.test.ts tests/loop-refine-transaction.test.ts \
+ tests/loop-measure-probe-exit.test.ts tests/metric-never-moved-resumable.test.ts \
+ tests/durable-choice-ledger.test.ts tests/durable-defer-production-ui.test.ts \
+ tests/task-atomicity-gate.test.ts
 ```
 
-Total focused regression: 285 pass / 0 fail across 16 files.
+These focused checks do not substitute for the full release gate. Package
+smoke results, environment-gated skips and final selected-suite counts will be
+recorded from actual final output, not predicted here.
 
-## Representative negative cases
+## Touched-file review
 
-1. Reloaded goal: legacy deferral stamp retained, claim with open task refused; ledger `complete_goal_tasks_refused` written; goal and contract unchanged.
-2. Agent scope replacement with auto-accept drafts: confirmation requested with retained contract; denial preserves objective/revision.
-3. Mid-confirm target replacement: amendment refused; live state remains the original owner.
-4. Recovery path: a settling claim with open tasks is parked (`settlement_unfinished_work_refused`) before any archive.
-5. Manual terminal archive: refused when the open-task collection is non-empty.
+Baseline comparison: `git diff 6943a00b --name-only`; daemon commits are retained.
 
-## Remaining limitations
+| Path | Review |
+| --- | --- |
+| extensions/durable-solution.ts | Shared bounded typed admission, JSON normalization, target/revision matching, outcome-kind limits and common policy; every judgment remains executor-asserted. |
+| extensions/goal-loop-core.ts | Goal metadata/markdown and state-load normalization; common drafting policy; Required fixes preference in continuation. Legacy tasks retain history, not exemptions. |
+| extensions/goal-loop-forever.ts | Optional loop judgment state; no metric/bounds semantics changed. |
+| extensions/goal-loop.ts | All loop prompt variants receive common policy and retained judgment. User finish remains a stop action. |
+| extensions/loops/goal-tools.ts | Owned all-mode judgment admission/persistence; explicit outcome-claim limits; specific scope consent and target fences; explicit task amendment. Initial draft auto-accept remains available. |
+| extensions/loops/goal-orchestrator.ts | Shared final refusal/rework transaction for unfinished work; no terminal render on refusal; human holds retained. |
+| extensions/loops/goal-auditor-hooks.ts | Normal and recovered settlement reuse the same unfinished-work admission. Existing worker/attempt/revision/archive fences remain. |
+| extensions/goal-loop-auditor.ts | Independent goal/project audit guidance explicitly checks root cause, actual runtime behavior and workaround evidence, never merely populated fields. |
+| extensions/respec-builder-audit.ts | Project judgment carried into the existing independent audit adapter; requirements still verify individually. |
+| extensions/respec-builder-runtime.ts | Pass retained judgment and separate initial draft confirmation from specific scope-amendment consent. |
+| extensions/task-batch.ts | All unfinished committed tasks remain open, including legacy stamps; truthful refusal instructions. |
+| schemas/goal.schema.json | Document bounded executor-assertion state; remove obsolete task-exemption contract. |
+| tests/durable-solution-authority.test.ts | Real tool/temporary-journal tests for goal/list task admission, scope denial and target races; no provider dispatch required. |
+| tests/durable-solution-judgment.test.ts | Positive all-mode admission/restore, negative evidence/workaround checks, scope guards, legitimate task amendments, failure persistence, recovered rework, corrupt metadata and actual-objection replay. |
+| tests/durable-choice-ledger.test.ts | Existing positive cases supply new required evidence/blocker facts; original compaction/follow-up assertions retained. |
+| tests/durable-defer-production-ui.test.ts | Positive fixture supplies evidence; durable-first ordering and repaint assertions unchanged. |
+| tests/task-atomicity-gate.test.ts | Explicitly replace obsolete exemption expectations with refusal; retain task atomicity and race coverage. |
+| tests/harness/mock-pi.ts | Expose optional isError in the mock result type; no behavior or assertion bypass. |
+| docs/RECOVERY.md | Explain policy, consent, all-mode persistence, claims versus observations, legacy stamps and explicit holds. |
+| docs/RUNTIME-INVENTORY.md | Regenerate from real source; final --check and release gate pending. |
+| CHANGELOG.md | Unreleased behavior notes; preserve earlier pause-card and stranded-loop fixes. |
+| audit/DURABLE-SOLUTION-CONTRACT.md | Actual implementation map and explicit limits; no acceptance criterion removed. |
+| audit/DURABLE-SOLUTION-VERIFICATION.md | Correct premature evidence claims; retain exact current checks and identify unrun gates. |
 
-- The "durable solution" policy covers GLLA-controlled evidence. It cannot
-  detect every kind of misleading message; the independent auditor remains
-  the canonical authority on completion.
-- `loop` and `metricless loop` user `/loop finish` remain a user-authorized
-  action and are NOT converted into a goal-completion path. A finish record
-  follows existing semantics; lifecycle tests cover it.
-- The respec project builder already requires every requirement verified
-  before `phase === "complete"`. No further change is required; the durable
-  contract in `audit/DURABLE-SOLUTION-CONTRACT.md` records the integration
-  boundary.
-- The shared `complete_goal` admission now includes an explicit per-amendment
-  consent and a mid-confirm fence. UI paths that auto-accept drafts do not
-  bypass this consent; tests prove it.
-- This change set is local. No npm/GitHub release performed. No external
-  project journal, settings, provider or credential mutated. No other live
-  session reloaded.
+## Boundaries and limitations
+
+No version bump/publication, provider/credential/settings changes, external
+project journals or other live-session reloads. The release smoke script uses a
+disposable temporary install and RPC stub, not another real session or provider.
+Installation/loading smoke is not live deployment evidence.
+
+GLLA enforces structural obligations and truthful provenance, not automatic
+architectural-quality classification or cryptographic authentication of arbitrary
+repository artifacts. The independent auditor must inspect/reproduce cited
+behavior. A supported workaround admits bounded work under the retained contract,
+not completion of unmet requirements. Ordinary loop bounds/plateau/user finish
+are not converted into goal audits.
+
+The screenshot's stalled recovery state retained a Codex usage-limit diagnostic,
+an in-flight primary probe and a pending switch without confirmed execution.
+No provider reset time is inferred and no journal marker is manufactured to
+claim that execution succeeded. Current authorized work continues against the
+original contract; no global provider or upstream plugin repair is attempted.

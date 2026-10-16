@@ -723,7 +723,7 @@ function registerAgentTools(pi: any): void {
         }
         return { content: [{ type: "text", text: `No active goal — it is ${state.goal.status}.` }], details: {} };
       }
-      const p = params as { completionSummary?: string; verificationSummary?: string; newObjective?: string; leftOut?: string; showVerification?: boolean; findingGroups?: unknown; gateRows?: unknown; requestFullAudit?: boolean; outcomeClaims?: OutcomeClaim[] };
+      const p = { ...params } as { completionSummary?: string; verificationSummary?: string; newObjective?: string; leftOut?: string; showVerification?: boolean; findingGroups?: unknown; gateRows?: unknown; requestFullAudit?: boolean; outcomeClaims?: OutcomeClaim[] };
       const unsupportedOutcome = p.outcomeClaims?.find(claim => !outcomeClaimAdmissible(claim));
       if (unsupportedOutcome) return { content: [{ type: "text", text: `Completion claim refused: ${outcomeClaimLimit(unsupportedOutcome, unsupportedOutcome.required)} Inspect/reproduce the actual target before claiming this outcome. No audit was dispatched.` }], details: {}, isError: true };
       // Keep assertions in the audited claim, never silently drop or upgrade
@@ -2474,7 +2474,7 @@ function registerAgentTools(pi: any): void {
   pi.registerTool(defineTool({
     name: "record_goal_judgment",
     label: "Record judgment",
-    description: "Record the explicit durable-vs-defer implementation choice in the ledger without pausing the goal. Use choice=inline when implementing the maintainable root-cause fix now. Use choice=deferred only when that fix is genuinely unsafe, impossible, or currently blocked; include the reason and, when applicable, the durable follow-up. Do not use this to defer an obvious durable fix.",
+    description: "Record an evidence-backed, target/revision-bound durable-solution judgment for the owned goal/list or loop/project without pausing. Every choice requires reason, durableFix and concrete evidence. Deferred needs durableBlocked=true, a typed blocker with evidence and followUp; an actual workaround also needs action, safety, rollback and reproducible verification. These are executor assertions for independent review, never implementation proof, task exemptions or permission to weaken the contract. Implement an in-scope durable fix rather than deferring it.",
     parameters: Type.Object({
       choice: Type.Union([Type.Literal("inline"), Type.Literal("deferred")], { description: "Whether the durable fix is being implemented now or intentionally deferred" }),
       reason: Type.String({ description: "Concrete root-cause rationale. Evidence is recorded as an executor assertion, not approval." }),

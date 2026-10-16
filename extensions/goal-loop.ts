@@ -448,7 +448,7 @@ async function parkLoopOnWrongBranch(ctx: ExtensionContext, loop: LoopState, whe
 }
 
 export function loopPrompt(loop: LoopState, regressionNote: string, strategyNote: string, boundsNote: string, interventionNote = "", variantNote = "", hypothesisNote = "", refineHintNote = ""): string {
-  const solutionPolicy = `${DURABLE_SOLUTION_POLICY}\n\n${solutionJudgmentBrief(loop.durableSolution)}\n\n`;
+  const solutionPolicy = `${DURABLE_SOLUTION_POLICY}\n\n${solutionJudgmentBrief(loop.durableSolution, { mode: loop.builder ? "project" : "loop", id: loop.builder?.projectId ?? loop.startedAt, revision: loop.builder?.revision ?? loop.refinements?.length ?? 0 })}\n\n`;
   if (loop.builder) {
     return solutionPolicy + loadPromptWhole("goal-loop-respec-builder.md")
       .replace(/\$\{ITERATION\}/g, String(loop.iteration + 1))
