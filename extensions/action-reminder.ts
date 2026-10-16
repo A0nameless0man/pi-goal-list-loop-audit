@@ -25,6 +25,8 @@ export interface ActionReminderPresentation {
   heading: string;
   why: string;
   next: string;
+  /** Conditional retry copy; a resume command does not resolve a blocker. */
+  resumeHint?: string;
   resumeCommand?: string;
   resumeAt?: string;
   parkState: ActionReminderParkState;
@@ -154,12 +156,13 @@ export function buildActionReminder(input: {
   const content = [
     presentation.heading,
     `Why: ${presentation.why}`,
+    presentation.next,
+    ...(presentation.resumeHint ? [presentation.resumeHint] : []),
     parkState === "redirect"
       ? "The saved goal is held while the current turn handles the new request."
       : parkState === "automatic"
         ? "Your saved work is intact; no manual action is needed while the owned wake remains registered and no hold applies."
         : "Your saved work is intact; this turn stopped before more work could be lost.",
-    presentation.next,
     ...(diagnostic ? [`Diagnostic: ${compactDisplayText(diagnostic)}`] : []),
   ].join("\n");
   return {
@@ -229,6 +232,24 @@ export function buildPausePresentation(input: {
       parkState: displayed.parkState,
     };
   }
+  if (displayed.kind === "blocked") {
+    // Missing actions in historical cards defaulted to the resume command.
+    // Do not extract/invent a prerequisite from prose; keep the full reason
+    // prominent and point to it when the only suggested action is retry.
+    const resumeOnly = !displayed.action || /^(?:(?:run|use)\s+)?[`'"]?\/(?:goal|list|loop|glla)\s+resume[`'"]?[.!]?$/i.test(displayed.action);
+    return {
+      heading: "Action needed — work is safely parked",
+      why,
+      next: resumeOnly
+        ? "Next: Resolve the prerequisite described above and report the result."
+        : (frameTweakSuggestion(displayed.action) ?? `Next: ${displayed.action}`),
+      resumeHint: displayed.resumeCommand
+        ? `After the prerequisite is resolved: ${displayed.resumeCommand} retries the work; it does not resolve the blocker.`
+        : undefined,
+      resumeCommand: displayed.resumeCommand,
+      parkState: displayed.parkState,
+    };
+  }
   return {
     heading: "Action needed — work is safely parked",
     why,
@@ -260,17 +281,18 @@ export function registerActionReminderRenderer(pi: ExtensionAPI): void {
         : `⏸ GLLA ${presentation.heading}`;
     const box = new Box(outputPad, 1, (t) => theme.bg("customMessageBg", t));
     box.addChild(new Text(theme.fg(color, heading), 0, 0));
-    box.addChild(new Text(theme.fg("dim", `Why: ${presentation.why}`), 0, 0));
+    // The prerequisite is primary information, not a muted diagnostic.
+    box.addChild(new Text(`Why: ${presentation.why}`, 0, 0));
     if (presentation.next) box.addChild(new Text(theme.fg("accent", presentation.next), 0, 0));
+    if (presentation.resumeCommand && presentation.parkState !== "automatic") {
+      box.addChild(new Text(presentation.resumeHint ?? theme.fg("dim", `Resume: ${presentation.resumeCommand}`), 0, 0));
+    }
     if (presentation.parkState === "redirect") {
       box.addChild(new Text(theme.fg("dim", "The saved goal is held while the current turn handles the new request."), 0, 0));
     } else if (presentation.parkState === "automatic") {
       box.addChild(new Text(theme.fg("dim", "Your saved work is intact; no manual action is needed while the owned wake remains registered and no hold applies."), 0, 0));
     } else {
       box.addChild(new Text(theme.fg("dim", "Your saved work is intact; this turn stopped before more work could be lost."), 0, 0));
-    }
-    if (presentation.resumeCommand && presentation.parkState !== "automatic") {
-      box.addChild(new Text(theme.fg("dim", `Resume: ${presentation.resumeCommand}`), 0, 0));
     }
     if (diagnostics) {
       box.addChild(new Text(theme.fg("dim", `Diagnostic: ${diagnostics}`), 0, 0));

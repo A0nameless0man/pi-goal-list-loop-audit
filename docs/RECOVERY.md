@@ -70,6 +70,21 @@ while the host is closed or registration is unconfirmed.
 
 See [the lifecycle/state reference](DESIGN-work-lifecycle.md).
 
+## Manual-action blockers
+
+A blocked pause card puts the full prerequisite in readable text. `Next` names
+an explicit supplied action; if the saved action is missing or only a resume
+command, it asks you to resolve the prerequisite and report the result instead.
+The retry command appears separately: **after the prerequisite is resolved**.
+Resume retries the work; it cannot complete a checkout, supply permission or
+produce missing evidence. Ordinary authorized work should continue rather than
+be parked merely to request resume.
+
+Agents should lead pause reasons with the remaining prerequisite, not completed
+work. Before claiming a page or inbox cannot be inspected, check available,
+authorized tools; access and payment authorization must never be assumed.
+This display change neither grants access nor changes pause/resume policy.
+
 ## Which resume command?
 
 | Command | Use it for |

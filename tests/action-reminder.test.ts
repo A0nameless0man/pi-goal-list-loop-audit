@@ -67,6 +67,21 @@ test("blocked reminder preserves a concrete human action ahead of conditional re
   }
 });
 
+test("replaying legacy blocked details replaces old resume-only card copy", () => {
+  const pi = new MockPi(); registerActionReminderRenderer(pi.api);
+  const details = { kind: "blocked", reason: "Confirm the checkout receipt.", resumeCommand: "/list resume" };
+  const before = JSON.stringify(details);
+  const renderer = pi.messageRenderers.get("glla-action-reminder")!;
+  const component = renderer({ details, content: "Next: /list resume" }, { outputPad: 1 },
+    { fg: (_: string, text: string) => text, bg: (_: string, text: string) => text }) as { render(width: number): string[] };
+  const text = component.render(120).join("\n");
+  assert.match(text, /Why: Confirm the checkout receipt/);
+  assert.match(text, /Next: Resolve the prerequisite/);
+  assert.match(text, /After the prerequisite is resolved: \/list resume/);
+  assert.doesNotMatch(text, /Next: \/list resume/);
+  assert.equal(JSON.stringify(details), before, "rendering never rewrites saved state");
+});
+
 test("registers a dedicated GLLA reminder renderer", () => {
   const pi = new MockPi();
   registerActionReminderRenderer(pi.api);
@@ -84,7 +99,7 @@ test("blocked reminder is actionable and says the work is safely parked", () => 
   assert.match(text, /GLLA Action needed — work is safely parked/);
   assert.match(text, /Why: The native browser popup/);
   assert.match(text, /Next: Open the popup and record the result/);
-  assert.match(text, /Resume: \/list resume/);
+  assert.match(text, /After the prerequisite is resolved: \/list resume/);
   assert.doesNotMatch(text, /Operation aborted/);
   assert.equal(reminder.details.parkState, "stopped");
   assert.equal(reminder.details.safelyParked, true);

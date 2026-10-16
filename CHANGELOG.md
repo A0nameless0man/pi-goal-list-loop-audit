@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Prerequisites before resume
+
+- Make pause-card reasons readable instead of dimmed. For manual-action blockers,
+  show the prerequisite before a conditional retry command, not `Next: /list resume`.
+  Apply the same copy to transcript and replayed cards; retain concrete actions,
+  tweak questions, decision/redirect handling and automatic-wait behavior.
+- Teach agents to name unmet prerequisites first and check available authorized
+  tools before claiming they cannot inspect a page or inbox. This grants no
+  access/payment permission and changes no pause or retry policy.
+
 ### Stranded parked-loop recovery resume
 
 - `/glla resume` and `/loop resume` now retry a saved loop-kind
