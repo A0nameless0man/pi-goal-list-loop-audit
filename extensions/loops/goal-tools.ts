@@ -34,6 +34,7 @@ import { Type } from "typebox";
 import { state, replaceState, persistStateLine } from "../goal-state.js";
 import { admitBackgroundWait } from "../background-wait-runtime.js";
 import { backgroundDispatchHeld } from "../work-lifecycle.js";
+import { admitSolutionJudgment, outcomeClaimAdmissible, outcomeClaimLimit, type OutcomeClaim, type SolutionJudgmentInput } from "../durable-solution.js";
 
 import {
   type Goal,
@@ -629,6 +630,11 @@ function registerAgentTools(pi: any): void {
           "structure is the price of length. " +
           "See audit/COMPLETION-SUMMARY-POLICY-2026-08-19.md and docs/DESIGN-long-running-supervision.md. Free-form prose is allowed but discouraged; incomplete input receives a recorded-facts-only fallback at terminalization.",
       })),
+      outcomeClaims: Type.Optional(Type.Array(Type.Object({
+        required: Type.Union([Type.Literal("loaded"), Type.Literal("executed")]),
+        kind: Type.Union([Type.Literal("installation"), Type.Literal("runtime-observation"), Type.Literal("behavioral-check"), Type.Literal("journal-marker")]),
+        evidence: Type.String({ description: "Concrete target/revision and observation for independent inspection. Executor assertions, not host attestations." }),
+      }), { maxItems: 20, description: "Optional explicit loaded/executed claims. Install-only and journal-marker evidence is refused before audit; actual observations still require independent review." })),
       verificationSummary: Type.Optional(Type.String({
         description:
           "Per-item evidence for the verification contract. " +
@@ -714,7 +720,12 @@ function registerAgentTools(pi: any): void {
         }
         return { content: [{ type: "text", text: `No active goal — it is ${state.goal.status}.` }], details: {} };
       }
-      const p = params as { completionSummary?: string; verificationSummary?: string; newObjective?: string; leftOut?: string; showVerification?: boolean; findingGroups?: unknown; gateRows?: unknown; requestFullAudit?: boolean };
+      const p = params as { completionSummary?: string; verificationSummary?: string; newObjective?: string; leftOut?: string; showVerification?: boolean; findingGroups?: unknown; gateRows?: unknown; requestFullAudit?: boolean; outcomeClaims?: OutcomeClaim[] };
+      const unsupportedOutcome = p.outcomeClaims?.find(claim => !outcomeClaimAdmissible(claim));
+      if (unsupportedOutcome) return { content: [{ type: "text", text: `Completion claim refused: ${outcomeClaimLimit(unsupportedOutcome, unsupportedOutcome.required)} Inspect/reproduce the actual target before claiming this outcome. No audit was dispatched.` }], details: {}, isError: true };
+      // Keep assertions in the audited claim, never silently drop or upgrade
+      // them to host-observed proof. The independent auditor must inspect them.
+      if (p.outcomeClaims?.length) p.verificationSummary = [p.verificationSummary, "Executor-asserted outcome claims (independent review required):", JSON.stringify(p.outcomeClaims)].filter(Boolean).join("\n");
       if (state.goal.repairTarget) {
         return {
           content: [{ type: "text", text: `This repair card cannot be completed yet. Redraft the original target as a confirmed task list with propose_task_list (include objective: ${state.goal.repairTarget.objective.slice(0, 180)}), then continue the real work.` }],
@@ -759,6 +770,9 @@ function registerAgentTools(pi: any): void {
         // Use an explicit per-amendment confirmation, with the full retained
         // contract visible, and fence every await against target changes.
         const amendmentGoal = state.goal;
+        const amendmentId = amendmentGoal.id;
+        const amendmentStatus = amendmentGoal.status;
+        const amendmentTasks = JSON.stringify(amendmentGoal.taskList);
         const amendmentRevision = amendmentGoal.revision ?? 0;
         const amendmentContract = amendmentGoal.verificationContract;
         const proposedContract = verificationContract || amendmentContract;
@@ -771,7 +785,7 @@ function registerAgentTools(pi: any): void {
             // Unavailable/stale UI cannot grant scope authority.
           }
           if (auditGeneration !== sessionGeneration || state.goal !== amendmentGoal ||
-              state.goal.id !== amendmentGoal.id || (state.goal.revision ?? 0) !== amendmentRevision ||
+              state.goal.id !== amendmentId || state.goal.status !== amendmentStatus || JSON.stringify(state.goal.taskList) !== amendmentTasks || (state.goal.revision ?? 0) !== amendmentRevision ||
               state.goal.objective !== oldObjective || state.goal.verificationContract !== amendmentContract ||
               foreignToolGuard(ctx)) {
             return { content: [{ type: "text", text: "The target changed during scope confirmation; no amendment or completion claim was applied." }], details: {}, isError: true };
@@ -2459,7 +2473,10 @@ function registerAgentTools(pi: any): void {
     description: "Record the explicit durable-vs-defer implementation choice in the ledger without pausing the goal. Use choice=inline when implementing the maintainable root-cause fix now. Use choice=deferred only when that fix is genuinely unsafe, impossible, or currently blocked; include the reason and, when applicable, the durable follow-up. Do not use this to defer an obvious durable fix.",
     parameters: Type.Object({
       choice: Type.Union([Type.Literal("inline"), Type.Literal("deferred")], { description: "Whether the durable fix is being implemented now or intentionally deferred" }),
-      reason: Type.String({ description: "Concise reason for the durable-vs-defer choice. The ledger record bounds length clause-aware; the schema never refuses a judgment over it." }),
+      reason: Type.String({ description: "Concrete root-cause rationale. Evidence is recorded as an executor assertion, not approval." }),
+      evidence: Type.Optional(Type.String({ description: "Required for every judgment: inspected artifact, reproduction or observed result supporting the root cause/blocker." })),
+      blocker: Type.Optional(Type.Object({ kind: Type.Union([Type.Literal("unsafe"), Type.Literal("impossible"), Type.Literal("external-blocked")]), evidence: Type.String() })),
+      workaround: Type.Optional(Type.Object({ action: Type.String(), safety: Type.String(), rollback: Type.String(), verification: Type.String() }, { description: "For an actual temporary workaround: safety boundary, reversal and reproducible verification are all mandatory. Never a completion waiver." })), 
       followUp: Type.Optional(Type.String({ description: "For a deferred choice, the bounded durable follow-up" })),
       durableFix: Type.Optional(Type.String({ description: "The maintainable root-cause action to show in the goal card" })),
       deferRecommendations: Type.Optional(Type.Array(Type.String(), { description: "Earlier bounded workaround/defer recommendations to retain as UI evidence (the ledger record bounds count and length; the schema never refuses a judgment over them)." })),
@@ -2471,27 +2488,20 @@ function registerAgentTools(pi: any): void {
       if (foreignJudgment) return { content: [{ type: "text", text: foreignJudgment }], details: {} };
       const ctx = currentToolContext(execCtx);
       if (!ctx) return staleToolResult();
-      if (!state.goal) return { content: [{ type: "text", text: "No active goal." }], details: {} };
-      if (state.goal.status !== "active") {
-        return { content: [{ type: "text", text: `Goal is already ${state.goal.status}; judgment was not recorded.` }], details: {} };
+      const goal = state.goal;
+      const loop = !goal ? state.loop : undefined;
+      if (!goal && !loop?.active) return { content: [{ type: "text", text: "No active goal or loop." }], details: {} };
+      if (goal && goal.status !== "active") {
+        return { content: [{ type: "text", text: `Goal is already ${goal.status}; judgment was not recorded.` }], details: {} };
       }
-      const p = params as {
-        choice: DurableChoice;
-        reason: string;
-        followUp?: string;
-        durableFix?: string;
-        deferRecommendations?: string[];
-        durableBlocked?: boolean;
-        taskId?: string;
-      };
+      const p = params as SolutionJudgmentInput & { deferRecommendations?: string[]; taskId?: string };
       // Task-linked deferrals preserve blocker context without waiving the
       // committed task. An unknown task is refused before anything is recorded.
       const taskId = p.taskId?.trim() || undefined;
       if (taskId && p.choice !== "deferred") {
         return { content: [{ type: "text", text: "taskId is only valid with choice=deferred — an inline judgment implements the fix now and needs no task exemption. Nothing was recorded." }], details: {} };
       }
-      const goal = state.goal;
-      const deferredTask = taskId ? (goal.taskList ? findTask(goal.taskList, taskId) : null) : undefined;
+      const deferredTask = taskId ? (goal?.taskList ? findTask(goal.taskList, taskId) : null) : undefined;
       if (taskId && !deferredTask) {
         return { content: [{ type: "text", text: `No task "${taskId}" in this goal's task list — the judgment was NOT recorded.` }], details: {} };
       }
@@ -2502,9 +2512,15 @@ function registerAgentTools(pi: any): void {
       if (record.choice === "deferred" && !record.followUp) {
         return { content: [{ type: "text", text: "A deferred judgment also requires a durable follow-up." }], details: {} };
       }
-      const durableDeferRecommendation = durableDeferFactsForGoal(goal, record, p);
+      const admission = admitSolutionJudgment(p, goal
+        ? { mode: goal.policy === "list" ? "list" : "goal", id: goal.id, revision: goal.revision ?? 0 }
+        : { mode: loop!.builder ? "project" : "loop", id: loop!.builder?.projectId ?? loop!.startedAt, revision: loop!.builder?.revision ?? loop!.refinements?.length ?? 0 }, nowIso());
+      if (!admission.ok) return { content: [{ type: "text", text: admission.error }], details: {}, isError: true };
+      const durableSolution = admission.judgment;
+      const durableDeferRecommendation = goal ? durableDeferFactsForGoal(goal, record, p) : undefined;
       const landed = appendLedger(ctx.cwd, "durable_defer_choice", {
-        goalId: goal.id,
+        ...(goal ? { goalId: goal.id } : { loopId: loop!.startedAt }),
+        durableSolution,
         ...record,
         ...(taskId ? { taskId, taskTitle: deferredTask!.title } : {}),
         durableDeferRecommendation,
@@ -2517,15 +2533,23 @@ function registerAgentTools(pi: any): void {
       // record.followUp is proven non-empty for deferred above; a taskId
       // always implies deferred (refused otherwise), so the non-null
       // assertion holds exactly when a stamp is written.
-      const patch: Record<string, unknown> = { durableDeferRecommendation };
-      if (taskId && goal.taskList) {
+      const patch: Record<string, unknown> = { durableDeferRecommendation, durableSolution };
+      if (taskId && goal?.taskList) {
         patch.taskList = patchTaskCopy(goal.taskList, taskId, {
           deferred: { reason: record.reason, followUp: record.followUp!, at: nowIso() },
         });
       }
-      if (!updateGoal(patch as Parameters<typeof updateGoal>[0], ctx)) {
+      const before = state;
+      let persisted: boolean;
+      if (goal) persisted = updateGoal(patch as Parameters<typeof updateGoal>[0], ctx);
+      else {
+        replaceState({ ...before, loop: { ...loop!, durableSolution } });
+        persisted = persistState(ctx);
+        if (!persisted) replaceState(before);
+      }
+      if (!persisted) {
         return {
-          content: [{ type: "text", text: `Recorded durable-vs-defer judgment: ${record.choice} in the ledger, but its persistence failed${taskId ? " — the task exemption did NOT land, so the gate will still block" : ""}. Retry.` }],
+          content: [{ type: "text", text: `Recorded durable-vs-defer judgment: ${record.choice} in the ledger, but its persistence failed${taskId ? " — the blocker note did NOT land; committed work remains open" : ""}. Retry.` }],
           details: {},
         };
       }

@@ -114,6 +114,8 @@ export interface LoopState {
    * with 13 open findings, polis with 3+, hellhunter stuck-stopped at
    * iter 93 — every counted turn was a dead 429 turn. */
   consecutiveErrors?: number;
+  /** Executor assertions survive reload; metric movement never verifies them. */
+  durableSolution?: import("./durable-solution.js").SolutionJudgment;
   /** Durable pacing only; measurement episodes never create numeric history. */
   infrastructureRetry?: import("./infrastructure-retry.js").InfrastructureRetry;
   infrastructureRetryKind?: "measurement" | "provider";

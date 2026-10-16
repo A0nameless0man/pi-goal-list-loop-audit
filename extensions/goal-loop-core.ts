@@ -17,6 +17,7 @@ import { isDeterministicProviderError, normalizeProviderErrorText, providerError
 import { MAX_AUDITOR_CANDIDATE_REFS, MAX_MAIN_MODEL_FALLBACKS, MAX_MAIN_MODEL_SAME_MODEL_RETRIES, normalizeBoundedModelRefs } from "./main-model-recovery.js";
 import { resolveGllaStateDir, stateRootPending, withStateRootSnapshot } from "./glla-state-root.js";
 import { normalizeFindingLead, clipSummaryValue } from "./finding-lead.js";
+import { DURABLE_SOLUTION_POLICY, type SolutionJudgment } from "./durable-solution.js";
 import { sanitizeRecoveryOwner, type RecoveryOwner } from "./recovery-ownership.js";
 import { auditLifecycleLine, auditLifecycleProjection } from "./audit-lifecycle.js";
 // Re-exported so display surfaces (which already import values from this
@@ -373,10 +374,8 @@ export interface Task {
   /** Optional verification gate for milestone-checked tasks. */
   verificationContract?: string;
   subtasks?: Task[];
-  /** A recorded deferral (via record_goal_judgment choice=deferred + taskId)
-   * exempts this task from the complete_goal pending-task gate. The
-   * exemption is durable state, not prose: the ledger holds the judgment,
-   * this stamp is the gate-readable pointer. */
+  /** Historical blocker/follow-up context only. Never a completion exemption,
+   * including legacy stamps restored from older journals. */
   deferred?: TaskDeferral;
 }
 
@@ -1069,6 +1068,8 @@ export interface Goal {
    * so every UI refresh can project the same recommendation the agent
    * recorded in the ledger, including after a reload. */
   durableDeferRecommendation?: DurableDeferRecommendationInput;
+  /** Revision-bound executor assertions; never scope or completion authority. */
+  durableSolution?: SolutionJudgment;
   activePath?: string;
   archivedPath?: string;
   usage: {
@@ -4121,7 +4122,7 @@ export function formatDurableDeferPolicyLine(): string {
  * product rule, not a user preference toggle: changing it between sessions
  * would make the same verification contract produce different decisions.
  */
-export const LONG_RUNNING_JUDGMENT_POLICY = `LONG-RUNNING JUDGMENT POLICY:
+export const LONG_RUNNING_JUDGMENT_POLICY = `${DURABLE_SOLUTION_POLICY}\n\nLONG-RUNNING JUDGMENT POLICY:
 - Preserve the objective and verification contract as the source of truth. The default answer is the durable, maintainable root-cause fix — decide it and proceed; do not stop at a cosmetic workaround merely because it is faster.
 - "Band-aid now vs do it proper" is NEVER a question: when the durable fix is the clearly best call, do it — no ask_user_question, no pause_goal, no "which do you prefer" framing. Record the choice and the reasoning in the turn.
 ${formatDurableDeferPolicyLine()}

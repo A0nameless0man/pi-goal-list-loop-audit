@@ -71,7 +71,12 @@ export function judgmentMatchesTarget(judgment: SolutionJudgment, target: Soluti
 
 /** Facts are not upgraded merely because a caller calls them a receipt. */
 export type OutcomeEvidenceKind = "installation" | "runtime-observation" | "behavioral-check" | "journal-marker";
-export interface OutcomeClaim { kind: OutcomeEvidenceKind; evidence: string }
+export interface OutcomeClaim { kind: OutcomeEvidenceKind; evidence: string; required: "loaded" | "executed" }
+/** Admission to independent review, NEVER an approval predicate. */
+export function outcomeClaimAdmissible(claim: OutcomeClaim): boolean {
+  return !!compact(claim.evidence) && (claim.required === "loaded" || claim.required === "executed") &&
+    (claim.kind === "behavioral-check" || (claim.kind === "runtime-observation" && claim.required === "loaded"));
+}
 export function outcomeClaimLimit(claim: OutcomeClaim, required: "loaded" | "executed"): string {
   if (claim.kind === "installation") return `Installation metadata does not establish ${required} behavior.`;
   if (claim.kind === "journal-marker") return `A journal marker is bookkeeping, not proof of ${required} behavior.`;
