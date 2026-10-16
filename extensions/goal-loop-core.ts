@@ -17,7 +17,7 @@ import { isDeterministicProviderError, normalizeProviderErrorText, providerError
 import { MAX_AUDITOR_CANDIDATE_REFS, MAX_MAIN_MODEL_FALLBACKS, MAX_MAIN_MODEL_SAME_MODEL_RETRIES, normalizeBoundedModelRefs } from "./main-model-recovery.js";
 import { resolveGllaStateDir, stateRootPending, withStateRootSnapshot } from "./glla-state-root.js";
 import { normalizeFindingLead, clipSummaryValue } from "./finding-lead.js";
-import { DURABLE_SOLUTION_POLICY, type SolutionJudgment } from "./durable-solution.js";
+import { DURABLE_SOLUTION_POLICY, solutionJudgmentBrief, type SolutionJudgment } from "./durable-solution.js";
 import { sanitizeRecoveryOwner, type RecoveryOwner } from "./recovery-ownership.js";
 import { auditLifecycleLine, auditLifecycleProjection } from "./audit-lifecycle.js";
 // Re-exported so display surfaces (which already import values from this
@@ -3689,6 +3689,9 @@ export function renderGoalMarkdown(goal: Goal): string {
   lines.push("");
   lines.push("> " + goal.objective);
   lines.push("");
+  if (goal.durableSolution) {
+    lines.push("## Durable-solution judgment (executor assertion)", "", solutionJudgmentBrief(goal.durableSolution), "");
+  }
   if (goal.repairTarget) {
     lines.push("## Replan target (preserved)");
     lines.push("");
