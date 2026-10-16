@@ -2193,13 +2193,27 @@ test("T2b: stale before compaction → no late rebind, refire, or misleading act
   // emits/finishes compaction, but never delivers session_start.
   await pi.fire("session_compact", {}, ctx);
   await pi.fire("agent_end", { messages: [{ role: "assistant", content: [{ type: "text", text: "late old event" }], stopReason: "end_turn" }] }, ctx);
-  await tick(2_200);
+  await waitUntil(() => {
+    const events = readLedger(cwd);
+    const index = events.findIndex(entry => entry.type === "session_compact");
+    return index >= 0 && events.slice(index + 1).some(entry => entry.type === "goal_continuation_sent" &&
+      (entry.value?.kind === "resync" || entry.value?.kind === "full+resync"));
+  });
   const after = fs.readFileSync(path.join(cwd, ".pi-glla", "active.jsonl"), "utf8");
   const g = readState(cwd).goal as { status: string; interruptedAt?: string };
   assert.equal(g.status, "active", "persisted goal remains recoverable");
   assert.equal(g.interruptedAt, undefined, "the healthy same-session contact clears the stale marker");
   assert.ok((after.match(/"extension_api_stale"/g) ?? []).length >= 1, "stale terminal is ledgered");
-  assert.match(after, /"compaction_refire"/, "the healthy compact is allowed to re-arm the continuation");
+  // Recovery and compaction can coalesce through either scheduling path.
+  // Verify the actual post-compaction resync, not one optional trace label.
+  const recoveryRecords = readLedger(cwd);
+  const compactIndex = recoveryRecords.findIndex(entry => entry.type === "session_compact");
+  assert.ok(compactIndex >= 0, "the actual compaction event is recorded");
+  const resyncSends = recoveryRecords.slice(compactIndex + 1).filter(entry =>
+    entry.type === "goal_continuation_sent" && entry.value?.goalId === readState(cwd).goal?.id &&
+    (entry.value?.kind === "resync" || entry.value?.kind === "full+resync"));
+  assert.equal(resyncSends.length, 1, "healthy recovery delivers exactly one post-compaction resync");
+  assert.ok(pi.sent.some(sent => sent.message.customType === "goal-event" && sent.message.content?.includes(`[GOAL CHECKPOINT goalId=${readState(cwd).goal!.id}]`)), "the real send carries this goal's checkpoint");
   assert.doesNotMatch(after, /"compaction_grace_refire"/, "the late event does not double-schedule the grace refire");
   assert.ok(pi.sent.length >= 1, "healthy same-session recovery resumes the continuation");
   const status = ctx.ui.statuses["pi-glla"] ?? "";
