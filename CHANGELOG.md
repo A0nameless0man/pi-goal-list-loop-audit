@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Durable-solution authority and evidence
+
+- Share typed, target/revision-bound judgment across goal, list, ordinary loop
+  and project loop. Require concrete evidence and a named durable correction;
+  deferrals need an explicit genuine blocker and follow-up. Workarounds also
+  require safety, rollback and reproducible verification. Records are executor
+  assertions for independent review, never proof or scope authority.
+- Keep all unfinished committed tasks open, including legacy deferral stamps.
+  Fence completion and recovered settlements; an obsolete approval with open
+  work returns to rework instead of a misleading archive-I/O recovery hold.
+- Require specific scope-amendment consent even with draft auto-accept enabled:
+  completion pivots, repair redrafts, loop refinements and project refinements.
+  Preserve target/revision fences and show the actual proposed loop spec.
+- Reject explicit install-only/journal-marker claims of loaded/executed behavior
+  before audit. Preserve asserted observations for independent inspection and
+  align drafting, continuation and goal/project auditor guidance. Source
+  installation, runtime loading and successful behavior remain distinct facts.
+
 ### Prerequisites before resume
 
 - Make pause-card reasons readable instead of dimmed. For manual-action blockers,

@@ -138,3 +138,73 @@ test("shared continuation and both auditor paths require independent evidence, n
   assert.match(LONG_RUNNING_JUDGMENT_POLICY, /Recording this permits bounded work, not completion/);
   assert.equal(state.loop!.builder!.phase, "planning");
 });
+
+for (const mode of ["loop", "project"] as const) {
+  test(`${mode}: draft auto-accept cannot silently weaken an established spec`, async () => {
+    const { cwd, pi, ctx } = harness(mode);
+    fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, JSON.stringify({ autoAcceptDrafts: true }));
+    const before = readState(cwd);
+    let asked = 0;
+    ctx.ui.confirmImpl = async (_title, body) => {
+      asked++;
+      assert.match(body, mode === "project" ? /CURRENT/ : /old:/);
+      return false;
+    };
+    const result = mode === "project"
+      ? await pi.runTool("propose_project_refinement", { reason: "Make the gate easier", requirements: [{ id: "R1", text: "round-trip storage", acceptance: "Only inspect installed metadata" }] }, ctx)
+      : await pi.runTool("propose_loop_refine", { rationale: "Replace runtime checks with installation", target: "Only install the source" }, ctx);
+    assert.equal(asked, 1);
+    assert.match(result.content[0]!.text, /declined|rejected/i);
+    assert.deepEqual(readState(cwd), before);
+  });
+}
+
+test("repair redrafting also requires specific consent with draft auto-accept enabled", async () => {
+  const { cwd, pi, ctx } = harness("goal");
+  const repair = { id: "original-storage", objective: "Implement durable storage migration and verify read/write round trips", verificationContract: "Inspect the actual round trip", reasons: ["intent needs clarification"], source: "test" };
+  seedState(cwd, { goal: { ...state.goal!, repairTarget: repair } });
+  __testOnlyLoadState(cwd);
+  fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, JSON.stringify({ autoAcceptDrafts: true }));
+  const before = readState(cwd);
+  let asked = 0;
+  ctx.ui.confirmImpl = async (_title, body) => { asked++; assert.ok(body.includes(repair.verificationContract)); return false; };
+  const result = await pi.runTool("propose_task_list", { objective: "Implement durable storage migration and verify read/write round trips end to end", tasks: [{ title: "Implement and verify migration" }] }, ctx);
+  assert.equal(asked, 1);
+  assert.match(result.content[0]!.text, /rejected/i);
+  assert.deepEqual(readState(cwd), before);
+});
+
+test("recovered approval with unfinished deferred tasks returns to rework, not an archive-I/O hold", () => {
+  const { cwd, ctx } = harness("goal");
+  const before = state.goal!;
+  const at = "2026-10-16T13:30:00.000Z";
+  seedState(cwd, { goal: { ...before, status: "auditing", pendingCompletion: { completionSummary: "done", at, attemptId: "old-approval", phase: "settling", verdictAt: at },
+    auditHistory: [{ at, approved: true, disapproved: false, model: "test-auditor", revision: 4 }],
+    taskList: { version: 1, tasks: [{ id: "1", title: "Inspect runtime", status: "pending", deferred: { reason: "Installation only", followUp: "Inspect runtime", at } }] } } });
+  __testOnlyLoadState(cwd);
+  assert.equal(resumeSettlingCompletionAudit(ctx as unknown as ExtensionContext), "parked");
+  const after = readState(cwd).goal!;
+  assert.equal(after.status, "active");
+  assert.equal(after.pendingCompletion, undefined);
+  assert.equal(after.objective, before.objective);
+  assert.equal(after.verificationContract, before.verificationContract);
+  assert.ok(after.pendingTasks!.some(task => task.includes("Inspect runtime")));
+  assert.equal(after.pauseReason, undefined);
+  assert.equal(fs.existsSync(`${cwd}/.pi-glla/archive/${before.id}.md`), false);
+});
+
+for (const mode of ["goal", "loop"] as const) {
+  test(`${mode}: failed journal persistence grants no typed decision or workaround authority`, async () => {
+    const { cwd, pi, ctx } = harness(mode);
+    const before = JSON.stringify(state);
+    const journal = `${cwd}/.pi-glla/active.jsonl`;
+    fs.renameSync(journal, journal + ".before");
+    fs.mkdirSync(journal);
+    try {
+      const result = await pi.runTool("record_goal_judgment", deferred, ctx);
+      assert.match(result.content[0]!.text, /could not be persisted|persistence failed/);
+      assert.equal(JSON.stringify(state), before);
+      assert.equal(state.goal?.durableSolution ?? state.loop?.durableSolution, undefined);
+    } finally { fs.rmdirSync(journal); fs.renameSync(journal + ".before", journal); }
+  });
+}
