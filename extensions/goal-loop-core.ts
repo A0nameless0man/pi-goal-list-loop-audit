@@ -4612,6 +4612,11 @@ export function extractRequiredFixSeverities(report: string): RequiredFix[] {
 }
 
 export function durableObjectionsForDisapproval(report: string, statusCommand = "/goal status"): string[] {
+  // Prefer the auditor's explicit objections. The legacy prose fallback
+  // mistook "0 fail" and "No recursive test hazards" in verified checks for
+  // rework, hiding the actual Required fixes and retrying already-green work.
+  const required = extractRequiredFixSeverities(report).slice(0, 5).map(fix => clipSummaryValue(fix.text, 500));
+  if (required.length) return required;
   const extracted = extractPendingTasks(report, 5);
   return extracted.length > 0
     ? extracted

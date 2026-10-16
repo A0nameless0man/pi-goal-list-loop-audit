@@ -3,7 +3,7 @@ import fs from "node:fs";
 import { test, beforeEach, afterEach } from "node:test";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import activate, { __testOnlyLoadState, __testOnlyRegisterAgentTools, __testOnlyRememberCtx, __testOnlyResetOwnerSession, __testOnlyResetStaleFlag, __testOnlyResetTerminalFlags } from "../extensions/loops/goal.js";
-import { readState, LONG_RUNNING_JUDGMENT_POLICY } from "../extensions/goal-loop-core.js";
+import { readState, LONG_RUNNING_JUDGMENT_POLICY, durableObjectionsForDisapproval } from "../extensions/goal-loop-core.js";
 import { state } from "../extensions/goal-state.js";
 import { loopPrompt } from "../extensions/goal-loop.js";
 import { buildGoalAuditorPrompt } from "../extensions/goal-loop-auditor.js";
@@ -18,6 +18,16 @@ function reset(): void {
 }
 beforeEach(() => { reset(); fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, "{}"); });
 afterEach(reset);
+
+test("disapproval continuation retains actual required fixes instead of successful checks containing fail/no", () => {
+  const report = `Verified personally:\n- Focused tests: 8 pass / 0 fail (re-ran).\n- No recursive test hazards found.\n\n## Required fixes\n1. [HIGH] Run and record the complete release gate with package smoke results; focused tests cannot satisfy the full verification contract.\n2. [HIGH] Implement supported blocked-workaround admission across all modes and verify follow-up survives actual reload.\n3. [MED] Update verification evidence and the touched-file review.\n`;
+  const fixes = durableObjectionsForDisapproval(report);
+  assert.equal(fixes.length, 3);
+  assert.match(fixes[0]!, /Run and record the complete release gate/);
+  assert.match(fixes[1]!, /blocked-workaround admission/);
+  assert.ok(fixes.every(fix => /^\[(HIGH|MED)\]/.test(fix)));
+  assert.ok(fixes.every(fix => !fix.includes("0 fail") && !fix.includes("No recursive")));
+});
 
 const inline: SolutionJudgmentInput = { choice: "inline", reason: "Reproduced loss of the blocker across state restore", durableFix: "Persist the typed decision with the owning revision", evidence: "repro: restored fixture loses followUp before the fix" };
 const deferred: SolutionJudgmentInput = { choice: "deferred", reason: "Destructive migration is blocked by missing production permission", durableFix: "Replace the legacy storage after the migration is authorized", evidence: "permission preflight returns denied; existing storage remains usable", durableBlocked: true,
