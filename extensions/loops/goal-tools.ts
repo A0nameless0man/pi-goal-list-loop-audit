@@ -4261,6 +4261,7 @@ function registerAgentTools(pi: any): void {
     description: "Propose a task breakdown for the active goal. During a repair/replan card, include the concrete objective being redrafted. Opens the user's Confirm dialog. Limits: 20 top-level tasks, 5 subtasks per task.",
     parameters: Type.Object({
       objective: Type.Optional(Type.String({ description: "Required for a repair/replan card: the concrete original target being restored." })),
+      replaceExisting: Type.Optional(Type.Boolean({ description: "Explicitly propose a full replacement of committed tasks. Always requires specific user confirmation with old/new tasks and retained objective/contract, even with draft auto-accept. Records the old plan and invalidates prior revision proof." })),
       tasks: Type.Array(Type.Object({
         title: Type.String(),
         agentRole: Type.Optional(Type.Literal("designer", { description: "Route this task through the read-only Designer subagent before implementation." })),
@@ -4274,10 +4275,10 @@ function registerAgentTools(pi: any): void {
       if (!state.goal || state.goal.status !== "active") {
         return { content: [{ type: "text", text: "No active goal to break down." }], details: {} };
       }
-      if (state.goal.taskList && state.goal.taskList.tasks.length > 0 && !state.goal.repairTarget) {
+      if (state.goal.taskList && state.goal.taskList.tasks.length > 0 && !state.goal.repairTarget && params.replaceExisting !== true) {
         return { content: [{ type: "text", text: "A task list already exists. Use update_task_status / complete_task to work it." }], details: {} };
       }
-      const p = params as { objective?: string; tasks: TaskProposal[] };
+      const p = params as { objective?: string; tasks: TaskProposal[]; replaceExisting?: boolean };
       const liveCtx = currentToolContext(execCtx);
       if (!liveCtx) return staleToolResult();
       const repairTarget = state.goal.repairTarget;
@@ -4305,7 +4306,11 @@ function registerAgentTools(pi: any): void {
       const proposalGoal = state.goal;
       const proposalRevision = proposalGoal.revision ?? 0;
       const proposalContract = proposalGoal.verificationContract;
-      const autoAcceptTasks = !repairTarget && loadSettings(liveCtx.cwd).autoAcceptDrafts === true;
+      const proposalObjective = proposalGoal.objective;
+      const proposalStatus = proposalGoal.status;
+      const proposalTaskSnapshot = JSON.stringify(proposalGoal.taskList);
+      const replacing = !!proposalGoal.taskList?.tasks.length && !repairTarget;
+      const autoAcceptTasks = !repairTarget && !replacing && loadSettings(liveCtx.cwd).autoAcceptDrafts === true;
       let confirmed = false;
       if (autoAcceptTasks) {
         confirmed = true;
@@ -4313,7 +4318,9 @@ function registerAgentTools(pi: any): void {
         appendLedger(liveCtx.cwd, "draft_autoaccepted", { kind: "tasks", count: p.tasks.length });
       } else {
         try {
-          confirmed = repairTarget
+          confirmed = replacing
+            ? await liveCtx.ui.confirm("Confirm committed task amendment", `Retained objective:\n${proposalObjective}\n\nRetained verification contract:\n${proposalContract || "(none)"}\n\nCURRENT COMMITTED TASKS:\n${sanitizeDisplayText(JSON.stringify(proposalGoal.taskList, null, 2))}\n\nPROPOSED TASKS (all require fresh verification):\n${preview}\n\nThis explicitly replaces the committed plan, records its history and invalidates prior revision proof. It does not waive the objective or verification contract. Approve?`)
+            : repairTarget
             ? await liveCtx.ui.confirm("Confirm repair scope amendment", `Original objective:\n${repairTarget.objective}\n\nOriginal verification contract:\n${repairTarget.verificationContract || "(none)"}\n\nProposed:\n${preview}`)
             : (await confirmDraft(liveCtx, "Confirm task list", preview)) === "yes";
         } catch {
@@ -4323,7 +4330,7 @@ function registerAgentTools(pi: any): void {
       if (!confirmed) {
         return { content: [{ type: "text", text: "Task list rejected by the user. Adjust and propose again." }], details: {} };
       }
-      if (state.goal !== proposalGoal || (state.goal.revision ?? 0) !== proposalRevision || state.goal.verificationContract !== proposalContract || foreignToolGuard(liveCtx)) {
+      if (state.goal !== proposalGoal || (state.goal.revision ?? 0) !== proposalRevision || state.goal.verificationContract !== proposalContract || state.goal.objective !== proposalObjective || state.goal.status !== proposalStatus || JSON.stringify(state.goal.taskList) !== proposalTaskSnapshot || foreignToolGuard(liveCtx)) {
         return { content: [{ type: "text", text: "The task proposal target changed during confirmation; no amendment was applied." }], details: {}, isError: true };
       }
       const taskList = buildTaskList(p.tasks);
@@ -4405,7 +4412,7 @@ function registerAgentTools(pi: any): void {
           });
         }
       } else {
-        if (!updateGoal({ taskList }, liveCtx)) {
+        if (!updateGoal({ taskList, ...(replacing ? { revision: proposalRevision + 1 } : {}) }, liveCtx)) {
           return {
             content: [{ type: "text", text: "Task list was not persisted. No task was added; fix .pi-glla storage and retry." }],
             details: {},
@@ -4413,6 +4420,7 @@ function registerAgentTools(pi: any): void {
           };
         }
       }
+      if (replacing) appendLedger(liveCtx.cwd, "committed_tasks_amended", { goalId: proposalGoal.id, fromRevision: proposalRevision, toRevision: proposalRevision + 1, priorTasks: proposalGoal.taskList, tasks: taskList });
       const subCount = taskList.tasks.reduce((n, t) => n + (t.subtasks?.length ?? 0), 0);
       return {
         content: [{ type: "text", text: `Task list set: ${taskList.tasks.length} tasks, ${subCount} subtasks. Track progress with complete_task / update_task_status.` }],
