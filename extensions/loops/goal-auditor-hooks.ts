@@ -259,6 +259,7 @@ import {
 } from "../goal-loop-repetition.js";
 import { buildStatusText, buildWidgetLines, type AuditDisplayProgress } from "../goal-loop-display.js";
 import { buildFinalRepoStateLines, buildTerminalApprovalRender, compactCompletionSummary, isGenericCompletionSummary, missingCompletionSummaryLabels } from "../completion-summary.js";
+import { collectOpenTasks, formatOpenTaskRefusal } from "../task-batch.js";
 import { AUDIT_ACTIVITY_PERSIST_MS, isSettlingClaim, settlementAllowsTerminalRender, settlementPark } from "../audit-lifecycle.js";
 import { persistApprovalRender, replayUndeliveredApprovalRenders } from "../approval-render-store.js";
 import {
@@ -1174,6 +1175,15 @@ export function resumeSettlingCompletionAudit(ctx: ExtensionContext, origin: Com
     // A settling claim with no approval verdict is a corrupt/incomplete
     // record, not a settlement. Park it honestly instead of archiving.
     markCompletionAuditRecoveryPending(ctx, "settling-without-verdict");
+    return "parked";
+  }
+  // A pre-existing verdict cannot waive unfinished committed work; refuse the
+  // settlement before archive so a recovered session cannot quietly complete a
+  // goal that still has open tasks. The same fence `archiveCurrentGoal` uses.
+  const openTasks = goal.taskList ? collectOpenTasks(goal.taskList) : [];
+  if (openTasks.length) {
+    ctx.ui.notify(formatOpenTaskRefusal(openTasks), "warning");
+    appendLedger(ctx.cwd, "settlement_unfinished_work_refused", { goalId: goal.id, open: openTasks, origin });
     return "parked";
   }
   appendLedger(ctx.cwd, "audit_settlement_resumed", { goalId: goal.id, attemptId: claim.attemptId, verdictAt: approved.at, origin });
