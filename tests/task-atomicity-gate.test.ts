@@ -101,19 +101,31 @@ test("withTaskStatus replaces one status on a copy", () => {
   assert.throws(() => withTaskStatus(tl, "nope", "complete"), /not found/);
 });
 
-test("open-task collection skips complete and deferred tasks, keeps BFS order", () => {
+test("open-task collection: deferrals are notes, not exemptions; BFS order kept", () => {
+  // The fixture task '3' carries a legacy deferral stamp; the new policy
+  // keeps it open, because a deferral retains context and never waives
+  // committed work.
   assert.deepEqual(collectOpenTasks(batchFixture()), [
     { id: "2", title: "Implement the core", status: "in_progress" },
+    { id: "3", title: "Blocked upstream", status: "pending" },
     { id: "2.2", title: "Persist once", status: "pending" },
   ]);
+  // Record a deferral on the in-progress task: it remains open, because a
+  // deferral retains context and never waives committed work.
+  const stamped: TaskList = {
+    version: 1,
+    tasks: [{ id: "x", title: "Blocked work", status: "in_progress", deferred: { reason: "Provider outage", followUp: "Retry next turn", at: "2026-10-16T09:00:00.000Z" } }],
+  };
+  assert.deepEqual(collectOpenTasks(stamped), [{ id: "x", title: "Blocked work", status: "in_progress" }]);
 });
 
 test("refusal text names every open task with id, title, and status", () => {
   const text = formatOpenTaskRefusal(collectOpenTasks(batchFixture()));
-  assert.match(text, /complete_goal REFUSED — 2 open committed tasks/);
+  assert.match(text, /complete_goal REFUSED — 3 open committed tasks/);
   assert.match(text, /- 2: "Implement the core" \(in_progress\)/);
+  assert.match(text, /- 3: "Blocked upstream" \(pending\)/);
   assert.match(text, /- 2\.2: "Persist once" \(pending\)/);
-  assert.match(text, /record_goal_judgment/);
+  assert.match(text, /recorded deferral retains the blocker/i);
   assert.match(text, /NOT sent to the auditor/);
 });
 
@@ -319,7 +331,7 @@ function taskById(cwd: string, id: string): Record<string, unknown> | null {
   return null;
 }
 
-test("deferred judgment with a real taskId stamps the exemption durably", async () => {
+test("deferred judgment with a real taskId retains the blocker durably, without waiving it", async () => {
   const { cwd, ctx, on } = await activeHarness();
   const res = await on.runTool("record_goal_judgment", {
     choice: "deferred",
@@ -328,7 +340,7 @@ test("deferred judgment with a real taskId stamps the exemption durably", async 
     taskId: "3",
   }, ctx);
   assert.match(res.content[0]!.text, /Recorded durable-vs-defer judgment: deferred\./);
-  assert.match(res.content[0]!.text, /Task 3 .+ exempt from the complete_goal pending-task gate/);
+  assert.match(res.content[0]!.text, /retains its blocker and durable follow-up; it remains unfinished/);
   const stamped = taskById(cwd, "3")!["deferred"] as Record<string, string>;
   assert.equal(stamped.reason, "provider outage blocks the gated step");
   assert.equal(stamped.followUp, "retry the gated step tomorrow");
@@ -388,7 +400,7 @@ test("claim with open committed tasks is refused naming each one, auditor untouc
   assert.equal((readState(cwd).goal as unknown as { status: string }).status, "active");
 });
 
-test("claim passes the gate when open tasks are finished and the rest deferred", async () => {
+test("a recorded deferral does not waive committed work; the gate still refuses with task 3 open", async () => {
   const { cwd, ctx, on } = await activeHarness();
   const batch = await on.runTool("update_task_batch", {
     updates: [
@@ -404,9 +416,10 @@ test("claim passes the gate when open tasks are finished and the rest deferred",
     followUp: "retry the gated step next turn",
     taskId: "3",
   }, ctx);
-  assert.match(defer.content[0]!.text, /exempt from the complete_goal pending-task gate/);
+  assert.match(defer.content[0]!.text, /retains its blocker and durable follow-up/);
   const res = await on.runTool("complete_goal", CLAIM, ctx);
-  assert.doesNotMatch(res.content[0]!.text, /complete_goal REFUSED/);
+  assert.match(res.content[0]!.text, /complete_goal REFUSED — 1 open committed task/);
+  assert.match(res.content[0]!.text, /- 3: "Gated" \(pending\)/);
 });
 
 for (const tool of ["complete_task", "update_task_status", "update_task_batch"]) {

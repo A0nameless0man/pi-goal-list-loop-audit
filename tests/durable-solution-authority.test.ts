@@ -101,12 +101,12 @@ test("the shared terminal archive fence refuses legacy deferred work, including 
 });
 
 test("complete_goal: the gate now blocks a claim whose only task carries a legacy deferral", async () => {
-  const { cwd, pi, ctx } = harness();
+  const { cwd, pi, ctx } = harness("goal", tasks());
   const before = readState(cwd).goal!;
   const res = await pi.runTool("complete_goal", { ...claim, verificationSummary: "Inspect actual runtime behavior" }, ctx);
   const text = res.content[0]!.text;
   assert.match(text, /open committed task/);
-  assert.match(text, /Inspect actual runtime behavior/);
+  assert.match(text, /Verify loaded behavior/);
   const after = readState(cwd).goal!;
   assert.equal(after.status, before.status);
   assert.equal(after.objective, before.objective);
@@ -117,16 +117,17 @@ test("complete_goal: the gate now blocks a claim whose only task carries a legac
   assert.match(fs.readFileSync(`${cwd}/.pi-glla/active.jsonl`, "utf8"), /"complete_goal_tasks_refused"/);
 });
 
-test("a same-text newObjective still needs explicit consent", async () => {
+test("a meaningful newObjective amendment keeps the contract changes unless the user approves them", async () => {
   const { cwd, pi, ctx } = harness();
   const before = readState(cwd).goal!;
   let confirmations = 0;
   ctx.ui.confirmImpl = async () => { confirmations++; return false; };
-  const res = await pi.runTool("complete_goal", { ...claim, newObjective: before.objective + "  " }, ctx);
+  const res = await pi.runTool("complete_goal", { ...claim, newObjective: "Mark the source installed, no contract change" }, ctx);
   assert.match(res.content[0]!.text, /not confirmed|not changed/i);
   assert.equal(confirmations, 1);
   const after = readState(cwd).goal!;
   assert.equal(after.objective, before.objective);
+  assert.equal(after.verificationContract, before.verificationContract);
   assert.equal(after.revision, before.revision);
   assert.equal(after.pendingCompletion, undefined);
 });
