@@ -294,7 +294,7 @@ test("already-complete and same-status moves report state instead of not found",
   assert.deepEqual(taskStatuses(cwd), { "1": "pending", "2": "in_progress", "2.1": "complete", "3": "pending" });
 });
 
-// ---- record_goal_judgment taskId: the recorded deferral behind the gate exemption ----
+// ---- record_goal_judgment taskId: persisted context, never a gate exemption ----
 
 // record_goal_judgment and complete_goal only run on an ACTIVE goal owned
 // by the calling session. Owner identity binds by object, so each test
@@ -337,6 +337,10 @@ test("deferred judgment with a real taskId retains the blocker durably, without 
     choice: "deferred",
     reason: "provider outage blocks the gated step",
     followUp: "retry the gated step tomorrow",
+    durableFix: "Verify the durable implementation through the gated provider",
+    evidence: "provider preflight returns a service outage",
+    durableBlocked: true,
+    blocker: { kind: "external-blocked", evidence: "external provider reports service unavailable" },
     taskId: "3",
   }, ctx);
   assert.match(res.content[0]!.text, /Recorded durable-vs-defer judgment: deferred\./);
@@ -376,7 +380,7 @@ test("inline judgment with a taskId is refused — no exemption by accident", as
   assert.equal(ledgerText(cwd), beforeLedger, "no ledger entry for a refused judgment");
 });
 
-// ---- complete_goal pending-task gate: refuse early, name tasks, deferrals exempt ----
+// ---- complete_goal pending-task gate: refuse early, name all unfinished tasks ----
 
 const CLAIM = {
   completionSummary: "Outcome: tasks done. Changed: code. Evidence: tests. Tests: bun test 14/14. Unresolved: none. Next: none.",
@@ -414,6 +418,10 @@ test("a recorded deferral does not waive committed work; the gate still refuses 
     choice: "deferred",
     reason: "external gate down",
     followUp: "retry the gated step next turn",
+    durableFix: "Run the durable implementation gate",
+    evidence: "preflight confirms the remote gate is unavailable",
+    durableBlocked: true,
+    blocker: { kind: "external-blocked", evidence: "remote service preflight unavailable" },
     taskId: "3",
   }, ctx);
   assert.match(defer.content[0]!.text, /retains its blocker and durable follow-up/);

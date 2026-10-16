@@ -22,6 +22,7 @@ test("production record_goal_judgment persists facts and refreshUI renders durab
     choice: "inline",
     reason: "The durable root-cause fix is safe to ship now.",
     durableFix: "pin plaque ordering",
+    evidence: "production widget reproduction demonstrates durable plaque must retain first position across three historical deferrals",
     deferRecommendations: [
       "defer until the next pass",
       "use a cosmetic workaround",
