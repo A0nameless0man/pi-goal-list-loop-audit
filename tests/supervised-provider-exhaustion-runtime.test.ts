@@ -1,4 +1,4 @@
-import { test, afterEach } from 'node:test';
+import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import type { ExtensionContext } from '@earendil-works/pi-coding-agent';
@@ -11,6 +11,9 @@ import { clearMainModelRecoveryTimer, mainModelRecoveryRuntimeStatus, probeMainM
 
 // Drive registered agent_end and the real durable recovery probe, not a retry
 // model. Advance only the cadence clock; no provider calls or quota requests.
+// Isolate the first stress case from prior files as well as subsequent cases.
+// Shared singleton timers/holds must not leak in from earlier suite fixtures.
+beforeEach(() => __testOnlyResetProcessState());
 afterEach(() => __testOnlyResetProcessState());
 
 // 2101 simulated failures per mode. This is a real integration stress test:

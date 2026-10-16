@@ -117,11 +117,11 @@ test("judgment is target/revision-bound and a changed contract cannot reuse it a
   assert.equal(judgmentMatchesTarget(accepted.judgment, { ...target, id: "other" }), false);
 });
 
-for (const kind of ["installation", "journal-marker", "runtime-observation"] as const) {
-  test(`${kind} cannot prove successful execution even without open tasks or after synthetic markers`, async () => {
+for (const [kind, required] of [["installation", "executed"], ["journal-marker", "executed"], ["runtime-observation", "executed"], ["installation", "loaded"], ["journal-marker", "loaded"]] as const) {
+  test(`${kind} cannot prove ${required} behavior even without open tasks or after synthetic markers`, async () => {
     const { cwd, pi, ctx } = harness("goal");
     fs.appendFileSync(`${cwd}/.pi-glla/active.jsonl`, JSON.stringify({ at: new Date().toISOString(), type: "fake_runtime_verified", value: { loaded: true, execution: "successful" } }) + "\n");
-    const result = await pi.runTool("complete_goal", { completionSummary: "Outcome: installation done", outcomeClaims: [{ required: "executed", kind, evidence: "metadata version matches; executor wrote a successful marker" }] }, ctx);
+    const result = await pi.runTool("complete_goal", { completionSummary: "Outcome: installation done", outcomeClaims: [{ required, kind, evidence: "metadata version matches; executor wrote a successful marker" }] }, ctx);
     assert.equal(result.isError, true);
     assert.match(result.content[0]!.text, /not proof|does not establish/);
     assert.match(result.content[0]!.text, /No audit was dispatched/);
