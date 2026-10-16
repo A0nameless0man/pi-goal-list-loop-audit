@@ -3,6 +3,43 @@
 Start with `/glla status`. For full saved details, use `/goal status`,
 `/list show`, or `/loop status`, depending on the work surface.
 
+## Durable fixes, temporary workarounds and evidence
+
+`record_goal_judgment` works for the owned active goal/list item or loop/project.
+Every new judgment needs `durableFix`, `reason` and concrete `evidence` (an
+inspected artifact, reproduction or observed result). It persists the target,
+contract revision and executor-assertion provenance through reload.
+
+For `choice="deferred"`, also provide `durableBlocked=true`, a `blocker` with
+`kind` (`unsafe`, `impossible`, `external-blocked`) and concrete `evidence`, plus
+`followUp`. If using an actual workaround, its `action`, `safety`, `rollback` and
+`verification` are all required. Routine failed tests and incomplete local work
+are not external blockers. Recording a justified workaround admits bounded
+work under the existing contract; it does **not** admit final completion or
+silently waive a required task. The independent auditor must inspect the cited
+blocker, behavior and checks; populated fields alone prove none of them.
+
+Legacy task deferrals remain historical context. All unfinished committed tasks
+still block completion and archival. If a recovered approval has unfinished
+work, its settlement claim is invalidated and rework resumes (an explicit pause
+is preserved); this is not reported as an archive storage failure.
+
+Draft auto-accept is not consent to weaken adopted scope. Completion pivots,
+repair redrafts, loop spec refinements and project requirement refinements need
+specific confirmation; a changed target during confirmation refuses the
+amendment. Loop refinement shows the current and proposed spec and refuses a
+concurrent spec change. Ordinary loop plateau, bounds and explicit finish keep
+their stopping semantics: stopping is not independent implementation approval.
+
+Completion can carry explicit `outcomeClaims` (`required`: `loaded`/`executed`,
+`kind`, `evidence`). Installation metadata or a journal marker cannot support
+such claims; runtime loading alone cannot support successful execution. Valid
+observations are still executor assertions requiring independent inspection of
+the real target/revision. Omitting this optional structured field does not
+remove the auditor's obligation to inspect actual behavior. GLLA does not
+cryptographically authenticate arbitrary artifacts or classify architectural
+quality from prose.
+
 ## Resolving contract conflicts without losing work
 
 A rejected invocation is not a passed criterion. Correcting shell syntax is distinct from waiving failures or required human evidence: keep the confirmed criteria until explicitly amended. `/goal verify` starts/manages a completion audit; it does not edit the contract or supply missing evidence.
