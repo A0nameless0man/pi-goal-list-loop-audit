@@ -1245,6 +1245,26 @@ export function createGoalSettlementBoundary(overrides: Partial<SettlementPersis
   };
 }
 
+/** A stored approval cannot waive unfinished work. Clear its settlement claim
+ * and return to rework, rather than misreporting this as an archive I/O error.
+ * Preserve an explicit paused hold; all state changes use the normal transaction. */
+export function refuseUnfinishedCompletion(ctx: ExtensionContext): boolean {
+  const goal = state.goal;
+  const open = goal?.taskList ? collectOpenTasks(goal.taskList) : [];
+  if (!goal || !open.length) return false;
+  const held = goal.status === "paused";
+  const persisted = updateGoal({
+    status: held ? "paused" : "active",
+    pendingCompletion: undefined,
+    pendingTasks: open.slice(0, 5).map(task => `${task.id}: ${task.title} remains unfinished; a deferral does not waive it.`),
+    ...(held ? { pauseKind: "blocked", pauseReason: "Completion refused: committed work remains unfinished; the existing pause is retained.", pauseSuggestedAction: `Resolve the recorded work, then ${activeGoalSurfaceCommand("resume")} continues under the unchanged contract.` } : {}),
+  }, ctx);
+  appendLedger(ctx.cwd, "settlement_unfinished_work_refused", { goalId: goal.id, open, persisted });
+  ctx.ui.notify(formatOpenTaskRefusal(open), "warning");
+  if (persisted && !held) scheduleLoopTick(ctx);
+  return true;
+}
+
 export function archiveCurrentGoal(
   ctx: ExtensionContext,
   status: Status,
@@ -1271,12 +1291,7 @@ export function archiveCurrentGoal(
   }
   // Final common fence, including manual and recovered approved settlements:
   // old deferral stamps and a previously written verdict cannot waive work.
-  const openTasks = status === "complete" && goal.taskList ? collectOpenTasks(goal.taskList) : [];
-  if (openTasks.length) {
-    ctx.ui.notify(formatOpenTaskRefusal(openTasks), "warning");
-    appendLedger(ctx.cwd, "completion_unfinished_work_refused", { goalId: goal.id, open: openTasks });
-    return false;
-  }
+  if (status === "complete" && refuseUnfinishedCompletion(ctx)) return false;
   const pendingAttemptId = goal.pendingCompletion?.attemptId;
   const target = archivedGoalPath(ctx.cwd, goal.id);
   const archivePath = path.relative(ctx.cwd, target) || target;
