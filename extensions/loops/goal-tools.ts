@@ -2,7 +2,7 @@ import { classifyInterruption, type InterruptionReason } from "../interruption-p
 import { assessDraftReadiness, draftReadinessMessage } from "../draft-readiness.js";
 import { effectiveToolTimeoutMs } from "../goal-loop-auditor-process.js";
 import { deliverTerminalSummary } from "../terminal-summary-delivery.js";
-import { archiveCurrentGoal } from "./goal-orchestrator.js";
+import { archiveCurrentGoal, refuseUnfinishedCompletion } from "./goal-orchestrator.js";
 /**
  * pi-goal-list-loop-audit — v0.1.0
  * extensions/loops/goal-tools.ts — agent tool definitions.
@@ -1684,6 +1684,7 @@ function registerAgentTools(pi: any): void {
           appendLedger(ctx.cwd, "audit_settlement_parked", { goalId: state.goal?.id, attemptId: settlementClaim.attemptId, origin: "manual-verify", stage: settlementPark("verdict").step });
           return { content: [{ type: "text", text: "The auditor approved, but the approval could not be persisted, so nothing was archived. Fix .pi-glla disk access and call complete_goal again." }], details: {} };
         }
+        if (refuseUnfinishedCompletion(ctx)) return { content: [{ type: "text", text: "Completion refused: committed work remains unfinished. The stored settlement was invalidated; continue the unchanged contract and submit fresh evidence after finishing the work." }], details: {}, isError: true };
         // v0.34.91: the end-of-goal voice carries the recap (what happened)
         // on EVERY approve path — fresh complete_goal approval + provider retry
         // approve + manual-verify approve. Captured BEFORE archive (it

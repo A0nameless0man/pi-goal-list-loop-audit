@@ -124,6 +124,7 @@
       "items": { "type": "string" },
       "description": "aggressiveMode audit-cap TODOs: objections extracted from the latest disapproved report, rendered into every continuation until addressed."
     },
+    "durableSolution": { "$ref": "#/definitions/solutionJudgment" },
     "durableDeferRecommendation": {
       "type": "object",
       "required": ["durableFix", "deferRecommendations"],
@@ -346,6 +347,42 @@
         "auditorThinkingLevel": { "type": "string", "maxLength": 20, "description": "Effective thinking level resolved for the running attempt (per-candidate fallback applied at launch). Display-only — never candidate-selection state; absent on legacy claims." }
       }
     },
+    "solutionText": { "type": "string", "minLength": 1, "maxLength": 1000 },
+    "solutionJudgment": {
+      "type": "object",
+      "description": "Revision-bound executor assertions. Never implementation proof, scope authority or a pending-task exemption.",
+      "required": ["version", "target", "at", "authority", "choice", "reason", "durableFix", "evidence"],
+      "properties": {
+        "version": { "const": 1 },
+        "authority": { "const": "executor-assertion" },
+        "at": { "type": "string", "format": "date-time" },
+        "target": {
+          "type": "object", "required": ["mode", "id", "revision"],
+          "properties": {
+            "mode": { "enum": ["goal", "list", "loop", "project"] },
+            "id": { "type": "string", "minLength": 1 },
+            "revision": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "choice": { "enum": ["inline", "deferred"] },
+        "reason": { "$ref": "#/definitions/solutionText" },
+        "durableFix": { "$ref": "#/definitions/solutionText" },
+        "evidence": { "$ref": "#/definitions/solutionText" },
+        "followUp": { "$ref": "#/definitions/solutionText" },
+        "durableBlocked": { "type": "boolean" },
+        "blocker": {
+          "type": "object", "required": ["kind", "evidence"],
+          "properties": { "kind": { "enum": ["unsafe", "impossible", "external-blocked"] }, "evidence": { "$ref": "#/definitions/solutionText" } }
+        },
+        "workaround": {
+          "type": "object", "required": ["action", "safety", "rollback", "verification"],
+          "properties": {
+            "action": { "$ref": "#/definitions/solutionText" }, "safety": { "$ref": "#/definitions/solutionText" },
+            "rollback": { "$ref": "#/definitions/solutionText" }, "verification": { "$ref": "#/definitions/solutionText" }
+          }
+        }
+      }
+    },
     "task": {
       "type": "object",
       "required": ["id", "title", "status"],
@@ -357,7 +394,7 @@
         "verificationContract": { "type": "string" },
         "deferred": {
           "type": "object",
-          "description": "Durable deferral stamp (record_goal_judgment choice=deferred + taskId). Exempts this task from the complete_goal pending-task gate.",
+          "description": "Historical deferral context (record_goal_judgment choice=deferred + taskId). Retains blocker and follow-up; NEVER exempts unfinished committed work from completion checks, including legacy stamps.",
           "required": ["reason", "followUp", "at"],
           "properties": {
             "reason": { "type": "string", "minLength": 1 },

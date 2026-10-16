@@ -1,5 +1,5 @@
 import { effectiveToolTimeoutMs } from "../goal-loop-auditor-process.js";
-import { archiveCurrentGoal } from "./goal-orchestrator.js";
+import { archiveCurrentGoal, refuseUnfinishedCompletion } from "./goal-orchestrator.js";
 /**
  * pi-goal-list-loop-audit — v0.1.0
  * extensions/loops/goal.ts
@@ -259,7 +259,6 @@ import {
 } from "../goal-loop-repetition.js";
 import { buildStatusText, buildWidgetLines, type AuditDisplayProgress } from "../goal-loop-display.js";
 import { buildFinalRepoStateLines, buildTerminalApprovalRender, compactCompletionSummary, isGenericCompletionSummary, missingCompletionSummaryLabels } from "../completion-summary.js";
-import { collectOpenTasks, formatOpenTaskRefusal } from "../task-batch.js";
 import { AUDIT_ACTIVITY_PERSIST_MS, isSettlingClaim, settlementAllowsTerminalRender, settlementPark } from "../audit-lifecycle.js";
 import { persistApprovalRender, replayUndeliveredApprovalRenders } from "../approval-render-store.js";
 import {
@@ -1056,6 +1055,7 @@ function settleApprovedCompletion(
   const { goalId, generation, claim, model, origin, fallbackUsed, inspectionSessionPath } = opts;
   const goal = state.goal;
   if (!goal || goal.id !== goalId) return false;
+  if (refuseUnfinishedCompletion(ctx)) return false;
   // v0.34.91: capture the recap BEFORE archiveCurrentGoal (it mutates
   // state.goal). The end-of-goal message says WHAT HAPPENED, not
   // "auditor approved" — that's process, not information (the field
@@ -1177,15 +1177,7 @@ export function resumeSettlingCompletionAudit(ctx: ExtensionContext, origin: Com
     markCompletionAuditRecoveryPending(ctx, "settling-without-verdict");
     return "parked";
   }
-  // A pre-existing verdict cannot waive unfinished committed work; refuse the
-  // settlement before archive so a recovered session cannot quietly complete a
-  // goal that still has open tasks. The same fence `archiveCurrentGoal` uses.
-  const openTasks = goal.taskList ? collectOpenTasks(goal.taskList) : [];
-  if (openTasks.length) {
-    ctx.ui.notify(formatOpenTaskRefusal(openTasks), "warning");
-    appendLedger(ctx.cwd, "settlement_unfinished_work_refused", { goalId: goal.id, open: openTasks, origin });
-    return "parked";
-  }
+  if (refuseUnfinishedCompletion(ctx)) return "parked";
   appendLedger(ctx.cwd, "audit_settlement_resumed", { goalId: goal.id, attemptId: claim.attemptId, verdictAt: approved.at, origin });
   return settleApprovedCompletion(ctx, {
     goalId: goal.id,
