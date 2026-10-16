@@ -1,6 +1,7 @@
 # Durable-solution contract
 
-Status: implementation design; verification is not yet claimed.
+Status: shared typed policy implemented; final release verification remains pending.
+The first completion claim was disapproved; no acceptance criterion was removed.
 Baseline: 6943a00b1e0b84af574dc5902a7e5556a19815f9, package 0.39.34.
 Authority: confirmed local-only goal; preserve unrelated existing repairs.
 
@@ -14,8 +15,12 @@ rationale, UI selection, ledger marker, repeated recommendation or passing
 build does not establish architectural quality or user-visible completion.
 Independent verification must inspect actual behavior and the current contract.
 
-Use one shared typed judgment/evidence policy; persist decisions through the
-existing state transaction. Keep recommendations separate from authority.
+`extensions/durable-solution.ts` owns typed judgment and explicit outcome-claim
+admission. Goal/loop types persist these executor assertions through the existing
+state transaction. New records require a named correction and concrete evidence;
+deferred corrections need a typed blocker and follow-up, and actual workarounds
+also require safety, rollback and reproducible verification. This admits bounded
+work under the contract, never final completion or a task exemption. Keep recommendations separate from authority.
 Evidence supplied by an executor must be labelled as an assertion, not a
 host attestation. Preserve the distinction between installed source/metadata,
 loaded runtime, and observed successful behavior. No generic prose classifier
@@ -26,12 +31,12 @@ can prove these semantic claims; the independent verifier must inspect them.
 | Mode/path | Existing entry points | Required invariant |
 | --- | --- | --- |
 | Goal and list planning | goal-loop-core.ts drafting/policy; goal-commands.ts confirmed tweak; loops/goal-tools.ts task proposals | Preserve confirmed scope; no silent objective/contract replacement during completion. |
-| Goal and list judgment | loops/goal-tools.ts record_goal_judgment; goal-loop-core.ts recommendation projection | Validate concrete blocked-workaround facts; store target/revision-bound assertions, never implementation proof. |
+| Goal and list judgment | durable-solution.ts admitSolutionJudgment; loops/goal-tools.ts record_goal_judgment; goal-loop-core.ts state/markdown | Validate blocked-workaround assertions; persist target/revision, evidence and follow-up, never implementation proof. |
 | Goal and list completion | task-batch.ts collectOpenTasks; loops/goal-tools.ts complete_goal | A deferral note cannot waive pending committed work; audit always checks the confirmed contract. |
-| Goal and list recovery | goal-auditor-hooks.ts stored claim/settlement; goal-loop-core.ts durable state | Restart cannot resurrect a removed exemption or bypass admission. Preserve ownership and revision checks. |
-| Metric and metricless loop | goal-loop-forever.ts LoopState; goal-loop.ts user finish/refinement | Retain shared judgment through loop persistence; metric movement is not proof of unrelated implementation obligations. Explicit user stop/finish remains a user action, not independent approval. |
+| Goal and list recovery | goal-orchestrator.ts refuseUnfinishedCompletion; goal-auditor-hooks.ts settlement/recovery | Restart cannot resurrect an exemption. Obsolete settling approvals with unfinished work return to rework (retaining explicit holds), not a false archive-I/O wait. |
+| Metric and metricless loop | goal-loop-forever.ts LoopState; goal-loop.ts loopPrompt/user finish; goal-tools.ts refinement/judgment | Persist shared judgments and follow-up; require specific scope consent even with draft auto-accept. Metric movement and user-directed stop/finish are not independent implementation approval. |
 | Project/respec loop | respec-builder-runtime.ts tools/settlement; respec-builder-audit.ts goal adapter | Preserve independent per-increment verification, confirmed refinements and requirement/attempt/revision fences. Carry shared policy into audit. |
-| Independent verification | goal-loop-auditor.ts prompt; existing mechanical checks and revision-bound settlement | Asserted decisions/markers/install receipts cannot substitute for inspected root-cause and runtime evidence. Reject missing contract behavior, not unrelated repository debt. |
+| Independent verification | durable-solution.ts outcomeClaimAdmissible; goal-tools.ts complete_goal; goal-loop-auditor.ts shared goal/project policy | Explicit installation/journal-marker execution claims are refused before audit, even with no open tasks. Admitted observations stay assertions for independent review. Auditors inspect actual root-cause/runtime evidence, not just populated fields. |
 | Continuation | goal-continuation.ts templates; goal-loop-core.ts policy; loop prompts | Durable-first, blocked exceptions with retained follow-up; no repeated cosmetic patching or scope evasion. |
 
 ## Compatibility and lifecycle
@@ -50,13 +55,16 @@ proof and allow fresh verification; no silent removal of acceptance clauses.
 
 ## Verification plan
 
-Production-hook temporary-journal tests will cover refused unsupported deferrals,
+Production-hook temporary-journal tests cover refused unsupported deferrals,
 legacy stamps after reload, protected scope changes, positive confirmed changes,
 mode-appropriate judgment, write failures and ownership. Shared evidence tests
 must distinguish claims/install receipts from inspected runtime behavior without
 pretending to cryptographically authenticate arbitrary repository artifacts.
-Run bounded dedicated regressions, types, inventory and full release checks.
-Record exact evidence in DURABLE-SOLUTION-VERIFICATION.md before claiming results.
+Dedicated cases also cover supported inline/workaround admission across goal,
+list, loop and project, actual session restore, scope consent, failed persistence
+and install-only/synthetic-marker refusal without pending tasks. Run types,
+inventory and the full release check; record raw results in
+DURABLE-SOLUTION-VERIFICATION.md before claiming completion.
 
 ## Boundaries
 

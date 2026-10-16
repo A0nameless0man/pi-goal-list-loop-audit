@@ -4012,7 +4012,7 @@ function registerAgentTools(pi: any): void {
           proposedSpec = p.specText?.trim() ? p.specText.trim() + "\n" : originalSpec;
           if (p.specAppend?.trim()) proposedSpec += (proposedSpec.endsWith("\n") ? "" : "\n") + p.specAppend.trim() + "\n";
         } catch {
-          return { content: [{ type: "text", text: "Cannot inspect the current spec for scope confirmation; no refinement was applied." }], details: {}, isError: true };
+          return { content: [{ type: "text", text: "Cannot inspect the current spec for scope confirmation; no refinement was applied. No loop state changed." }], details: {}, isError: true };
         }
       }
       // Measure change → orchestrator test-runs the new command first.
