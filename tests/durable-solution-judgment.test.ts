@@ -10,6 +10,7 @@ import { buildGoalAuditorPrompt } from "../extensions/goal-loop-auditor.js";
 import { respecIncrementAuditGoal } from "../extensions/respec-builder-audit.js";
 import { createRespecBuilder, adoptRespecRequirements, planRespecIncrement, claimRespecTask, beginRespecAudit } from "../extensions/respec-builder.js";
 import { judgmentMatchesTarget, admitSolutionJudgment, type SolutionJudgmentInput } from "../extensions/durable-solution.js";
+import { resumeSettlingCompletionAudit } from "../extensions/loops/goal-auditor-hooks.js";
 import { MockPi, makeMockCtx, seedGoal, seedLoop, seedState, tmpCwd } from "./harness/mock-pi.js";
 
 function reset(): void {
@@ -87,7 +88,7 @@ for (const bad of [
   { ...deferred, workaround: { ...deferred.workaround!, safety: "" } },
   { ...deferred, workaround: { ...deferred.workaround!, verification: "" } },
 ]) {
-  test(`unsupported judgment is refused without a state mutation: ${JSON.stringify(bad).slice(-90)}`, async () => {
+  test(`unsupported judgment is refused without a state mutation: evidence=${!!bad.evidence}, blocked=${bad.durableBlocked}, blocker=${!!bad.blocker}, rollback=${!!bad.workaround?.rollback}, safety=${!!bad.workaround?.safety}, verification=${!!bad.workaround?.verification}`, async () => {
     const { cwd, pi, ctx } = harness("goal");
     const before = readState(cwd);
     const result = await pi.runTool("record_goal_judgment", bad, ctx);
