@@ -1257,7 +1257,6 @@ export function refuseUnfinishedCompletion(ctx: ExtensionContext): boolean {
     status: held ? "paused" : "active",
     pendingCompletion: undefined,
     pendingTasks: open.slice(0, 5).map(task => `${task.id}: ${task.title} remains unfinished; a deferral does not waive it.`),
-    ...(held ? { pauseKind: "blocked", pauseReason: "Completion refused: committed work remains unfinished; the existing pause is retained.", pauseSuggestedAction: `Resolve the recorded work, then ${activeGoalSurfaceCommand("resume")} continues under the unchanged contract.` } : {}),
   }, ctx);
   appendLedger(ctx.cwd, "settlement_unfinished_work_refused", { goalId: goal.id, open, persisted });
   ctx.ui.notify(formatOpenTaskRefusal(open), "warning");
