@@ -129,7 +129,8 @@ test("integration: a marked pause without suggestedAction still replaces generic
   const result: any = await (handler as any)({ message: { role: "assistant", stopReason: "aborted", errorMessage: "Operation aborted", content: [] } }, ctx);
   const text = result.message.content?.[0]?.text ?? "";
   assert.match(text, /required local credential/);
-  assert.match(text, /Next: \/goal resume/);
+  assert.match(text, /Next: Resolve the prerequisite described above and report the result/);
+  assert.doesNotMatch(text, /Next: \/goal resume/);
   assert.doesNotMatch(text, /Operation aborted/);
 });
 

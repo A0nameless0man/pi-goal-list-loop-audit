@@ -3934,6 +3934,9 @@ test("v0.35.x: /glla audits full sanitizes active and global reports", async () 
   const cwd = tmpCwd();
   const raw403 = '403 {"error":{"message":"upstream denied this request"},"request_id":"auth-sensitive-id"}';
   const raw429 = '429 {"error":{"message":"Token Plan rate limit reached"},"request_id":"quota-sensitive-id"}';
+  // Metadata time is irrelevant to redaction. Freeze it so a millisecond
+  // suffix such as .403Z cannot randomly trip the unchanged payload assertion.
+  const reportAt = "2026-10-16T12:00:00.000Z";
   const report403 = [
     "## Audit report",
     "Safe finding remains visible.",
@@ -3944,7 +3947,7 @@ test("v0.35.x: /glla audits full sanitizes active and global reports", async () 
     goal: seedGoal({
       status: "paused",
       auditHistory: [{
-        at: new Date().toISOString(),
+        at: reportAt,
         approved: false,
         disapproved: false,
         model: "provider/model",
@@ -3960,7 +3963,7 @@ test("v0.35.x: /glla audits full sanitizes active and global reports", async () 
   assert.match(activeFull, /provider diagnostic redacted/);
 
   appendAuditLog(cwd, {
-    at: new Date().toISOString(),
+    at: reportAt,
     goalId: "global-403-429",
     objective: "global provider recovery",
     verdict: "error",

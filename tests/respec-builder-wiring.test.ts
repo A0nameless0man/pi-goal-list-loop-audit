@@ -84,11 +84,13 @@ test("registered blocker and refinement tools preserve work and require consent 
     assert.equal(readState(cwd).loop!.builder!.requirements[0]!.status, "open");
     assert.equal(readState(cwd).loop!.active, false, "unblocking preserves explicit pause until resume");
     const before = JSON.stringify(readState(cwd).loop!.builder);
-    ctx.ui.customImpl = async () => "No";
+    // Established-scope amendments use specific consent, not the draft
+    // auto-accept/custom-dialog path. Preserve the same denial assertions.
+    ctx.ui.confirmImpl = async () => false;
     const proposal = { reason: "Add two-factor authentication", requirements: [{ id: "login", text: "Two-factor login", acceptance: "Password and second factor required" }] };
     await pi.runTool("propose_project_refinement", proposal, ctx);
     assert.equal(JSON.stringify(readState(cwd).loop!.builder), before, "declining scope keeps every durable requirement");
-    ctx.ui.customImpl = async () => "Yes";
+    ctx.ui.confirmImpl = async () => true;
     await pi.runTool("propose_project_refinement", proposal, ctx);
     assert.equal(readState(cwd).loop!.builder!.requirements[0]!.acceptance, "Password and second factor required");
     assert.equal(readState(cwd).loop!.builder!.revision, 2);

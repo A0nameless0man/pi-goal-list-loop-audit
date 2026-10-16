@@ -66,9 +66,37 @@ timeout 600 node scripts/run-tests.mjs tests/durable-solution-*.test.ts \
  tests/task-atomicity-gate.test.ts
 ```
 
-These focused checks do not substitute for the full release gate. Package
-smoke results, environment-gated skips and final selected-suite counts will be
-recorded from actual final output, not predicted here.
+### First full release attempt and failure assessment
+
+`timeout 3600 npm run release:check`: FAIL (exit 1). The full suite finished
+with 3,977 pass / 1 skip / 6 fail across 423 files in 1,454 seconds. Packaging
+and smoke did not run after that failure. Log:
+`/tmp/glla-durable-release-check.log`; status `/tmp/glla-durable-release-status.json`.
+
+The six failures were repaired without removing behavioral assertions:
+- Three exact context-size snapshots needed independent remeasurement after the
+  common policy added 1,179 text/UTF-8 bytes and 1,186 serialized bytes. Retain
+  exact snapshots, provider fields, cardinality and flat/linear growth checks.
+  The bounded checkpoint still retains one payload: 29,651 serialized bytes
+  at all 5/12/25-history probes. Raw independent measurement:
+  `/tmp/glla-durable-context-measurements.json`.
+- The active-audit redaction fixture's live timestamp happened to end in .403Z,
+  matching its forbidden-provider-text assertion. Freeze irrelevant fixture
+  time; retain the entire redaction assertion unchanged.
+- The project refinement fixture now answers the specific-consent callback,
+  not the initial-draft custom dialog. Keep both decline/accept assertions.
+- The pause-abort integration fixture still expected the obsolete resume-first
+  text from before the earlier prerequisite-first repair. It now positively
+  requires the prerequisite and rejects resume as the primary next action.
+
+Failure-focused recheck (the five affected files plus both dedicated files):
+229 pass / 0 fail across 7 files, exit 0, in 127 seconds. Log:
+`/tmp/glla-durable-full-failure-recheck.log`.
+
+One legitimate skip: `commit survives the auto-committer daemon (item 32,
+env-gated watched repo)`. No assertions/skips were disabled for these repairs.
+A new full release attempt remains required; package smoke results and final
+counts will be recorded from actual output, not predicted here.
 
 ## Touched-file review
 
@@ -94,6 +122,11 @@ Baseline comparison: `git diff 6943a00b --name-only`; daemon commits are retaine
 | tests/durable-defer-production-ui.test.ts | Positive fixture supplies evidence; durable-first ordering and repaint assertions unchanged. |
 | tests/task-atomicity-gate.test.ts | Explicitly replace obsolete exemption expectations with refusal; retain task atomicity and race coverage. |
 | tests/harness/mock-pi.ts | Expose optional isError in the mock result type; no behavior or assertion bypass. |
+| tests/context-checkpoint.test.ts | Independently measured new exact serialized-byte pin; retain history-removal, cardinality and flat-growth assertions. |
+| tests/context-growth-measurement.test.ts | Refresh exact raw-size snapshots for the common policy; retain exact provider usage, cardinality and linear-growth assertions. |
+| tests/behavioral-orchestrator.test.ts | Freeze redaction fixture time to remove accidental .403Z false failures; forbidden-provider-payload assertions unchanged. |
+| tests/respec-builder-wiring.test.ts | Route mock scope consent to the actual amendment confirmation callback; preserve rejection and legitimate amendment checks. |
+| tests/stale-continuation-integration.test.ts | Enforce the earlier prerequisite-first pause behavior and reject primary resume; keep actual abort replacement/isolation assertions. |
 | docs/RECOVERY.md | Explain policy, consent, all-mode persistence, claims versus observations, legacy stamps and explicit holds. |
 | docs/RUNTIME-INVENTORY.md | Regenerate from real source; final --check and release gate pending. |
 | CHANGELOG.md | Unreleased behavior notes; preserve earlier pause-card and stranded-loop fixes. |
