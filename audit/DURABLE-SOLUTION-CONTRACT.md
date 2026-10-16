@@ -1,7 +1,9 @@
 # Durable-solution contract
 
-Status: shared typed policy implemented; final release verification remains pending.
-The first completion claim was disapproved; no acceptance criterion was removed.
+Status: shared typed policy implemented; final full release gate passed (exit 0).
+Independent completion approval remains required. The first completion claim
+was disapproved; no acceptance criterion was removed. See
+DURABLE-SOLUTION-VERIFICATION.md and DURABLE-SOLUTION-RELEASE-2026-10-16.md.
 Baseline: 6943a00b1e0b84af574dc5902a7e5556a19815f9, package 0.39.34.
 Authority: confirmed local-only goal; preserve unrelated existing repairs.
 
@@ -65,6 +67,16 @@ list, loop and project, actual session restore, scope consent, failed persistenc
 and install-only/synthetic-marker refusal without pending tasks. Run types,
 inventory and the full release check; record raw results in
 DURABLE-SOLUTION-VERIFICATION.md before claiming completion.
+
+Confirmed task-plan amendments are also supported explicitly via
+`propose_task_list(replaceExisting=true)`: old/new committed tasks and retained
+objective/acceptance are shown, specific consent is mandatory, history is
+retained, and revision proof is invalidated. This avoids trapping a legitimate
+human-approved replan while preventing silent task removal.
+
+Continuation prefers the auditor's explicit Required fixes section over broad
+word-matching in successful-check bullets. A concrete regression reproduces
+and rejects the previous '0 fail' / 'No recursive test hazards' TODO poisoning.
 
 ## Boundaries
 

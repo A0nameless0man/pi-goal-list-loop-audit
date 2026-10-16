@@ -1,7 +1,8 @@
 # Durable-solution verification — corrected after disapproval
 
-Status: implementation and focused checks pass; full release gate is PENDING.
-Do not treat this file's existence or any previous completion narrative as proof.
+Status: final full release gate PASSED (exit 0); independent completion approval
+is still required. Do not treat this file's existence or any previous completion
+narrative as proof. Recorded raw final output: DURABLE-SOLUTION-RELEASE-2026-10-16.md.
 The original completion claim was disapproved and tasks 2–4 were reopened. The
 original objective and all five acceptance criteria remain unchanged.
 
@@ -16,8 +17,8 @@ repeated cases; they are superseded by the exact gate results below.
 | 1 — concrete all-mode policy map | audit/DURABLE-SOLUTION-CONTRACT.md; shared types/admission in extensions/durable-solution.ts; mode-specific entry points listed in the contract |
 | 2 — behavioral admission/lifecycle/outcome evidence | tests/durable-solution-authority.test.ts and tests/durable-solution-judgment.test.ts exercise production tools and temporary journals, including real session_start restore; results below |
 | 3 — clean types | npm run check; exact log below |
-| 4 — full release verification | timeout 3600 npm run release:check; PENDING, not inferred from focused subsets |
-| 5 — evidence and touched-file review | This report; file review and boundaries below. Full smoke/skips results remain PENDING until the release command finishes. |
+| 4 — full release verification | Final timeout 3600 npm run release:check: exit 0; 3,985 pass, 1 legitimate environment skip, 0 fail; Jiti, types, inventory, offline extension, pack and installed-artifact smoke all pass. Raw excerpts in DURABLE-SOLUTION-RELEASE-2026-10-16.md. |
+| 5 — evidence and touched-file review | This corrected report plus DURABLE-SOLUTION-RELEASE-2026-10-16.md; complete touched-file review, raw final smoke/skips results, baseline/version and no-rollout boundary below. |
 
 ## Implementation and negative/positive cases
 
@@ -121,8 +122,34 @@ across 6 files, 199 seconds. Log: `/tmp/glla-durable-stress-crossfile.log`.
 Dedicated outcome cases now reject both loaded and executed claims from
 installation/journal markers, independently of task counts.
 
-A third full release attempt remains required; smoke and final totals will
-be recorded from its actual output, not predicted here.
+### Final full release result (supersedes failed attempts)
+
+`timeout 3600 npm run release:check`: PASS, exit 0, 2026-10-16T14:32:04Z to
+15:12:21Z. Main suite: **3,985 pass / 1 environment-gated skip / 0 fail across
+423 files**. Separate Jiti regression: **1 pass / 0 fail**. `tsc --noEmit`,
+offline auditor-extension resolution, inventory check, npm pack dry-run and
+installed-tarball smoke all passed. Packed worker RPC challenge confirmed;
+packed glla-delegate skill loaded with zero diagnostics. Manifest stayed
+0.39.34. No publication or live-session reload occurred.
+
+Dedicated contract command: `timeout 300 node scripts/run-tests.mjs
+tests/durable-solution-*.test.ts`: **40 pass / 0 fail across 2 files**.
+Separate `timeout 180 npm run check`: exit 0. These selected tests are included
+in the full-suite count, not added to it. Final raw log:
+`/tmp/glla-durable-release-check-3.log`; status:
+`/tmp/glla-durable-release-status-3.json`; preflight hashes:
+`/tmp/glla-durable-release-inputs-3.json`; dedicated/types logs:
+`/tmp/glla-durable-final-dedicated.log`, `/tmp/glla-durable-final-types.log`.
+Post-run source/input drift check: empty, including added/deleted input paths.
+Final touched-file review check: no missing paths across all 30 baseline-changed
+files; package/lock baseline diff empty, version 0.39.34 unchanged. Final
+inventory and whitespace checks exit 0. Independent-review excerpts and exact
+skip/smoke observations are retained in the tracked
+`audit/DURABLE-SOLUTION-RELEASE-2026-10-16.md`.
+
+Pre-gate HEAD was eb04c210b76277cf050c46ce38a98c9098c901c1. Content hashes,
+not a moving daemon HEAD alone, identify the tested inputs. Only reviewable
+audit evidence is finalized after the gate; tested implementation is unchanged.
 
 ## Touched-file review
 
@@ -155,10 +182,11 @@ Baseline comparison: `git diff 6943a00b --name-only`; daemon commits are retaine
 | tests/stale-continuation-integration.test.ts | Enforce the earlier prerequisite-first pause behavior and reject primary resume; keep actual abort replacement/isolation assertions. |
 | tests/supervised-provider-exhaustion-runtime.test.ts | Symmetric fixture reset and bounded progress only after asserted durable cycles; retain all 2,101 failures per mode, every assertion and original timeouts. |
 | docs/RECOVERY.md | Explain policy, consent, all-mode persistence, claims versus observations, legacy stamps and explicit holds. |
-| docs/RUNTIME-INVENTORY.md | Regenerate from real source; final --check and release gate pending. |
+| docs/RUNTIME-INVENTORY.md | Regenerated from real source; final --check and complete release gate passed. |
 | CHANGELOG.md | Unreleased behavior notes; preserve earlier pause-card and stranded-loop fixes. |
 | audit/DURABLE-SOLUTION-CONTRACT.md | Actual implementation map and explicit limits; no acceptance criterion removed. |
-| audit/DURABLE-SOLUTION-VERIFICATION.md | Correct premature evidence claims; retain exact current checks and identify unrun gates. |
+| audit/DURABLE-SOLUTION-VERIFICATION.md | Correct premature evidence claims; retain failed attempts and exact final gates, skip and smoke results. |
+| audit/DURABLE-SOLUTION-RELEASE-2026-10-16.md | Tracked raw final-gate excerpts, timestamps, source/input identity, skip reason and isolated package-smoke boundary. |
 
 ## Boundaries and limitations
 
