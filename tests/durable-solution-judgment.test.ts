@@ -101,7 +101,6 @@ test("judgment is target/revision-bound and a changed contract cannot reuse it a
   const target = { mode: "goal" as const, id: "owner", revision: 4 };
   const accepted = admitSolutionJudgment(inline, target, "2026-10-16T13:30:00.000Z");
   assert.equal(accepted.ok, true);
-  if (!accepted.ok) throw new Error(accepted.error);
   assert.equal(judgmentMatchesTarget(accepted.judgment, target), true);
   assert.equal(judgmentMatchesTarget(accepted.judgment, { ...target, revision: 5 }), false);
   assert.equal(judgmentMatchesTarget(accepted.judgment, { ...target, id: "other" }), false);

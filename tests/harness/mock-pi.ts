@@ -148,7 +148,7 @@ export class MockPi {
     await (h as (...a: unknown[]) => Promise<void>)(...args);
   }
 
-  async runTool(name: string, params: unknown, ctx: unknown, signal: AbortSignal = new AbortController().signal): Promise<{ content: Array<{ type: string; text: string }> }> {
+  async runTool(name: string, params: unknown, ctx: unknown, signal: AbortSignal = new AbortController().signal): Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }> {
     const t = this.tools.get(name);
     if (!t) throw new Error(`tool not registered: ${name}`);
     return (await (t.execute as (...a: unknown[]) => Promise<{ content: Array<{ type: string; text: string }> }>)(
