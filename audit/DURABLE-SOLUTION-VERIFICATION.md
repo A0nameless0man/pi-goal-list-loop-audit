@@ -95,8 +95,34 @@ Failure-focused recheck (the five affected files plus both dedicated files):
 
 One legitimate skip: `commit survives the auto-committer daemon (item 32,
 env-gated watched repo)`. No assertions/skips were disabled for these repairs.
-A new full release attempt remains required; package smoke results and final
-counts will be recorded from actual output, not predicted here.
+### Second full attempt and stress-harness correction
+
+Second `timeout 3600 npm run release:check`: FAIL (exit 1). The suite's
+180-second no-output watchdog killed a run inside the 2,101-cycle provider
+stress file after 1,114 seconds overall. It did not reach packaging/smoke.
+Log: `/tmp/glla-durable-release-check-2.log`; retained diagnostics:
+`/tmp/glla-test-processes-pqCBeR/failure.json`. No passing full-suite total is
+inferred from this terminated run, and host load alone is not a proven cause.
+
+The stress test already allowed 300 seconds per test, but emitted nothing
+until an entire case finished. It now reports bounded progress only AFTER
+real durable failure/probe assertions pass (first cycle, each 250, final).
+A genuinely stuck cycle still stops emitting and remains watchdog-bounded.
+Add symmetric beforeEach process-state reset, matching existing afterEach,
+so the first stress case does not inherit prior fixtures' singleton holds.
+No timeout was raised, no heartbeat timer was added, no cycle/assertion removed.
+
+Isolated diagnostic run: 7 pass / 0 fail, 155 seconds, all 2,101 cycles in
+each of goal/list/loop actually verified. Log:
+`/tmp/glla-durable-provider-isolated.log`.
+Cross-file recheck after symmetric reset (behavioral orchestrator, project
+wiring, host boundary, stress and both dedicated files): 213 pass / 0 fail
+across 6 files, 199 seconds. Log: `/tmp/glla-durable-stress-crossfile.log`.
+Dedicated outcome cases now reject both loaded and executed claims from
+installation/journal markers, independently of task counts.
+
+A third full release attempt remains required; smoke and final totals will
+be recorded from its actual output, not predicted here.
 
 ## Touched-file review
 
@@ -127,6 +153,7 @@ Baseline comparison: `git diff 6943a00b --name-only`; daemon commits are retaine
 | tests/behavioral-orchestrator.test.ts | Freeze redaction fixture time to remove accidental .403Z false failures; forbidden-provider-payload assertions unchanged. |
 | tests/respec-builder-wiring.test.ts | Route mock scope consent to the actual amendment confirmation callback; preserve rejection and legitimate amendment checks. |
 | tests/stale-continuation-integration.test.ts | Enforce the earlier prerequisite-first pause behavior and reject primary resume; keep actual abort replacement/isolation assertions. |
+| tests/supervised-provider-exhaustion-runtime.test.ts | Symmetric fixture reset and bounded progress only after asserted durable cycles; retain all 2,101 failures per mode, every assertion and original timeouts. |
 | docs/RECOVERY.md | Explain policy, consent, all-mode persistence, claims versus observations, legacy stamps and explicit holds. |
 | docs/RUNTIME-INVENTORY.md | Regenerate from real source; final --check and release gate pending. |
 | CHANGELOG.md | Unreleased behavior notes; preserve earlier pause-card and stranded-loop fixes. |
