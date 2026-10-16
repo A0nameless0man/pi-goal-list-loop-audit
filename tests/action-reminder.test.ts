@@ -10,11 +10,11 @@ import {
 } from "../extensions/action-reminder.js";
 import { MockPi } from "./harness/mock-pi.js";
 
-function renderReminder(reminder: ActionReminderCopy, width = 120): string {
+function renderReminder(reminder: ActionReminderCopy, width = 120, dimmed: string[] = []): string {
   const pi = new MockPi();
   registerActionReminderRenderer(pi.api);
   const renderer = pi.messageRenderers.get("glla-action-reminder")!;
-  const testTheme = { fg: (_color: string, text: string) => text, bg: (_color: string, text: string) => text };
+  const testTheme = { fg: (color: string, text: string) => { if (color === "dim") dimmed.push(text); return text; }, bg: (_color: string, text: string) => text };
   const component = renderer(
     { customType: "glla-action-reminder", content: reminder.content, display: true, details: reminder.details },
     { expanded: false, outputPad: 1 },
@@ -34,6 +34,37 @@ test("standby renderer keeps the background-wake explanation visible", () => {
   assert.match(text, /no manual action is needed/);
   assert.doesNotMatch(text, /this turn stopped/);
   assert.doesNotMatch(text, /Next:/);
+});
+
+for (const action of [undefined, "/list resume", "Run '/list resume'.", "`/glla resume`"]) {
+  test(`blocked reminder prioritizes prerequisite, not resume-only action (${action})`, () => {
+    const reminder = buildActionReminder({
+      kind: "blocked", reason: "Complete the $0 checkout and confirm the receipt.",
+      action, resumeCommand: "/list resume",
+    });
+    const dimmed: string[] = [];
+    const rendered = renderReminder(reminder, 120, dimmed);
+    for (const text of [reminder.content, rendered]) {
+      assert.match(text, /Why: Complete the \$0 checkout and confirm the receipt/);
+      assert.match(text, /Next: Resolve the prerequisite described above and report the result/);
+      assert.match(text, /After the prerequisite is resolved: \/list resume/);
+      assert.match(text, /does not resolve the blocker/);
+      assert.doesNotMatch(text, /Next: (?:Run )?[`']?\/(?:list|glla) resume/);
+      assert.ok(text.indexOf("Why:") < text.indexOf("After the prerequisite"));
+    }
+    assert.ok(!dimmed.some(text => text.startsWith("Why:") || text.startsWith("After the prerequisite")), "blocker and conditional retry must be readable");
+    assert.equal(reminder.details.reason, "Complete the $0 checkout and confirm the receipt.");
+  });
+}
+
+test("blocked reminder preserves a concrete human action ahead of conditional retry", () => {
+  const reminder = buildActionReminder({ kind: "blocked", reason: "Browser authorization is missing.",
+    action: "Authorize browser access, then reply here.", resumeCommand: "/goal resume" });
+  for (const text of [reminder.content, renderReminder(reminder)]) {
+    assert.match(text, /Next: Authorize browser access, then reply here/);
+    assert.match(text, /After the prerequisite is resolved: \/goal resume/);
+    assert.ok(text.indexOf("Next:") < text.indexOf("After the prerequisite"));
+  }
 });
 
 test("registers a dedicated GLLA reminder renderer", () => {
