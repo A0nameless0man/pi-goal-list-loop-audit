@@ -63,6 +63,16 @@ wait, not a manual-action blocker.
 Lifecycle is separate from activity such as researching, implementing, auditing
 or recovering. Activity requires observed evidence, not the model's narration.
 
+A scheduled wait intentionally ends the current turn. Pi may still print its
+own red abort transport line; the admitted wait card explains that this is not
+a failed assessment. Tool output, notifications and status use the same saved
+assessment deadline (ISO `Z` is labelled UTC), not a manual-resume instruction.
+An exact owner/goal/pause/turn match keeps the expected abort quiet after the
+card is shown, even after the one-shot message rewrite. An unmarked abort still
+reports once; a new turn or changed owner/pause is not suppressed. This is
+presentation-only: it neither registers a new wake nor changes deadlines,
+retry policy or explicit holds. Closing Pi still does not prove a live wake.
+
 The agent uses `wait_for_background` with exact owned `runIds` and a reason.
 `pause_goal(kind="standby")` is a compatibility entry requiring the same ids;
 use a genuine pause for decisions, user holds or manual-action blockers. Unknown

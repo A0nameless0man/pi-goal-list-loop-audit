@@ -2,12 +2,18 @@
 
 ## Unreleased
 
-### Empty (next batch goes here)
+### Scheduled waits: intentional stop, consistent next action
 
-Promote this section to a dated release heading as part of the next release
-contract run. It must exist as the canonical place to capture changes between
-published versions; the release-contract test enforces exactly one such
-section at the time of release.
+- Align scheduled-wait tool output, reminders and notifications around the
+  saved assessment deadline, explicit UTC and conditional automatic wake. Do
+  not prescribe manual resume for a registered scheduled wait.
+- Bind expected pause-abort disposition to the exact owner, goal, pause and
+  turn. Retain it after the one-shot message rewrite, record the transport
+  observation once and suppress redundant expected-abort notifications.
+  Unmarked aborts still notify once; new turns/owners/pauses are not hidden.
+- Explain Pi's possible red abort line as an intentional turn stop on the
+  admitted wait card. Pi's renderer is unchanged; wait admission, deadlines,
+  heartbeat ownership, explicit holds and retry policy are unchanged.
 
 ## 0.39.35 — durable-solution authority and evidence (2026-10-16)
 

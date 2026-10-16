@@ -449,7 +449,7 @@ import { defineGoalRuntimeGlobal } from "./goal-runtime-globals.js";
 import { registerRespecBuilderTools } from "../respec-builder-runtime.js";
 import { releaseAuditorSurface } from "./goal-auditor-surface.js";
 import { chooseObjectiveConflict, liveObjectives, type ObjectiveKind } from "../goal-objective-conflict.js";
-import { ACTION_REMINDER_CUSTOM_TYPE, buildActionReminder, clearPauseAbort, markPauseAbort } from "../action-reminder.js";
+import { ACTION_REMINDER_CUSTOM_TYPE, buildActionReminder, buildAbortedAssistantNotice, clearPauseAbort, markPauseAbort } from "../action-reminder.js";
 import { assessSuspiciousObjective, isSuspiciousObjectivePause } from "../faulty-objective-recovery.js";
 
 type AuditorModelCandidate = any;
@@ -2737,7 +2737,7 @@ function registerAgentTools(pi: any): void {
         const requestedMs = Date.parse(p.resumeAt);
         if (Number.isFinite(requestedMs) && requestedMs - Date.now() > MAX_AGENT_WAIT_MS) {
           storedResumeAt = new Date(Date.now() + MAX_AGENT_WAIT_MS).toISOString();
-          waitClampNotice = ` The requested wait was bounded to 1h (asked ${p.resumeAt}): the wait auto-continues then so the condition is re-evaluated — re-wait if it still holds, resume if it cleared.`;
+          waitClampNotice = ` The requested wait was bounded to a 1h assessment horizon (asked ${p.resumeAt}). At the saved check, re-evaluate the condition: re-wait if it still holds; resume actual work only if it cleared.`;
           appendLedger(ctx.cwd, "pause_wait_clamped", {
             goalId: state.goal.id,
             requestedResumeAt: p.resumeAt,
@@ -3090,8 +3090,13 @@ function registerAgentTools(pi: any): void {
           display: true,
           details: reminder.details,
         }, { triggerTurn: false });
-        ctx.ui.notify(`${goalNoun()} paused by agent: ${safePauseReason}${safePauseAction ? `\n\n→ ${safePauseAction}` : ""}`, "info");
-        notifyExternal(ctx, `${goalNoun()} paused: ${(safePauseAction ? `${safePauseReason} → ${safePauseAction}` : safePauseReason).slice(0, 200)}`);
+        if (effectiveKind === "wait" && !redirect) {
+          ctx.ui.notify(`Scheduled wait saved — ${safePauseReason}\n${reminder.presentation.next}`, "info");
+          notifyExternal(ctx, `Scheduled wait saved. ${reminder.presentation.next}`);
+        } else {
+          ctx.ui.notify(`${goalNoun()} paused by agent: ${safePauseReason}${safePauseAction ? `\n\n→ ${safePauseAction}` : ""}`, "info");
+          notifyExternal(ctx, `${goalNoun()} paused: ${(safePauseAction ? `${safePauseReason} → ${safePauseAction}` : safePauseReason).slice(0, 200)}`);
+        }
       }
       if (!droppedImpossible && !redirect) {
         markPauseAbort({
@@ -3127,7 +3132,9 @@ function registerAgentTools(pi: any): void {
           type: "text",
           text: droppedImpossible
             ? "The list item was auto-dropped as impossible (blocked with no resume path) — the list moved on instead of stopping."
-            : `Goal paused. The turn ends here — do NOT continue working. ${activeGoalSurfaceCommand("resume")} to continue.${waitClampNotice}${quotaRerouteNotice}`,
+            : effectiveKind === "wait"
+              ? `${buildAbortedAssistantNotice({ kind: "wait", reason: safePauseReason, resumeCommand: activeGoalSurfaceCommand("resume"), resumeAt: storedResumeAt })} Do NOT continue working in this turn.${waitClampNotice}${quotaRerouteNotice}`
+              : `Goal paused. The turn ends here — do NOT continue working. ${activeGoalSurfaceCommand("resume")} to continue.${waitClampNotice}${quotaRerouteNotice}`,
         }],
         details: {},
       };

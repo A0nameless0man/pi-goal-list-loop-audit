@@ -295,7 +295,7 @@ import {
 } from "../model-picker.js";
 import { bindBackgroundWaitRuntime, observeBackgroundStart, observeBackgroundTerminal, reconcileBackgroundWait, consumeBackgroundYield, backgroundWaitPromptContext } from "../background-wait-runtime.js";
 import { consumeRecoveryResume } from "../goal-recovery.js"; // decomposition step 3 (v0.34.111)
-import { buildAbortedAssistantNotice, clearPauseAbort, consumePauseAbort, markActionReminderTurnStart } from "../action-reminder.js";
+import { buildAbortedAssistantNotice, buildActionReminder, clearPauseAbort, consumePauseAbort, markActionReminderTurnStart, observePausedHostAbort } from "../action-reminder.js";
 import { payloadGuardProjection } from "../payload-guard.js"; // v0.35.51 image-413 guard
 import { dropFailedErrorOnlyTurns, pruneCompactionPreparation } from "../context-hygiene.js"; // v0.35.52 error-turn hygiene
 import { projectCompactionPreparation } from "../compaction-input.js"; // bounded default-compactor input
@@ -793,24 +793,35 @@ function maybeScheduleUnsupervisedErrorRetry(
   // upstream-only limitation. The blocked-pause case is handled by the
   // existing `goal-blocked-paused` fence below for backward compatibility.
   if (failure.kind === "non-recoverable" && state.goal?.status === "paused" && state.goal.pauseKind && state.goal.pauseKind !== "blocked") {
+    const disposition = /\b(?:aborted|aborterror)\b/i.test(raw)
+      ? observePausedHostAbort({ ownerSession: ctx.sessionManager, goalId: state.goal.id,
+        kind: state.goal.pauseKind, reason: state.goal.pauseReason ?? "", resumeAt: state.goal.pauseResumeAt })
+      : "unexpected";
+    if (disposition === "duplicate") return;
     const pausedDisplay = `paused (${state.goal.pauseKind}) — host ended turn (${display})`;
     appendLedger(ctx.cwd, "unsupervised_error_retry_refused", {
       reason: "goal-paused-host-abort",
+      expectedPauseAbort: disposition === "expected",
       kind: failure.kind,
       display: pausedDisplay,
       pauseKind: state.goal.pauseKind,
       pauseReason: state.goal.pauseReason,
     });
+    // The admitted pause already emitted its canonical card. The expected
+    // transport abort is bookkeeping, not a second failure notification.
+    if (disposition === "expected") return;
     const resumeCommand = activeGoalSurfaceCommand("resume");
-    const waitHint = state.goal.pauseKind === "wait" && state.goal.pauseResumeAt
-      ? ` Resume after the saved check (${state.goal.pauseResumeAt}).`
+    const waitHint = state.goal.pauseKind === "wait"
+      ? ` ${buildActionReminder({ kind: "wait", reason: state.goal.pauseReason ?? "", resumeCommand, resumeAt: state.goal.pauseResumeAt }).presentation.next} No manual resume is needed while the owned wake remains registered and no hold applies.`
       : ` ${resumeCommand} to continue.`;
     ctx.ui.notify(
       `glla: host ended the turn while the goal was paused (${state.goal.pauseKind}). The saved work is intact; the red "Error:" line is the host's own transport, not a GLLA retry.${waitHint}`,
       "info",
     );
     notifyExternal(ctx,
-      `glla: paused (${state.goal.pauseKind}) — host turn ended with "${display}". Saved work intact; ${resumeCommand} continues.`);
+      state.goal.pauseKind === "wait"
+        ? `glla: scheduled wait retained.${waitHint}`
+        : `glla: paused (${state.goal.pauseKind}) — host turn ended with "${display}". Saved work intact; ${resumeCommand} continues.`);
     return;
   }
   // Carve-out: aborts and policy refusals never retry.

@@ -185,7 +185,7 @@ export function projectUiStatus(state: State, context: UiStatusContext): UiStatu
           && evidence.scheduledCheck?.heartbeatArmed === true;
         return finish(registered ? 'waiting' : 'unconfirmed', registered ? 'automatic' : 'inspect',
           registered
-            ? `Next assessment: ${base.checkAt} · GLLA heartbeat; completion must be checked`
+            ? `Assessment at ${base.checkAt}${base.checkAt?.endsWith('Z') ? ' (UTC)' : ''} · GLLA heartbeat; completion must be checked`
             : `Check saved for ${base.checkAt}; live wake registration missing — /glla status`,
           registered ? undefined : 'Saved deadline is not a live wake');
       }

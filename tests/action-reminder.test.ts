@@ -206,7 +206,7 @@ test("wait abort notice uses the same automatic-wake explanation as its card", (
     resumeCommand: "/goal resume",
     resumeAt: "2026-09-24T23:59:00.000Z",
   });
-  assert.match(notice, /GLLA paused this turn safely/);
+  assert.match(notice, /Scheduled wait saved; this turn ended intentionally/);
   assert.match(notice, /The rate limit resets later/);
   assert.match(notice, /Assessment check saved for 2026-09-24T23:59:00\.000Z/);
   assert.match(notice, /current registration/);

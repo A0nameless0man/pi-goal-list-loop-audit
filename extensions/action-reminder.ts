@@ -65,12 +65,30 @@ let pauseAbortMarker: PauseAbortMarker | null = null;
 let pauseTurnStartedAt = 0;
 let pauseTurnGeneration = 0;
 let pauseMarkerGeneration: number | null = null;
+// The message rewrite is one-shot; expected-abort classification must survive
+// it until this exact turn ends so agent_end cannot emit a second warning.
+let expectedPauseAbort: { marker: PauseAbortMarker; generation: number } | null = null;
+type PausedAbortIdentity = Pick<PauseAbortMarker, "ownerSession" | "goalId" | "kind" | "reason" | "resumeAt">;
+let observedPauseAbort: { identity: PausedAbortIdentity; generation: number } | null = null;
+const samePause = (a: PausedAbortIdentity, b: PausedAbortIdentity): boolean =>
+  a.ownerSession === b.ownerSession && a.goalId === b.goalId && a.kind === b.kind && a.reason === b.reason && a.resumeAt === b.resumeAt;
+
+/** Observation only: never resumes work, proves a wake or suppresses retries
+ * for another owner/turn/pause. Unexpected aborts remain visible once. */
+export function observePausedHostAbort(identity: PausedAbortIdentity): "expected" | "unexpected" | "duplicate" {
+  if (observedPauseAbort?.generation === pauseTurnGeneration && samePause(observedPauseAbort.identity, identity)) return "duplicate";
+  observedPauseAbort = { identity: { ...identity }, generation: pauseTurnGeneration };
+  return pauseTurnStartedAt !== 0 && expectedPauseAbort?.generation === pauseTurnGeneration && samePause(expectedPauseAbort.marker, identity)
+    ? "expected" : "unexpected";
+}
 
 /** Bind the exact pause state and host owner to the turn pause_goal is about
  * to abort. A session/goal mismatch expires the marker instead of letting it
  * rewrite some later abort. */
 export function markPauseAbort(marker: PauseAbortMarker): void {
   pauseAbortMarker = { ...marker };
+  expectedPauseAbort = { marker: { ...marker }, generation: pauseTurnGeneration };
+  observedPauseAbort = null;
   // Keep the public marker contract focused on the pause payload. A monotonic
   // generation captured at agent_start is the fence: consuming requires the
   // marker and its owner/goal to still belong to this exact turn.
@@ -80,11 +98,15 @@ export function markPauseAbort(marker: PauseAbortMarker): void {
 export function markActionReminderTurnStart(): void {
   pauseTurnStartedAt = Date.now();
   pauseTurnGeneration++;
+  expectedPauseAbort = null;
+  observedPauseAbort = null;
   pauseAbortMarker = null;
   pauseMarkerGeneration = null;
 }
 
 export function clearPauseAbort(): void {
+  expectedPauseAbort = null;
+  observedPauseAbort = null;
   pauseAbortMarker = null;
   pauseTurnStartedAt = 0;
   pauseMarkerGeneration = null;
@@ -123,7 +145,9 @@ export function buildAbortedAssistantNotice(input: {
   resumeAt?: string;
 }): string {
   const reminder = buildActionReminder(input);
-  return `GLLA paused this turn safely — ${reminder.presentation.why} ${reminder.presentation.next}`;
+  return reminder.presentation.parkState === "automatic"
+    ? `${input.kind === "wait" ? "Scheduled" : "Background"} wait saved; this turn ended intentionally — ${reminder.presentation.why} ${reminder.presentation.next} No manual resume is needed while the owned wake remains registered and no hold applies.`
+    : `GLLA paused this turn safely — ${reminder.presentation.why} ${reminder.presentation.next}`;
 }
 
 /** Build the durable, user-facing explanation for a GLLA pause. Pi's core
@@ -161,7 +185,7 @@ export function buildActionReminder(input: {
     parkState === "redirect"
       ? "The saved goal is held while the current turn handles the new request."
       : parkState === "automatic"
-        ? "Your saved work is intact; no manual action is needed while the owned wake remains registered and no hold applies."
+        ? "This turn ends intentionally. Pi may show a red abort line; this is not a failed assessment. Your saved work is intact; no manual action is needed while the owned wake remains registered and no hold applies."
         : "Your saved work is intact; this turn stopped before more work could be lost.",
     ...(diagnostic ? [`Diagnostic: ${compactDisplayText(diagnostic)}`] : []),
   ].join("\n");
@@ -216,7 +240,7 @@ export function buildPausePresentation(input: {
       heading: "Waiting — work is safely parked",
       why,
       next: displayed.resumeAt
-        ? `Assessment check saved for ${displayed.resumeAt}. GLLA's admitted heartbeat releases it shortly after that deadline; holds can delay it. A saved deadline does not prove completion or a live wake after closing the session. Inspect /glla status for current registration.`
+        ? `Assessment check saved for ${displayed.resumeAt}${displayed.resumeAt.endsWith("Z") ? " (UTC)" : ""}. GLLA's admitted heartbeat releases it shortly after that deadline; holds can delay it. A saved deadline does not prove completion or a live wake after closing the session. Inspect /glla status for current registration.`
         : "No check deadline is recorded; automatic wake is unconfirmed. Inspect /glla status rather than waiting on prose.",
       parkState: displayed.parkState,
     };
