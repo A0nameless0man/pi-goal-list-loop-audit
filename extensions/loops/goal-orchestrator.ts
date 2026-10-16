@@ -17,6 +17,7 @@
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import { persistApprovalRender } from "../approval-render-store.js";
+import { collectOpenTasks, formatOpenTaskRefusal } from "../task-batch.js";
 import * as os from "node:os";
 import * as path from "node:path";
 
@@ -1266,6 +1267,14 @@ export function archiveCurrentGoal(
   const goal = state.goal;
   if (!isSafePersistedId(goal.id)) {
     ctx.ui.notify("Could not archive the goal — its persisted id is invalid, so no filesystem path was used. Repair the state before retrying.", "warning");
+    return false;
+  }
+  // Final common fence, including manual and recovered approved settlements:
+  // old deferral stamps and a previously written verdict cannot waive work.
+  const openTasks = status === "complete" && goal.taskList ? collectOpenTasks(goal.taskList) : [];
+  if (openTasks.length) {
+    ctx.ui.notify(formatOpenTaskRefusal(openTasks), "warning");
+    appendLedger(ctx.cwd, "completion_unfinished_work_refused", { goalId: goal.id, open: openTasks });
     return false;
   }
   const pendingAttemptId = goal.pendingCompletion?.attemptId;

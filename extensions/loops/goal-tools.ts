@@ -635,7 +635,7 @@ function registerAgentTools(pi: any): void {
           "Stays independent of completionSummary: the detached auditor receives both fields separately " +
           "and cross-checks the verification claim against real artifacts (see audit/COMPLETION-SUMMARY-POLICY-2026-08-19.md).",
       })),
-      newObjective: Type.Optional(Type.String({ description: "v0.25.0 (contract item 15): when the work has legitimately shifted, pass the new objective here — it atomically replaces the goal objective AND the audit proceeds against the NEW objective in this same call. Do not use to dodge a legitimate disapproval; the auditor sees the change." })),
+      newObjective: Type.Optional(Type.String({ description: "Propose a legitimate objective amendment before completion. Any changed objective/contract requires explicit per-amendment user confirmation, even with draft auto-accept enabled; rejection changes nothing. After confirmation the revision changes atomically before fresh audit. Never use this to evade unfinished work." })),
       leftOut: Type.Optional(Type.String({
         maxLength: 10000,
         description:
@@ -723,10 +723,9 @@ function registerAgentTools(pi: any): void {
       }
       // v0.38.48: pending-task completion gate — a claim with open
       // committed tasks is refused BEFORE the auditor, naming each open
-      // item. Tasks carrying a recorded deferral (record_goal_judgment
-      // choice=deferred + taskId) are exempt. Placed before newObjective:
-      // a pivot must not silently orphan committed tasks — finish them or
-      // defer them explicitly first. Refusal mutates nothing.
+      // item. Recorded deferrals retain context, not scope authority.
+      // Placed before newObjective: a pivot must not silently orphan
+      // committed tasks. Refusal mutates no goal state.
       if (state.goal.taskList) {
         const openTasks = collectOpenTasks(state.goal.taskList);
         if (openTasks.length > 0) {
@@ -755,6 +754,32 @@ function registerAgentTools(pi: any): void {
         const rawNewObjective = p.newObjective.trim();
         const { objective: cleanObj, verificationContract } = extractVerificationContract(rawNewObjective);
         const priorProvenance = state.goal.objectiveProvenance;
+        // Completion is not a scope-amendment authority. In particular,
+        // draft auto-accept is not consent to replace a confirmed objective.
+        // Use an explicit per-amendment confirmation, with the full retained
+        // contract visible, and fence every await against target changes.
+        const amendmentGoal = state.goal;
+        const amendmentRevision = amendmentGoal.revision ?? 0;
+        const amendmentContract = amendmentGoal.verificationContract;
+        const proposedContract = verificationContract || amendmentContract;
+        const scopeChanged = cleanObj !== oldObjective || proposedContract !== amendmentContract;
+        if (scopeChanged) {
+          let confirmed = false;
+          try {
+            confirmed = await ctx.ui.confirm("Confirm completion scope amendment", `Current objective:\n${oldObjective}\n\nCurrent verification contract:\n${amendmentContract || "(none)"}\n\nProposed objective:\n${cleanObj}\n\nProposed verification contract:\n${proposedContract || "(none)"}\n\nThis changes what the independent auditor will judge. Approve this specific amendment?`);
+          } catch {
+            // Unavailable/stale UI cannot grant scope authority.
+          }
+          if (auditGeneration !== sessionGeneration || state.goal !== amendmentGoal ||
+              state.goal.id !== amendmentGoal.id || (state.goal.revision ?? 0) !== amendmentRevision ||
+              state.goal.objective !== oldObjective || state.goal.verificationContract !== amendmentContract ||
+              foreignToolGuard(ctx)) {
+            return { content: [{ type: "text", text: "The target changed during scope confirmation; no amendment or completion claim was applied." }], details: {}, isError: true };
+          }
+          if (!confirmed) {
+            return { content: [{ type: "text", text: "Scope amendment not confirmed. The objective and verification contract were not changed, and no completion claim was submitted. Continue the confirmed work." }], details: {}, isError: true };
+          }
+        }
         // v0.38.104: the objective shift must be DURABLE before anything
         // claims it happened. This used to pre-bump the in-memory revision,
         // ignore updateGoal's boolean, then ledger goal_tweaked and notify
@@ -2439,7 +2464,7 @@ function registerAgentTools(pi: any): void {
       durableFix: Type.Optional(Type.String({ description: "The maintainable root-cause action to show in the goal card" })),
       deferRecommendations: Type.Optional(Type.Array(Type.String(), { description: "Earlier bounded workaround/defer recommendations to retain as UI evidence (the ledger record bounds count and length; the schema never refuses a judgment over them)." })),
       durableBlocked: Type.Optional(Type.Boolean({ description: "True only when the durable action is unsafe, impossible, or blocked for this turn" })),
-      taskId: Type.Optional(Type.String({ description: "v0.38.48: with choice=deferred, attach this deferral to a task so the complete_goal pending-task gate exempts it. Only valid with choice=deferred." })),
+      taskId: Type.Optional(Type.String({ description: "With choice=deferred, retain the blocker and durable follow-up on a task. This is a historical note, NOT an exemption from committed work or the completion gate. Only valid with choice=deferred." })),
     }),
     async execute(_id, params, signal, _onUpdate, execCtx) {
       const foreignJudgment = foreignToolGuard(execCtx);
@@ -2459,9 +2484,8 @@ function registerAgentTools(pi: any): void {
         durableBlocked?: boolean;
         taskId?: string;
       };
-      // v0.38.48: a task-linked deferral exempts that task from the
-      // complete_goal pending-task gate. Inline needs no exemption (the fix
-      // ships now); an unknown task is refused before anything is recorded.
+      // Task-linked deferrals preserve blocker context without waiving the
+      // committed task. An unknown task is refused before anything is recorded.
       const taskId = p.taskId?.trim() || undefined;
       if (taskId && p.choice !== "deferred") {
         return { content: [{ type: "text", text: "taskId is only valid with choice=deferred — an inline judgment implements the fix now and needs no task exemption. Nothing was recorded." }], details: {} };
@@ -2510,7 +2534,7 @@ function registerAgentTools(pi: any): void {
       // from the state ledger through Goal.durableDeferRecommendation.
       refreshUI(ctx, true);
       return {
-        content: [{ type: "text", text: `Recorded durable-vs-defer judgment: ${record.choice}.${taskId ? ` Task ${taskId} ("${deferredTask!.title}") is now exempt from the complete_goal pending-task gate.` : ""}` }],
+        content: [{ type: "text", text: `Recorded durable-vs-defer judgment: ${record.choice}.${taskId ? ` Task ${taskId} ("${deferredTask!.title}") retains its blocker and durable follow-up; it remains unfinished and is not exempt from completion checks.` : ""}` }],
         details: {},
       };
     },

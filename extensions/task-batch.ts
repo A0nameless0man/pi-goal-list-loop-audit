@@ -127,15 +127,15 @@ export interface OpenTaskInfo {
 
 /**
  * Every committed task (top-level and subtask) still open, in list order.
- * Complete tasks and tasks carrying a recorded deferral are not open — a
- * deferral is an explicit durable-vs-defer judgment, not abandonment.
+ * A recorded deferral explains unfinished work; it never authorizes removing
+ * a committed obligation. This also applies to legacy persisted stamps.
  */
 export function collectOpenTasks(taskList: TaskList): OpenTaskInfo[] {
   const open: OpenTaskInfo[] = [];
   const queue: Task[] = [...taskList.tasks];
   while (queue.length > 0) {
     const t = queue.shift()!;
-    if (t.status !== "complete" && !t.deferred) {
+    if (t.status !== "complete") {
       open.push({ id: t.id, title: t.title, status: t.status });
     }
     if (t.subtasks) queue.push(...t.subtasks);
@@ -149,8 +149,9 @@ export function formatOpenTaskRefusal(open: OpenTaskInfo[]): string {
   return (
     `complete_goal REFUSED — ${open.length} open committed task${open.length === 1 ? " is" : "s are"} still unfinished:\n` +
     lines.join("\n") +
-    `\n\nFinish them with complete_task or update_task_batch, or record an explicit ` +
-    `deferral for a genuinely blocked item with record_goal_judgment ` +
-    `(choice=\"deferred\", taskId=\"<id>\"). The claim was NOT sent to the auditor and no state changed.`
+    `\n\nFinish and verify the work before marking it complete. A recorded deferral ` +
+    `retains the blocker and durable follow-up but does not waive committed work. ` +
+    `A genuine scope change requires explicit user confirmation. ` +
+    `The claim was NOT sent to the auditor and no state changed.`
   );
 }
