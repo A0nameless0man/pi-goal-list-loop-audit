@@ -599,6 +599,9 @@ function registerAgentTools(pi: any): void {
     refresh: ctx => refreshUI(ctx),
     completed: (ctx, id, summary) => deliverTerminalSummary(ctx, pi, "goal-event", id, summary),
     finished: ctx => announceQueuedListAfterLoopEnd(ctx),
+    confirmAmendment: async (ctx, title, body) => {
+      try { return await ctx.ui.confirm(title, body); } catch { return false; }
+    },
     confirm: async (ctx, title, body) => {
       if (loadSettings(ctx.cwd).autoAcceptDrafts === true) {
         appendLedger(ctx.cwd, "draft_autoaccepted", { kind: "respec-project", title });
@@ -3985,6 +3988,8 @@ function registerAgentTools(pi: any): void {
         return { content: [{ type: "text", text: "No refinable loop is available. propose_loop_refine applies while a loop is running or after a recoverable bound/failure stop; clean max-iteration and user-finished loops require /loop start." }], details: {} };
       }
       const wasActive = loop.active;
+      const refinementGeneration = sessionGeneration;
+      const refinementSnapshot = JSON.stringify({ target: loop.target, measureCmd: loop.measureCmd, refinements: loop.refinements, specFile: loop.specFile, active: loop.active });
       const newTarget = p.target?.trim() || loop.target;
       const newMeasure = p.measureCmd?.trim() || loop.measureCmd || "";
       // v0.23.0: a metricless loop can't be refined into a measured one
@@ -4015,20 +4020,17 @@ function registerAgentTools(pi: any): void {
         }
       }
       let confirmed = false;
-      if (loadSettings(liveCtx.cwd).autoAcceptDrafts === true) {
-        confirmed = true;
-        liveCtx.ui.notify(`Loop spec refinement auto-accepted (Auto-accept drafts = on in /glla settings).${newMeasure !== loop.measureCmd ? " The new measure command was already test-run once to establish the baseline." : ""}`, "info");
-        appendLedger(liveCtx.cwd, "draft_autoaccepted", { kind: "loop-refine" });
-      } else {
-        try {
-          confirmed = (await confirmDraft(
-            liveCtx,
+      try {
+          confirmed = await liveCtx.ui.confirm(
             "Confirm loop spec refinement",
-          `Rationale: ${sanitizeDisplayText(p.rationale)}\n\nTarget:\n  old: ${displaySlice(loop.target, 120)}\n  new: ${displaySlice(newTarget, 120)}\n\nMeasure:\n  old: ${sanitizeDisplayText(loop.measureCmd ?? "none")}\n  new: ${sanitizeDisplayText(newMeasure)}${newMeasure !== loop.measureCmd ? `\n  test-run (already executed once by the orchestrator): ${sanitizeDisplayText(testOutput).slice(0, 120)} → ${newBaseline}` : ""}${specChange ? `\n\nSpec file (${sanitizeDisplayText(loop.specFile ?? "")}:\n  ${p.specText?.trim() ? `REPLACE with ${p.specText!.trim().length} chars` : ""}${p.specText?.trim() && p.specAppend?.trim() ? " + " : ""}${p.specAppend?.trim() ? `APPEND: ${sanitizeDisplayText(p.specAppend!.trim()).slice(0, 120)}` : ""}` : ""}\n\nThe loop ${wasActive ? "keeps running" : "stays stopped until /loop resume"} against the refined spec (iteration ${loop.iteration} so far). Apply?`,
-          )) === "yes";
-        } catch {
-          confirmed = false;
-        }
+          `Rationale: ${sanitizeDisplayText(p.rationale)}\n\nTarget:\n  old: ${sanitizeDisplayText(loop.target)}\n  new: ${sanitizeDisplayText(newTarget)}\n\nMeasure:\n  old: ${sanitizeDisplayText(loop.measureCmd ?? "none")}\n  new: ${sanitizeDisplayText(newMeasure)}${newMeasure !== loop.measureCmd ? `\n  test-run (already executed once by the orchestrator): ${sanitizeDisplayText(testOutput).slice(0, 120)} → ${newBaseline}` : ""}${specChange ? `\n\nSpec file (${sanitizeDisplayText(loop.specFile ?? "")}:\n  ${p.specText?.trim() ? `REPLACE with ${p.specText!.trim().length} chars` : ""}${p.specText?.trim() && p.specAppend?.trim() ? " + " : ""}${p.specAppend?.trim() ? `APPEND: ${sanitizeDisplayText(p.specAppend!.trim()).slice(0, 120)}` : ""}` : ""}\n\nThe loop ${wasActive ? "keeps running" : "stays stopped until /loop resume"} against the refined spec (iteration ${loop.iteration} so far). Apply?`,
+          );
+      } catch {
+        confirmed = false;
+      }
+      if (refinementGeneration !== sessionGeneration || state.loop !== loop || foreignToolGuard(liveCtx) ||
+          JSON.stringify({ target: loop.target, measureCmd: loop.measureCmd, refinements: loop.refinements, specFile: loop.specFile, active: loop.active }) !== refinementSnapshot) {
+        return { content: [{ type: "text", text: "The loop changed during refinement confirmation; no proposal was applied." }], details: {}, isError: true };
       }
       if (!confirmed) {
         return { content: [{ type: "text", text: "Refinement rejected by the user. The loop continues against the current spec — keep improving the metric as defined." }], details: {} };
@@ -4290,7 +4292,10 @@ function registerAgentTools(pi: any): void {
           : "";
         return `${i + 1}. ${t.title}${t.agentRole ? ` [${t.agentRole}]` : ""}${verification}` + (subs ? `\n${subs}` : "");
       }).join("\n")}`;
-      const autoAcceptTasks = loadSettings(liveCtx.cwd).autoAcceptDrafts === true;
+      const proposalGoal = state.goal;
+      const proposalRevision = proposalGoal.revision ?? 0;
+      const proposalContract = proposalGoal.verificationContract;
+      const autoAcceptTasks = !repairTarget && loadSettings(liveCtx.cwd).autoAcceptDrafts === true;
       let confirmed = false;
       if (autoAcceptTasks) {
         confirmed = true;
@@ -4298,13 +4303,18 @@ function registerAgentTools(pi: any): void {
         appendLedger(liveCtx.cwd, "draft_autoaccepted", { kind: "tasks", count: p.tasks.length });
       } else {
         try {
-          confirmed = (await confirmDraft(liveCtx, "Confirm task list", preview)) === "yes";
+          confirmed = repairTarget
+            ? await liveCtx.ui.confirm("Confirm repair scope amendment", `Original objective:\n${repairTarget.objective}\n\nOriginal verification contract:\n${repairTarget.verificationContract || "(none)"}\n\nProposed:\n${preview}`)
+            : (await confirmDraft(liveCtx, "Confirm task list", preview)) === "yes";
         } catch {
           confirmed = false;
         }
       }
       if (!confirmed) {
         return { content: [{ type: "text", text: "Task list rejected by the user. Adjust and propose again." }], details: {} };
+      }
+      if (state.goal !== proposalGoal || (state.goal.revision ?? 0) !== proposalRevision || state.goal.verificationContract !== proposalContract || foreignToolGuard(liveCtx)) {
+        return { content: [{ type: "text", text: "The task proposal target changed during confirmation; no amendment was applied." }], details: {}, isError: true };
       }
       const taskList = buildTaskList(p.tasks);
       if (repairTarget) {

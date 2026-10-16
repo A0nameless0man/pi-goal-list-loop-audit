@@ -29,6 +29,8 @@ interface Host {
   auditRuntime?: AuditorProcessRuntime;
   finished?: (ctx: ExtensionContext) => void;
   confirm?: (ctx: ExtensionContext, title: string, body: string) => Promise<boolean>;
+  /** Specific scope consent, separate from initial-draft auto-accept. */
+  confirmAmendment?: (ctx: ExtensionContext, title: string, body: string) => Promise<boolean>;
   auditNow?: () => number;
   auditSleep?: (ms: number) => Promise<void>;
   thinkingLevel?: () => string | undefined;
@@ -330,7 +332,7 @@ export function registerRespecBuilderTools(pi: ExtensionAPI, deps: Host): void {
     parameters: Type.Object({ reason: Type.String(), requirements: Type.Array(Type.Object({ id: Type.String(), text: Type.String(), acceptance: Type.String() })) }),
     execute: execute(async (p, ctx, before) => {
       const next = refineRespecRequirements(before, p.requirements, p.reason);
-      const ok = await confirm(ctx, "Confirm project scope change", `Reason: ${p.reason}\n\n**CURRENT:**\n${before.requirements.map(r => `${r.id}: ${r.text}\nDone when: ${r.acceptance}`).join("\n\n")}\n\n**PROPOSED:**\n${next.requirements.map(r => `${r.id}: ${r.text}\nDone when: ${r.acceptance}`).join("\n\n")}\n\nRemoved: ${next.scopeChanges!.at(-1)!.removedIds.join(", ") || "none"}. Changed scope requires renewed verification.`);
+      const ok = await (host.confirmAmendment ?? confirm)(ctx, "Confirm project scope change", `Reason: ${p.reason}\n\n**CURRENT:**\n${before.requirements.map(r => `${r.id}: ${r.text}\nDone when: ${r.acceptance}`).join("\n\n")}\n\n**PROPOSED:**\n${next.requirements.map(r => `${r.id}: ${r.text}\nDone when: ${r.acceptance}`).join("\n\n")}\n\nRemoved: ${next.scopeChanges!.at(-1)!.removedIds.join(", ") || "none"}. Changed scope requires renewed verification.`);
       if (!ok) throw new Error("Scope change declined; existing requirements and audit claim remain intact.");
       return next;
     }, true),
