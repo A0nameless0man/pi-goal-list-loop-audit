@@ -12,11 +12,14 @@ import { respecAuditLiveScope } from "../respec-builder-ui.js";
  *
  * Design: see docs/DESIGN.md.
  *
- * Command surface (v0.8.0 — four top-level commands):
- *   /goal "<objective>" | /goal (draft) | /goal status|pause|resume|cancel|tweak <text>|archive
- *   /list add|show|tweak|next|remove|clear
- *   /loop (draft) | /loop start|status|stop
- *   /glla (settings UI) | /glla <action>
+ * Command surface (v0.39.x — five top-level slash commands, registered
+ * in goal-activation.ts with bodies in goal-commands.ts; completion claims
+ * are verified by the DETACHED auditor via goal-loop-auditor-process.ts):
+ *   /goal start|plan|audit|verify|status|timeline|pause|resume|cancel|decide|tweak|archive (+ draft)
+ *   /list add|show|start|resume|pause|tweak|next|remove|rm|clear|depth|cancel|plan|audit|import
+ *   /loop start|respec|plan|audit|status|blockers|recheck|resume|refine|polish|stop|cancel|pause|finish (+ draft)
+ *   /glla <settings table> | version|status|fleet|progress|log|resume|pause|cancel|wipe|stats|audits|agents|switchlog|tooloverride|fallbacks|owner|takeover|postaudit|bug
+ *   /review <goal-id> [off|on|auto|aggressive]
  */
 
 import * as fs from "node:fs";
