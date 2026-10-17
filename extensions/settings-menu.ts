@@ -672,7 +672,7 @@ export function buildSettingsRows(
       label: "Stuck max interventions",
       valueText: show("stuckMaxInterventions", `${effective.stuckMaxInterventions}`),
       sourceText: src("stuckMaxInterventions"),
-      description: "consecutive stuck interventions before a loop stops (unset = 10 in aggressive mode, otherwise 5)",
+      description: "consecutive stuck interventions before a loop stops (0 = stop after the first tick; unset = 10 in aggressive mode, otherwise 5)",
     },
     {
       id: "stallEscalationRefires",

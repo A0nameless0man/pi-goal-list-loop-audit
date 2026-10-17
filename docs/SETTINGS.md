@@ -139,7 +139,7 @@ This authority boundary applies before settings-value normalization.
 | `subagentFallbacks` | unset | Per-role fallback chains (first eligible ref wins). |
 | `subagentDisplayRichness` | `"quiet"` | Ambient worker UI: `"quiet"` (default, troubled workers + count line) / `"compact"` / `"rich"`. |
 | `aggressiveMode` | `true` | Keep-going defaults (`false` = pause-first policy). |
-| `stuckMaxInterventions` | `5` (10 aggressive) | Consecutive stuck interventions before a loop stops. |
+| `stuckMaxInterventions` | `5` (10 aggressive) | Consecutive stuck interventions before a loop stops (`0` = stop after the first tick). |
 | `subagentHangEscalationMinutes` | `30` | Confirmed no-progress minutes before child-specific abort (`0` = warn only). |
 | `stallEscalationRefires` | `5` | Heartbeat refires before pause/stop (`0` = never). |
 | `zombieRetryMaxAttempts` | `3` | Re-dispatches per busy/no-stream episode (`0` = manual; max 10). |

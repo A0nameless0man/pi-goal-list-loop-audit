@@ -1945,13 +1945,16 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
     case "stuckMaxInterventions": {
       const current = loadSettings(ctx.cwd);
       const defaultStuck = resolveEffectiveAggressiveSettings({ ...current, stuckMaxInterventions: undefined }).stuckMaxInterventions;
-      const v = await ctx.ui.input("Consecutive stuck interventions before a loop stops", `positive integer; empty = current default ${defaultStuck}`);
+      // v0.39.38 (audit): 0 is loadable from file and means "stop after the
+      // first tick" at runtime ((consecutiveStuck ?? 0) >= 0 is always
+      // true), so the editor accepts it too — editor/file parity, documented.
+      const v = await ctx.ui.input("Consecutive stuck interventions before a loop stops", `non-negative integer; 0 = stop after the first tick; empty = current default ${defaultStuck}`);
       if (v !== undefined) {
         const raw = v.trim();
         const n = parseSettingsInteger(raw);
-        if (n !== undefined && n > 0) saveSettings("global", ctx, { stuckMaxInterventions: n });
+        if (n !== undefined && n >= 0) saveSettings("global", ctx, { stuckMaxInterventions: n });
         else if (!raw) saveSettings("global", ctx, { stuckMaxInterventions: undefined });
-        else ctx.ui.notify(`Not a positive integer: ${v}`, "warning");
+        else ctx.ui.notify(`Not a non-negative integer: ${v}`, "warning");
       }
       return;
     }
