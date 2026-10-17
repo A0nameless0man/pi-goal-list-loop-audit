@@ -241,8 +241,14 @@ test("v0.39.38: every release-check lane uploads its $TMPDIR failure diagnostics
   for (const [name, section] of [["quality", workflow.slice(qualityAt, publishAt)], ["publish", workflow.slice(publishAt)]] as const) {
     assert.match(section, /uses:\s*actions\/upload-artifact@v4/, `${name} uploads artifacts`);
     assert.match(section, /if:\s*failure\(\)/, `${name} uploads on failure, not on success`);
-    assert.match(section, /runner\.temp.*glla-test-processes-\*/, `${name} captures the run-tests $TMPDIR diagnostics dirs`);
+    assert.match(section, /runner\.temp.*glla-test-processes-\*/, `${name} collects under runner.temp`);
     assert.match(section, /actions:\s*write/, `${name} grants the upload permission`);
+    // Producer (scripts/run-tests.mjs) writes via os.tmpdir(), which ignores
+    // RUNNER_TEMP unless TMPDIR is set — the lane must pin os.tmpdir() to
+    // runner.temp or the upload collects an empty dir (warn-and-lose).
+    for (const variable of ["TMPDIR", "TEMP", "TMP"] as const) {
+      assert.match(section, new RegExp(`${variable}: \\$\\{\\{ runner\\.temp \\}\\}`), `${name} pins os.tmpdir() to runner.temp via ${variable}`);
+    }
   }
   assert.doesNotMatch(workflow.slice(qualityAt, publishAt), /id-token:\s*write/, "the upload permission does not widen quality OIDC");
 });
