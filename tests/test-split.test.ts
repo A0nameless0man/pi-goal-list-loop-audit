@@ -17,6 +17,7 @@ import { SLOW_TEST_FILES } from "./slow-files.mjs";
 import {
   DEFAULT_HEARTBEAT_MS,
   DEFAULT_STALL_TIMEOUT_MS,
+  NODE_ONLY_TEST_FILES,
   SERIAL_FLAGS,
   buildRunnerArgs,
   heartbeatMs,
@@ -52,12 +53,12 @@ test("test-split: explicit paths drop the ignore patterns", () => {
 });
 
 test("test-split: a --changed filter drops the slow exclusions (changed scope wins)", () => {
-  const changed = buildRunnerArgs(["--changed"], ["tests/a.test.ts"]);
+  const changed = buildRunnerArgs(["--changed"], ["tests/a.test.ts"], []);
   assert.equal(changed.mode, "changed");
   assert.ok(!changed.bunArgs.some((a) => a.includes("ignore-patterns")), "a changed slow file must still run");
   assert.ok(changed.bunArgs.includes("--changed"), "the filter passes through to bun");
   assert.deepEqual(changed.bunArgs.slice(0, SERIAL_FLAGS.length), SERIAL_FLAGS, "serial flags first, always");
-  const changedRef = buildRunnerArgs(["--changed=main"], ["tests/a.test.ts"]);
+  const changedRef = buildRunnerArgs(["--changed=main"], ["tests/a.test.ts"], []);
   assert.equal(changedRef.mode, "changed");
   assert.ok(!changedRef.bunArgs.some((a) => a.includes("ignore-patterns")));
 });
@@ -67,13 +68,41 @@ test("test-split: slow mode names the files; all mode passes through", () => {
   assert.equal(slow.mode, "slow");
   assert.ok(slow.bunArgs.includes("tests/a.test.ts"));
   assert.ok(!slow.bunArgs.some((a) => a.includes("ignore-patterns")));
-  const all = buildRunnerArgs(["--all", "-t", "foo"], ["tests/a.test.ts"]);
+  const all = buildRunnerArgs(["--all", "-t", "foo"], ["tests/a.test.ts"], []);
   assert.equal(all.mode, "all");
   assert.ok(!all.bunArgs.some((a) => a.includes("ignore-patterns")));
   assert.deepEqual(all.bunArgs.slice(-2), ["-t", "foo"], "filters pass through");
   const filtered = buildRunnerArgs(["-t", "foo"], ["tests/a.test.ts"]);
   assert.equal(filtered.mode, "fast", "a -t value is not an explicit path");
   assert.ok(filtered.bunArgs.some((a) => a.includes("ignore-patterns")), "filtered fast keeps the exclusion");
+});
+
+test("v0.39.38: node-only gates are excluded from bun discovery in every scan mode", () => {
+  assert.ok(NODE_ONLY_TEST_FILES.length > 0, "the node-only list is populated");
+  for (const file of NODE_ONLY_TEST_FILES) {
+    assert.ok(existsSync(file), `node-only entry exists on disk: ${file}`);
+    assert.match(file, /\.test\.mjs$/, `node-only entry is a bun-discoverable node gate: ${file}`);
+  }
+  const N = ["tests/n.test.mjs"];
+  const fast = buildRunnerArgs([], [], N);
+  assert.ok(fast.bunArgs.includes("tests/n.test.mjs"), "fast scan skips the node-only gate");
+  const all = buildRunnerArgs(["--all"], [], N);
+  assert.equal(all.mode, "all");
+  assert.ok(all.bunArgs.includes("tests/n.test.mjs"), "all scan skips the node-only gate (the test:all duplicate)");
+  const changed = buildRunnerArgs(["--changed"], ["tests/a.test.ts"], N);
+  assert.ok(changed.bunArgs.includes("tests/n.test.mjs"), "changed scope keeps the node-only exclusion (wrong loader, not slow)");
+  assert.ok(!changed.bunArgs.includes("tests/a.test.ts"), "changed scope still drops the slow exclusion");
+  const explicit = buildRunnerArgs(["tests/n.test.mjs"], [], N);
+  assert.equal(explicit.mode, "explicit");
+  assert.ok(!explicit.bunArgs.some((a) => a.includes("ignore-patterns")), "naming the file still runs it");
+});
+
+test("v0.39.38: test:all keeps exactly one execution path per node-only gate", async () => {
+  const pkg = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  for (const file of NODE_ONLY_TEST_FILES) {
+    assert.ok(pkg.scripts["test:all"].includes(`node ${file}`), `test:all runs ${file} once under node`);
+  }
+  assert.ok(pkg.scripts["test:jiti"].includes(`node ${NODE_ONLY_TEST_FILES[0]}`), "test:jiti stays the focused single run");
 });
 
 // ---------------------------------------------------------------------------
