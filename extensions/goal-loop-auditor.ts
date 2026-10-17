@@ -33,6 +33,22 @@ export function escapeXmlText(value: string): string {
     .replaceAll(">", "&gt;");
 }
 
+/** v0.39.38 (audit): dash-list entries (`- path` lines in <changed_files>
+ * and the shield-gap list) must stay exactly one line each. escapeXmlText
+ * leaves newlines and quotes alone, so a crafted path like
+ * `ok.ts\n- evil.ts` rendered as two list lines — a fake entry inside the
+ * block the auditor echoes and the shield parses. This keeps the XML
+ * escaping and additionally encodes quotes and CR/LF as entities: the
+ * entry stays single-line, lossless, and unambiguous. Prose blocks keep
+ * escapeXmlText — their newlines are legitimate structure. */
+export function escapeXmlListEntry(value: string): string {
+  return escapeXmlText(value)
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;")
+    .replaceAll("\r", "&#13;")
+    .replaceAll("\n", "&#10;");
+}
+
 export function isVisualGoal(goal: Goal): boolean {
   const hay = `${goal.objective ?? ""}\n${goal.verificationContract ?? ""}`;
   return VISUAL_GOAL_RE.test(hay);
@@ -261,7 +277,7 @@ export function buildGoalAuditorPrompt(goal: Goal, completionSummary: string | n
       "",
       `Changed files recorded during execution (${changedFiles.length} path${changedFiles.length === 1 ? "" : "s"}) — verify THESE first; this list is the work under review:`,
       "<changed_files>",
-      ...shownChangedFiles.map((f) => `- ${escapeXmlText(f)}`),
+      ...shownChangedFiles.map((f) => `- ${escapeXmlListEntry(f)}`),
       "</changed_files>",
       ...(changedOverflow > 0 ? [
         `${changedOverflow} further touched path${changedOverflow === 1 ? " was" : "s were"} recorded past the ${MAX_TELEMETRY_FILES}-path list cap — the work is larger than the list above.`,
@@ -276,7 +292,7 @@ export function buildGoalAuditorPrompt(goal: Goal, completionSummary: string | n
       "",
       "REGRESSION SHIELD RETRY: a previous audit of yours ended in <approved/>, but the orchestrator blocked it",
       "because the report never referenced these contract items in its evidence:",
-      ...shieldGaps.map((i) => `- ${escapeXmlText(i)}`),
+      ...shieldGaps.map((i) => `- ${escapeXmlListEntry(i)}`),
       "This time, address each of them explicitly: name the item and paste the raw output that proves it.",
     ] : []),
     ...(isVisualGoal(goal) ? [
