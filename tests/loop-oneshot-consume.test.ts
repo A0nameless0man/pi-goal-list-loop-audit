@@ -74,7 +74,7 @@ test("v0.39.38 a sent loop turn consumes its one-shot directives on disk", async
   assert.ok(pi.sent.length >= 1, "the loop turn was actually sent");
   const sent = pi.sent.map((s) => s.message.content ?? "").join("\n");
   assert.ok(sent.includes(ONESHOTS.refineHint), "the sent turn carried the one-shot hint");
-  const disk = readState(cwd).loop as Record<string, unknown> | null;
+  const disk = readState(cwd).loop as unknown as Record<string, unknown> | null;
   assert.equal(disk?.auditReprieveNote, undefined, "the reprieve does not survive on disk past its turn");
   assert.equal(disk?.hypothesisFeedback, undefined, "hypothesis feedback does not survive on disk past its turn");
   assert.equal(disk?.refineHint, undefined, "the refine hint does not survive on disk past its turn");
@@ -111,7 +111,7 @@ test("v0.39.38 an unpersistable consume re-arms RAM and notifies instead of dive
     }, ctx);
     await tick(400);
     assert.ok(pi.sent.length >= 1, "the loop turn was actually sent");
-    const live = (state.loop ?? {}) as Record<string, unknown>;
+    const live = (state.loop ?? {}) as unknown as Record<string, unknown>;
     assert.equal(live.refineHint, ONESHOTS.refineHint, "RAM re-arms the hint so it agrees with the still-armed disk");
     assert.equal(live.hypothesisFeedback, ONESHOTS.hypothesisFeedback, "RAM re-arms hypothesis feedback");
     assert.equal(live.auditReprieveNote, ONESHOTS.auditReprieveNote, "RAM re-arms the reprieve");
