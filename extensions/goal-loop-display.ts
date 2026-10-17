@@ -2489,6 +2489,34 @@ function standaloneRecoveryLines(recovery: MainModelRecovery, now: number, theme
   ];
 }
 
+/** v0.39.36: shared human label for the held-loop card — mirrors the
+ * resumable-stop taxonomy so the multi-line card and the held-suffix
+ * overlay describe the same stop class. Kept narrow: this only sets the
+ * human line; the predicate that drives visibility is heldLoop above. */
+function heldLoopReasonLabel(stopReason: string | undefined): string {
+  if (stopReason === HELD_ON_RESTORE) return "held by the session-restore gate";
+  if (stopReason?.startsWith("provider errors —")
+    || stopReason?.startsWith("main model recovery —")) return "provider recovery stopped; saved work retained";
+  if (stopReason?.startsWith("plateau —")) return "plateau stopped; saved work retained";
+  if (stopReason?.startsWith("stuck —")) return "stuck stopped; saved work retained";
+  if (stopReason?.startsWith("stalled:")) return "stalled brake fired; saved work retained";
+  if (stopReason?.startsWith("metric never moved —")) return "metric never moved; saved work retained";
+  if (stopReason?.startsWith("stopped: automatic zero-stream abort")) return "zero-stream abort; saved work retained";
+  if (stopReason?.startsWith("paused by user (/loop pause)")) return "paused via /loop pause; saved work retained";
+  if (stopReason?.startsWith("branch changed —")) return "branch change parked; saved work retained";
+  if (stopReason?.startsWith("time bound reached")) return "time bound reached; saved work retained";
+  if (stopReason?.startsWith("token budget exhausted")) return "token budget exhausted; saved work retained";
+  if (stopReason?.startsWith("audit infrastructure:")) return "audit infrastructure held; saved work retained";
+  if (stopReason?.startsWith("blocked project requirements:")) return "blocked project requirements; saved work retained";
+  if (stopReason?.startsWith("stopped by user —")) return "stopped by user; saved work retained";
+  if (stopReason === "summarization output limit:"
+    || stopReason?.startsWith("context overflow:")
+    || stopReason?.startsWith("compaction failure:")
+    || stopReason?.startsWith("summarization output limit:")
+    || stopReason?.startsWith("compaction:")) return "compaction stopped; saved work retained";
+  return "resumable stop; saved work retained";
+}
+
 function heldLoopLines(l: LoopState, now: number, theme?: DisplayTheme, width?: number): string[] {
   const reason = heldLoopReasonLabel(l.stopReason);
   return [

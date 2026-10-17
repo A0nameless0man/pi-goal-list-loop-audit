@@ -285,6 +285,79 @@ test("v0.38.105: no countdown once the gap elapsed or cadence unset", () => {
 });
 
 // The goal/list paths are byte-identical to the old inline selection.
+// v0.39.36 (audit RESUMABLE_STOP-vs-display finding): the held-suffix overlay
+// and the multi-line held-loop card must surface every prefix RESUMABLE_STOP
+// promises to resume, not only HELD_ON_RESTORE / provider / main-recovery.
+// A loop parked by plateau, stuck, stalled, bound, metric-never-moved,
+// zero-stream, user-paused or branch-changed stops must stay visible.
+const RESUMABLE_PREFIXES: ReadonlyArray<{ stopReason: string; expectedFragment: RegExp }> = [
+  { stopReason: "plateau — 8 consecutive non-improving iterations", expectedFragment: /plateau stopped/ },
+  { stopReason: "stuck — 5 turns without measurable movement", expectedFragment: /stuck stopped/ },
+  { stopReason: "stalled: 3 consecutive unproductive turns", expectedFragment: /stalled brake fired/ },
+  { stopReason: "metric never moved — last value 7.42", expectedFragment: /metric never moved/ },
+  { stopReason: "stopped: automatic zero-stream abort — nothing on stdout (/loop resume to retry)", expectedFragment: /zero-stream abort/ },
+  { stopReason: "paused by user (/loop pause) at 2026-08-17T20:10:00Z", expectedFragment: /paused via \/loop pause/ },
+  { stopReason: "branch changed — expected refactor, current main (where)", expectedFragment: /branch change parked/ },
+  { stopReason: "time bound reached (2h 00m 00s)", expectedFragment: /time bound reached/ },
+  { stopReason: "token budget exhausted (1.0M tok)", expectedFragment: /token budget exhausted/ },
+  { stopReason: "stopped by user — em-dash terminator", expectedFragment: /stopped by user/ },
+  { stopReason: "summarization output limit: 4096 tokens", expectedFragment: /compaction stopped/ },
+  { stopReason: "context overflow: agent loop is 92% of the 200k window", expectedFragment: /compaction stopped/ },
+  { stopReason: "compaction failure: provider returned a partial transcript", expectedFragment: /compaction stopped/ },
+];
+
+function loopWithStop(stopReason: string): LoopState {
+  return {
+    target: "Mean sd of all 16 block tiles",
+    iteration: 1,
+    maxIterations: 100,
+    plateauWindow: 8,
+    stallCount: 0,
+    bestValue: 25.0125,
+    lastValue: 36.4125,
+    active: false,
+    stopReason,
+    history: [],
+    startedAt: "2026-09-29T11:50:23.573Z",
+  };
+}
+
+test("v0.39.36: held-suffix overlay rides every RESUMABLE_STOP prefix on the loop-only status line", () => {
+  for (const { stopReason } of RESUMABLE_PREFIXES) {
+    const state: State = { goal: null, list: [], loop: loopWithStop(stopReason) };
+    const status = buildStatusText(state, null, NOW) ?? "";
+    assert.ok(
+      status.includes("⏸ held") || status.includes("· loop⏸held"),
+      `resumable prefix "${stopReason}" rendered no held signal: ${status}`,
+    );
+  }
+});
+
+test("v0.39.36: held-loop card mirrors the held-suffix overlay label for every RESUMABLE_STOP prefix", () => {
+  for (const { stopReason, expectedFragment } of RESUMABLE_PREFIXES) {
+    const state: State = { goal: null, list: [], loop: loopWithStop(stopReason) };
+    const lines = buildWidgetLines(state, null, NOW, undefined, 120, {}) ?? [];
+    const label = lines.join("\n");
+    assert.match(label, /loop held/, `card lost the held signal for "${stopReason}": ${label}`);
+    assert.match(label, expectedFragment, `label mismatch for "${stopReason}": ${label}`);
+    assert.match(label, /saved work retained/);
+  }
+});
+
+test("v0.39.36: held-suffix overlay is suppressed for terminal stop reasons", () => {
+  for (const stopReason of [
+    "max iterations reached (50)",
+    "aborted: 0 / 0 hosts responded in 5s",
+  ]) {
+    const state: State = { goal: null, list: [], loop: loopWithStop(stopReason) };
+    const status = buildStatusText(state, null, NOW) ?? "";
+    assert.ok(
+      !status.includes("⏸ held") && !status.includes("· loop⏸held"),
+      `terminal prefix "${stopReason}" must not render the held overlay: ${status}`,
+    );
+  }
+});
+
 test("v0.38.105: recovery selector preserves goal and list precedence", () => {
   const withGoal = selectLoadHoldRecoverySummary({ goal: goal(), list: [] });
   assert.equal(withGoal.objective, "Show model provenance on the active goal");
