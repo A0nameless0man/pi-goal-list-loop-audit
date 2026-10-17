@@ -47,8 +47,8 @@ test("v0.39.38: header verb lists cover the live completion verbs (no silent ver
   const starts = [...activation.matchAll(/pi\.registerCommand\("([a-z]+)"/g)].map((m) => ({ cmd: m[1], index: m.index }));
   const liveVerbs = new Map<string, Set<string>>();
   for (let i = 0; i < starts.length; i++) {
-    const end = i + 1 < starts.length ? starts[i + 1]!.index : activation.length;
-    const slice = activation.slice(starts[i]!.index, end);
+    const end = i + 1 < starts.length ? (starts[i + 1]!.index ?? activation.length) : activation.length;
+    const slice = activation.slice(starts[i]!.index ?? 0, end);
     // Bound the scan to the getArgumentCompletions([...]) array — later
     // code in the slice (e.g. status checks like ["complete", ...]) is
     // not command surface. Walk brackets from the completions( open.
@@ -65,7 +65,7 @@ test("v0.39.38: header verb lists cover the live completion verbs (no silent ver
       }
       for (const m of span.matchAll(/\["([a-z]+)",/g)) verbs.add(m[1]!);
     }
-    liveVerbs.set(starts[i]!.cmd, verbs);
+    liveVerbs.set(starts[i]!.cmd!, verbs);
   }
   // Intentional exclusions: the /list `settings` stub only redirects to /glla.
   const excluded = new Map([["list", new Set(["settings"])]]);
