@@ -106,7 +106,7 @@ import { formatProgressReport } from "./progress-report.mjs";
 import { cmdGllaOwner, cmdGllaTakeover } from "./state-root-owner.js";
 import { inspectFleetHealth, formatFleetHealth } from './fleet-health.js';
 import { AUDIT_JOB_CLEANUP_MIN_AGE_MS, cancelDetachedGoalCompletionAuditor, cleanupDeadAuditJobs, inspectAuditJobHealth, DEFAULT_AUDITOR_STALL_MS, DEFAULT_AUDITOR_TOOL_TIMEOUT_MS } from "./goal-loop-auditor-process.js";
-import { releaseCurrentAuditorSurface } from "./loops/goal-auditor-surface.js";
+import { releaseAuditorSurfaceForGoal } from "./loops/goal-auditor-surface.js";
 import { inferStartFromSession, resolveTweakReplacement, seedPlusContextSufficient, type StartContextInference } from "./start-context.js";
 
 /** Child pi sessions live under the shared session store, munged by cwd
@@ -626,7 +626,7 @@ async function cmdResume(ctx: ExtensionContext): Promise<void> {
   const requestedGoal = state.goal?.status === "paused" ? state.goal : undefined;
   const resumeGeneration = flags.sessionGeneration;
   if (!recoveryStaleEntry && manuallyResumeMainModelRecovery(ctx)) {
-    releaseCurrentAuditorSurface();
+    releaseAuditorSurfaceForGoal(state.goal?.id, ctx.sessionManager);
     if (state.goal?.status === "paused") {
       // v0.39.25: the same "resume stops at the probe" gap as the armed
       // recovery below — release the parked goal once THIS probe settles.
@@ -641,7 +641,7 @@ async function cmdResume(ctx: ExtensionContext): Promise<void> {
   // the parked goal once the probe actually wins; a failed probe re-arms the
   // envelope and leaves the park in place.
   if (!recoveryStaleEntry && (state.mainModelRecovery?.retryAt || state.mainModelRecovery?.pendingModelSwitch)) {
-    releaseCurrentAuditorSurface();
+    releaseAuditorSurfaceForGoal(state.goal?.id, ctx.sessionManager);
     clearMainModelRecoveryTimer();
     flags.continuationDispatchStoodDown = false;
     ctx.ui.notify("Retrying the saved main-model recovery now — one provider probe, then the configured fallback models if needed.", "info");
@@ -654,7 +654,7 @@ async function cmdResume(ctx: ExtensionContext): Promise<void> {
   // retain their existing bounded recovery path.
   const activeProbeTarget = state.mainModelRecovery?.kind === "loop" ? state.loop?.active === true : state.goal?.status === "active";
   if (!recoveryStaleEntry && activeProbeTarget && (state.mainModelRecovery?.primaryProbeAt || state.mainModelRecovery?.primaryProbeInFlight)) {
-    releaseCurrentAuditorSurface();
+    releaseAuditorSurfaceForGoal(state.goal?.id, ctx.sessionManager);
     clearMainModelRecoveryTimer();
     flags.continuationDispatchStoodDown = false;
     ctx.ui.notify("Probing the preferred primary now — the current fallback remains available if the primary is still unhealthy.", "info");
@@ -675,7 +675,7 @@ async function cmdResume(ctx: ExtensionContext): Promise<void> {
     // rejected by the stale/foreign session boundary.
     const staleEntry = warnIfStaleAtEntry(ctx, resumeCommand);
     if (staleEntry) return;
-    releaseCurrentAuditorSurface();
+    releaseAuditorSurfaceForGoal(state.goal?.id, ctx.sessionManager);
     if (state.goal.backgroundWait) {
       reconcileBackgroundWait(ctx);
       ctx.ui.notify(state.goal?.backgroundWait
@@ -716,7 +716,7 @@ async function cmdResume(ctx: ExtensionContext): Promise<void> {
     }
     const staleEntry = warnIfStaleAtEntry(ctx, resumeCommand);
     if (staleEntry) return;
-    releaseCurrentAuditorSurface();
+    releaseAuditorSurfaceForGoal(state.goal?.id, ctx.sessionManager);
     // v0.38.99: an approved-but-unarchived claim is a blocked SETTLEMENT, not
     // an unfinished audit (/goal resume and the resume re-kick). Promising "no
     // new audit is needed" and then launching a second auditor was exactly the
@@ -783,7 +783,7 @@ async function cmdResume(ctx: ExtensionContext): Promise<void> {
   const storedCompletion = state.goal.pendingCompletion;
   if (!updateGoal({ status: "active", pauseReason: undefined, pauseSuggestedAction: undefined, pauseKind: undefined, pauseOptions: undefined, pauseRecommended: undefined, pauseContractAmendment: undefined, pauseResumeAt: undefined, interruptedAt: undefined, interruptedReason: undefined, autoResumedAt: undefined, autoResumedEvent: undefined, ...(staleEntry ? { interruptedAt: nowIso(), interruptedReason: "resumed in a stale session" } : {}), ...(usage ? { usage } : {}) }, ctx)) return;
   if (staleEntry) return;
-  releaseCurrentAuditorSurface();
+  releaseAuditorSurfaceForGoal(state.goal?.id, ctx.sessionManager);
   // A manual resume starts a fresh relentless cycle: a user pause between
   // an episode-1 exhaustion wedge and the next one must not make that
   // wedge park one cycle early.
@@ -1984,7 +1984,7 @@ async function cmdList(args: string, ctx: ExtensionContext): Promise<void> {
     } else {
       // Explicit list activation is also continuation consent, even when the
       // activated item is a fresh queue head rather than the parked goal.
-      releaseCurrentAuditorSurface();
+      releaseAuditorSurfaceForGoal(state.goal?.id, ctx.sessionManager);
     }
     return;
   }
@@ -2872,7 +2872,7 @@ async function cmdGllaResume(ctx: ExtensionContext): Promise<void> {
   if (warnIfStaleAtEntry(ctx, "/glla resume")) return;
   // /glla resume is the broad resume surface and therefore carries the same
   // consent semantics as /goal resume or /list resume.
-  releaseCurrentAuditorSurface();
+  releaseAuditorSurfaceForGoal(state.goal?.id, ctx.sessionManager);
   releaseInitialSessionLoadBarrier();
   // v0.35.15: clearing a supervisor pause is resume's first job — the flag
   // outlives sessions, so an explicit /glla resume must always unfreeze the

@@ -80,7 +80,7 @@ import { isCompactionInFlightSince, normalizeMainModelFallbackRefs } from "./mai
 import { createContinuationDispatch, type ContinuationDispatch } from "./goal-loop-dispatch.js";
 import { attemptFreshSessionRecovery, mainModelRecoveryRuntimeStatus } from "./goal-recovery.js";
 import { chooseObjectiveConflict, liveObjectives } from "./goal-objective-conflict.js";
-import { releaseCurrentAuditorSurface } from "./loops/goal-auditor-surface.js";
+import { releaseAuditorSurfaceForGoal } from "./loops/goal-auditor-surface.js";
 import { compactLoopCompletionSummary, compactTerminalCompletionSummary } from "./completion-summary.js";
 import { inferStartFromSession, type StartContextInference } from "./start-context.js";
 import { createRespecBuilder, respecCoverage, type RespecBuilderState } from "./respec-builder.js";
@@ -1487,7 +1487,7 @@ async function cmdLoop(args: string, ctx: ExtensionContext): Promise<void> {
       }
       if (flags.continuationDispatchStoodDown) {
         releaseContinuationDispatchStandDown();
-        releaseCurrentAuditorSurface();
+        releaseAuditorSurfaceForGoal(state.goal?.id, ctx.sessionManager);
         scheduleLoopTickUrgent(ctx);
         ctx.ui.notify("Loop dispatch stand-down cleared — retrying one continuation explicitly.", "info");
       } else {
@@ -1567,7 +1567,7 @@ async function cmdLoop(args: string, ctx: ExtensionContext): Promise<void> {
         appendLedger(ctx.cwd, "load_hold_released", { via: "loop-resume" });
       }
       releaseContinuationDispatchStandDown();
-      releaseCurrentAuditorSurface();
+      releaseAuditorSurfaceForGoal(state.goal?.id, ctx.sessionManager);
       scheduleLoopTickUrgent(ctx);
       const boundResetNote = resetTimeWindow
         ? " · fresh time window"

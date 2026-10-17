@@ -65,11 +65,23 @@ export function releaseAuditorSurface(key: string): void {
   suppressedByKey.delete(key);
 }
 
-/** Release the gate for the lifecycle's current key (the owner session
- * most recently setCurrentAuditorSurfaceKey). Convenience for callers
- * that hold ctx but not a goal id. */
-export function releaseCurrentAuditorSurface(): void {
-  suppressedByKey.delete(currentAuditorSurfaceKey);
+/** Goal-aware release for consent paths (/goal resume, /list resume,
+ * /loop resume, /glla resume, resume_goal, main-model recovery resume).
+ * Mirrors the lifecycle's key contract exactly: the goal id when one is
+ * loaded (the key goal-aware readers use), else the owner session id
+ * extracted from ctx.sessionManager (the lifecycle's fallback). A stale
+ * or foreign session must return before calling — same fence as before.
+ * v0.39.38 fix for the auditor's residual-leak repro: the previous
+ * releaseCurrentAuditorSurface() deleted a single process-global current
+ * pointer (last session_start wins), so co-resident A's resume released
+ * B's key and left A suppressed. */
+export function releaseAuditorSurfaceForGoal(goalId?: string | null, sessionManager?: unknown): void {
+  let owner = "unknown-session";
+  try {
+    const getId = (sessionManager as { getSessionId?: () => string } | undefined)?.getSessionId;
+    if (typeof getId === "function") owner = String(getId.call(sessionManager)) || owner;
+  } catch { /* keep the unknown-session fallback, mirroring sessionManagerId */ }
+  releaseAuditorSurface(auditorSurfaceKey({ goalId, ownerSessionId: owner }));
 }
 
 export function auditorSurfaceSuppressed(key?: string): boolean {
