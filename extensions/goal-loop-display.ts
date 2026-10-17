@@ -618,7 +618,7 @@ interface LatestAuditFeedback {
 }
 
 function latestAuditFeedback(g: Goal): LatestAuditFeedback | undefined {
-  if (auditorSurfaceSuppressed({ goalId: g.id })) return undefined;
+  if (auditorSurfaceSuppressed(g.id)) return undefined;
   const verdict = [...(g.auditHistory ?? [])].reverse().find((entry) =>
     (entry.disapproved || (entry.approved && entry.regressionShieldPassed === false))
     && typeof entry.report === "string"

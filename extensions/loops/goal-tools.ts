@@ -447,7 +447,7 @@ import {
 } from "../goal-loop.js";
 import { defineGoalRuntimeGlobal } from "./goal-runtime-globals.js";
 import { registerRespecBuilderTools } from "../respec-builder-runtime.js";
-import { releaseAuditorSurface } from "./goal-auditor-surface.js";
+import { releaseAuditorSurface, releaseCurrentAuditorSurface } from "./goal-auditor-surface.js";
 import { chooseObjectiveConflict, liveObjectives, type ObjectiveKind } from "../goal-objective-conflict.js";
 import { ACTION_REMINDER_CUSTOM_TYPE, buildActionReminder, buildAbortedAssistantNotice, clearPauseAbort, markPauseAbort } from "../action-reminder.js";
 import { assessSuspiciousObjective, isSuspiciousObjectivePause } from "../faulty-objective-recovery.js";
@@ -3203,10 +3203,10 @@ function registerAgentTools(pi: any): void {
         if (manuallyResumeMainModelRecovery(ctx)) {
           // That call already clears the hold, re-arms the window, notifies,
           // and fires the probe — ledger only the agent-resume provenance.
-          releaseAuditorSurface();
+          releaseCurrentAuditorSurface();
           appendLedger(ctx.cwd, "main_model_manual_hold_released", { via: "agent-resume" });
         } else {
-          releaseAuditorSurface();
+          releaseCurrentAuditorSurface();
           clearMainModelRecoveryTimer();
           releaseContinuationDispatchStandDown();
           ctx.ui.notify("Retrying the saved main-model recovery now — one provider probe, then the configured fallback models if needed.", "info");
@@ -3243,7 +3243,7 @@ function registerAgentTools(pi: any): void {
         autoResumedEvent: undefined,
         ...(usage ? { usage } : {}),
       }, ctx);
-      releaseAuditorSurface();
+      releaseCurrentAuditorSurface();
       appendLedger(ctx.cwd, "goal_resumed", { via: "resume_goal", goalId: resumedId, reason: clipSummaryValue(p.reason ?? "", 200) }); // 2026-09-26 cap audit: ledger excerpt kept at 200 (abuse guard on the resumed line) with clause-aware clip — over-long reasons still resume.
       // A stored completion claim is a direct-audit resume, not an agent
       // turn — same law as the manual path: re-fire the detached auditor

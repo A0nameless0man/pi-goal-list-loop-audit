@@ -247,7 +247,7 @@ import {
   rollupProject,
   type ProjectRollup,
 } from "../goal-loop-stats.js";
-import { releaseAuditorSurface, suppressAuditorSurfaceAfterColdRestore } from "./goal-auditor-surface.js";
+import { releaseAuditorSurface, setCurrentAuditorSurfaceKey, suppressAuditorSurfaceAfterColdRestore } from "./goal-auditor-surface.js";
 import { shouldSkipApprovalRenderReplay, claimProcessOwner as defaultClaimProcessOwner, writeOwnerFile as defaultWriteOwnerFile } from "./goal-session.js";
 import {
   cancelDetachedGoalCompletionAuditor,
@@ -2187,7 +2187,9 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
       // previous auditor report must not become fresh model/UI context before
       // this session has granted continuation consent. Key by owner session
       // so co-resident sessions do not share a process-global gate.
-      suppressAuditorSurfaceAfterColdRestore(sessionManagerId(ctx));
+      const ownerKey = sessionManagerId(ctx);
+      setCurrentAuditorSurfaceKey(ownerKey);
+      suppressAuditorSurfaceAfterColdRestore(ownerKey);
       // Even a blank startup must not leave a stored completion claim in the
       // old AUDITING state: there is no worker verdict to wait for after a
       // session boundary. Release it before the transcript-load barrier;
@@ -2256,8 +2258,10 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
       || staleRearmedOnSessionStart
       || sameProcessSuccessorResume
       || heldLoopSuccessorResume;
-    if (continuationConsent) releaseAuditorSurface(sessionManagerId(ctx));
-    else suppressAuditorSurfaceAfterColdRestore(sessionManagerId(ctx));
+    const ownerKey = sessionManagerId(ctx);
+    setCurrentAuditorSurfaceKey(ownerKey);
+    if (continuationConsent) releaseAuditorSurface(ownerKey);
+    else suppressAuditorSurfaceAfterColdRestore(ownerKey);
     rearmLegacyElapsedRecoveryHold(ctx, !stateRootPending(), autoResume || explicitRecovery);
     const mainRecovery = state.mainModelRecovery;
     if (mainRecovery?.manualResumeRequired) {

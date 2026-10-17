@@ -65,6 +65,18 @@ export function releaseAuditorSurface(key: string): void {
   suppressedByKey.delete(key);
 }
 
+/** Release the gate for the lifecycle's current key (the owner session
+ * most recently setCurrentAuditorSurfaceKey). Convenience for callers
+ * that hold ctx but not a goal id. */
+export function releaseCurrentAuditorSurface(): void {
+  suppressedByKey.delete(currentAuditorSurfaceKey);
+}
+
+/** Suppress the gate for the lifecycle's current key. */
+export function suppressCurrentAuditorSurface(): void {
+  suppressedByKey.set(currentAuditorSurfaceKey, true);
+}
+
 export function auditorSurfaceSuppressed(key?: string): boolean {
   const effective = key ?? currentAuditorSurfaceKey;
   return suppressedByKey.get(effective) === true;
