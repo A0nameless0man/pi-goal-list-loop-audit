@@ -60,6 +60,7 @@ async function writeJob(dir: string, attemptId: string, extra: Record<string, un
   const withoutHash = {
     protocolVersion: 1, attemptId, cwd: dir, prompt: "Inspect artifact.", model: "test/provider-model",
     thinkingLevel: "medium", createdAt: new Date().toISOString(),
+    auditorEnvAllowlist: ["PATH"],
     ...extra,
   };
   await writeFile(path.join(jobDir, "request.json"), JSON.stringify({ ...withoutHash, requestHash: requestHash(withoutHash) }));

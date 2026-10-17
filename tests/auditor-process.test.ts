@@ -964,6 +964,7 @@ test("request hashing is stable and excludes no runtime secret or API key field"
   const request = {
     protocolVersion: 1, attemptId: "a", cwd: "/tmp/project", prompt: "inspect", model: "p/m",
     thinkingLevel: "medium", createdAt: "2026-01-01T00:00:00.000Z", wallDeadlineAt: 123,
+    auditorEnvAllowlist: ["PATH"],
   };
   assert.equal(stableJson({ b: 2, a: 1 }), stableJson({ a: 1, b: 2 }));
   assert.equal(requestHash(request).length, 64);

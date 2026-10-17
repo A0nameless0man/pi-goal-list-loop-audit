@@ -84,6 +84,8 @@ async function runWorker(env: NodeJS.ProcessEnv, requestExtra: Record<string, un
     prompt: "Audit brief: verify the artifact. End with <approved/> or <disapproved/>.",
     model: "test/challenge-model",
     thinkingLevel: "off",
+    // v0.39.38: the worker forwards ONLY these keys to the pi child.
+    auditorEnvAllowlist: ["PATH", "FAKE_AUDIT_OUTPUT", "FAKE_CHALLENGE_MODE", "FAKE_ROUND1_CRASH"],
     ...requestExtra,
   };
   const request = { ...requestWithoutHash, requestHash: requestHash(requestWithoutHash) };

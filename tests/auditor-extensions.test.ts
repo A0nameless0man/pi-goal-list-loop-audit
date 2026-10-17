@@ -184,6 +184,7 @@ test("request allowedExtensions rides the hashed payload with resolved paths", (
     thinkingLevel: "high",
     createdAt: "2026-08-22T00:00:00.000Z",
     wallDeadlineAt: 1,
+    auditorEnvAllowlist: ["PATH"],
   };
   const withExts = { ...base, allowedExtensions: ["npm:pi-webaio"] };
   assert.notEqual(requestHash(base), requestHash(withExts));
