@@ -88,6 +88,8 @@ test("v0.39.38: the module header names all 9 registry sections (no stale count)
   const header = src.slice(0, src.indexOf("import {")); // The header is //-line prose above the first import.
   assert.ok(!header.includes("all 8 sections"), "the retired 8-section claim is gone");
   assert.ok(header.includes("all 9 sections"), "the header states the live count");
+  assert.ok(!src.includes("8 sections"), "no stale 8-section count survives anywhere in the module");
+  assert.ok(!src.includes("8 `label"), "no stale 8-tab count survives anywhere in the module");
   for (const s of SETTINGS_SECTIONS) {
     assert.ok(header.includes(s.id), `header section list names "${s.id}"`);
   }
