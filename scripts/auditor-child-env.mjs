@@ -24,16 +24,25 @@ export const MAX_ENV_KEYS = 512;
 export const MAX_ENV_NAME_CHARS = 256;
 const ENV_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
-/** Forward only allowlisted keys from source into a fresh env object. */
-export function buildAuditorChildEnv(sourceEnv, allowlist) {
+/** Shape gate for the hashed key list. Shared by the worker's load-time
+ * identity check (exit-1 result-less) and the spawn path, so both fail
+ * closed identically. */
+export function assertAuditorEnvAllowlistShape(allowlist) {
   if (!Array.isArray(allowlist) || allowlist.length > MAX_ENV_KEYS) {
     throw new Error("auditor request auditorEnvAllowlist must be an array of at most 512 env names");
   }
-  const childEnv = {};
   for (const name of allowlist) {
     if (typeof name !== "string" || name.length === 0 || name.length > MAX_ENV_NAME_CHARS || !ENV_NAME_RE.test(name)) {
       throw new Error("auditor request auditorEnvAllowlist contains an invalid env name");
     }
+  }
+}
+
+/** Forward only allowlisted keys from source into a fresh env object. */
+export function buildAuditorChildEnv(sourceEnv, allowlist) {
+  assertAuditorEnvAllowlistShape(allowlist);
+  const childEnv = {};
+  for (const name of allowlist) {
     const value = sourceEnv?.[name];
     if (typeof value === "string") childEnv[name] = value;
   }

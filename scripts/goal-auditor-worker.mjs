@@ -35,7 +35,7 @@ import {
   processTreeSize,
 } from "./auditor-process-tree.mjs";
 import { filterLoadableExtensionSpecs } from "./auditor-extension-specs.mjs";
-import { buildAuditorChildEnv, resolveAuditorBinary } from "./auditor-child-env.mjs";
+import { assertAuditorEnvAllowlistShape, buildAuditorChildEnv, resolveAuditorBinary } from "./auditor-child-env.mjs";
 
 const DEFAULT_TOOL_TIMEOUT_MS = 5 * 60_000;
 // MAX_TOOL_TIMEOUT_MS / MAX_STALL_TIMEOUT_MS now live in
@@ -290,6 +290,12 @@ function identity(request, attemptId) {
       if (typeof spec !== "string" || !spec.trim()) throw new Error("auditor request allowedExtensions contains an invalid spec");
     }
   }
+  // v0.39.38: env + binary identity. The child inherits ONLY these keys
+  // (buildAuditorChildEnv at spawn); a missing/malformed list or a
+  // redirecting GLLA_PI_BINARY fails here — exit 1, result-less, no retry
+  // storm — instead of running an audit under a widened env or evil binary.
+  assertAuditorEnvAllowlistShape(request.auditorEnvAllowlist);
+  resolveAuditorBinary(process.env.GLLA_PI_BINARY);
 }
 
 const MAX_TOOL_ARGS_CHARS = 120;
