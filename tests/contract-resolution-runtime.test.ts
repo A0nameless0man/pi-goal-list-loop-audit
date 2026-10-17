@@ -121,8 +121,8 @@ test('v0.39.38: numbered-line matching needs no replacement normalization',()=>{
  // The matcher returns the consent-target line itself (indented numbering
  // included) — pin the surviving shape after the dead `replacement` field
  // was removed.
- const indented=extractContractAmendment('Amend item 2 to `node check.mjs`','1. `bun test` exits 0\n  2. `node check.mjs` exits 0');
- assert.equal(indented?.proposedContract,'1. `bun test` exits 0\n  2. `node check.mjs` exits 0'.replace('`node check.mjs`','`node check.mjs`'));
+ const indented=extractContractAmendment('Amend item 2 to `node verify.mjs`','1. `bun test` exits 0\n  2. `node check.mjs` exits 0');
+ assert.equal(indented?.proposedContract,'1. `bun test` exits 0\n  2. `node verify.mjs` exits 0');
  assert.equal(indented?.originalItem,'  2. `node check.mjs` exits 0');
  assert.equal(extractContractAmendment('Amend item 9 to `node --version`','1. `bun test` exits 0'),undefined);
 });
