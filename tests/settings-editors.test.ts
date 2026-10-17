@@ -564,6 +564,26 @@ test("v0.35.x: zero-stream retry budget persists and rejects values outside 0..1
   }
 });
 
+test("v0.39.38: stuckMaxInterventions editor accepts 0 with documented meaning, matching the file loader", async () => {
+  try {
+    const ctx = makeMockCtx(tmpCwd());
+    ctx.ui.inputImpl = async () => "0";
+    await handleSettingChoice("stuckMaxInterventions", ctx as unknown as ExtensionContext);
+    assert.equal(readGlobal().stuckMaxInterventions, 0, "0 persists from the editor, like its siblings");
+    assert.equal(loadSettings(tmpCwd()).stuckMaxInterventions, 0, "file-loaded 0 survives normalization (editor/file parity)");
+
+    ctx.ui.inputImpl = async () => "-1";
+    await handleSettingChoice("stuckMaxInterventions", ctx as unknown as ExtensionContext);
+    assert.equal(readGlobal().stuckMaxInterventions, 0, "negatives are still rejected");
+    assert.ok(ctx.ui.matching("must be a non-negative integer").length >= 1);
+
+    ctx.ui.inputImpl = async () => "";
+    await handleSettingChoice("stuckMaxInterventions", ctx as unknown as ExtensionContext);
+    assert.ok(!("stuckMaxInterventions" in readGlobal()), "empty input restores the default");
+  } finally {
+    restoreGlobal();
+  }
+});
 test("v0.35.x: hand-edited zero-stream retry budgets normalize to the safe default", () => {
   const cwd = tmpCwd();
   fs.mkdirSync(path.dirname(projectSettingsPath(cwd)), { recursive: true });
