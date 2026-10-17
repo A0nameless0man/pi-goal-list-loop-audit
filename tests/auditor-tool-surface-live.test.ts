@@ -17,7 +17,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import * as fs from "node:fs";
 import * as http from "node:http";
 import * as os from "node:os";
@@ -70,26 +70,29 @@ async function runProbe(args: string[]): Promise<ProbeOutcome> {
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const port = (server.address() as { port: number }).port;
-  try {
-    execFileSync(PI, ["-p", "probe the boundary", "--no-session", "--model", "glla-probe-rig/rig-model", ...args], {
-      encoding: "utf8",
-      timeout: 120_000,
-      stdio: ["ignore", "pipe", "pipe"],
-      env: {
-        ...process.env,
-        PI_CODING_AGENT_DIR: home,
-        PI_OFFLINE: "1",
-        GLLA_PROBE_DIR: dir,
-        GLLA_PROBE_PROVIDER_URL: `http://127.0.0.1:${port}/v1`,
+  // Async spawn: a sync exec would block this process's event loop and starve
+  // the loopback stub (fail-closed deadlock until timeout). Bound 90s.
+  await new Promise<void>((resolve) => {
+    const child = execFile(
+      PI,
+      ["-p", "probe the boundary", "--no-session", "--model", "glla-probe-rig/rig-model", ...args],
+      {
+        timeout: 90_000,
+        env: {
+          ...process.env,
+          PI_CODING_AGENT_DIR: home,
+          PI_OFFLINE: "1",
+          GLLA_PROBE_DIR: dir,
+          GLLA_PROBE_PROVIDER_URL: `http://127.0.0.1:${port}/v1`,
+        },
       },
-    });
-  } catch (error) {
+      () => resolve(),
+    );
     // A non-zero exit still yields surface evidence; absence of the probe
     // tool in the declared set is asserted below, not the exit code.
-    assert.ok(error instanceof Error, "pi spawn failure surfaces as an error");
-  } finally {
-    server.close();
-  }
+    child.on("error", () => resolve());
+  });
+  server.close();
   return { declared, toolCallsServed, dir };
 }
 
