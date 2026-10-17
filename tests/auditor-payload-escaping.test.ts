@@ -46,8 +46,9 @@ test("v0.39.38: changed-file entries stay single-line — a crafted path cannot 
     telemetry: { files: [crafted] },
   });
   const prompt = buildGoalAuditorPrompt(goal as any, "done", "checked");
-  const block = /<changed_files>([\s\S]*?)<\/changed_files>/.exec(prompt)?.[1] ?? "";
-  assert.ok(block.length > 0, "the changed-files block is present");
-  assert.equal(block.trim().split("\n").length, 1, "the crafted path renders as exactly one list line");
-  assert.ok(block.includes("- ok.ts&#10;- evil.ts&#10;&quot;quoted&quot;"), "the entry is lossless and unambiguous");
+  assert.ok(prompt.includes("<changed_files>"), "the changed-files block is present");
+  const entryLines = prompt.split("\n").filter((line) => line.includes("ok.ts"));
+  assert.equal(entryLines.length, 1, "the crafted path renders as exactly one list line");
+  assert.equal(entryLines[0], "- ok.ts&#10;- evil.ts&#10;&quot;quoted&quot;", "the entry is lossless and unambiguous");
+  assert.ok(!prompt.split("\n").some((line) => line === "- evil.ts"), "no injected fake entry line survives");
 });
