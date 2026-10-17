@@ -40,10 +40,11 @@ function ledger(cwd: string): string {
 
 interface StubRecord {
   id: string; sentAt: number; generation: number; kind: "goal"; goalId: string; marker: string; ownerSessionId: string;
+  version: 1; phase: "prepared"; resync: boolean;
 }
 
 function buildRecord(id: string, goalId: string, sentAt: number): StubRecord {
-  return { id, sentAt, generation: 1, kind: "goal", goalId, marker: "wrong-record-test", ownerSessionId: "main" };
+  return { id, sentAt, generation: 1, kind: "goal", goalId, marker: "wrong-record-test", ownerSessionId: "main", version: 1, phase: "prepared", resync: false };
 }
 
 async function boot(cwd: string): Promise<{ pi: MockPi; ctx: MockCtx; goalId: string }> {
