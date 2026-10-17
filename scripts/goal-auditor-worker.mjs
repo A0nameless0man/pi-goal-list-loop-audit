@@ -34,6 +34,7 @@ import {
   processGroupSize,
   processTreeSize,
 } from "./auditor-process-tree.mjs";
+import { filterLoadableExtensionSpecs } from "./auditor-extension-specs.mjs";
 
 const DEFAULT_TOOL_TIMEOUT_MS = 5 * 60_000;
 // MAX_TOOL_TIMEOUT_MS / MAX_STALL_TIMEOUT_MS now live in
@@ -275,9 +276,12 @@ function identity(request, attemptId) {
   // Older request files may carry wallDeadlineAt. It is intentionally not
   // validated or enforced: a guessed duration must not terminate a worker
   // that continues to emit real progress. Current requests omit the field.
-  // v0.36.0: optional extension allowlist. Specs are passed verbatim to
-  // `pi --extension <spec>`; the strict shape check keeps a corrupted job
-  // dir from smuggling arbitrary extra CLI surface into the spawn.
+  // v0.36.0: optional extension allowlist. Specs reach `pi --extension`
+  // only through the loadable-path fence (scripts/auditor-extension-specs.mjs):
+  // the shape check below rejects structural corruption loudly, while
+  // scheme/flag/relative/nonexistent entries drop fail-closed at spawn so a
+  // tampered job dir can only narrow the auditor (fully isolated), never
+  // widen it into installs, fetches, or extra CLI surface.
   if (request.allowedExtensions !== undefined) {
     if (!Array.isArray(request.allowedExtensions)) throw new Error("auditor request allowedExtensions must be an array");
     if (request.allowedExtensions.length > 32) throw new Error("auditor request allowedExtensions is too large");
@@ -838,7 +842,12 @@ async function main() {
     // --no-extensions (pi honors explicit -e paths). Extension tools stay
     // disabled: --tools above remains the auditor's only tool surface, so
     // allow-listed extensions effectively contribute model providers.
-    for (const spec of request.allowedExtensions ?? []) piArgs.push("--extension", spec);
+    // v0.39.38: never pass job-dir specs verbatim — see the fence module.
+    const { ok: loadableExtensions, dropped: droppedExtensions } = filterLoadableExtensionSpecs(request.allowedExtensions);
+    if (droppedExtensions > 0) {
+      process.stderr.write(`goal-auditor-worker: dropped ${droppedExtensions} unloadable allowedExtension spec(s); auditor runs narrowed.\n`);
+    }
+    for (const spec of loadableExtensions) piArgs.push("--extension", spec);
     const launch = buildAuditorPiSpawnSpec(piBinary, piArgs);
     // The parent already reduced process.env to execution necessities plus
     // selected-model credentials. Copy that exact set: inheriting a second
