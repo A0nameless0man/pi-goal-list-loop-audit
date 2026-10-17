@@ -575,7 +575,7 @@ test("v0.39.38: stuckMaxInterventions editor accepts 0 with documented meaning, 
     ctx.ui.inputImpl = async () => "-1";
     await handleSettingChoice("stuckMaxInterventions", ctx as unknown as ExtensionContext);
     assert.equal(readGlobal().stuckMaxInterventions, 0, "negatives are still rejected");
-    assert.ok(ctx.ui.matching("must be a non-negative integer").length >= 1);
+    assert.ok(ctx.ui.matching("not a non-negative integer").length >= 1);
 
     ctx.ui.inputImpl = async () => "";
     await handleSettingChoice("stuckMaxInterventions", ctx as unknown as ExtensionContext);
