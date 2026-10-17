@@ -19,8 +19,8 @@ import activate, {
   __testOnlyResetOwnerSession,
   __testOnlyResetStaleFlag,
 } from "../extensions/loops/goal.js";
-import { sendContinuation, resetContinuationDispatchState } from "../extensions/goal-continuation.js";
-import { readState } from "../extensions/goal-loop-core.js";
+import { resetContinuationDispatchState } from "../extensions/goal-continuation.js";
+import { readState, goalMdPath } from "../extensions/goal-loop-core.js";
 import { MockPi, makeMockCtx, seedGoal, seedState, tmpCwd, tick, type MockCtx } from "./harness/mock-pi.js";
 
 const GLOBAL_SETTINGS_PATH = process.env.GLLA_GLOBAL_SETTINGS_PATH!;
@@ -35,6 +35,16 @@ function ledgerText(cwd: string): string {
   }
 }
 
+function waitUntil(predicate: () => boolean, timeoutMs = 8_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  return (async () => {
+    while (!predicate()) {
+      if (Date.now() >= deadline) throw new Error("timed out waiting for the rebound send");
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  })();
+}
+
 afterEach(() => {
   fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify({ aggressiveMode: false }));
   __testOnlyResetOwnerSession();
@@ -42,12 +52,13 @@ afterEach(() => {
   pi.sent.length = 0;
 });
 
-async function bootWithRecoveredGoal(cwd: string): Promise<{ ctx: MockCtx; goalId: string }> {
+// A reload with an armed autoResumedAt stamp rebounds into a recovery send
+// on session_start — that rebound IS the delivery under test.
+async function bootRecovered(cwd: string, goalId: string): Promise<MockCtx> {
   fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify({ autoResume: true, aggressiveMode: false }));
   __testOnlyResetOwnerSession();
   __testOnlyResetStaleFlag();
   resetContinuationDispatchState(cwd);
-  const goalId = `recovery-notice-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
   seedState(cwd, {
     goal: seedGoal({
       id: goalId,
@@ -59,21 +70,18 @@ async function bootWithRecoveredGoal(cwd: string): Promise<{ ctx: MockCtx; goalI
   });
   const ctx = makeMockCtx(cwd, { sessionManager: { name: `recovery-notice-${Date.now()}-${Math.random()}` } });
   await pi.fire("session_start", { reason: "reload" }, ctx);
-  await tick(150);
-  return { ctx, goalId };
+  await waitUntil(() => pi.sent.length >= 1);
+  await tick(300);
+  return ctx;
 }
 
 test("v0.39.38 a delivered recovery notice stamps durable delivery", async () => {
   const cwd = tmpCwd();
-  const { ctx, goalId } = await bootWithRecoveredGoal(cwd);
+  const goalId = `recovery-ok-${Date.now().toString(36)}`;
+  const ctx = await bootRecovered(cwd, goalId);
   try {
-    const sendsBefore = pi.sent.length;
-    sendContinuation(goalId);
-    await tick(300);
-    console.log("DBG ledger tail:", JSON.stringify(ledgerText(cwd).trim().split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l).type; } catch { return "?"; } }).slice(-10)));
-    assert.ok(pi.sent.length > sendsBefore, "the continuation was actually sent");
-    const sent = pi.sent.slice(sendsBefore).map((s) => s.message.content ?? "").join("\n");
-    assert.ok(sent.includes("RECOVERY NOTICE"), "the sent turn carried the recovery notice");
+    const sent = pi.sent.map((s) => s.message.content ?? "").join("\n");
+    assert.ok(sent.includes("RECOVERY NOTICE"), "the rebound turn carried the recovery notice");
     const ledger = ledgerText(cwd);
     assert.ok(ledger.includes("recovery_notice_delivered"), "durable delivery is ledgered on success");
     assert.equal(readState(cwd).goal?.autoResumedAt, undefined, "the disk stamp is cleared");
@@ -84,19 +92,32 @@ test("v0.39.38 a delivered recovery notice stamps durable delivery", async () =>
 
 test("v0.39.38 an unpersistable delivered stamp is reported, not claimed", async () => {
   const cwd = tmpCwd();
-  const { ctx, goalId } = await bootWithRecoveredGoal(cwd);
+  const goalId = `recovery-fail-${Date.now().toString(36)}`;
+  fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify({ autoResume: true, aggressiveMode: false }));
+  __testOnlyResetOwnerSession();
+  __testOnlyResetStaleFlag();
+  resetContinuationDispatchState(cwd);
+  seedState(cwd, {
+    goal: seedGoal({
+      id: goalId,
+      status: "active",
+      policy: "goal",
+      autoResumedAt: new Date(Date.now() - 60_000).toISOString(),
+      autoResumedEvent: "heartbeat recovery for the regression test",
+    }),
+  });
+  // Break ONLY the goal markdown projection before boot: goalMarkdownLanded
+  // then fails, so the rebound's updateGoal returns false while the dispatch
+  // sidecar and the journal keep working — the turn still sends and the
+  // stamp path runs.
+  const goalMd = goalMdPath(cwd, goalId);
+  fs.rmSync(goalMd, { force: true });
+  fs.mkdirSync(goalMd, { recursive: true });
+  const ctx = makeMockCtx(cwd, { sessionManager: { name: `recovery-fail-${Date.now()}-${Math.random()}` } });
+  await pi.fire("session_start", { reason: "reload" }, ctx);
   try {
-    // Break ONLY the goal markdown projection: goalMarkdownLanded then
-    // fails, so updateGoal returns false while the dispatch sidecar and the
-    // journal keep working — the turn still sends and the stamp path runs.
-    const goalMd = path.join(cwd, ".pi-glla", "goals", `${goalId}.md`);
-    fs.rmSync(goalMd, { force: true });
-    fs.mkdirSync(goalMd, { recursive: true });
-    const sendsBefore = pi.sent.length;
-    sendContinuation(goalId);
+    await waitUntil(() => pi.sent.length >= 1);
     await tick(300);
-    console.log("DBG ledger tail:", JSON.stringify(ledgerText(cwd).trim().split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l).type; } catch { return "?"; } }).slice(-10)));
-    assert.ok(pi.sent.length > sendsBefore, "the continuation was actually sent");
     const ledger = ledgerText(cwd);
     assert.ok(!ledger.includes("recovery_notice_delivered"), "no durable-delivery claim for an unpersisted stamp");
     assert.ok(ledger.includes("recovery_notice_clear_persist_failed"), "the gap is ledgered instead");
