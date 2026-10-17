@@ -1373,6 +1373,11 @@ interface AuditorRequest {
    * switch). Absent/empty = the default extension-less auditor. Part of the
    * request hash like every other field. */
   allowedExtensions?: string[];
+  /** v0.39.38: exact env keys the worker may forward to the auditor child.
+   * Computed from the fenced dispatch env and hashed like every field, so
+   * job-dir tampering breaks the request hash instead of widening the
+   * child env. The worker never inherits full process.env into pi. */
+  auditorEnvAllowlist: string[];
   /** v0.38.3: opt-in live inspection. When true the worker spawns pi with
    * --session <jobDir>/session.jsonl instead of --no-session, persisting the
    * auditor's pi as a resumable session (tail -f live, resume after).
@@ -1692,6 +1697,13 @@ export function detachedAuditorEnv(
   }
   Object.assign(out, auditorCredentialEnv(provider, source), overrides);
   return out;
+}
+
+/** v0.39.38: the exact string-valued keys of a fenced dispatch env, sorted
+ * for hash stability. Hashed into the request so the worker forwards only
+ * these keys to the auditor child — never a blind process.env inherit. */
+export function auditorEnvAllowlistFor(env: NodeJS.ProcessEnv): string[] {
+  return Object.keys(env).filter((name) => typeof env[name] === "string").sort();
 }
 
 function buildPrompt(goal: Goal, completionSummary?: string | null, verificationSummary?: string | null): string {
