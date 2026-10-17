@@ -51,6 +51,7 @@ function job(cwd: string, g: Goal, options: { name?: string; at?: number; output
   const unsigned = { protocolVersion: 1, attemptId: name, createdAt: new Date(options.at ?? Date.now() - 2000).toISOString(), cwd,
     prompt: buildGoalAuditorPrompt(g, g.pendingCompletion!.completionSummary, g.pendingCompletion!.verificationSummary), model: "test/model", thinkingLevel: "off",
     goalRevision: { goalId: g.id, revision: g.revision ?? 0 },
+    auditorEnvAllowlist: ["PATH"], // v0.39.38: required hashed field (recovery reads only; never respawned)
     ...(!options.legacy ? { logicalAttemptId: g.pendingCompletion!.attemptId, recoveryIdentity: completionAuditRecoveryIdentity(g) } : {}),
   };
   const request = { ...unsigned, requestHash: requestHash(unsigned) };
