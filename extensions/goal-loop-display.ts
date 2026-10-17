@@ -19,6 +19,7 @@ import { auditVerdictLabel, auditLifecycleLine, auditLifecycleProjection, auditP
 
 export { isMonitorGoal };
 import { HELD_ON_RESTORE, type LoopState } from "./goal-loop-forever.js";
+import { RESUMABLE_STOP } from "./goal-loop.js";
 import { respecCoverage } from "./respec-builder.js";
 import { providerErrorPresentation } from "./quota-retry.js";
 import { normalizeFindingLead } from "./finding-lead.js";
@@ -42,12 +43,23 @@ export const MAIN_HOST_LABEL = "MAIN HOST · SUPERVISING";
  * last session ended). Held loops must stay VISIBLE — before, only
  * state.loop?.active rendered anything and a reload made the loop vanish
  * from the always-on UI (user report 2026-07-29: "loops are the most
- * immature"). Stopped loops (any other stopReason) stay invisible. */
+ * immature").
+ * v0.39.36 (audit RESUMABLE_STOP-vs-display finding): RESUMABLE_STOP in
+ * extensions/goal-loop.ts promises /loop resume for plateau, stuck,
+ * stalled, bound, metric-never-moved, zero-stream, user-paused and
+ * branch-changed prefixes; this predicate now mirrors the slash-side
+ * promise so a resumable stop is never rendered as a vanished loop.
+ * Main-model recovery / provider-errors prefixes are subsumed by
+ * RESUMABLE_STOP. */
 function heldLoop(state: State): LoopState | undefined {
   const l = state.loop;
-  return l && !l.active && (l.stopReason === HELD_ON_RESTORE
-    || (!state.mainModelRecovery && (l.stopReason?.startsWith("provider errors —")
-      || l.stopReason?.startsWith("main model recovery —")))) ? l : undefined;
+  if (!l || l.active) return undefined;
+  if (RESUMABLE_STOP(l.stopReason)) return l;
+  // Max-iterations stays refinable too: same parity contract as the
+  // shared predicate, kept inline so the display never reaches into the
+  // loop module to read builder state for the suffix overlay.
+  if (l.builder && l.stopReason?.startsWith("max iterations reached")) return l;
+  return undefined;
 }
 
 // ---- formatters ----
@@ -2478,7 +2490,7 @@ function standaloneRecoveryLines(recovery: MainModelRecovery, now: number, theme
 }
 
 function heldLoopLines(l: LoopState, now: number, theme?: DisplayTheme, width?: number): string[] {
-  const reason = l.stopReason === HELD_ON_RESTORE ? "held by the session-restore gate" : "provider recovery stopped; saved work retained";
+  const reason = heldLoopReasonLabel(l.stopReason);
   return [
     `${paint(theme, "warning", "⏸")} ${truncate(l.target, budgetFor(width, 3, 64))}`,
     `├─ loop held · iter ${l.iteration} · ${fmtElapsed(now - Date.parse(l.startedAt))} so far`,
