@@ -41,6 +41,49 @@ test("v0.39.38: no loops header documents the retired four-command surface", () 
   }
 });
 
+test("v0.39.38: header verb lists cover the live completion verbs (no silent verb rot)", () => {
+  const activation = fs.readFileSync(path.join(LOOPS, "goal-activation.ts"), "utf-8");
+  // Slice per-command: from its registerCommand( to the next one (or EOF).
+  const starts = [...activation.matchAll(/pi\.registerCommand\("([a-z]+)"/g)].map((m) => ({ cmd: m[1], index: m.index }));
+  const liveVerbs = new Map<string, Set<string>>();
+  for (let i = 0; i < starts.length; i++) {
+    const end = i + 1 < starts.length ? starts[i + 1]!.index : activation.length;
+    const slice = activation.slice(starts[i]!.index, end);
+    // Bound the scan to the getArgumentCompletions([...]) array — later
+    // code in the slice (e.g. status checks like ["complete", ...]) is
+    // not command surface. Walk brackets from the completions( open.
+    const verbs = new Set<string>();
+    const anchor = slice.indexOf("getArgumentCompletions");
+    if (anchor >= 0) {
+      let depth = 0, started = false, k = slice.indexOf("completions([", anchor) + "completions(".length;
+      let span = "";
+      for (; k < slice.length; k++) {
+        const ch = slice[k];
+        if (ch === "[") { depth++; started = true; }
+        span += ch;
+        if (ch === "]") { depth--; if (started && depth === 0) break; }
+      }
+      for (const m of span.matchAll(/\["([a-z]+)",/g)) verbs.add(m[1]!);
+    }
+    liveVerbs.set(starts[i]!.cmd, verbs);
+  }
+  // Intentional exclusions: the /list `settings` stub only redirects to /glla.
+  const excluded = new Map([["list", new Set(["settings"])]]);
+  const headerLine = (header: string, cmd: string): string =>
+    header.split("\n").find((line) => line.includes(`/${cmd} `) || line.includes(`/${cmd}<`)) ?? "";
+  for (const file of HEADER_FILES) {
+    const header = headerOf(file);
+    for (const [cmd, verbs] of liveVerbs) {
+      if (cmd === "review") continue; // No completions array — presence pinned above.
+      const line = headerLine(header, cmd);
+      assert.ok(line.length > 0, `${file}: header has a /${cmd} verb line`);
+      for (const verb of verbs) {
+        if (excluded.get(cmd)?.has(verb)) continue;
+        assert.ok(line.includes(verb), `${file}: header /${cmd} line covers live verb "${verb}"`);
+      }
+    }
+  }
+});
 test("v0.39.38: every loops header names the five registered commands and the true surface sites", () => {
   const activation = fs.readFileSync(path.join(LOOPS, "goal-activation.ts"), "utf-8");
   const registered = [...activation.matchAll(/pi\.registerCommand\("([a-z]+)"/g)].map((m) => m[1]);
