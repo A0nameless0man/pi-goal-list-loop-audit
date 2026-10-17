@@ -67,7 +67,7 @@ test("cold auditor gate hides only the report, not the durable objective UI", ()
   const goal = goalWithAudit({ status: "active", interruptedAt: new Date().toISOString(), pauseReason: "auditor disapproved — fix the gap" }) as unknown as Goal;
   const state = { goal, list: [], loop: null } as unknown as State;
 
-  suppressAuditorSurfaceAfterColdRestore();
+  suppressAuditorSurfaceAfterColdRestore(goal.id);
   const hiddenWidget = widgetText(state);
   const hiddenPrompt = continuationPrompt(goal);
   assert.match(hiddenWidget, /visible unfinished objective/, "objective remains visible");
@@ -76,7 +76,7 @@ test("cold auditor gate hides only the report, not the durable objective UI", ()
   assert.doesNotMatch(hiddenPrompt, /AUDITOR TODO LIST/, "old auditor TODOs are not injected");
   assert.doesNotMatch(hiddenPrompt, /resume it silently/, "old report text is not injected");
 
-  releaseAuditorSurface();
+  releaseAuditorSurface(goal.id);
   assert.match(widgetText(state), /Required fixes/, "report returns after consent");
   assert.match(continuationPrompt(goal), /LATEST AUDITOR/, "continuation sees the report after consent");
   assert.match(continuationPrompt(goal), /AUDITOR TODO LIST/, "continuation sees durable auditor TODOs after consent");
@@ -200,4 +200,45 @@ test("configured auto-resume is continuation consent and restores auditor contex
   } finally {
     fs.rmSync(cwd, { recursive: true, force: true });
   }
+});
+
+// v0.39.38 (audit MEDIUM finding): the auditor-surface gate was
+// process-global, so a cold restore in one co-resident session suppressed
+// every other session in the same process, and any single session's resume
+// released the surface for everyone. The gate is now keyed per surface
+// (goal id / list item id / owner session), so each session's consent
+// decision stays local. Prove isolation at the unit level first, then
+// through the full restore path.
+test("v0.39.38: suppressing one surface does not suppress a co-resident surface", () => {
+  const goalA = goalWithAudit({ status: "active" }) as unknown as Goal;
+  const stateA = { goal: goalA, list: [], loop: null } as unknown as State;
+  const goalB = goalWithAudit({ status: "active" }) as unknown as Goal;
+  const stateB = { goal: goalB, list: [], loop: null } as unknown as State;
+  assert.match(widgetText(stateB), /Required fixes/, "precondition: B projects the report");
+
+  suppressAuditorSurfaceAfterColdRestore(goalA.id);
+  assert.doesNotMatch(widgetText(stateA), /Required fixes/, "A is suppressed");
+  assert.doesNotMatch(continuationPrompt(goalA), /LATEST AUDITOR/, "A prompt is report-free");
+  assert.match(widgetText(stateB), /Required fixes/, "B is not suppressed by A's cold restore");
+  assert.match(continuationPrompt(goalB), /LATEST AUDITOR/, "B prompt keeps the report");
+
+  releaseAuditorSurface(goalA.id);
+  assert.match(widgetText(stateA), /Required fixes/, "A restored after its own resume");
+});
+
+test("v0.39.38: releasing one surface does not release a co-resident suppressed surface", () => {
+  const goalA = goalWithAudit({ status: "active" }) as unknown as Goal;
+  const stateA = { goal: goalA, list: [], loop: null } as unknown as State;
+  const goalB = goalWithAudit({ status: "active" }) as unknown as Goal;
+  const stateB = { goal: goalB, list: [], loop: null } as unknown as State;
+
+  suppressAuditorSurfaceAfterColdRestore(goalA.id);
+  suppressAuditorSurfaceAfterColdRestore(goalB.id);
+  assert.doesNotMatch(widgetText(stateA), /Required fixes/, "precondition: A suppressed");
+  assert.doesNotMatch(widgetText(stateB), /Required fixes/, "precondition: B suppressed");
+
+  releaseAuditorSurface(goalA.id);
+  assert.match(widgetText(stateA), /Required fixes/, "A released by its own resume");
+  assert.doesNotMatch(widgetText(stateB), /Required fixes/, "B stays suppressed after A's resume");
+  assert.doesNotMatch(continuationPrompt(goalB), /LATEST AUDITOR/, "B prompt stays report-free");
 });

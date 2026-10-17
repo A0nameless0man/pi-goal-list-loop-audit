@@ -2185,11 +2185,13 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
     if (initialSessionLoadPending && !explicitRecovery && !heldLoopSuccessorResume) {
       // The objective/status projection remains visible below, but the
       // previous auditor report must not become fresh model/UI context before
-      // this session has granted continuation consent. Key by owner session
-      // so co-resident sessions do not share a process-global gate.
-      const ownerKey = sessionManagerId(ctx);
-      setCurrentAuditorSurfaceKey(ownerKey);
-      suppressAuditorSurfaceAfterColdRestore(ownerKey);
+      // this session has granted continuation consent. Key by the goal when
+      // one is loaded (goal-aware readers look up the goal id), else by
+      // owner session so co-resident sessions never share a process-global
+      // gate. Set the current key so no-arg readers see the right key.
+      const surfaceKey = state.goal?.id ?? auditorSurfaceKey({ ownerSessionId: sessionManagerId(ctx) });
+      setCurrentAuditorSurfaceKey(surfaceKey);
+      suppressAuditorSurfaceAfterColdRestore(surfaceKey);
       // Even a blank startup must not leave a stored completion claim in the
       // old AUDITING state: there is no worker verdict to wait for after a
       // session boundary. Release it before the transcript-load barrier;
@@ -2258,10 +2260,13 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
       || staleRearmedOnSessionStart
       || sameProcessSuccessorResume
       || heldLoopSuccessorResume;
-    const ownerKey = sessionManagerId(ctx);
-    setCurrentAuditorSurfaceKey(ownerKey);
-    if (continuationConsent) releaseAuditorSurface(ownerKey);
-    else suppressAuditorSurfaceAfterColdRestore(ownerKey);
+    // Same key contract as the cold-restore branch above: prefer the goal
+    // id so goal-aware readers hit the entry the lifecycle wrote; owner
+    // session otherwise. The gate is per-surface, never process-global.
+    const surfaceKey = state.goal?.id ?? auditorSurfaceKey({ ownerSessionId: sessionManagerId(ctx) });
+    setCurrentAuditorSurfaceKey(surfaceKey);
+    if (continuationConsent) releaseAuditorSurface(surfaceKey);
+    else suppressAuditorSurfaceAfterColdRestore(surfaceKey);
     rearmLegacyElapsedRecoveryHold(ctx, !stateRootPending(), autoResume || explicitRecovery);
     const mainRecovery = state.mainModelRecovery;
     if (mainRecovery?.manualResumeRequired) {
