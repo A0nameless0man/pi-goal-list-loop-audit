@@ -57,12 +57,16 @@ async function writeJob(dir: string, attemptId: string, extra: Record<string, un
   const jobDir = path.join(dir, ".pi-glla", "audit-jobs", attemptId);
   await mkdir(jobDir, { recursive: true });
   await writeFile(path.join(jobDir, "lock"), "lock\n");
-  const withoutHash = {
+  const raw = {
     protocolVersion: 1, attemptId, cwd: dir, prompt: "Inspect artifact.", model: "test/provider-model",
     thinkingLevel: "medium", createdAt: new Date().toISOString(),
     auditorEnvAllowlist: ["PATH"],
     ...extra,
   };
+  // Hash exactly what lands on disk (JSON drops undefined, so an explicit
+  // `auditorEnvAllowlist: undefined` override tests a truly absent field
+  // with a VALID hash — the worker must then fail on the shape gate itself).
+  const withoutHash = JSON.parse(JSON.stringify(raw));
   await writeFile(path.join(jobDir, "request.json"), JSON.stringify({ ...withoutHash, requestHash: requestHash(withoutHash) }));
   return jobDir;
 }
@@ -134,7 +138,7 @@ test("v0.39.38: live worker rejects a redirected binary and a missing allowlist"
     const cases: Array<[string, Record<string, unknown>, Record<string, string>]> = [
       ["worker-binary-redirect", { auditorEnvAllowlist: ["PATH"] }, { GLLA_PI_BINARY: "relative/evil-pi" }],
       ["worker-binary-missing", { auditorEnvAllowlist: ["PATH"] }, { GLLA_PI_BINARY: "/nonexistent/pi-binary" }],
-      ["worker-envlist-missing", {}, { GLLA_PI_BINARY: fakePi }],
+      ["worker-envlist-missing", { auditorEnvAllowlist: undefined }, { GLLA_PI_BINARY: fakePi }],
     ];
     for (const [name, extra, workerEnv] of cases) {
       const jobDir = await writeJob(dir, name, extra);
