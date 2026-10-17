@@ -72,6 +72,8 @@ async function runProbe(args: string[]): Promise<ProbeOutcome> {
   const port = (server.address() as { port: number }).port;
   // Async spawn: a sync exec would block this process's event loop and starve
   // the loopback stub (fail-closed deadlock until timeout). Bound 90s.
+  let spawnError: unknown = null;
+  let stderrTail = "";
   await new Promise<void>((resolve) => {
     const child = execFile(
       PI,
@@ -88,12 +90,17 @@ async function runProbe(args: string[]): Promise<ProbeOutcome> {
           GLLA_PROBE_PROVIDER_URL: `http://127.0.0.1:${port}/v1`,
         },
       },
-      () => resolve(),
+      (error, stdout, stderr) => {
+        spawnError = error;
+        stderrTail = String(stderr ?? stdout ?? "").slice(-1500);
+        resolve();
+      },
     );
     // A non-zero exit still yields surface evidence; absence of the probe
     // tool in the declared set is asserted below, not the exit code.
     child.on("error", () => resolve());
   });
+  fs.writeFileSync(path.join(dir, `spawn-debug.log`), `ERR:${String(spawnError).slice(0, 500)}\nSTDERR:${stderrTail}`);
   server.close();
   return { declared, toolCallsServed, dir };
 }
