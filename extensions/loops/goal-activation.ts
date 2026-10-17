@@ -247,7 +247,7 @@ import {
   rollupProject,
   type ProjectRollup,
 } from "../goal-loop-stats.js";
-import { releaseAuditorSurface, setCurrentAuditorSurfaceKey, suppressAuditorSurfaceAfterColdRestore } from "./goal-auditor-surface.js";
+import { auditorSurfaceKey, releaseAuditorSurface, setCurrentAuditorSurfaceKey, suppressAuditorSurfaceAfterColdRestore } from "./goal-auditor-surface.js";
 import { shouldSkipApprovalRenderReplay, claimProcessOwner as defaultClaimProcessOwner, writeOwnerFile as defaultWriteOwnerFile } from "./goal-session.js";
 import {
   cancelDetachedGoalCompletionAuditor,
