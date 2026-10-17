@@ -77,6 +77,20 @@ test("test-split: slow mode names the files; all mode passes through", () => {
   assert.ok(filtered.bunArgs.some((a) => a.includes("ignore-patterns")), "filtered fast keeps the exclusion");
 });
 
+test("v0.39.38: --changed space form folds to the bun filter form, never an explicit path", () => {
+  const space = buildRunnerArgs(["--changed", "main"], [], []);
+  assert.equal(space.mode, "changed", "a bare ref is a filter, not a path");
+  assert.ok(space.bunArgs.includes("--changed=main"), "bun only accepts the = form");
+  assert.ok(!space.bunArgs.includes("main"), "no bare ref leaks through as a filename filter");
+  const bare = buildRunnerArgs(["--changed", "-t", "foo"], [], []);
+  assert.equal(bare.mode, "changed");
+  assert.ok(bare.bunArgs.includes("--changed"), "bare --changed passes through untouched");
+  assert.deepEqual(bare.bunArgs.slice(-2), ["-t", "foo"], "a following flag is not eaten as a ref");
+  const mixed = buildRunnerArgs(["tests/a.test.ts", "--changed", "main"], [], []);
+  assert.equal(mixed.mode, "explicit", "a real path still selects explicit mode");
+  assert.ok(mixed.bunArgs.includes("--changed=main"), "the ref still folds inside explicit mode");
+});
+
 test("v0.39.38: node-only gates are excluded from bun discovery in every scan mode", () => {
   assert.ok(NODE_ONLY_TEST_FILES.length > 0, "the node-only list is populated");
   for (const file of NODE_ONLY_TEST_FILES) {

@@ -72,9 +72,23 @@ export function isStalled({ silentMs, limitMs }) {
 
 /** Pure arg builder (unit-tested in tests/test-split.test.ts). */
 export function buildRunnerArgs(argv, slowFiles, nodeOnlyFiles = NODE_ONLY_TEST_FILES) {
+  // Bun only accepts the --changed=<ref> filter form (`bun test --help`);
+  // fold the space form up front so a bare ref is never mistaken for an
+  // explicit path (or filename filter). A bare --changed stays bare: it
+  // takes no space-separated value, so it must not consume the next token.
+  const normalized = [];
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "--changed" && i + 1 < argv.length && !argv[i + 1].startsWith("-")) {
+      normalized.push(`--changed=${argv[i + 1]}`);
+      i++;
+    } else {
+      normalized.push(arg);
+    }
+  }
   let mode = "fast";
   const rest = [];
-  for (const arg of argv) {
+  for (const arg of normalized) {
     if (arg === "--slow") mode = "slow";
     else if (arg === "--all") mode = "all";
     else rest.push(arg);
@@ -86,7 +100,7 @@ export function buildRunnerArgs(argv, slowFiles, nodeOnlyFiles = NODE_ONLY_TEST_
   const VALUE_FLAGS = new Set([
     "-t", "--test-name-pattern", "--timeout", "--parallel",
     "--max-concurrency", "--preload", "--path-ignore-patterns",
-    "--changed", "--rerun-each", "--repeat-each",
+    "--rerun-each", "--repeat-each",
   ]);
   let hasExplicitPaths = false;
   let hasChangedFilter = false;
