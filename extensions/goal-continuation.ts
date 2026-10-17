@@ -30,6 +30,7 @@ import { deliverTerminalSummary } from "./terminal-summary-delivery.js";
 import { defaultAgentDir, ensureRequestedDesigner } from "./goal-loop-subagents.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { createHash } from "node:crypto";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { state, replaceState, persistStateLine } from "./goal-state.js";
 import {
@@ -293,14 +294,18 @@ let lastContinuationSentAt = 0;
  * dispatch that contained the report, and on `resetContinuationInitialSend`.
  * First-send and cross-process handling are owned by the
  * `continuationInitialFullSentFor` latch; this is the in-process dedupe. */
-interface AuditEvidenceFingerprint { attemptId: string | undefined; revision: number | undefined; reportChars: number; }
+// v0.39.38 (audit): the fingerprint hashes the report content, not just its
+// length — a same-length different report on the same attempt+revision used
+// to compare equal and skip the full brief that would have taught the model
+// the new content. sha256/16 follows the codebase convention (specHash).
+export interface AuditEvidenceFingerprint { attemptId: string | undefined; revision: number | undefined; reportHash: string; }
 const deliveredAuditFingerprints = new Map<string, AuditEvidenceFingerprint>();
-function auditEvidenceFingerprint(lastAudit: { attemptId?: string; revision?: number; report?: string } | undefined): AuditEvidenceFingerprint | undefined {
+export function auditEvidenceFingerprint(lastAudit: { attemptId?: string; revision?: number; report?: string } | undefined): AuditEvidenceFingerprint | undefined {
   if (!lastAudit || typeof lastAudit.report !== "string") return undefined;
-  return { attemptId: lastAudit.attemptId, revision: lastAudit.revision, reportChars: lastAudit.report.length };
+  return { attemptId: lastAudit.attemptId, revision: lastAudit.revision, reportHash: createHash("sha256").update(lastAudit.report, "utf8").digest("hex").slice(0, 16) };
 }
 function auditFingerprintEqual(a: AuditEvidenceFingerprint, b: AuditEvidenceFingerprint | undefined): boolean {
-  return !!b && a.attemptId === b.attemptId && a.revision === b.revision && a.reportChars === b.reportChars;
+  return !!b && a.attemptId === b.attemptId && a.revision === b.revision && a.reportHash === b.reportHash;
 }
 
 /** v0.38.94 (field 2026-09-22: 909 full 28KB sends in one session):

@@ -17,6 +17,7 @@ import { test } from "node:test";
 import * as assert from "node:assert/strict";
 
 import {
+  auditEvidenceFingerprint,
   buildContinuationContent,
   needsFullContinuation,
   resetContinuationInitialSend,
@@ -54,7 +55,7 @@ test("unchanged audit does not force a second full continuation once it has been
   const first = buildContinuationContent(goal, { firstSend: false });
   assert.equal(first.kind, "full", "first delivery of the audit still requires a full payload");
   // Record the audit as delivered (the dispatch path does this on accept).
-  __testOnlyRecordDeliveredAudit(GOAL_ID, { attemptId: LAST_AUDIT.attemptId, revision: LAST_AUDIT.revision, reportChars: LAST_AUDIT.report.length });
+  __testOnlyRecordDeliveredAudit(GOAL_ID, auditEvidenceFingerprint(LAST_AUDIT));
   // Subsequent routine continuation must be a marker, not a full rebuild.
   const second = buildContinuationContent(goal, { firstSend: false });
   assert.equal(second.kind, "marker", "repeated steady-state turn must not re-send the audit");
@@ -67,10 +68,24 @@ test("unchanged audit does not force a second full continuation once it has been
   assert.equal(fp?.attemptId, LAST_AUDIT.attemptId, "fingerprint retains the previously delivered audit, not the new one");
 });
 
+test("v0.39.38: a same-length different report is new evidence and forces a full send", () => {
+  resetContinuationInitialSend();
+  const goal = baseGoal({ auditHistory: [LAST_AUDIT] as any });
+  __testOnlyRecordDeliveredAudit(GOAL_ID, auditEvidenceFingerprint(LAST_AUDIT));
+  assert.equal(needsFullContinuation(goal), false, "the delivered report stays a marker");
+  // Same attempt, same revision, same length — different content (case flip).
+  const sameLength = { ...LAST_AUDIT, report: LAST_AUDIT.report.replace("same large", "SAME LARGE") };
+  assert.equal(sameLength.report.length, LAST_AUDIT.report.length, "the premise: lengths match");
+  assert.notEqual(sameLength.report, LAST_AUDIT.report, "the premise: contents differ");
+  const goalSame = baseGoal({ auditHistory: [sameLength] as any });
+  assert.equal(needsFullContinuation(goalSame), true, "changed content re-arms the full brief");
+  assert.equal(buildContinuationContent(goalSame, { firstSend: false }).kind, "full", "the new report is actually sent");
+});
+
 test("resetContinuationInitialSend clears delivered audit so a new session re-teaches", () => {
   resetContinuationInitialSend();
   const goal = baseGoal({ auditHistory: [LAST_AUDIT] as any });
-  __testOnlyRecordDeliveredAudit(GOAL_ID, { attemptId: LAST_AUDIT.attemptId, revision: LAST_AUDIT.revision, reportChars: LAST_AUDIT.report.length });
+  __testOnlyRecordDeliveredAudit(GOAL_ID, auditEvidenceFingerprint(LAST_AUDIT));
   assert.equal(needsFullContinuation(goal), false);
   resetContinuationInitialSend();
   assert.equal(__testOnlyGetDeliveredAudit(GOAL_ID), undefined);
