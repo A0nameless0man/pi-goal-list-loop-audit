@@ -287,19 +287,19 @@ export function extractContractAmendment(
   // promotion is data-driven; the test suite pins the three
   // categories from the verification contract item 1.
   const kind: "safe" | "unsafe" = isSafeMechanicalCommandShape(proposed) ? "safe" : "unsafe";
-  const numbered = matchItemNumberedLine(currentContract, itemNumber);
-  if (!numbered) return undefined; // Never offer acceptance of a nonexistent item.
-  const commands = numbered.line.match(/`[^`]+`/g) ?? [];
+  const numberedLine = matchItemNumberedLine(currentContract, itemNumber);
+  if (!numberedLine) return undefined; // Never offer acceptance of a nonexistent item.
+  const commands = numberedLine.match(/`[^`]+`/g) ?? [];
   // Without a uniquely delimited command, replacement could erase other
   // predicates/commands. Require full-contract confirmation instead.
   if (commands.length !== 1) return undefined;
   const oldCommand = commands[0]!.slice(1, -1);
-  const proposedItem = numbered.line.replace(commands[0]!, `\`${proposed}\``);
-  const proposedContract = kind === "safe" ? currentContract.split("\n").map(line => line === numbered.line ? proposedItem : line).join("\n") : currentContract;
+  const proposedItem = numberedLine.replace(commands[0]!, `\`${proposed}\``);
+  const proposedContract = kind === "safe" ? currentContract.split("\n").map(line => line === numberedLine ? proposedItem : line).join("\n") : currentContract;
   if (kind === "safe" && proposedContract === currentContract) return undefined;
   const canonicalOld = oldCommand.replace(/(["'])([A-Za-z0-9_./:@=+,-]+)\1/g, "$2").trim().replace(/[ \t]+/g, " ");
   const changeKind = canonicalOld === proposed.trim().replace(/[ \t]+/g, " ") ? "syntax-correction" : "substantive-amendment";
-  const details = { itemNumber, command: proposed, proposedContract, changeKind, originalItem: numbered.line, proposedItem } as const;
+  const details = { itemNumber, command: proposed, proposedContract, changeKind, originalItem: numberedLine, proposedItem } as const;
   return kind === "safe"
     ? { ...details, kind: "safe" }
     : { ...details, kind: "unsafe", 
@@ -315,11 +315,14 @@ function isSafeMechanicalCommandShape(command: string): boolean {
   return /^[A-Za-z0-9_./:@=+,-]+(?:[ \t]+[A-Za-z0-9_./:@=+,-]+)*$/.test(command.trim());
 }
 
-function matchItemNumberedLine(contract: string, itemNumber: number): { line: string; replacement: string } | null {
+// v0.39.38 (audit): the matcher returns the consent-target line itself. An
+// earlier shape also returned a renumbered `replacement` variant, but no
+// caller ever read it — the dead field only suggested a normalization step
+// the plumbing never performed.
+function matchItemNumberedLine(contract: string, itemNumber: number): string | null {
   const matches = contract.split("\n").filter(line => Number(line.match(/^\s*(\d+)\.\s+/)?.[1]) === itemNumber);
   if (matches.length !== 1) return null; // Duplicate numbering cannot identify a unique consent target.
-  const line = matches[0]!;
-  return { line, replacement: line.replace(/^\s*\d+\.\s+/, `${itemNumber}. `) };
+  return matches[0]!;
 }
 
 export function contractAmendmentPromotion(
