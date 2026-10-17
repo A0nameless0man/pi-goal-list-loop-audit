@@ -100,3 +100,15 @@ test("obsolete quota policy files cannot change the generic retry settings", () 
   assert.equal(loaded.quotaRetryMinutes, undefined);
   assert.equal(loaded.mainModelFallbackOnRateLimit, undefined);
 });
+
+test("v0.39.38: editor title never lists autoResume as an aggressive default", async () => {
+  const ui = await import("../extensions/loops/goal-settings-ui.ts");
+  assert.ok(
+    !ui.AGGRESSIVE_MODE_EDITOR_TITLE.includes("autoResume,"),
+    "autoResume must not appear in the aggressive-defaults list",
+  );
+  assert.ok(
+    ui.AGGRESSIVE_MODE_EDITOR_TITLE.includes("autoResume stays separate explicit consent"),
+    "the title states the consent boundary",
+  );
+});

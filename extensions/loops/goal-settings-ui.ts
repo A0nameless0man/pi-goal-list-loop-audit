@@ -512,6 +512,12 @@ function menuThinkingLevelsByRef(ctx: ExtensionContext): Record<string, readonly
 
 const DRAFTER_INHERIT_THINKING = "session — inherit current session level (default)";
 
+/** v0.39.38: aggressive-mode editor title. autoResume is deliberately NOT
+ * listed among the aggressive defaults — it stays separate explicit
+ * consent (see resolveEffectiveAggressiveSettings). */
+export const AGGRESSIVE_MODE_EDITOR_TITLE =
+  "Aggressive mode — ON by default: audit cap 10, stuck max 10, wedge alerts off, provider retries, cap objections become a TODO list (autoResume stays separate explicit consent; explicit per-key settings still win)";
+
 function drafterThinkingChoiceOptions(
   levels: string[],
   current: string | undefined,
