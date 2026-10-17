@@ -68,6 +68,25 @@ afterEach(() => {
   setSettings({});
 });
 
+test("decision budget docs and setting contract describe safe decline, not recommended-option adoption", () => {
+  const docs = fs.readFileSync("docs/SETTINGS.md", "utf8");
+  const row = docs.split("\n").find(line => line.startsWith("| `decisionPauseBudget`"));
+  assert.ok(row, "the operator-facing setting row exists");
+  const source = fs.readFileSync("extensions/goal-settings.ts", "utf8");
+  const property = source.indexOf("  decisionPauseBudget?: number;");
+  assert.ok(property >= 0);
+  const contract = source.slice(source.lastIndexOf("/**", property), property).replace(/\n\s*\*\s?/g, " ");
+  for (const text of [row, contract]) {
+    assert.match(text, /safe decline/i);
+    assert.match(text, /unlimited/i);
+    assert.match(text, /`0`/);
+    assert.match(text, /decision_budget_auto_default/);
+    assert.doesNotMatch(text, /recommended option is adopted|0` = relentless/i);
+  }
+  assert.match(contract, /never supplies consent/i);
+  assert.match(row, /never supplies consent/i);
+});
+
 test("decision budget cannot adopt a material exception as consent", async () => {
   const cwd = tmpCwd();
   setSettings({ decisionPauseBudget: 1 });

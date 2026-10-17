@@ -239,14 +239,15 @@ export interface Settings {
    * widget card still shows the options; /goal decide opens it on demand).
    * Default on; unattended rigs have no UI so this never fires there. */
   decisionPopup?: boolean;
-  /** v0.38.69 (Antigravity port): maximum agent-authored decision pauses
-   * per goal before the run stops blocking on a human. The (N+1)-th
-   * decision pause does NOT pause: the goal stays active and the
-   * recommended option is adopted as a logged assumption (goal
-   * autoDefaultLog + `decision_budget_auto_default` ledger line), which
-   * the agent must carry into its completion recap's Left out. Unset =
-   * unlimited (legacy pause-every-time). `0` = relentless: the first
-   * decision already auto-defaults. */
+  /** Budget for safe decline of promoted suggestions while unattended.
+   * After N admitted decisions, a further eligible promotion keeps the goal
+   * active WITHOUT executing the suggested command. The declined promotion
+   * is retained in autoDefaultLog and `decision_budget_auto_default` (or
+   * `run_to_done_auto_default` for run-to-done), and carried into Left out.
+   * Unset = unlimited; `0` permits safe decline immediately. This never
+   * supplies consent or waives criteria: material exceptions remain paused,
+   * unclassified human decisions require classification, and authorized
+   * mechanical/reversible work continues without a decision. */
   decisionPauseBudget?: number;
   /** v0.28.14: what happens to stale carryover (paused goal, waiting list,
    * held loop from before this session) when NEW work activates.
