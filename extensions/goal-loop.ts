@@ -17,7 +17,7 @@ import { respecBuilderContext } from "./respec-builder-context.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { ExtensionContext, ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { state, replaceState } from "./goal-state.js";
+import { state, replaceState, persistStateLine } from "./goal-state.js";
 import { backgroundDispatchHeld, loopWorkView } from "./work-lifecycle.js";
 import { buildWorkLifecycleSummary } from "./goal-loop-display.js";
 import { reconcileBackgroundWait } from "./background-wait-runtime.js";
@@ -721,6 +721,22 @@ function sendLoopTurn(): void {
       if (reprieveNote) liveLoop.auditReprieveNote = undefined;
       if (hypothesisNote) liveLoop.hypothesisFeedback = undefined;
       if (refineHintNote) liveLoop.refineHint = undefined;
+      // v0.39.38 (audit): the consume must land on disk, not just in RAM —
+      // otherwise a crash before the next state write replays the
+      // reprieve/hint prompts on the next turn.
+      if (reprieveNote || hypothesisNote || refineHintNote) {
+        if (!persistStateLine(ctx.cwd, state)) {
+          // Fail closed: storage is broken, so keep RAM and disk in
+          // agreement by re-arming the one-shots and say so loudly — a
+          // crash now replays them, but with a ledger trace and an
+          // operator error instead of silent duplication.
+          if (reprieveNote) liveLoop.auditReprieveNote = reprieveNote;
+          if (hypothesisNote) liveLoop.hypothesisFeedback = hypothesisNote;
+          if (refineHintNote) liveLoop.refineHint = refineHintValue;
+          appendLedger(ctx.cwd, "loop_oneshot_consume_persist_failed", { iteration: loop.iteration, attemptId: attempt.id });
+          ctx.ui.notify("glla: the loop turn was sent but its one-shot consume could not be persisted, so reprieve/hint prompts may replay. Fix .pi-glla storage, then resume explicitly.", "error");
+        }
+      }
     }
     // v0.26.1: the send path is ledgered — the hegemon zombie spun 619
     // refires with zero visibility into whether sends were landing.
