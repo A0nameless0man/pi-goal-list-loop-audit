@@ -447,7 +447,7 @@ import {
 } from "../goal-loop.js";
 import { defineGoalRuntimeGlobal } from "./goal-runtime-globals.js";
 import { registerRespecBuilderTools } from "../respec-builder-runtime.js";
-import { releaseAuditorSurface, releaseCurrentAuditorSurface } from "./goal-auditor-surface.js";
+import { releaseCurrentAuditorSurface } from "./goal-auditor-surface.js";
 import { chooseObjectiveConflict, liveObjectives, type ObjectiveKind } from "../goal-objective-conflict.js";
 import { ACTION_REMINDER_CUSTOM_TYPE, buildActionReminder, buildAbortedAssistantNotice, clearPauseAbort, markPauseAbort } from "../action-reminder.js";
 import { assessSuspiciousObjective, isSuspiciousObjectivePause } from "../faulty-objective-recovery.js";

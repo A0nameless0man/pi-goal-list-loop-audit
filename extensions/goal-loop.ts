@@ -80,7 +80,7 @@ import { isCompactionInFlightSince, normalizeMainModelFallbackRefs } from "./mai
 import { createContinuationDispatch, type ContinuationDispatch } from "./goal-loop-dispatch.js";
 import { attemptFreshSessionRecovery, mainModelRecoveryRuntimeStatus } from "./goal-recovery.js";
 import { chooseObjectiveConflict, liveObjectives } from "./goal-objective-conflict.js";
-import { releaseAuditorSurface, releaseCurrentAuditorSurface } from "./loops/goal-auditor-surface.js";
+import { releaseCurrentAuditorSurface } from "./loops/goal-auditor-surface.js";
 import { compactLoopCompletionSummary, compactTerminalCompletionSummary } from "./completion-summary.js";
 import { inferStartFromSession, type StartContextInference } from "./start-context.js";
 import { createRespecBuilder, respecCoverage, type RespecBuilderState } from "./respec-builder.js";

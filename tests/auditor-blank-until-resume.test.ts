@@ -210,10 +210,10 @@ test("configured auto-resume is continuation consent and restores auditor contex
 // decision stays local. Prove isolation at the unit level first, then
 // through the full restore path.
 test("v0.39.38: suppressing one surface does not suppress a co-resident surface", () => {
-  // Paused with the auditor pauseReason so the widget renders the report
-  // text when the surface is visible (active goals carry it only in the
-  // prompt, not the widget).
-  const paused = { status: "paused", pauseReason: "auditor disapproved — fix the gap" };
+  // Active (but interrupted) with the auditor pauseReason, matching the
+  // first test's shape — that is the widget path that renders the report
+  // text when the surface is visible.
+  const paused = { status: "active", interruptedAt: new Date().toISOString(), pauseReason: "auditor disapproved — fix the gap" };
   const goalA = goalWithAudit(paused) as unknown as Goal;
   const stateA = { goal: goalA, list: [], loop: null } as unknown as State;
   const goalB = goalWithAudit(paused) as unknown as Goal;
@@ -231,7 +231,7 @@ test("v0.39.38: suppressing one surface does not suppress a co-resident surface"
 });
 
 test("v0.39.38: releasing one surface does not release a co-resident suppressed surface", () => {
-  const paused = { status: "paused", pauseReason: "auditor disapproved — fix the gap" };
+  const paused = { status: "active", interruptedAt: new Date().toISOString(), pauseReason: "auditor disapproved — fix the gap" };
   const goalA = goalWithAudit(paused) as unknown as Goal;
   const stateA = { goal: goalA, list: [], loop: null } as unknown as State;
   const goalB = goalWithAudit(paused) as unknown as Goal;

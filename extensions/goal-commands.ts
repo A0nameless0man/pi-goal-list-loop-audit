@@ -106,7 +106,7 @@ import { formatProgressReport } from "./progress-report.mjs";
 import { cmdGllaOwner, cmdGllaTakeover } from "./state-root-owner.js";
 import { inspectFleetHealth, formatFleetHealth } from './fleet-health.js';
 import { AUDIT_JOB_CLEANUP_MIN_AGE_MS, cancelDetachedGoalCompletionAuditor, cleanupDeadAuditJobs, inspectAuditJobHealth, DEFAULT_AUDITOR_STALL_MS, DEFAULT_AUDITOR_TOOL_TIMEOUT_MS } from "./goal-loop-auditor-process.js";
-import { releaseAuditorSurface, releaseCurrentAuditorSurface } from "./loops/goal-auditor-surface.js";
+import { releaseCurrentAuditorSurface } from "./loops/goal-auditor-surface.js";
 import { inferStartFromSession, resolveTweakReplacement, seedPlusContextSufficient, type StartContextInference } from "./start-context.js";
 
 /** Child pi sessions live under the shared session store, munged by cwd

@@ -72,11 +72,6 @@ export function releaseCurrentAuditorSurface(): void {
   suppressedByKey.delete(currentAuditorSurfaceKey);
 }
 
-/** Suppress the gate for the lifecycle's current key. */
-export function suppressCurrentAuditorSurface(): void {
-  suppressedByKey.set(currentAuditorSurfaceKey, true);
-}
-
 export function auditorSurfaceSuppressed(key?: string): boolean {
   const effective = key ?? currentAuditorSurfaceKey;
   return suppressedByKey.get(effective) === true;
