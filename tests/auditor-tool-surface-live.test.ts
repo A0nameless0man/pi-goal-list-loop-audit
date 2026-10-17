@@ -78,6 +78,8 @@ async function runProbe(args: string[]): Promise<ProbeOutcome> {
       ["-p", "probe the boundary", "--no-session", "--model", "glla-probe-rig/rig-model", ...args],
       {
         timeout: 90_000,
+        stdio: ["ignore", "pipe", "pipe"],
+        maxBuffer: 4 * 1024 * 1024,
         env: {
           ...process.env,
           PI_CODING_AGENT_DIR: home,
