@@ -810,7 +810,24 @@ export function dispatchStartAcknowledged(ctx: ExtensionContext, source: string,
     startProofSource: source,
   };
   pendingContinuationDispatch = started;
-  persistDispatchRecord(ctx.cwd, started);
+  if (!persistDispatchRecord(ctx.cwd, started)) {
+    // Fail closed: the start proof is real but not durable. Roll the live
+    // record back to accepted so RAM and the sidecar agree, keep the start
+    // watchdog armed (never cleared above), ledger the gap, and report the
+    // ack as unsettled — a later start-proof event re-acks once storage is
+    // fixed. Otherwise the sidecar keeps the accepted record past its
+    // expiry and a restart misreads a started turn as stuck dispatch.
+    pendingContinuationDispatch = record;
+    appendLedger(ctx.cwd, "continuation_start_ack_persist_failed", dispatchLedgerValue(record, {
+      acknowledgement: "accepted",
+      startProofSource: source,
+      settlement: "ack-persist-failed",
+      startedAt: settledAt,
+      settledAt,
+    }));
+    ctx.ui.notify("glla: the continuation start was observed but its dispatch record could not be persisted, so the start watchdog stays armed. Fix .pi-glla storage, then resume explicitly.", "error");
+    return false;
+  }
   clearContinuationStartWatchdog();
   clearCompactionRearms(record.id);
   clearDispatchRecord(ctx.cwd);
