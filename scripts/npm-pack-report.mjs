@@ -15,7 +15,8 @@ export function packReportEntries(report) {
   if (report && typeof report === "object") {
     if (Array.isArray(report.files)) return [report];
     const values = Object.values(report);
-    if (values.length > 0 && values.every((value) => value && typeof value === "object")) return values;
+    if (values.length === 0) return [];
+    if (values.every((value) => value && typeof value === "object")) return values;
     return [report];
   }
   return [];
