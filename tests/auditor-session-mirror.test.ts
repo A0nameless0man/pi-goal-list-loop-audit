@@ -21,6 +21,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import {
+  dispatchAuditorAllowedExtensions,
   mergeAuditorAllowedExtensions,
   resolveAuditorAllowedExtensions,
   sessionMirrorExtensionSpecs,
@@ -39,6 +40,28 @@ function fakeHome(packages: string[]): string {
   fs.writeFileSync(path.join(agentDir, "settings.json"), JSON.stringify({ packages }));
   return home;
 }
+
+test("auditor isolation design documents default-on mirroring and its trust boundary", () => {
+  const design = fs.readFileSync("docs/DESIGN.md", "utf8");
+  const section = design.split("### Decision 1: Anti-bamboozle via isolated auditor")[1]?.split("### Decision 2:")[0];
+  assert.ok(section, "the auditor isolation section exists");
+  const text = section.replace(/\s+/g, " ");
+  assert.match(text, /auditorMirrorSessionExtensions.*default.*on/i);
+  assert.match(text, /auditorAllowedExtensions/);
+  assert.match(text, /false.*empty.*auditorAllowedExtensions/);
+  assert.match(text, /GLLA itself.*excluded.*mirror/);
+  assert.match(text, /trusted.*code/);
+  assert.match(text, /not an OS-level sandbox/);
+  assert.doesNotMatch(text, /auditor has \*\*no extensions/);
+});
+
+test("dispatch mirrors packages by default; opt-out retains only the curated list", () => {
+  const home = fakeHome(["npm:provider-fixture", "npm:pi-goal-list-loop-audit"]);
+  assert.deepEqual(dispatchAuditorAllowedExtensions([], undefined, home), ["npm:provider-fixture"]);
+  assert.deepEqual(dispatchAuditorAllowedExtensions([], true, home), ["npm:provider-fixture"]);
+  assert.deepEqual(dispatchAuditorAllowedExtensions(["npm:curated-fixture"], false, home), ["npm:curated-fixture"]);
+  assert.deepEqual(dispatchAuditorAllowedExtensions([], false, home), []);
+});
 
 test("sessionMirrorExtensionSpecs returns raw user settings package specs", () => {
   const home = fakeHome(["npm:pi-agnes-tools", "../../Dev/pi-plugins/pi-agnes-tools"]);

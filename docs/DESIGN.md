@@ -433,21 +433,36 @@ Single loop only — **loop 1**, the single ordered goal.
 
 ### Decision 1: Anti-bamboozle via isolated auditor
 
-The single most important property of this plugin is that the implementing agent cannot bamboozle the verifier. The way to achieve this structurally:
+The auditor uses a fresh session to reduce contamination from the implementing
+conversation. This is process/API separation, not a guarantee against a malicious
+extension, repository artifact, or verifier command:
 
 1. The auditor runs in a **detached pi RPC process with a fresh agent session**.
-2. The auditor has **no extensions, no skills, no prompts, no themes, and no context files**.
+2. The worker disables automatic extension, skill, prompt-template, theme, and
+   context-file discovery. **Explicit extensions still load**: the dispatch
+   allowlist combines `auditorAllowedExtensions` with session package specs when
+   `auditorMirrorSessionExtensions` is enabled (**default: on**), preserving
+   model-provider availability. GLLA itself is excluded from the session mirror.
+   Set `auditorMirrorSessionExtensions: false` and use an empty
+   `auditorAllowedExtensions` list for an extension-free worker; opting out of
+   mirroring alone still permits curated extensions. Resolved specs are passed
+   explicitly with `--extension` despite `--no-extensions`; unresolved specs
+   are dropped fail-closed. See [Settings](SETTINGS.md).
 3. The auditor has the **power-mode audit tools**: `read`, `grep`, `find`, `ls`, and `bash`. Bash is intentionally available for bounded verifier scripts, tests, git inspection, and behavior reproduction; this is a policy-guided capability, not an OS-level read-only sandbox.
-4. The auditor **cannot see the implementing conversation and receives no glla
-   extension APIs or parent state handles**. This is not an OS-level sandbox:
-   intentional bash power mode means a prompt-injected command or verifier can
-   write repository/glla files or plant evidence. The parent still validates
-   attempt/request identity, tool evidence, `regression_shield`, and revision
-   before applying a result.
+4. The auditor request **does not include the implementing conversation or parent
+   state handles**. Loaded extensions are trusted executable code, not sandboxed
+   provider declarations: they can register hooks and access the worker's process
+   and filesystem. This is not an OS-level sandbox; bash power mode likewise
+   permits a prompt-injected command or verifier to write repository/GLLA files
+   or plant evidence. The parent still validates attempt/request identity, tool
+   evidence, `regression_shield`, and revision before applying a result. Those
+   checks do not make arbitrary loaded code or planted evidence trustworthy.
 
-This is based on `pi-goal-x/extensions/goal-auditor.ts:148-156`, with the
-current detached worker adding the explicitly accepted bash power mode and
-`regression_shield` revalidation.
+The original isolation design came from
+`pi-goal-x/extensions/goal-auditor.ts:148-156`. The current detached worker adds
+explicit extension loading (including default-on package mirroring), bash power
+mode, and `regression_shield` revalidation; the shipped trust boundary is the
+one above, not the original extension-free model.
 
 ### Decision 2: regression_shield in v0.2.0
 
