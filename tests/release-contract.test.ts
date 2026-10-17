@@ -231,3 +231,18 @@ test("release contract: untagged source work has an Unreleased changelog section
     "there is exactly one Unreleased section to rename",
   );
 });
+
+test("v0.39.38: every release-check lane uploads its $TMPDIR failure diagnostics", () => {
+  const workflow = fs.readFileSync(".github/workflows/publish.yml", "utf-8");
+  const jobsAt = workflow.indexOf("jobs:\n");
+  const qualityAt = workflow.indexOf("  quality:", jobsAt);
+  const publishAt = workflow.indexOf("  publish:", qualityAt);
+  assert.ok(qualityAt > jobsAt && publishAt > qualityAt, "quality and publish jobs are present");
+  for (const [name, section] of [["quality", workflow.slice(qualityAt, publishAt)], ["publish", workflow.slice(publishAt)]] as const) {
+    assert.match(section, /uses:\s*actions\/upload-artifact@v4/, `${name} uploads artifacts`);
+    assert.match(section, /if:\s*failure\(\)/, `${name} uploads on failure, not on success`);
+    assert.match(section, /runner\.temp.*glla-test-processes-\*/, `${name} captures the run-tests $TMPDIR diagnostics dirs`);
+    assert.match(section, /actions:\s*write/, `${name} grants the upload permission`);
+  }
+  assert.doesNotMatch(workflow.slice(qualityAt, publishAt), /id-token:\s*write/, "the upload permission does not widen quality OIDC");
+});
