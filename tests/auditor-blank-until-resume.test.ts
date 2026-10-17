@@ -14,8 +14,10 @@ import activate, {
 } from "../extensions/loops/goal.js";
 import {
   __testOnlyResetAuditorSurface,
+  auditorSurfaceKey,
   auditorSurfaceSuppressed,
   releaseAuditorSurface,
+  releaseAuditorSurfaceForGoal,
   suppressAuditorSurfaceAfterColdRestore,
 } from "../extensions/loops/goal-auditor-surface.js";
 import { continuationPrompt } from "../extensions/goal-continuation.js";
@@ -141,7 +143,7 @@ test("rejected stale /goal resume leaves the auditor surface suppressed", async 
 
     await pi.command("goal", "resume", ctx);
 
-    assert.equal(auditorSurfaceSuppressed(), true, "stale resume cannot grant auditor-context consent");
+    assert.equal(auditorSurfaceSuppressed(readState(cwd).goal!.id), true, "stale resume cannot grant auditor-context consent");
     assert.doesNotMatch(continuationPrompt(readState(cwd).goal as Goal), /LATEST AUDITOR/, "stale resume does not expose the old report");
     assert.equal(pi.sent.length, 0, "stale resume sends no continuation");
     assert.match(readState(cwd).goal?.interruptedReason ?? "", /resumed in a stale session/, "durable stale-resume recovery marker remains");
@@ -179,7 +181,7 @@ test("explicit /goal resume releases the auditor surface for admitted main-model
     await pi.command("goal", "resume", ctx);
     await tick(40);
 
-    assert.equal(auditorSurfaceSuppressed(), false, "admitted main-model recovery resume grants auditor-context consent");
+    assert.equal(auditorSurfaceSuppressed(readState(cwd).goal!.id), false, "admitted main-model recovery resume grants auditor-context consent");
     assert.match(continuationPrompt(readState(cwd).goal as Goal), /LATEST AUDITOR/, "recovery resume restores the old report context");
   } finally {
     fs.rmSync(cwd, { recursive: true, force: true });
@@ -246,4 +248,42 @@ test("v0.39.38: releasing one surface does not release a co-resident suppressed 
   assert.match(widgetText(stateA), /Required fixes/, "A released by its own resume");
   assert.doesNotMatch(widgetText(stateB), /Required fixes/, "B stays suppressed after A's resume");
   assert.doesNotMatch(continuationPrompt(goalB), /LATEST AUDITOR/, "B prompt stays report-free");
+});
+
+// v0.39.38 auditor-repro regression (detached-audit disapproval 2026-10-17):
+// the first per-surface cut kept a process-global `current` pointer (last
+// session_start wins) behind releaseCurrentAuditorSurface(), so co-resident
+// A/B with different goals leaked wrong-target: A-start, B-start, then
+// A-resume-via-current released B and left A suppressed
+// ("after A-resume-via-current (current=B): A= true B= false"). Consent
+// releases are now goal-aware (releaseAuditorSurfaceForGoal); this test
+// replays the repro through the exact resume-path form and pins the
+// process-global release helper as removed.
+test("v0.39.38: A-start, B-start, A-resume releases only A via the resume-path form", () => {
+  const managerA = { getSessionId: () => "session-a" };
+  const managerB = { getSessionId: () => "session-b" };
+  const keyA = auditorSurfaceKey({ goalId: "goal-A", ownerSessionId: "session-a" });
+  const keyB = auditorSurfaceKey({ goalId: "goal-B", ownerSessionId: "session-b" });
+  // A-start then B-start: lifecycle suppresses each surface under its own
+  // key. There is no process-global current pointer left to go stale.
+  suppressAuditorSurfaceAfterColdRestore(keyA);
+  suppressAuditorSurfaceAfterColdRestore(keyB);
+  assert.equal(auditorSurfaceSuppressed(keyA), true, "precondition: A suppressed");
+  assert.equal(auditorSurfaceSuppressed(keyB), true, "precondition: B suppressed");
+
+  // A-resume through the exact form the 13 consent paths now call.
+  releaseAuditorSurfaceForGoal("goal-A", managerA);
+  assert.equal(auditorSurfaceSuppressed(keyA), false, "A released by its own resume");
+  assert.equal(auditorSurfaceSuppressed(keyB), true, "B stays suppressed after A's resume");
+
+  // And the reverse: B-resume releases only B.
+  releaseAuditorSurfaceForGoal("goal-B", managerB);
+  assert.equal(auditorSurfaceSuppressed(keyB), false, "B released by its own resume");
+});
+
+test("v0.39.38: the process-global releaseCurrentAuditorSurface helper is gone", () => {
+  const src = fs.readFileSync(new URL("../extensions/loops/goal-auditor-surface.ts", import.meta.url), "utf-8");
+  assert.doesNotMatch(src, /export function releaseCurrentAuditorSurface/, "no process-global release to regress to");
+  assert.doesNotMatch(src, /currentAuditorSurfaceKey\)/, "no delete-by-current-pointer release remains");
+  assert.match(src, /export function releaseAuditorSurfaceForGoal/, "the goal-aware release is the consent-path form");
 });

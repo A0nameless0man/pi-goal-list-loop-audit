@@ -247,7 +247,7 @@ import {
   rollupProject,
   type ProjectRollup,
 } from "../goal-loop-stats.js";
-import { auditorSurfaceKey, releaseAuditorSurface, setCurrentAuditorSurfaceKey, suppressAuditorSurfaceAfterColdRestore } from "./goal-auditor-surface.js";
+import { auditorSurfaceKey, releaseAuditorSurface, suppressAuditorSurfaceAfterColdRestore } from "./goal-auditor-surface.js";
 import { shouldSkipApprovalRenderReplay, claimProcessOwner as defaultClaimProcessOwner, writeOwnerFile as defaultWriteOwnerFile } from "./goal-session.js";
 import {
   cancelDetachedGoalCompletionAuditor,
@@ -2190,7 +2190,6 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
       // owner session so co-resident sessions never share a process-global
       // gate. Set the current key so no-arg readers see the right key.
       const surfaceKey = state.goal?.id ?? auditorSurfaceKey({ ownerSessionId: sessionManagerId(ctx) });
-      setCurrentAuditorSurfaceKey(surfaceKey);
       suppressAuditorSurfaceAfterColdRestore(surfaceKey);
       // Even a blank startup must not leave a stored completion claim in the
       // old AUDITING state: there is no worker verdict to wait for after a
@@ -2264,7 +2263,6 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
     // id so goal-aware readers hit the entry the lifecycle wrote; owner
     // session otherwise. The gate is per-surface, never process-global.
     const surfaceKey = state.goal?.id ?? auditorSurfaceKey({ ownerSessionId: sessionManagerId(ctx) });
-    setCurrentAuditorSurfaceKey(surfaceKey);
     if (continuationConsent) releaseAuditorSurface(surfaceKey);
     else suppressAuditorSurfaceAfterColdRestore(surfaceKey);
     rearmLegacyElapsedRecoveryHold(ctx, !stateRootPending(), autoResume || explicitRecovery);
