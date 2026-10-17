@@ -39,6 +39,14 @@ import { SLOW_TEST_FILES } from "../tests/slow-files.mjs";
 
 export const SERIAL_FLAGS = ["--parallel=1", "--max-concurrency=1", "--timeout=60000"];
 
+/** v0.39.38 (audit): node-only gates. Bun discovers *.test.mjs, but this
+ * repro MUST run under node with the real jiti loader (see its header) —
+ * a bun run is a wasted duplicate today and a conflicting-result risk
+ * tomorrow. Excluded from bun discovery in every scan mode; the single
+ * execution path is `npm run test:jiti` (wired into test:all and CI).
+ * Explicitly naming the file still runs it: naming means "run this file". */
+export const NODE_ONLY_TEST_FILES = ["tests/repro-jiti-state-split.test.mjs"];
+
 /** v0.38.104: how long the suite may print NOTHING before we call it hung.
  * Generous on purpose — a serialized suite on a loaded host still emits
  * output every few seconds, and bun's own --timeout=60000 only bounds a
@@ -63,7 +71,7 @@ export function isStalled({ silentMs, limitMs }) {
 }
 
 /** Pure arg builder (unit-tested in tests/test-split.test.ts). */
-export function buildRunnerArgs(argv, slowFiles) {
+export function buildRunnerArgs(argv, slowFiles, nodeOnlyFiles = NODE_ONLY_TEST_FILES) {
   let mode = "fast";
   const rest = [];
   for (const arg of argv) {
@@ -88,11 +96,17 @@ export function buildRunnerArgs(argv, slowFiles) {
     if (VALUE_FLAGS.has(arg)) { i++; continue; }
     if (!arg.startsWith("-")) { hasExplicitPaths = true; break; }
   }
+  // Node-only gates are never bun's job (except when explicitly named) —
+  // unlike slow files they are not merely slow elsewhere, they are WRONG
+  // under any loader but node, so the ignore survives --changed scope too.
+  const nodeOnlyIgnores = nodeOnlyFiles.flatMap((f) => ["--path-ignore-patterns", f]);
   if (mode === "slow") return { mode, bunArgs: [...SERIAL_FLAGS, ...slowFiles, ...rest] };
-  if (mode === "all" || hasExplicitPaths || hasChangedFilter) return { mode: hasExplicitPaths ? "explicit" : hasChangedFilter ? "changed" : mode, bunArgs: [...SERIAL_FLAGS, ...rest] };
+  if (hasExplicitPaths) return { mode: "explicit", bunArgs: [...SERIAL_FLAGS, ...rest] };
+  if (hasChangedFilter) return { mode: "changed", bunArgs: [...SERIAL_FLAGS, ...nodeOnlyIgnores, ...rest] };
+  if (mode === "all") return { mode, bunArgs: [...SERIAL_FLAGS, ...nodeOnlyIgnores, ...rest] };
   return {
     mode,
-    bunArgs: [...SERIAL_FLAGS, ...slowFiles.flatMap((f) => ["--path-ignore-patterns", f]), ...rest],
+    bunArgs: [...SERIAL_FLAGS, ...slowFiles.flatMap((f) => ["--path-ignore-patterns", f]), ...nodeOnlyIgnores, ...rest],
   };
 }
 
