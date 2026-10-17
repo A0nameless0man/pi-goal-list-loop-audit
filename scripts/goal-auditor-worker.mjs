@@ -22,11 +22,19 @@ const PROTOCOL_VERSION = 1;
 // can run bounded verification commands and reproduce behavior. The timeout
 // below still prevents one tool call from pinning the audit indefinitely.
 const AUDITOR_TOOLS = new Set(["read", "grep", "find", "ls", "bash"]);
+import {
+  clampBudget,
+  MAX_STALL_TIMEOUT_MS,
+  MAX_TOOL_TIMEOUT_MS,
+  resolveBudget,
+} from "./auditor-budgets.mjs";
+
 const DEFAULT_TOOL_TIMEOUT_MS = 5 * 60_000;
-// Mirror of MAX_AUDITOR_TOOL_TIMEOUT_MS in
-// extensions/goal-loop-auditor-process.ts: a granted tool timeout is honored,
-// but never beyond the same ceiling the user-facing setting enforces.
-const MAX_TOOL_TIMEOUT_MS = 6 * 3_600_000;
+// MAX_TOOL_TIMEOUT_MS / MAX_STALL_TIMEOUT_MS now live in
+// scripts/auditor-budgets.mjs (mirrors of MAX_AUDITOR_TOOL_TIMEOUT_MS and
+// MAX_AUDITOR_STALL_MS in extensions/goal-loop-auditor-process.ts) so the
+// clamp schedule is unit-testable: a granted tool timeout is honored, but
+// never beyond the same ceiling the user-facing setting enforces.
 // A cancelled worker must not leave a wedged RPC child holding stdout/stderr
 // pipes open. Give a cooperative SIGTERM a short grace period, then force
 // kill and destroy the pipes so this worker can finish and exit too.
@@ -44,9 +52,10 @@ const PROCESS_GROUP_POLL_MS = 100;
 // bounded: the same worker-owned TERM→KILL cleanup runs when this grace ends.
 const DEFAULT_RPC_CLOSE_GRACE_MS = 250;
 
-function configuredDuration(name, fallback) {
-  const value = Number(process.env[name] ?? fallback);
-  return Number.isFinite(value) ? Math.max(50, value) : fallback;
+function configuredDuration(name, fallback, ceiling = MAX_TOOL_TIMEOUT_MS) {
+  // v0.39.38: floored AND capped — a huge env value used to defeat bounded
+  // verification and the stall brakes (and overflow setTimeout past 2^31-1).
+  return resolveBudget(process.env[name], fallback, { ceiling });
 }
 
 function childRunning(child) {
@@ -409,10 +418,13 @@ async function main() {
   let reportBytes = 0;
   const activeTools = new Map();
   const toolTimers = new Map();
-  const configuredToolTimeoutMs = Number(process.env.GLLA_AUDITOR_TOOL_TIMEOUT_MS ?? DEFAULT_TOOL_TIMEOUT_MS);
-  const TOOL_TIMEOUT_MS = Number.isFinite(configuredToolTimeoutMs)
-    ? Math.max(50, configuredToolTimeoutMs)
-    : DEFAULT_TOOL_TIMEOUT_MS;
+  // v0.39.38: the Math.max floor here had no Math.min cap, so a huge env
+  // value defeated bounded verification. Capped at the same ceiling the
+  // user-facing setting enforces (MAX_AUDITOR_TOOL_TIMEOUT_MS).
+  const TOOL_TIMEOUT_MS = resolveBudget(
+    process.env.GLLA_AUDITOR_TOOL_TIMEOUT_MS,
+    DEFAULT_TOOL_TIMEOUT_MS,
+  );
   /** Keys of active starts that arrived WITHOUT a toolCallId. An anonymous
    * end can only pair when exactly ONE anonymous start is open — with zero
    * or several it is an unmatched fact (any pairing would be a guess). */
@@ -437,9 +449,11 @@ async function main() {
   // v0.38.99: bounds the wait for the aborted turn to settle before the
   // attempt is failed. Sized for abort + republish + re-prompt.
   let continuationDeadlineTimer;
-  const configuredAbortSettleMs = Number(process.env.GLLA_AUDITOR_ABORT_SETTLE_MS ?? 30_000);
-  const ABORT_SETTLE_TIMEOUT_MS = Number.isFinite(configuredAbortSettleMs) && configuredAbortSettleMs > 0
-    ? Math.floor(configuredAbortSettleMs)
+  // v0.39.38: same uncapped shape — settle must never exceed the largest
+  // legitimate worker budget. Non-positive input keeps the prior fallback.
+  const rawAbortSettleMs = Number(process.env.GLLA_AUDITOR_ABORT_SETTLE_MS ?? 30_000);
+  const ABORT_SETTLE_TIMEOUT_MS = rawAbortSettleMs > 0
+    ? clampBudget(rawAbortSettleMs) ?? 30_000
     : 30_000;
   const setCurrentToolFromActive = () => {
     const active = [...activeTools.values()].at(-1);
@@ -487,8 +501,13 @@ async function main() {
   let lastActivityAt;
   let lastActivityProbeAt = Date.now();
   let progressWrite = Promise.resolve();
-  const configuredStallMs = Number(process.env.GLLA_AUDITOR_STALL_MS ?? 10 * 60_000);
-  const AUDITOR_STALL_MS = Number.isFinite(configuredStallMs) ? Math.max(50, configuredStallMs) : 10 * 60_000;
+  // v0.39.38: same uncapped shape on the actual stall brake — capped at the
+  // settings-layer stall ceiling (MAX_AUDITOR_STALL_MS mirror).
+  const AUDITOR_STALL_MS = resolveBudget(
+    process.env.GLLA_AUDITOR_STALL_MS,
+    10 * 60_000,
+    { ceiling: MAX_STALL_TIMEOUT_MS },
+  );
   const configuredProcessGroupSize = Number(process.env.GLLA_AUDITOR_MAX_PROCESS_GROUP_SIZE ?? DEFAULT_MAX_PROCESS_GROUP_SIZE);
   const MAX_PROCESS_GROUP_SIZE = Number.isInteger(configuredProcessGroupSize)
     ? Math.min(DEFAULT_MAX_PROCESS_GROUP_SIZE, Math.max(2, configuredProcessGroupSize))
