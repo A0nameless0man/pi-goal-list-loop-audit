@@ -563,7 +563,13 @@ export function clearContinuationStartWatchdog(): void {
   }
   pendingContinuationDispatch = null;
   settledSelfHealDispatch = null;
-  lastDispatchedRecordId = null;
+  // v0.39.37: do NOT null lastDispatchedRecordId here. The cursor is the
+  // only way a synchronous before_agent_start sync-ack can prove the
+  // clearing was for THIS record. clearContinuationStartWatchdog is called
+  // from pause/resume/completion too, but the next dispatch will overwrite
+  // the cursor, and an accept with a stale id must still fail closed
+  // (no lastDispatchedRecordId match → wrong-record diagnostic).
+  // Wipe the cursor only on an explicit reset (resetContinuationDispatchState).
   lastContinuationSentAt = 0;
   lastContinuationSentPayload = null;
 }
@@ -2089,6 +2095,7 @@ export function pendingContinuationDispatchRef(): ContinuationDispatch | null {
 }
 export function setPendingContinuationDispatchRef(v: ContinuationDispatch | null): void {
   pendingContinuationDispatch = v;
+  if (v) lastDispatchedRecordId = v.id;
 }
 export function continuationDispatchStoodDownRef(): boolean {
   return continuationDispatchStoodDown;
@@ -2142,5 +2149,6 @@ export function resetContinuationDispatchState(cwd: string): boolean {
   lastObservedTurnStartAt = 0;
   continuationStartCompactionRearms.clear();
   continuationStartRecoveryRearms.clear();
+  lastDispatchedRecordId = null;
   return clearDispatchRecord(cwd);
 }
