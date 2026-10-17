@@ -30,6 +30,11 @@ concurrency:
 jobs:
   quality:
     if: github.event_name == 'push' || github.event_name == 'pull_request'
+    # actions:write lets the failure-diagnostics upload run; OIDC stays
+    # publish-only (see the trusted-publishing scope test).
+    permissions:
+      contents: read
+      actions: write
     runs-on: ubuntu-latest
     # v0.38.108: the suite is serialized and can go silent on a loaded
     # runner. GitHub's 6-hour default is a 6-hour burn; the hardened runner
@@ -57,6 +62,18 @@ jobs:
       - name: Run the release contract
         run: npm run release:check
 
+      # Failure diagnostics live under $TMPDIR/glla-test-processes-* (see
+      # scripts/run-tests.mjs); the runner is discarded on failure, so
+      # upload them or the cause is unrecoverable.
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: glla-failure-diagnostics-quality
+          path: ${{ runner.temp }}/glla-test-processes-*
+          if-no-files-found: warn
+          retention-days: 14
+
   publish:
     # Own lane (see top-of-file note): release publishes must never queue
     # behind per-push quality churn, or daemon pushes supersede-cancel them.
@@ -67,6 +84,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      actions: write
     runs-on: ubuntu-latest
     # v0.38.108: same bound as the quality lane — a hung release contract
     # must fail fast, not hold the publish lane for GitHub's 6-hour default.
@@ -116,3 +134,14 @@ jobs:
       # the package settings. No long-lived NPM_TOKEN is required here.
       - name: Publish with npm trusted publishing
         run: npm publish --provenance --access public
+
+      # Same $TMPDIR diagnostics promise as the quality lane: a failed
+      # release contract must leave its evidence behind.
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: glla-failure-diagnostics-publish
+          path: ${{ runner.temp }}/glla-test-processes-*
+          if-no-files-found: warn
+          retention-days: 14
