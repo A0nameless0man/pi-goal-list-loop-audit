@@ -35,6 +35,7 @@ import {
   processTreeSize,
 } from "./auditor-process-tree.mjs";
 import { filterLoadableExtensionSpecs } from "./auditor-extension-specs.mjs";
+import { buildAuditorChildEnv, resolveAuditorBinary } from "./auditor-child-env.mjs";
 
 const DEFAULT_TOOL_TIMEOUT_MS = 5 * 60_000;
 // MAX_TOOL_TIMEOUT_MS / MAX_STALL_TIMEOUT_MS now live in
@@ -821,7 +822,9 @@ async function main() {
 
   const startRound = async (roundPrompt, initialPhase) => {
     resetRoundStreamState();
-    const piBinary = process.env.GLLA_PI_BINARY || "pi";
+    // v0.39.38: the binary is allowlisted, never env-redirected — see the
+    // fence module. Throws fail-closed as an identity error.
+    const piBinary = resolveAuditorBinary(process.env.GLLA_PI_BINARY);
     // v0.38.3: off = the original --no-session spawn, byte-identical args.
     // Round 2 reuses the identical spec (including inspection --session):
     // the falsification brief carries full context either way.
@@ -849,12 +852,14 @@ async function main() {
     }
     for (const spec of loadableExtensions) piArgs.push("--extension", spec);
     const launch = buildAuditorPiSpawnSpec(piBinary, piArgs);
-    // The parent already reduced process.env to execution necessities plus
-    // selected-model credentials. Copy that exact set: inheriting a second
-    // time here would restore unrelated host secrets despite the parent fence.
+    // v0.39.38: never inherit full process.env into the auditor child —
+    // forward ONLY the parent-hashed allowlist. If the parent fence ever
+    // regresses and the worker env carries host secrets, they stop here.
+    // Throws fail-closed as an identity error when the list is absent.
+    const childEnv = buildAuditorChildEnv(process.env, request.auditorEnvAllowlist);
     pi = spawn(launch.file, launch.args, {
       cwd: request.cwd,
-      env: { ...process.env },
+      env: childEnv,
       stdio: ["pipe", "pipe", "pipe"],
       ...launch.options,
     });

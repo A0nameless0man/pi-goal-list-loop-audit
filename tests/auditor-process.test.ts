@@ -1452,6 +1452,9 @@ process.stdin.on("end", () => { process.exitCode = 41; });
   const withoutHash = {
     protocolVersion: 1, attemptId, cwd: dir, prompt: "Inspect artifact.", model: "test/provider-model",
     thinkingLevel: "medium", createdAt: new Date().toISOString(), wallDeadlineAt: Date.now() + 5_000,
+    // v0.39.38: the worker forwards ONLY these keys to the pi child
+    // (PATH keeps the #!/usr/bin/env node shebang working).
+    auditorEnvAllowlist: ["PATH", "PI_LOG"],
   };
   const request = { ...withoutHash, requestHash: requestHash(withoutHash) };
   await writeFile(path.join(jobDir, "request.json"), JSON.stringify(request));
@@ -1519,6 +1522,7 @@ process.stdin.on("data", (chunk) => {
   const withoutHash = {
     protocolVersion: 1, attemptId, cwd: dir, prompt: "Inspect artifact.", model: "test/provider-model",
     thinkingLevel: "medium", createdAt: new Date().toISOString(), wallDeadlineAt: Date.now() + 5_000,
+    auditorEnvAllowlist: ["PATH"],
   };
   await writeFile(path.join(jobDir, "request.json"), JSON.stringify({ ...withoutHash, requestHash: requestHash(withoutHash) }));
   let child: ChildProcess | undefined;
@@ -1588,6 +1592,7 @@ process.stdin.on("end", () => { process.exitCode = 41; });
     protocolVersion: 1, attemptId, cwd: dir, prompt: "Inspect artifact.", model: "test/provider-model",
     thinkingLevel: "medium", createdAt: new Date().toISOString(), wallDeadlineAt: Date.now() + 5_000,
     allowedExtensions: [extDir, extFile],
+    auditorEnvAllowlist: ["PATH", "PI_LOG"],
   };
   const request = { ...withoutHash, requestHash: requestHash(withoutHash) };
   await writeFile(path.join(jobDir, "request.json"), JSON.stringify(request));
@@ -1694,6 +1699,7 @@ test("v0.36.0: a malformed allowedExtensions request fails closed as an identity
     protocolVersion: 1, attemptId, cwd: dir, prompt: "Inspect artifact.", model: "test/provider-model",
     thinkingLevel: "medium", createdAt: new Date().toISOString(), wallDeadlineAt: Date.now() + 5_000,
     allowedExtensions: "npm:not-an-array",
+    auditorEnvAllowlist: ["PATH"],
   };
   const request = { ...withoutHash, requestHash: requestHash(withoutHash as unknown as Parameters<typeof requestHash>[0]) };
   await writeFile(path.join(jobDir, "request.json"), JSON.stringify(request));

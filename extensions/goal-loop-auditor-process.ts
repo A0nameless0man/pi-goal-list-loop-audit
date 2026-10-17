@@ -2260,6 +2260,12 @@ async function runDetachedGoalCompletionAuditorInner(args: {
     // offline, wrong base dir for relative paths). Doing this in the
     // process layer means every dispatch path is covered.
     const allowedExtensions = resolveAuditorAllowedExtensions(args.allowedExtensions, runtime.homeDir ?? os.homedir(), args.cwd);
+    // v0.39.38: fence the worker env BEFORE hashing — the hashed key list
+    // is what the worker may forward to the auditor child (same object is
+    // reused for the worker spawn below, so list and env cannot drift).
+    const dispatchModelProvider = typeof args.model === "string" ? args.model.split("/", 1)[0] : args.model?.provider;
+    const dispatchEnv = detachedAuditorEnv(process.env, runtime.env ?? {}, dispatchModelProvider);
+    if (runtime.piBinary) dispatchEnv.GLLA_PI_BINARY = runtime.piBinary;
     // v0.38.103: how many comparable rounds this goal has already been
     // reworked through. Gates the falsification round below.
     const reworkStreak = countTrailingComparableDisapprovals(args.goal.auditHistory ?? []);
@@ -2309,6 +2315,10 @@ async function runDetachedGoalCompletionAuditorInner(args: {
       ...(!strictChallenge && (args.auditTier === "light" || reworkStreak >= AUDITOR_CHALLENGE_STREAK_LIMIT)
         ? { challenge: false, challengeSkip }
         : {}),
+      // v0.39.38: always present — the worker forwards ONLY these keys to
+      // the auditor child. Computed from the fenced env below (declared
+      // before hashing so tampering breaks the request hash).
+      auditorEnvAllowlist: auditorEnvAllowlistFor(dispatchEnv),
     };
     const request: AuditorRequest = { ...requestWithoutHash, requestHash: requestHash(requestWithoutHash) };
     await writeAtomicJson(requestPath, request);
@@ -2322,9 +2332,9 @@ async function runDetachedGoalCompletionAuditorInner(args: {
     const workerPath = runtime.workerPath ?? defaultWorkerPath();
     const command = runtime.command ?? resolveWorkerCommand(process.execPath);
     const spawn = runtime.spawn ?? nodeSpawn;
-    const modelProvider = typeof args.model === "string" ? args.model.split("/", 1)[0] : args.model?.provider;
-    const env = detachedAuditorEnv(process.env, runtime.env ?? {}, modelProvider);
-    if (runtime.piBinary) env.GLLA_PI_BINARY = runtime.piBinary;
+    // v0.39.38: dispatchEnv above is the fenced worker env (its keys are
+    // hashed into the request as auditorEnvAllowlist).
+    const env = dispatchEnv;
     child = spawn(command, [workerPath, "--job-dir", jobDir], {
       cwd: args.cwd,
       detached: true,
