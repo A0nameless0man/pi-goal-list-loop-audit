@@ -2187,8 +2187,7 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
       // previous auditor report must not become fresh model/UI context before
       // this session has granted continuation consent. Key by the goal when
       // one is loaded (goal-aware readers look up the goal id), else by
-      // owner session so co-resident sessions never share a process-global
-      // gate. Set the current key so no-arg readers see the right key.
+      // owner session so co-resident sessions never share a gate.
       const surfaceKey = state.goal?.id ?? auditorSurfaceKey({ ownerSessionId: sessionManagerId(ctx) });
       suppressAuditorSurfaceAfterColdRestore(surfaceKey);
       // Even a blank startup must not leave a stored completion claim in the
