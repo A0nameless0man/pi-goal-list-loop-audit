@@ -82,13 +82,28 @@ async function stopTestProcess(child: ChildProcess | undefined): Promise<void> {
   try { child.kill("SIGKILL"); } catch {}
 }
 
-test("v0.39.38: live worker keeps an unlisted host secret out of the pi child", async () => {
+test("v0.39.38: live worker keeps an unlisted host secret out of the pi child", { timeout: 60_000 }, async () => {
   const dir = await setupDir();
   try {
-    // Fake pi dumps the env it actually received, then approves.
+    // Fake pi mirrors the repo handshake (answer once the prompt line
+    // arrives) and dumps the env it actually received, then approves.
     const envDump = path.join(dir, "child-env.json");
     const fakePi = path.join(dir, "fake-pi.mjs");
-    await writeFile(fakePi, `#!/usr/bin/env node\nprocess.stdin.resume();\nimport { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(envDump)}, JSON.stringify({ keys: Object.keys(process.env).sort(), secret: process.env.HOST_ONLY_SECRET ?? null }));\nprocess.stdout.write(JSON.stringify({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "<approved/>\\\\n" } }) + "\\\\n");\nprocess.stdout.write(JSON.stringify({ type: "agent_end" }) + "\\\\n");\nprocess.stdout.write(JSON.stringify({ type: "agent_settled" }) + "\\\\n");\n`);
+    const fakePiSource = `
+import { writeFileSync } from "node:fs";
+writeFileSync(${JSON.stringify(envDump)}, JSON.stringify({ keys: Object.keys(process.env).sort(), secret: process.env.HOST_ONLY_SECRET ?? null }));
+let handled = false;
+process.stdin.on("data", (chunk) => {
+  if (handled || !String(chunk).includes("\\n")) return;
+  handled = true;
+  const out = (value) => process.stdout.write(JSON.stringify(value) + "\\n");
+  out({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "<approved/>\\n" } });
+  out({ type: "agent_end" });
+  out({ type: "agent_settled" });
+});
+process.stdin.on("end", () => { process.exitCode = 0; });
+`;
+    await writeFile(fakePi, `#!/usr/bin/env node\n${fakePiSource}`);
     await chmod(fakePi, 0o700);
     const jobDir = await writeJob(dir, "worker-env-fence", { auditorEnvAllowlist: ["PATH", "GLLA_PI_BINARY"] });
     const child = await runWorker(dir, jobDir, {
@@ -109,7 +124,7 @@ test("v0.39.38: live worker keeps an unlisted host secret out of the pi child", 
   }
 });
 
-test("v0.39.38: live worker rejects a redirected binary and a missing allowlist", async () => {
+test("v0.39.38: live worker rejects a redirected binary and a missing allowlist", { timeout: 90_000 }, async () => {
   const dir = await setupDir();
   try {
     const fakePi = path.join(dir, "fake-pi.mjs");
