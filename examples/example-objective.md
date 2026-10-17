@@ -121,6 +121,5 @@ plugin never falls back into the parent in-process session.
 
 If every candidate errors with auth/provider failures, the stored completion
 claim pauses and `/goal resume` retries it after you fix the model — with
-mirroring off and an empty allow-list, the auditor session has no
-extensions, so
-providers that only exist via an extension may be unavailable to it.
+mirroring off and an empty allow-list, the auditor session has no extensions,
+so providers that only exist via an extension may be unavailable to it.
