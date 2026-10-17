@@ -60,7 +60,8 @@ function snapshotDarwinGroups() {
   return darwinSnapshot.byPid.size > 0 ? darwinSnapshot.byPid : undefined;
 }
 
-function parseWmicCsv(out) {
+/** Parse wmic /FORMAT:CSV rows (exported for tests). */
+export function parseWmicCsv(out) {
   const rows = [];
   for (const line of out.split("\n")) {
     const cells = line.trim().split(",");
@@ -72,7 +73,8 @@ function parseWmicCsv(out) {
   return rows;
 }
 
-function parsePowershell(out) {
+/** Parse "pid ppid" powershell rows (exported for tests). */
+export function parsePowershell(out) {
   const rows = [];
   for (const line of out.split("\n")) {
     const m = line.trim().match(/^(\d+)\s+(\d+)$/);

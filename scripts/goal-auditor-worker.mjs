@@ -28,6 +28,12 @@ import {
   MAX_TOOL_TIMEOUT_MS,
   resolveBudget,
 } from "./auditor-budgets.mjs";
+import {
+  processGroupId,
+  processGroupMembers,
+  processGroupSize,
+  processTreeSize,
+} from "./auditor-process-tree.mjs";
 
 const DEFAULT_TOOL_TIMEOUT_MS = 5 * 60_000;
 // MAX_TOOL_TIMEOUT_MS / MAX_STALL_TIMEOUT_MS now live in
@@ -62,50 +68,25 @@ function childRunning(child) {
   return child.exitCode === null && child.signalCode === null;
 }
 
-function linuxProcessGroupId(pid) {
-  try {
-    const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
-    const end = stat.lastIndexOf(")");
-    if (end < 0) return undefined;
-    const fields = stat.slice(end + 2).trim().split(/\s+/);
-    const processGroup = Number(fields[2]); // stat field 5, after pid/comm/state/ppid
-    return Number.isInteger(processGroup) && processGroup > 1 ? processGroup : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function linuxProcessGroupSize(group) {
-  if (group === undefined || process.platform !== "linux") return undefined;
-  let entries;
-  try { entries = readdirSync("/proc"); } catch { return undefined; }
-  let count = 0;
-  for (const entry of entries) {
-    if (!/^\d+$/.test(entry)) continue;
-    const pid = Number(entry);
-    if (pid <= 1 || linuxProcessGroupId(pid) !== group) continue;
-    count++;
-  }
-  return count;
-}
+// v0.39.38: group/tree accounting lives in scripts/auditor-process-tree.mjs
+// (Linux /proc fast paths, darwin ps snapshot, win32 PPID tree) so the
+// containment fence fires on every platform, not just Linux.
 
 function signalPosixProcessGroup(group, signal) {
-  if (group === undefined || process.platform !== "linux") return false;
-  const workerGroup = linuxProcessGroupId(process.pid);
+  // v0.39.38: POSIX covers darwin too (negative-pid kill is real there).
+  // win32 has no groups — tree termination lives in contained-child.mjs.
+  if (group === undefined || process.platform === "win32") return false;
+  const workerGroup = processGroupId(process.pid);
   if (group !== workerGroup) {
     try { process.kill(-group, signal); return true; } catch { return false; }
   }
   // The worker itself is the group leader. Enumerate members instead of
   // signalling the whole group, otherwise this worker dies before it can
   // publish result.json.
-  let entries;
-  try { entries = readdirSync("/proc"); } catch { return false; }
+  const members = processGroupMembers(group) ?? [];
   let signaled = false;
-  for (const entry of entries) {
-    if (!/^\d+$/.test(entry)) continue;
-    const pid = Number(entry);
+  for (const pid of members) {
     if (pid <= 1 || pid === process.pid) continue;
-    if (linuxProcessGroupId(pid) !== group) continue;
     try { process.kill(pid, signal); signaled = true; } catch {}
   }
   return signaled;
@@ -117,16 +98,15 @@ function signalPosixChildTree(child, signal) {
   // normal shell descendants therefore share the worker's group. If a child
   // deliberately creates a separate group, signalling that group is safe and
   // catches its nested bash/test/browser processes.
-  const childGroup = process.platform === "linux" ? linuxProcessGroupId(child.pid) : undefined;
-  const workerGroup = process.platform === "linux" ? linuxProcessGroupId(process.pid) : undefined;
+  const childGroup = processGroupId(child.pid);
+  const workerGroup = processGroupId(process.pid);
   if (childGroup !== undefined && childGroup !== workerGroup && signalPosixProcessGroup(childGroup, signal)) return;
   try { child.kill(signal === "SIGTERM" ? "SIGTERM" : signal); } catch {}
   signalPosixProcessGroup(childGroup, signal);
 }
 
 async function terminateChild(child) {
-  const group = process.platform === "linux" && child.pid !== undefined
-    ? linuxProcessGroupId(child.pid) : undefined;
+  const group = child.pid !== undefined ? processGroupId(child.pid) : undefined;
   await terminateContainedChild(child, {
     graceMs: configuredDuration("GLLA_AUDITOR_CHILD_SHUTDOWN_MS", DEFAULT_CHILD_SHUTDOWN_GRACE_MS),
     forceMs: FORCE_KILL_SETTLE_MS,
@@ -876,16 +856,26 @@ async function main() {
     // This is a containment fence, not a progress timeout: a legitimate audit
     // remains eligible while its group stays below the ceiling.
     const processGroups = [...new Set([
-      linuxProcessGroupId(process.pid),
-      pi.pid ? linuxProcessGroupId(pi.pid) : undefined,
+      processGroupId(process.pid),
+      pi.pid ? processGroupId(pi.pid) : undefined,
     ].filter((group) => group !== undefined))];
-    if (processGroups.length > 0) {
+    // v0.39.38: win32 has no POSIX groups — fence the RPC child's tree
+    // instead, so the containment fence fires on every platform.
+    const treeRoots = process.platform === "win32" && pi.pid ? [pi.pid] : [];
+    if (processGroups.length > 0 || treeRoots.length > 0) {
       processGroupTimer = setInterval(() => {
         if (finalized || !pi || !childRunning(pi)) return;
         for (const group of processGroups) {
-          const size = linuxProcessGroupSize(group);
+          const size = processGroupSize(group);
           if (size !== undefined && size > MAX_PROCESS_GROUP_SIZE) {
             failRound(`Auditor stalled — process group exceeded its ${MAX_PROCESS_GROUP_SIZE}-process safety limit; the worker process tree was aborted.`);
+            break;
+          }
+        }
+        for (const root of treeRoots) {
+          const size = processTreeSize(root);
+          if (size !== undefined && size > MAX_PROCESS_GROUP_SIZE) {
+            failRound(`Auditor stalled — process tree exceeded its ${MAX_PROCESS_GROUP_SIZE}-process safety limit; the worker process tree was aborted.`);
             break;
           }
         }
