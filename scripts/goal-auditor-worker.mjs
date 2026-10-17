@@ -1006,6 +1006,14 @@ async function main() {
       if (event.type === "tool_execution_start" && AUDITOR_TOOLS.has(event.toolName)) {
         const id = event.toolCallId === undefined || event.toolCallId === null ? undefined : String(event.toolCallId);
         const key = id !== undefined ? id : `${event.toolName}:${activeTools.size}:${Date.now()}`;
+        // v0.39.38 (audit): a duplicate same-id start used to overwrite the
+        // Map entry, losing the first args/startedAt. Mirror the shared
+        // truth rules — the orphaned start is an explicit unmatched fact.
+        const orphaned = id !== undefined ? activeTools.get(key) : undefined;
+        if (orphaned) {
+          unmatchedToolStarts.push({ name: orphaned.name, argsPrefix: orphaned.argsPrefix, startedAt: orphaned.startedAt, toolCallId: orphaned.toolCallId });
+          if (unmatchedToolStarts.length > MAX_UNMATCHED_EVENTS) unmatchedToolStarts.shift();
+        }
         const timeoutMs = effectiveToolTimeoutMs(event.args);
         activeTools.set(key, { name: event.toolName, argsPrefix: toolArgsPrefix(event.args), startedAt: Date.now(), toolCallId: id, timeoutMs });
         if (id === undefined) anonymousStartKeys.add(key);

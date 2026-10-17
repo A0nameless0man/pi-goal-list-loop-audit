@@ -146,12 +146,22 @@ test("v0.34.56: a new start replacing an open start records the ORPHANED start e
   assert.equal(t.unmatchedToolStarts.length, 1, "the orphan stays a fact, not a phantom completion");
 });
 
-test("v0.34.56: same-id restart updates the slot without an unmatched fact; an end with no open start is an unmatched end", () => {
+test("v0.39.38: duplicate same-id start records the FIRST start as unmatched instead of silently overwriting it", () => {
   const t = fresh();
-  applyToolExecutionEvent(t, start("read-1", "read"), 1000);
+  applyToolExecutionEvent(t, start("read-1", "read", { path: "/a" }), 1000);
   applyToolExecutionEvent(t, start("read-1", "read", { path: "/b" }), 1100);
-  assert.equal(t.unmatchedToolStarts.length, 0, "same id = same logical call, slot refreshed");
-  assert.equal(t.currentToolArgs, '{"path":"/b"}');
+  assert.deepEqual(t.unmatchedToolStarts, [
+    { name: "read", argsPrefix: '{"path":"/a"}', startedAt: 1000, toolCallId: "read-1" },
+  ], "the orphaned first start is an explicit fact, not a silent overwrite");
+  assert.equal(t.currentToolArgs, '{"path":"/b"}', "the new start is still adopted");
+  assert.equal(t.currentToolStartedAt, 1100);
+  // The orphan must never resurface as a phantom completion: an end for the
+  // id pairs with the NEW start only.
+  applyToolExecutionEvent(t, end("read-1"), 2000);
+  assert.deepEqual(t.toolCalls, [{ name: "read", argsPrefix: '{"path":"/b"}', finishedAt: 2000 }]);
+  assert.equal(t.unmatchedToolStarts.length, 1, "the orphan stays a fact");
+});
+test("v0.34.56: an end with no open start is an unmatched end", () => {
   const t2 = fresh();
   applyToolExecutionEvent(t2, end("stray-7", "bash"), 500);
   assert.deepEqual(t2.unmatchedToolEnds, [{ toolCallId: "stray-7", toolName: "bash", at: 500 }]);
@@ -189,6 +199,11 @@ test("v0.34.56: worker — anonymous ends pair only with the SOLE anonymous star
   assert.ok(!/toolCalls\.push\([^)]*\);\s*}\s*void progress/.test(endBranch), "no silent drop branch remains");
 });
 
+test("v0.39.38: worker — duplicate same-id start records the orphaned first start, mirroring the shared truth rules", () => {
+  const startBranch = WORKER_SRC.slice(WORKER_SRC.indexOf('if (event.type === "tool_execution_start"'));
+  assert.ok(startBranch.includes("const orphaned = id !== undefined ? activeTools.get(key) : undefined"), "duplicate id'd start looks up the orphan");
+  assert.ok(startBranch.includes("unmatchedToolStarts.push({ name: orphaned.name"), "the orphaned first start is recorded, not overwritten");
+});
 test("v0.34.56: worker — in-flight starts at session end become explicit unmatched starts (finish sweep)", () => {
   assert.ok(WORKER_SRC.includes("for (const active of activeTools.values())"), "finish sweeps every in-flight start");
   assert.ok(WORKER_SRC.includes("unmatchedToolStarts.push({ name: active.name"), "swept starts are recorded with name");

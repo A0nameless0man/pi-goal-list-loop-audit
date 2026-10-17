@@ -98,9 +98,13 @@ export type AuditorToolExecutionEvent =
 /** v0.34.56: tool-execution pairing, extracted pure so the telemetry is
  * regression-testable. Truth rules:
  *
- * - A start while a start is open with a different (or absent) id means the
- *   open start never received its end — record it in unmatchedToolStarts as
- *   an explicitly unmatched fact, then adopt the new start.
+ * - A start while a start is open — different, absent, OR the same id —
+ *   means the open start never received its end: a duplicate same-id start
+ *   is a second start for one slot, and the first args/startedAt would be
+ *   lost to a silent overwrite. Record the open start in
+ *   unmatchedToolStarts as an explicitly unmatched fact, then adopt the
+ *   new start. (v0.39.38 audit: the old same-id carve-out refreshed the
+ *   slot with zero unmatched facts.)
  * - An end pairs ONLY when: both sides carry the SAME id, or both sides are
  *   anonymous (the id-less serial stream — the only pairing an id-less
  *   stream can support).
@@ -115,8 +119,7 @@ export function applyToolExecutionEvent(
   now: number,
 ): AuditProgress {
   if (event.type === "tool_execution_start") {
-    const sameId = event.toolCallId !== undefined && event.toolCallId === telemetry.currentToolId;
-    if (telemetry.currentTool !== undefined && !sameId) {
+    if (telemetry.currentTool !== undefined) {
       telemetry.unmatchedToolStarts.push({
         name: telemetry.currentTool,
         argsPrefix: telemetry.currentToolArgs ?? "",

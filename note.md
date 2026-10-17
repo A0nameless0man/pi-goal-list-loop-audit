@@ -15,3 +15,6 @@ i think we have another problem that we investigate that perhaps we are doing te
 
 # Later
 
+##
+what is the problem 
+/home/dracon/Pictures/Screenshots/Screenshot_20261017_224104.png
