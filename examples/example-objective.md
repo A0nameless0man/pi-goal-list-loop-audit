@@ -30,8 +30,13 @@ What happens next:
    5-consecutive-errors pause, and the optional token guard — no wall-clock
    cap; a goal ends via completion, pause/cancel, or a guard.
 2. It calls `complete_goal` when it believes it is done.
-3. The **isolated auditor** — a fresh pi session with no extensions and only
-   read tools — inspects the repo. Because this goal has a `Done when:`
+3. The **isolated auditor** — a fresh pi session with `--no-extensions`,
+   `--no-skills`, and only the `read,grep,find,ls` tools plus a bounded
+   `bash` verifier — inspects the repo. By default it also mirrors your
+   session's own packages (`auditorMirrorSessionExtensions` is on unless
+   you turn it off; GLLA itself is never mirrored) plus any curated
+   allow-list (`auditorAllowedExtensions`); turn mirroring off and empty
+   the allow-list for full isolation. Because this goal has a `Done when:`
    contract, the auditor MUST quote raw command output per contract item in an
    `<evidence>` block (regression_shield). An approval without complete
    evidence is automatically converted to a disapproval.
@@ -115,6 +120,7 @@ plugin never falls back into the parent in-process session.
 ```
 
 If every candidate errors with auth/provider failures, the stored completion
-claim pauses and `/goal resume` retries it after you fix the model — the
-auditor session has no extensions, so
+claim pauses and `/goal resume` retries it after you fix the model — with
+mirroring off and an empty allow-list, the auditor session has no
+extensions, so
 providers that only exist via an extension may be unavailable to it.
