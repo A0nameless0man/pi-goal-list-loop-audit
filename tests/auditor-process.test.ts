@@ -1578,13 +1578,16 @@ process.stdin.on("end", () => { process.exitCode = 41; });
   const jobDir = path.join(dir, ".pi-glla", "audit-jobs", attemptId);
   await mkdir(jobDir, { recursive: true });
   await writeFile(path.join(jobDir, "lock"), "lock\n");
+  // v0.39.38: the worker fence only forwards loadable absolute paths, so
+  // the allowlist entries must really exist (fake paths now drop
+  // fail-closed instead of reaching pi verbatim).
+  const extDir = await mkdtemp(path.join(dir, "ext-"));
+  const extFile = path.join(extDir, "local-ext.ts");
+  await writeFile(extFile, "// test extension\n");
   const withoutHash = {
     protocolVersion: 1, attemptId, cwd: dir, prompt: "Inspect artifact.", model: "test/provider-model",
     thinkingLevel: "medium", createdAt: new Date().toISOString(), wallDeadlineAt: Date.now() + 5_000,
-    allowedExtensions: [
-      "/home/u/.pi/agent/npm/node_modules/pi-webaio", // resolved npm: install path
-      "/opt/local-ext.ts",
-    ],
+    allowedExtensions: [extDir, extFile],
   };
   const request = { ...withoutHash, requestHash: requestHash(withoutHash) };
   await writeFile(path.join(jobDir, "request.json"), JSON.stringify(request));
@@ -1611,7 +1614,7 @@ process.stdin.on("end", () => { process.exitCode = 41; });
       "--mode", "rpc", "--no-session", "--no-extensions", "--no-skills", "--no-prompt-templates",
       "--no-themes", "--no-context-files", "--no-approve", "--tools", "read,grep,find,ls,bash",
       "--model", "test/provider-model", "--thinking", "medium",
-      "--extension", "/home/u/.pi/agent/npm/node_modules/pi-webaio", "--extension", "/opt/local-ext.ts",
+      "--extension", extDir, "--extension", extFile,
     ]);
   } finally {
     await stopTestProcess(child);
