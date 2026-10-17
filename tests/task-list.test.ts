@@ -49,6 +49,24 @@ test("rejects empty titles", () => {
   assert.match(validateTaskProposal([{ title: "  " }])!, /title/);
 });
 
+test("v0.39.38: non-string titles fail validation instead of throwing", () => {
+  // A truthy non-string used to reach .trim() as a TypeError that escaped
+  // the tool as a crash; like the subtask path, it must be a clean refusal.
+  for (const bad of [5, 0, 42, { toString: () => "x" }, ["x"], true]) {
+    assert.equal(
+      validateTaskProposal([{ title: bad as unknown as string }]),
+      "Every task needs a non-empty title.",
+      `title ${JSON.stringify(bad)} is refused, not thrown`,
+    );
+  }
+  assert.equal(
+    validateTaskProposal([null as unknown as { title: string }]),
+    "Every task needs a non-empty title.",
+    "a null entry is refused, not thrown",
+  );
+  assert.equal(validateTaskProposal([{ title: "real" }]), null, "valid input still passes");
+});
+
 // ---- buildTaskList ----
 
 test("assigns hierarchical ids and pending statuses", () => {

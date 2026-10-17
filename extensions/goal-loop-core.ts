@@ -415,7 +415,11 @@ export function validateTaskProposal(tasks: TaskProposal[]): string | null {
     return `Too many top-level tasks (${tasks.length}); max ${MAX_TOP_LEVEL_TASKS}. Coarser granularity, please.`;
   }
   for (const t of tasks) {
-    if (!t.title || !t.title.trim()) return "Every task needs a non-empty title.";
+    // v0.39.38 (audit): a non-string title must fail validation, not throw —
+    // the subtask path below already guards with typeof, and a truthy
+    // non-string (number, object) reached .trim() as a TypeError that escaped
+    // the tool as a crash instead of a clean refusal string.
+    if (typeof t?.title !== "string" || !t.title.trim()) return "Every task needs a non-empty title.";
     // v0.38.104: subtask titles get the same check. `buildTaskList` writes
     // `s.trim()` with no guard, so a blank subtask (trivial to produce — a
     // stray newline in the JSON array) reached `taskList` persistence and made
