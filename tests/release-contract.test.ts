@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { loadSkills } from "@earendil-works/pi-coding-agent";
+import { packReportFiles } from "../scripts/npm-pack-report.mjs";
 
 function dryRunFiles(): Set<string> {
   const raw = execFileSync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
@@ -11,22 +12,9 @@ function dryRunFiles(): Set<string> {
     timeout: 30_000,
     stdio: ["ignore", "pipe", "pipe"],
   });
-  const report = JSON.parse(raw) as unknown;
-  const entries = Array.isArray(report)
-    ? report
-    : report && typeof report === "object" && Array.isArray((report as { files?: unknown }).files)
-      ? [report]
-      : report && typeof report === "object"
-        ? Object.values(report)
-        : [];
-  // npm versions have emitted a keyed object, a single report object, and an
-  // array of reports, plus root-relative and `package/...` paths. Normalize
-  // those transport details before asserting the package contract.
-  return new Set(entries
-    .flatMap((entry) => (entry && typeof entry === "object" && Array.isArray((entry as { files?: unknown }).files)
-      ? (entry as { files: Array<{ path: string }> }).files
-      : []))
-    .map((file) => file.path.replace(/^package\//, "")));
+  // Transport-shape parsing lives in scripts/npm-pack-report.mjs, shared
+  // with the smoke lane so both lanes read the same npm version alike.
+  return new Set(packReportFiles(JSON.parse(raw) as unknown));
 }
 
 test("release contract: published documentation links are covered by the npm tarball", { timeout: 60_000 }, () => {

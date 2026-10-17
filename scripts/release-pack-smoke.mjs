@@ -14,6 +14,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { createJiti } from "jiti";
+import { packReportFilename } from "./npm-pack-report.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8"));
@@ -34,10 +35,9 @@ function run(command, args, options = {}) {
 }
 
 function packFilename(raw) {
-  const report = JSON.parse(raw);
-  const entry = Array.isArray(report) ? report[0] : report;
-  if (!entry || typeof entry.filename !== "string") throw new Error("npm pack did not return a tarball filename");
-  return entry.filename;
+  // Shape parsing lives in scripts/npm-pack-report.mjs, shared with the
+  // release-contract lane so both lanes read the same npm version alike.
+  return packReportFilename(JSON.parse(raw));
 }
 
 try {
