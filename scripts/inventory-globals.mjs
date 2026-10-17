@@ -27,13 +27,15 @@ export function extractGlobalNames(source, fileLabel = "<source>") {
       `generate-inventory: marker ${JSON.stringify(GLOBAL_NAMES_MARKER)} not found in ${fileLabel} — was the globals export renamed?`,
     );
   }
-  const [list] = after.split(GLOBAL_NAMES_TERMINATOR);
-  if (list === undefined) {
+  // Note: split with no match returns [whole], so absence needs an explicit
+  // membership check — otherwise a lost terminator silently widens the scan.
+  if (!after.includes(GLOBAL_NAMES_TERMINATOR)) {
     throw new Error(
       `generate-inventory: terminator ${JSON.stringify(GLOBAL_NAMES_TERMINATOR)} not found in ${fileLabel} — did the globals list shape change?`,
     );
   }
-  return [...list.matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+  const [list] = after.split(GLOBAL_NAMES_TERMINATOR);
+  return [...(list ?? "").matchAll(/"([^"]+)"/g)].map((match) => match[1]);
 }
 
 /** Null when the live count matches the audit baseline, otherwise the drift report. */
