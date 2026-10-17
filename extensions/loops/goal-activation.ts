@@ -172,6 +172,7 @@ import {
   armQueueStuckProbe,
   buildPostCompactResync,
   continuationTimerPending,
+  continuationStartTimeoutMs,
   continuationTimerRef,
   continuationStartTimerRef,
   pendingContinuationDispatchRef,
@@ -2022,7 +2023,23 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
     clearContinuationStartWatchdog();
     const recoveredDispatch = readDispatchRecord(ctx.cwd);
     if (recoveredDispatch) {
-      appendLedger(ctx.cwd, "continuation_dispatch_recovered", {
+      // v0.39.38 (audit): reconcile, don't just consume. A live record
+      // (accepted/prepared and inside its start window) is recovered
+      // forensics for a dispatch the fresh session re-drives on resume;
+      // anything terminal (failed) or past its window held nothing that
+      // could still settle, so it is discarded as stale. Either way
+      // nothing is re-sent here — a blind resend risks a duplicate against
+      // a followUp the dead host may still deliver; the restore-gate
+      // consent path re-drives with a fresh identity. dispatchTimedOut is
+      // accepted-only, so prepared records borrow it via the same window.
+      const live =
+        (recoveredDispatch.phase === "accepted" || recoveredDispatch.phase === "prepared") &&
+        !dispatchTimedOut(
+          { ...recoveredDispatch, phase: "accepted" },
+          Date.now(),
+          recoveredDispatch.timeoutMs ?? continuationStartTimeoutMs(),
+        );
+      appendLedger(ctx.cwd, live ? "continuation_dispatch_recovered" : "continuation_dispatch_discarded_stale", {
         id: recoveredDispatch.id,
         phase: recoveredDispatch.phase,
         kind: recoveredDispatch.kind,

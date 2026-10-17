@@ -233,7 +233,9 @@ const NO_TURN_START_RETRY_BACKOFF_MS = Number(
 );
 let continuationStartTimeoutOverrideMs: number | null = null;
 let continuationRetryBackoffOverrideMs: number | null = null;
-function continuationStartTimeoutMs(): number {
+/** The start-proof window the watchdog enforces; the restore boundary needs
+ * the same budget so it never calls an in-window record stale (or vice versa). */
+export function continuationStartTimeoutMs(): number {
   return continuationStartTimeoutOverrideMs ?? CONTINUATION_START_TIMEOUT_MS;
 }
 function continuationRetryBackoffMs(): number {
