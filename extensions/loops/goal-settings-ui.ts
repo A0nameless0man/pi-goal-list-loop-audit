@@ -1198,7 +1198,7 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
       return;
     }
     case "aggressiveMode": {
-      const v = await ctx.ui.select("Aggressive mode — ON by default: autoResume, audit cap 10, stuck max 10, wedge alerts off, provider retries, cap objections become a TODO list (explicit per-key settings still win)", [
+      const v = await ctx.ui.select("Aggressive mode — ON by default: audit cap 10, stuck max 10, wedge alerts off, provider retries, cap objections become a TODO list (autoResume stays separate explicit consent; explicit per-key settings still win)", [
         "off — conservative override: pause at the audit cap, show wedge alerts, require resume",
         "on — keep-going default; the goal does not park at the audit cap",
       ]);
