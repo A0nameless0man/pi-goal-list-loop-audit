@@ -2185,8 +2185,9 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
     if (initialSessionLoadPending && !explicitRecovery && !heldLoopSuccessorResume) {
       // The objective/status projection remains visible below, but the
       // previous auditor report must not become fresh model/UI context before
-      // this session has granted continuation consent.
-      suppressAuditorSurfaceAfterColdRestore();
+      // this session has granted continuation consent. Key by owner session
+      // so co-resident sessions do not share a process-global gate.
+      suppressAuditorSurfaceAfterColdRestore(sessionManagerId(ctx));
       // Even a blank startup must not leave a stored completion claim in the
       // old AUDITING state: there is no worker verdict to wait for after a
       // session boundary. Release it before the transcript-load barrier;
@@ -2255,8 +2256,8 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
       || staleRearmedOnSessionStart
       || sameProcessSuccessorResume
       || heldLoopSuccessorResume;
-    if (continuationConsent) releaseAuditorSurface();
-    else suppressAuditorSurfaceAfterColdRestore();
+    if (continuationConsent) releaseAuditorSurface(sessionManagerId(ctx));
+    else suppressAuditorSurfaceAfterColdRestore(sessionManagerId(ctx));
     rearmLegacyElapsedRecoveryHold(ctx, !stateRootPending(), autoResume || explicitRecovery);
     const mainRecovery = state.mainModelRecovery;
     if (mainRecovery?.manualResumeRequired) {
