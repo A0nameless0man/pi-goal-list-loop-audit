@@ -16,16 +16,19 @@
 // for the lifetime of the process; a session-only key (when no goal or
 // list item is loaded) is bounded to the session's owner id.
 //
-// This module is dependency-free because the display, continuation, command,
-// and lifecycle slices all need the same per-key gate.
+// The lifecycle layer sets the current key on every session_start. Display
+// and continuation paths read the current key when no goal is in hand
+// (e.g. a loop-only state). Goal-aware readers use the keyed variant
+// directly. This module is dependency-free because the display,
+// continuation, command, and lifecycle slices all need the same per-key
+// gate.
 
 const suppressedByKey = new Map<string, boolean>();
-
-/** Default key when no goal/list/owner context is available. Used as a
- * safe fallback so the gate still works in tests and projection paths
- * that legitimately have no surface identity to attribute the suppression
- * to. Distinct from any real session/goal so test isolation stays clean. */
+/** Key used by the no-arg readers when the lifecycle has not set a current
+ * key (e.g. tests that exercise the module in isolation). Distinct from
+ * any real session/goal so test isolation stays clean. */
 const GLOBAL_FALLBACK_KEY = "__glla_auditor_surface_global__";
+let currentAuditorSurfaceKey: string = GLOBAL_FALLBACK_KEY;
 
 function normalizeKey(parts: ReadonlyArray<string | undefined | null>): string {
   for (const part of parts) {
@@ -45,6 +48,13 @@ export function auditorSurfaceKey(input: {
   return normalizeKey([input.goalId, input.listItemId, input.ownerSessionId]);
 }
 
+/** Set the current surface key. The lifecycle layer calls this on every
+ * session_start so no-arg readers (display paths without a goal) see the
+ * right key. Goal-aware readers can ignore this and use the keyed API. */
+export function setCurrentAuditorSurfaceKey(key: string): void {
+  if (key) currentAuditorSurfaceKey = key;
+}
+
 /** Hide only newly projected auditor feedback after a no-consent cold load. */
 export function suppressAuditorSurfaceAfterColdRestore(key: string): void {
   suppressedByKey.set(key, true);
@@ -55,33 +65,13 @@ export function releaseAuditorSurface(key: string): void {
   suppressedByKey.delete(key);
 }
 
-export function auditorSurfaceSuppressed(key: string): boolean {
-  return suppressedByKey.get(key) === true;
-}
-
-/** Read the gate for the current surface (goal first, then list item,
- * then owner session). Use this from display / continuation / feedback
- * paths that do not already hold a single key. */
-export function auditorSurfaceSuppressedFor(input: {
-  goalId?: string | null;
-  listItemId?: string | null;
-  ownerSessionId?: string | null;
-}): boolean {
-  const key = auditorSurfaceKey(input);
-  if (suppressedByKey.get(key) === true) return true;
-  // The list-item path falls back to the owner session (a list item is
-  // surfaced while a goal is being restored). A goal key never falls
-  // through to a list item or owner session — a different goal's
-  // suppression must not silence this goal's projection.
-  if (input.goalId) return false;
-  if (input.listItemId && input.ownerSessionId
-    && suppressedByKey.get(input.ownerSessionId) === true) return true;
-  if (!input.goalId && !input.listItemId && input.ownerSessionId
-    && suppressedByKey.get(input.ownerSessionId) === true) return true;
-  return false;
+export function auditorSurfaceSuppressed(key?: string): boolean {
+  const effective = key ?? currentAuditorSurfaceKey;
+  return suppressedByKey.get(effective) === true;
 }
 
 /** Test hook: prevent module state leaking between co-resident fixtures. */
 export function __testOnlyResetAuditorSurface(): void {
   suppressedByKey.clear();
+  currentAuditorSurfaceKey = GLOBAL_FALLBACK_KEY;
 }
