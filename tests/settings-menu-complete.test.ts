@@ -85,7 +85,7 @@ test("role-specific tabs keep each agent's model, thinking, and fallback control
 
 test("v0.39.38: the module header names all 9 registry sections (no stale count)", () => {
   const src = fs.readFileSync(new URL("../extensions/settings-menu.ts", import.meta.url), "utf-8");
-  const header = src.slice(0, src.indexOf("*/") !== -1 ? src.indexOf("*/") : src.indexOf("import {"));
+  const header = src.slice(0, src.indexOf("import {")); // The header is //-line prose above the first import.
   assert.ok(!header.includes("all 8 sections"), "the retired 8-section claim is gone");
   assert.ok(header.includes("all 9 sections"), "the header states the live count");
   for (const s of SETTINGS_SECTIONS) {
