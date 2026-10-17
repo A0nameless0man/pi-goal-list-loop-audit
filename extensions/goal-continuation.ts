@@ -1765,8 +1765,17 @@ export function sendContinuation(goalId: string): void {
     // RECOVERED" directive injected into every single continuation.
     const noticeAutoResumedAt = state.goal?.autoResumedAt;
     if (noticeAutoResumedAt) {
-      updateGoal({ autoResumedAt: undefined, autoResumedEvent: undefined }, ctx);
-      appendLedger(ctx.cwd, "recovery_notice_delivered", { goalId, autoResumedAt: noticeAutoResumedAt });
+      // v0.39.38 (audit): the delivered stamp is only claimed when it lands.
+      // The notice WAS in the accepted payload above, so a failed clear must
+      // not re-arm it (that would duplicate a delivered notice every turn) —
+      // but claiming delivery while disk still arms the stamp lets the next
+      // restart re-inject the stale directive with a clean ledger conscience.
+      if (updateGoal({ autoResumedAt: undefined, autoResumedEvent: undefined }, ctx)) {
+        appendLedger(ctx.cwd, "recovery_notice_delivered", { goalId, autoResumedAt: noticeAutoResumedAt });
+      } else {
+        appendLedger(ctx.cwd, "recovery_notice_clear_persist_failed", { goalId, autoResumedAt: noticeAutoResumedAt });
+        ctx.ui.notify("glla: the recovery notice was sent but its delivered stamp could not be persisted, so a restart would re-inject the stale notice. Fix .pi-glla storage, then resume explicitly.", "error");
+      }
     }
     if (pendingContinuationDispatch === null) return; // before_agent_start acked synchronously
     lastContinuationSentAt = attempt.sentAt;
