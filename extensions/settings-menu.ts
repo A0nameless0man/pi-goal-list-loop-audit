@@ -5,15 +5,15 @@
 //
 // Pre-0.28.0 used `ctx.ui.select` with flat single-line rows; v0.28.0
 // replaces it with a `ctx.ui.custom` Container/Text layout featuring:
-//   • a top TABS row listing all 8 sections (left/right to switch sections)
+//   • a top TABS row listing all 9 sections (left/right to switch sections)
 //   • a 4-column table for the active section (KEY | VALUE | SOURCE | DESCRIPTION)
 //   • up/down navigation scoped to the active section's rows
 //   • Enter → emit the selected row's id (caller dispatches handler)
 //   • Esc / Ctrl+C → emit undefined (caller exits)
 //
 // Sections separate runtime roles so each agent's model, thinking, and
-// fallback controls stay together:
-//   keep-going | main-agent | drafter | auditor | subagents | stall-brakes | other
+// fallback controls stay together (mirrors SETTINGS_SECTIONS order below):
+//   keep-going | main-agent | drafter | compactor | auditor | designer | subagents | stall-brakes | other
 //
 // Extracted into its own module so tests can import `buildSettingsRows` directly
 // (mirrors how `readState` lives in goal-loop-core.ts) and so the renderer is
