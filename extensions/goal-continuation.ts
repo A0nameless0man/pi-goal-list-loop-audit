@@ -252,6 +252,14 @@ export function __testOnlySetContinuationRetryBackoff(backoffMs: number | null):
 /* ------------------------------------------------------------------ */
 
 let pendingContinuationDispatch: ContinuationDispatch | null = null;
+// v0.39.37 (audit dispatchAccepted finding): the only legitimate way the
+// pending slot is empty at acceptance time is a synchronous before_agent_start
+// acknowledging the same record (id match). Empty + different id means the
+// lane has moved on (pause/resume/completion/stale api) and the accept call
+// is a phantom — a wrong-record race that previously returned true and let
+// callers ledger a send that never proved delivery. Track the last id
+// dispatched so a non-matching accept fails closed.
+let lastDispatchedRecordId: string | null = null;
 // Settled recovery debt is not an in-flight dispatch. Keeping it separate
 // lets explicit resume and compaction release the normal queue guards.
 let settledSelfHealDispatch: ContinuationDispatch | null = null;
@@ -555,6 +563,7 @@ export function clearContinuationStartWatchdog(): void {
   }
   pendingContinuationDispatch = null;
   settledSelfHealDispatch = null;
+  lastDispatchedRecordId = null;
   lastContinuationSentAt = 0;
   lastContinuationSentPayload = null;
 }
@@ -637,6 +646,7 @@ export function dispatchPrepare(
   }
   settledSelfHealDispatch = null;
   pendingContinuationDispatch = record;
+  lastDispatchedRecordId = record.id;
   const repairGoal = state.goal;
   const repairTarget = record.kind === "goal" && repairGoal && repairGoal.id === record.goalId
     ? repairGoal.repairTarget
@@ -686,6 +696,7 @@ export function dispatchFailed(ctx: ExtensionContext, record: ContinuationDispat
     settledAt,
   };
   pendingContinuationDispatch = failed;
+  lastDispatchedRecordId = failed.id;
   persistDispatchRecord(ctx.cwd, failed);
   resetRepairReplanBootstrap(ctx, "dispatch-failed");
   appendLedger(ctx.cwd, "continuation_dispatch_failed", dispatchLedgerValue(failed, {
@@ -1103,6 +1114,7 @@ function retryContinuationDispatch(ctx: ExtensionContext, record: ContinuationDi
     return false;
   }
   pendingContinuationDispatch = retried;
+  lastDispatchedRecordId = retried.id;
   appendLedger(ctx.cwd, "continuation_retry_sent", dispatchLedgerValue(retried, {
     retrySentAt: retriedAt,
     nextTimeoutMs: retriedTimeoutMs,
@@ -1119,13 +1131,31 @@ export function dispatchAccepted(ctx: ExtensionContext, record: ContinuationDisp
   }
   // A synchronous before_agent_start can acknowledge while sendMessage is
   // still on the stack. Do not overwrite that proof with "accepted".
-  if (pendingContinuationDispatch !== record) return true;
+  if (pendingContinuationDispatch !== record) {
+    // v0.39.37 (audit): pending === null can mean either (a) a synchronous
+    // before_agent_start acked THIS record (id match — success) or (b) the
+    // lane cleared (pause/resume/completion/stale api) and this accept is
+    // a phantom (id mismatch — wrong-record race). Distinguish the two:
+    // a true sync-ack only returns success when the id matches the most
+    // recent dispatched record; anything else ledger-wrong-records and
+    // returns false so callers do not log a send that never proved
+    // delivery.
+    if (pendingContinuationDispatch === null && lastDispatchedRecordId === record.id) return true;
+    appendLedger(ctx.cwd, "continuation_dispatch_wrong_record", dispatchLedgerValue(record, {
+      observedPending: pendingContinuationDispatch ? pendingContinuationDispatch.id : null,
+      lastDispatchedRecordId,
+      settlement: "wrong-record",
+    }));
+    if (pendingContinuationDispatch === record) dispatchFailed(ctx, record, "stale goal identity before dispatch acceptance");
+    return false;
+  }
   const acceptedAt = Date.now();
   const accepted: ContinuationDispatch = {
     ...transitionDispatch(record, "accepted"),
     acceptedAt,
   };
   pendingContinuationDispatch = accepted;
+  lastDispatchedRecordId = accepted.id;
   appendLedger(ctx.cwd, "continuation_dispatch_accepted", dispatchLedgerValue(accepted, {
     acknowledgement: "accepted",
     startProofSource: null,
