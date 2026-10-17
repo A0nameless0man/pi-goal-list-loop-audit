@@ -749,6 +749,19 @@ test("v0.38.104: every 'Global-only.' annotation in docs/SETTINGS.md is true in 
   assert.deepEqual(wrong, [], `doc claims Global-only for keys the runtime lets a project set: ${wrong.join(", ")}`);
 });
 
+test("v0.39.38: the Global-only paragraph lists every GLOBAL_ONLY_KEYS member", async () => {
+  const { GLOBAL_ONLY_KEYS } = await import("../extensions/goal-settings.ts");
+  const doc = fs.readFileSync(path.join(import.meta.dirname, "..", "docs", "SETTINGS.md"), "utf-8");
+  const section = doc.slice(doc.indexOf("## Global-only keys"), doc.indexOf("This list is `GLOBAL_ONLY_KEYS`"));
+  assert.ok(section.length > 0, "the Global-only section still names its source set");
+  const listed = [...section.matchAll(/`([A-Za-z]+)`/g)].map((m) => m[1]);
+  // The prose names exactly one non-key backtick (`/glla`); everything else must be the set.
+  const missing = [...GLOBAL_ONLY_KEYS].filter((key) => !listed.includes(key as string));
+  assert.deepEqual(missing, [], `paragraph omits global-only keys: ${missing.join(", ")}`);
+  const extra = [...new Set(listed)].filter((key) => key !== "/glla" && !GLOBAL_ONLY_KEYS.has(key as never));
+  assert.deepEqual(extra, [], `paragraph lists non-global-only keys: ${extra.join(", ")}`);
+});
+
 test("v0.38.104: the superseded DESIGN.md table does not mark files that do not exist as shipped", () => {
   const doc = fs.readFileSync(path.join(import.meta.dirname, "..", "docs", "DESIGN.md"), "utf-8");
   const start = doc.indexOf("### Decision 7");
