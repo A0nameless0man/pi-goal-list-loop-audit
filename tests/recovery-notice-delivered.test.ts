@@ -70,6 +70,7 @@ test("v0.39.38 a delivered recovery notice stamps durable delivery", async () =>
     const sendsBefore = pi.sent.length;
     sendContinuation(goalId);
     await tick(300);
+    console.log("DBG ledger tail:", JSON.stringify(ledgerText(cwd).trim().split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l).type; } catch { return "?"; } }).slice(-10)));
     assert.ok(pi.sent.length > sendsBefore, "the continuation was actually sent");
     const sent = pi.sent.slice(sendsBefore).map((s) => s.message.content ?? "").join("\n");
     assert.ok(sent.includes("RECOVERY NOTICE"), "the sent turn carried the recovery notice");
@@ -94,6 +95,7 @@ test("v0.39.38 an unpersistable delivered stamp is reported, not claimed", async
     const sendsBefore = pi.sent.length;
     sendContinuation(goalId);
     await tick(300);
+    console.log("DBG ledger tail:", JSON.stringify(ledgerText(cwd).trim().split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l).type; } catch { return "?"; } }).slice(-10)));
     assert.ok(pi.sent.length > sendsBefore, "the continuation was actually sent");
     const ledger = ledgerText(cwd);
     assert.ok(!ledger.includes("recovery_notice_delivered"), "no durable-delivery claim for an unpersisted stamp");
