@@ -894,7 +894,7 @@ Four parallel bounded scouts (lifecycle-core, orchestrator/auditor, UI-settings-
 
 ## FIX findings (2026-10-17 pass)
 
-- [ ] FIX: MEDIUM: Resumable loops vanish from always-on UI — heldLoop only surfaces restore/provider holds while RESUMABLE_STOP promises resume for plateau/stuck/stalled/bound/metric-never-moved/zero-stream/user-paused/branch stops (extensions/goal-loop-display.ts:46)
+- [x] FIX: MEDIUM: Resumable loops vanish from always-on UI — heldLoop only surfaces restore/provider holds while RESUMABLE_STOP promises resume for plateau/stuck/stalled/bound/metric-never-moved/zero-stream/user-paused/branch stops (extensions/goal-loop-display.ts:46) — fixed in b409f159: the display-layer heldLoop predicate now mirrors RESUMABLE_STOP and the max-iterations refinable stop, so the held-suffix overlay and held-loop card surface every prefix the slash-side promise covers; the multi-line card uses a shared heldLoopReasonLabel; types, goal-loop display suite, and the broader display / parked-recovery / measure-fail-closed / loop-forever suites all pass.
 - [ ] FIX: MEDIUM: dispatchAccepted returns success on record mismatch, conflating sync-ack clears with genuine wrong-record races and ledgering sends that never proved delivery (extensions/goal-continuation.ts:1115)
 - [ ] FIX: LOW: dispatchStartAcknowledged ignores sidecar persist failure, leaving an accepted-but-expired record a restart misreads as stuck dispatch (extensions/goal-continuation.ts)
 - [ ] FIX: LOW: One-shot loop directives cleared without a state write, so a crash replays reprieve/hint prompts on the next turn (extensions/goal-loop.ts)
