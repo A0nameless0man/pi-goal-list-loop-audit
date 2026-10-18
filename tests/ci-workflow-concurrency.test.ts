@@ -1,13 +1,5 @@
-// pi-goal-list-loop-audit
-// tests/ci-workflow-concurrency.test.ts
-//
-// v0.39.x (chosen 2026-10-17): cancel superseded push-quality CI runs while
-// keeping release publication protected. These pin the workflow CONFIG
-// (event-specific cancellation/concurrency, the independent publish lane,
-// unchanged release gates) with the same raw-text section-slice style as
-// tests/release-contract.test.ts — they assert what the YAML says, not
-// GitHub's runtime behavior.
-
+// These inspect the repository's declarative workflow contract, not GitHub
+// execution. Ignore YAML comment-only lines: explanations are not config.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
@@ -15,78 +7,98 @@ import * as fs from "node:fs";
 const publish = fs.readFileSync(".github/workflows/publish.yml", "utf-8");
 const compat = fs.readFileSync(".github/workflows/compatibility.yml", "utf-8");
 
+function configuration(text: string): string {
+  return text.replace(/\r\n/g, "\n").split("\n").filter(line => !/^\s*#/.test(line)).join("\n");
+}
 function runLevel(text: string): string {
-  const jobsAt = text.indexOf("jobs:\n");
+  const config = configuration(text);
+  const jobsAt = config.search(/^jobs:\s*$/m);
   assert.ok(jobsAt > 0, "workflow has a jobs section");
-  return text.slice(0, jobsAt);
+  return config.slice(0, jobsAt);
+}
+function jobSection(text: string, name: string): string {
+  const config = configuration(text);
+  const jobsAt = config.search(/^jobs:\s*$/m);
+  assert.ok(jobsAt > 0, "workflow has a jobs section");
+  const jobs = config.slice(jobsAt);
+  const match = new RegExp(`^  ${name}:\\s*$`, "m").exec(jobs);
+  assert.ok(match, `job ${name} is present`);
+  const body = jobs.slice(match.index + match[0].length);
+  const next = body.search(/^  [\w-]+:\s*$/m);
+  return next < 0 ? body : body.slice(0, next);
 }
 
-function jobSection(text: string, name: string, next: string | null): string {
-  const jobsAt = text.indexOf("jobs:\n");
-  const start = text.indexOf(`  ${name}:`, jobsAt);
-  assert.ok(start > jobsAt, `job ${name} is present`);
-  if (next === null) return text.slice(start);
-  const end = text.indexOf(`  ${next}:`, start);
-  assert.ok(end > start, `job ${next} follows ${name}`);
-  return text.slice(start, end);
-}
-
-test("run-level concurrency keys the group by event and cancels only non-release runs", () => {
-  const head = runLevel(publish);
-  // Release events own their lane; push/PR churn shares a per-ref quality lane.
-  assert.match(head, /github\.event_name == 'release'/, "run-level group keys on the event");
-  assert.match(head, /'glla-publish-run'/, "release events keep the publish-run lane");
-  assert.match(head, /glla-quality-.*github\.ref/, "quality lane is per-ref so branches never cross-cancel");
-  assert.doesNotMatch(head, /^\s*group: glla-quality\s*$/m, "no shared static run-level group (v0.38.32 regression)");
-  // Event-specific cancellation: the cancel flag excludes release, so a
-  // daemon push can never cancel an active release publish at run level.
+function assertReleaseIsolation(text: string): void {
+  const head = runLevel(text);
+  assert.match(head, /github\.event_name == 'release'/, "run-level group separates release events");
+  assert.match(head, /'glla-publish-run'/, "release events keep an independent lane");
+  assert.match(head, /glla-quality-.*github\.ref/, "quality lane is per-ref");
+  assert.doesNotMatch(head, /^\s*group: glla-quality\s*$/m, "no shared static run-level group");
   assert.match(head, /cancel-in-progress:\s*\$\{\{\s*github\.event_name != 'release'\s*\}\}/,
-    "run-level cancellation applies to push/PR churn, never to release events");
-});
-
-test("quality job keeps its push/PR gate and gains no release trigger", () => {
-  const quality = jobSection(publish, "quality", "publish");
+    "push churn cannot cancel release at run level");
+  const job = jobSection(text, "publish");
+  assert.match(job, /group:\s*npm-publish/, "publish has its own lane");
+  assert.match(job, /cancel-in-progress:\s*false/, "publish job cannot cancel active publication");
+  assert.match(job, /if:\s*github\.event_name == 'release'/, "publish runs only on release");
+}
+function assertReleaseGates(text: string): void {
+  const job = jobSection(text, "publish");
+  // Protect the actual tag comparison, not the error message's wording.
+  assert.match(job, /process\.env\.RELEASE_TAG\s*!==\s*expected/, "tag must match the expected package version");
+  assert.match(job, /const expected\s*=\s*`v\$\{version\}`/, "expected tag derives from package version");
+  assert.match(job, /run:\s*npm run release:check/, "release contract remains mandatory");
+  assert.match(job, /run:\s*npm publish --provenance --access public/, "provenance publish remains mandatory");
+  assert.match(job, /id-token:\s*write/, "publish retains OIDC permission");
+}
+function assertQuality(text: string): void {
+  const quality = jobSection(text, "quality");
   assert.match(quality, /if:\s*github\.event_name == 'push' \|\| github\.event_name == 'pull_request'/,
-    "quality still runs only on push/PR");
-  assert.match(quality, /run:\s*npm run release:check/, "quality still runs the release contract");
-  assert.doesNotMatch(quality, /npm publish/, "quality never publishes");
-  assert.doesNotMatch(quality, /id-token:\s*write/, "quality has no publish OIDC permission");
+    "quality runs only on push/PR");
+  assert.match(quality, /run:\s*npm run release:check/, "quality runs release checks");
+  assert.doesNotMatch(quality, /npm publish/, "quality cannot publish");
+  assert.doesNotMatch(quality, /id-token:\s*write/, "quality has no OIDC write permission");
+}
+function assertCompatibility(text: string): void {
+  const config = configuration(text);
+  assert.match(runLevel(text), /group:\s*glla-compatibility-\$\{\{\s*github\.ref\s*\}\}/, "compat lane stays per-ref");
+  assert.match(runLevel(text), /cancel-in-progress:\s*true/, "compat cancels superseded runs");
+  assert.match(config, /os:\s*\[ubuntu-latest, macos-latest, windows-latest\]/, "cross-platform coverage remains");
+  assert.match(config, /run:\s*npm run check/, "typecheck remains");
+  assert.match(config, /tests\/contained-child-platform\.test\.ts/, "platform behavior remains checked");
+  assert.match(config, /repro-jiti-state-split\.test\.mjs/, "host loader remains checked");
+  assert.doesNotMatch(config, /github\.event_name == 'release'/, "compat has no release condition");
+  assert.doesNotMatch(config, /npm publish/, "compat never publishes");
+}
+
+test("release isolation, gates and quality permissions remain configured", () => {
+  assertReleaseIsolation(publish);
+  assertReleaseGates(publish);
+  assertQuality(publish);
+  assertCompatibility(compat);
 });
 
-test("publish lane stays independent with cancel off and gates unchanged", () => {
-  const job = jobSection(publish, "publish", null);
-  assert.match(job, /group:\s*npm-publish/, "publish keeps its own lane");
-  assert.match(job, /cancel-in-progress:\s*false/, "the publish lane never cancels");
-  assert.match(job, /if:\s*github\.event_name == 'release'/, "publish still fires only on release");
-  assert.match(job, /RELEASE_TAG.*does not match package\.json/s, "tag-must-match-package.json gate unchanged");
-  assert.match(job, /run:\s*npm run release:check/, "publish still runs the release contract before publishing");
-  assert.match(job, /run:\s*npm publish --provenance --access public/, "provenance publish unchanged");
-  assert.match(job, /id-token:\s*write/, "publish retains trusted-publishing OIDC");
+test("harmless comment edits, error prose and line endings do not change the contract", () => {
+  const comments = "# Historical misconception: newest QUEUED; even with cancel-in-progress:false\n# npm publish / id-token: write are forbidden in quality, not executable here.\n";
+  const edited = publish.replace(/^\s*#.*$/gm, "").replace("does not match package.json", "is inconsistent with the package version");
+  assertReleaseIsolation(comments + edited.replace(/\n/g, "\r\n"));
+  assertReleaseGates(comments + edited);
+  assertQuality(edited.replace("  quality:\n", "  quality:\n    # npm publish; id-token: write are not allowed here\n"));
+  assertCompatibility(comments + compat.replace(/^\s*#.*$/gm, ""));
 });
 
-test("the inaccurate unlimited-queue premise is gone, corrected in place", () => {
-  const head = runLevel(publish);
-  assert.doesNotMatch(head, /newest QUEUED/i, "stale newest-queued-run claim removed");
-  assert.doesNotMatch(head, /even with cancel-in-progress:false/i, "stale supersede-cancels-queued claim removed");
-  assert.match(head, /ONE running and ONE pending/i, "corrected one-running-one-pending premise stated");
-});
-
-test("compatibility cancels superseded same-ref churn with gates unchanged", () => {
-  const head = runLevel(compat);
-  assert.match(head, /group:\s*glla-compatibility-\$\{\{\s*github\.ref\s*\}\}/, "compat lane stays per-ref");
-  assert.match(head, /cancel-in-progress:\s*true/, "compat cancels superseded same-ref runs");
-  assert.match(compat, /os:\s*\[ubuntu-latest, macos-latest, windows-latest\]/, "3-OS matrix unchanged");
-  assert.match(compat, /run:\s*npm run check/, "compat still runs the typecheck gate");
-  assert.match(compat, /tests\/contained-child-platform\.test\.ts/, "compat platform-behavior tests unchanged");
-  assert.match(compat, /repro-jiti-state-split\.test\.mjs/, "compat host-loader check unchanged");
-});
-
-test("no workflow cancels a release publish from push churn", () => {
-  // publish.yml: release run-level group has cancel off via the event guard.
-  assert.match(runLevel(publish), /github\.event_name != 'release'/, "release excluded from run-level cancellation");
-  // The publish job's own lane is cancel-off regardless of the run level.
-  assert.match(jobSection(publish, "publish", null), /cancel-in-progress:\s*false/, "publish job lane cancel-off");
-  // compatibility.yml has no release trigger at all.
-  assert.doesNotMatch(compat, /github\.event_name == 'release'/, "compat never fires on release");
-  assert.doesNotMatch(compat, /npm publish/, "compat never publishes");
-});
+for (const [risk, before, after, check] of [
+  ["release run cancellation", "cancel-in-progress: ${{ github.event_name != 'release' }}", "cancel-in-progress: true", assertReleaseIsolation],
+  ["shared release lane", "'glla-publish-run'", "'glla-quality'", assertReleaseIsolation],
+  ["publish job cancellation", "cancel-in-progress: false", "cancel-in-progress: true", assertReleaseIsolation],
+  ["release verification removed", "run: npm run release:check", "run: echo skipped", assertReleaseGates],
+  ["provenance removed", "npm publish --provenance --access public", "npm publish --access public", assertReleaseGates],
+  ["OIDC removed", "id-token: write", "id-token: read", assertReleaseGates],
+  ["tag comparison inverted", "process.env.RELEASE_TAG !== expected", "process.env.RELEASE_TAG === expected", assertReleaseGates],
+] as const) {
+  test(`meaningful invalid configuration is rejected: ${risk}`, () => {
+    assert.ok(publish.includes(before), "mutation applies to the fixture");
+    // replaceAll is needed for the shared quality/publish verification command.
+    const invalid = publish.replaceAll(before, after);
+    assert.throws(() => check(invalid), { name: "AssertionError" });
+  });
+}
