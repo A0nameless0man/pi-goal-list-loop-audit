@@ -49,7 +49,7 @@ export interface SentMessage {
 }
 
 export class MockPi {
-  tools = new Map<string, { name: string; execute: (...args: never[]) => Promise<unknown> }>();
+  tools = new Map<string, { name: string; execute: (...args: never[]) => Promise<unknown>; promptGuidelines?: string[] }>();
   commands = new Map<string, (args: string, ctx: unknown) => Promise<void>>();
   handlers = new Map<string, (...args: never[]) => Promise<void>>();
   sent: SentMessage[] = [];
@@ -80,8 +80,8 @@ export class MockPi {
   constructor() {
     const self = this;
     this.api = {
-      registerTool(def: { name: string; execute: (...args: never[]) => Promise<unknown> }): void {
-        self.tools.set(def.name, { name: def.name, execute: def.execute });
+      registerTool(def: { name: string; execute: (...args: never[]) => Promise<unknown>; promptGuidelines?: string[] }): void {
+        self.tools.set(def.name, def);
       },
       registerCommand(name: string, spec: { handler: (args: string, ctx: unknown) => Promise<void> }): void {
         self.commands.set(name, spec.handler);
