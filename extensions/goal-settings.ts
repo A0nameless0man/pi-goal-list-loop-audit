@@ -800,7 +800,9 @@ export function normalizeLoadedSettings(settings: Settings): Settings {
   return settings;
 }
 
-function migrateLegacySettings(value: Partial<Settings>): Record<string, unknown> {
+/** Read a settings file through the legacy migration (exported for per-layer
+ * editors that must read one scope without merging the other). */
+export function migrateLegacySettings(value: Partial<Settings>): Record<string, unknown> {
   const migrated = { ...(value as Record<string, unknown>) };
   // v0.36.0: preserve the old one-slot auditor pin while moving every read
   // and write to the ordered array used by the main-agent picker. An
