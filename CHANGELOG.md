@@ -2,7 +2,20 @@
 
 ## Unreleased
 
+## 0.39.38 — clearer waiting UI and resilient stats (2026-10-18)
+
+- Includes the human-facing waiting/completion changes and publishing repair
+  described below. Earlier 0.39.36/0.39.37 tags remain unchanged.
+- Exclude directory-shaped and symlink ledgers from stats discovery. Keep
+  ledger enumeration inside the reader's I/O boundary so a malformed or
+  replaced ledger cannot crash read-only inspection or fabricate empty stats.
+- Add deterministic malformed-ledger/race regressions and verify stale-context
+  inspection with CI-style temporary directories under the user's home.
+
 ## 0.39.37 — publishable waiting UI release (2026-10-18)
+
+GitHub tag retained, but not published to npm: its release gate found a stats
+reader failure before the publish step. Superseded by 0.39.38.
 
 - Includes the clearer waiting/completion UI and reliability improvements
   described under 0.39.36 below.
