@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Goal, LoopState } from "../extensions/goal-loop-core.js";
+import type { Goal } from "../extensions/goal-loop-core.js";
+import type { LoopState } from "../extensions/goal-loop-forever.js";
 import { buildSeedGrillMessage } from "../extensions/goal-loop-core.js";
 import { continuationPrompt } from "../extensions/goal-continuation.js";
 import { loopPrompt } from "../extensions/goal-loop.js";
