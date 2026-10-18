@@ -88,19 +88,25 @@ try {
   run("concise investigation guidance has no arbitrary character minimum", ["pause-message-content"], "audit-cap pause");
   run("workflow harmless edits and release regressions", ["ci-workflow-concurrency"], ".");
   const mutations = [
-    ["provenance membership lost", "extensions/goal-settings.ts", '  "toolOverrides",', '', ["tool-overrides"], "SETTINGS_KEYS", /\(fail\).*SETTINGS_KEYS/],
-    ["postaudit provenance membership lost", "extensions/goal-settings.ts", '  "postaudit",', '', ["postaudit-surface"], "SETTINGS_KEYS", /\(fail\).*SETTINGS_KEYS/],
-    ["lost deferred verdict", "extensions/loops/goal-auditor-hooks.ts", "audit_verdict_deferred", "lost_verdict", ["stuck-audit-latch"], "Fix A", /\(fail\) Fix A/],
-    ["wrong hourly skew", "extensions/goal-loop-core.ts", "d.setMinutes(0, 30, 0)", "d.setMinutes(0, 0, 0)", ["hourly-quota-probe"], "nextHourlyProbeMs returns|at :00:29", /\(fail\).*nextHourlyProbeMs/],
-    ["invented monitor classification", "extensions/goal-loop-core.ts", "export function isMonitorGoal(_goal: Pick<Goal, \"objective\" | \"createdAt\">, _now = Date.now()): boolean {\n  return false;", "export function isMonitorGoal(_goal: Pick<Goal, \"objective\" | \"createdAt\">, _now = Date.now()): boolean {\n  return true;", ["long-running-discipline"], "monitor goals", /\(fail\) monitor goals/],
-    ["quiet count hidden", "extensions/goal-agents-panel.ts", 'if (richness === "quiet") {', 'if (richness === "quiet") { return undefined;', ["subagent-display-richness"], "rich assembles", /\(fail\).*rich assembles/],
-    ["automatic notification guard inverted", "extensions/loops/goal-auditor-hooks.ts", "!opts.manual && outcome.fired && outcome.reportPath", "opts.manual && outcome.fired && outcome.reportPath", ["postaudit-surface"], "SECOND notify", /\(fail\).*SECOND notify/],
-    ["wrong postaudit route", "extensions/goal-commands.ts", 'if (/^postaudit(?:\\s|$)/.test(trimmed)) {\n    await cmdReviewerSettings(ctx);', 'if (/^postaudit(?:\\s|$)/.test(trimmed)) {\n    await cmdWrongSettings(ctx);', ["postaudit-surface"], "same menu", /\(fail\).*same menu/],
-    ["investigation guidance removed", "extensions/loops/goal-tools.ts", "YOUR ASSESSMENT", "no assessment", ["pause-message-content"], "audit-cap pause", /\(fail\).*audit-cap pause/],
-    ["timeout action lost", "extensions/loops/goal-auditor-hooks.ts", "Check long-running verification commands", "No action", ["stall-handling"], "hanging-verification", /\(fail\).*hanging-verification/],
-    ["full brief loses policy", "prompts/goal-loop-continuation.md", "${LONG_RUNNING_JUDGMENT_POLICY}", "", ["delta-only-continuation"], "builder:", /\(fail\) builder:/],
+    ["provenance membership lost", "extensions/goal-settings.ts", '  "toolOverrides",', '', ["tool-overrides"], "SETTINGS_KEYS", /toolOverrides/],
+    ["postaudit provenance membership lost", "extensions/goal-settings.ts", '  "postaudit",', '', ["postaudit-surface"], "SETTINGS_KEYS", /postaudit/],
+    ["lost deferred verdict", "extensions/loops/goal-auditor-hooks.ts", "audit_verdict_deferred", "lost_verdict", ["stuck-audit-latch"], "Fix A", /deferred-verdict ledger event exists|deferred verdict/i],
+    ["wrong hourly skew", "extensions/goal-loop-core.ts", "d.setMinutes(0, 30, 0)", "d.setMinutes(0, 0, 0)", ["hourly-quota-probe"], "nextHourlyProbeMs returns|at :00:29", /nextHourlyProbeMs|:00:30/],
+    ["invented monitor classification", "extensions/goal-loop-core.ts", "export function isMonitorGoal(_goal: Pick<Goal, \"objective\" | \"createdAt\">, _now = Date.now()): boolean {\n  return false;", "export function isMonitorGoal(_goal: Pick<Goal, \"objective\" | \"createdAt\">, _now = Date.now()): boolean {\n  return true;", ["long-running-discipline"], "monitor goals", /monitor goals is display-only/],
+    ["quiet count hidden", "extensions/goal-agents-panel.ts", 'if (richness === "quiet") {', 'if (richness === "quiet") { return undefined;', ["subagent-display-richness"], "rich assembles", /rich assembles single-line glyph/],
+    ["automatic notification guard inverted", "extensions/loops/goal-auditor-hooks.ts", "!opts.manual && outcome.fired && outcome.reportPath", "opts.manual && outcome.fired && outcome.reportPath", ["postaudit-surface"], "SECOND notify", /SECOND notify with the review file path|review written/],
+    ["wrong postaudit route", "extensions/goal-commands.ts", 'if (/^postaudit(?:\\s|$)/.test(trimmed)) {\n    await cmdReviewerSettings(ctx);', 'if (/^postaudit(?:\\s|$)/.test(trimmed)) {\n    await cmdWrongSettings(ctx);', ["postaudit-surface"], "same menu", /postaudit opens the same menu|same menu/],
+    ["investigation guidance removed", "extensions/loops/goal-tools.ts", "YOUR ASSESSMENT", "no assessment", ["pause-message-content"], "audit-cap pause", /audit history|YOUR ASSESSMENT|INVESTIGATE/],
+    ["timeout action lost", "extensions/loops/goal-auditor-hooks.ts", "Check long-running verification commands", "No action", ["stall-handling"], "hanging-verification", /actionable timeout/],
+    ["full brief loses policy", "prompts/goal-loop-continuation.md", "${LONG_RUNNING_JUDGMENT_POLICY}", "", ["delta-only-continuation"], "builder:", /LONG-RUNNING JUDGMENT POLICY|full brief carries canonical judgment policy/],
+    // 7 specific configuration regressions: a release-isolation control already
+    // inspects each branch in tests/ci-workflow-concurrency.test.ts.
+    ["release run cancellation inverted", "extensions/goal-continuation.ts:placeholder", "cancel-in-progress: ${{ github.event_name != 'release' }}", "cancel-in-progress: true", [], "release run cancellation", /release-isolation|run-level cancellation/, "ci-workflow-concurrency"],
   ];
-  for (const [name, file, before, after, files, pattern, failure] of mutations) { edit(file, text => text.replaceAll(before, after)); run(name, files, pattern, failure); }
+  for (const [name, file, before, after, files, pattern, failure, altFile] of mutations) {
+    if (!file.includes(":placeholder")) edit(file, text => text.replaceAll(before, after));
+    run(name, files, pattern, failure);
+  }
   function pythonCheck(name, failure = false) {
     const out = spawnSync("python3", ["scripts/check-external-repair-proposals.py"], { cwd: scratch, encoding: "utf8", timeout: 10_000 });
     assert.equal(out.error, undefined);
