@@ -100,6 +100,9 @@ test('pause tool renders one short wait receipt; expanded, partial and error res
   assert.doesNotMatch(short, /Do NOT continue|backup rotation/);
   const expanded = text(tool.renderResult(result, { expanded: true, isPartial: false }, theme, { ...context, expanded: true }));
   assert.match(expanded, /Do NOT continue/);
+  assert.match(text(tool.renderResult(result, { expanded: false, isPartial: true }, theme, { ...context, isPartial: true })), /Do NOT continue/);
+  assert.match(text(tool.renderCall(args, theme, { ...context, expanded: true })), /backup rotation/);
+  assert.match(text(Reflect.apply(tool.renderResult, undefined, [result, { expanded: false, isPartial: false }, theme])), /Do NOT continue/, 'older hosts without error context keep the full result');
   const failure = { content: [{ type: 'text' as const, text: 'Wait admission failed: writes unavailable.' }], details: { pauseState: 'waiting' } };
   for (const isPartial of [false, true]) {
     assert.match(text(tool.renderResult(failure, { expanded: false, isPartial }, theme, { ...context, isError: true, isPartial })), /Wait admission failed/);
