@@ -120,10 +120,16 @@ try {
   const attemptId = "packed-worker-probe";
   const workerProbe = path.join(workspace, attemptId);
   fs.mkdirSync(workerProbe, { recursive: true });
+  // v0.39.x (chosen 2026-10-17): the probe request runs in the disposable
+  // probe directory, never the live checkout — the worker spawns its RPC
+  // child with cwd: request.cwd, so pointing at repoRoot operated the probe
+  // inside the live tree (and any future cwd-keyed worker path would write
+  // journals/state there). Imports stay bound to the installed tarball and
+  // the RPC stub stays controlled; only the working directory is isolated.
   const request = {
     protocolVersion: 1,
     attemptId,
-    cwd: repoRoot,
+    cwd: workerProbe,
     prompt: "packed worker smoke probe",
     model: "packed-probe/model",
     thinkingLevel: "minimal",

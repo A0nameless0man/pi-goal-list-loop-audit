@@ -51,6 +51,8 @@ test("release contract: the release gate exercises the packed artifact", () => {
   assert.match(smoke, /detached:\s*true/, "the direct worker probe must isolate its process group");
   assert.doesNotMatch(smoke, /legacy-peer-deps/, "the smoke must not skip declared peer resolution");
   assert.doesNotMatch(smoke, /alias\s*:/, "the smoke must not alias peers back to the source tree");
+  assert.match(smoke, /cwd: workerProbe/, "the probe request runs in the disposable probe directory");
+  assert.doesNotMatch(smoke, /cwd: repoRoot/, "the probe request must never point at the live checkout");
 });
 
 test("release contract: packed prompts, schema, and workers ship in the dry-run list", { timeout: 60_000 }, () => {
