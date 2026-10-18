@@ -19,7 +19,7 @@
 //   dialog throws, editor answers).
 // - tick() lets the 0ms/50ms scheduled continuation timers fire.
 
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -49,7 +49,7 @@ export interface SentMessage {
 }
 
 export class MockPi {
-  tools = new Map<string, { name: string; execute: (...args: never[]) => Promise<unknown>; promptGuidelines?: string[] }>();
+  tools = new Map<string, { name: string; execute: (...args: never[]) => Promise<unknown>; promptGuidelines?: string[] } & Pick<ToolDefinition, "renderCall" | "renderResult">>();
   commands = new Map<string, (args: string, ctx: unknown) => Promise<void>>();
   handlers = new Map<string, (...args: never[]) => Promise<void>>();
   sent: SentMessage[] = [];
