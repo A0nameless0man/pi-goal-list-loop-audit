@@ -3235,7 +3235,7 @@ function normalizePendingCompletion(value: unknown): PendingCompletion {
     showVerification: _showVerification,
     ...canonicalOrUnknown
   } = raw;
-  const phase = _phase === "quota-waiting" ? "retry-waiting" : _phase;
+  const phase = _phase; // NEUTRALIZED-CONTROL
   // v0.38.99: lifecycle timestamps are evidence, not decoration. A
   // hand-edited or truncated value degrades to absent (the projection then
   // falls back to startedAt/at) — never to an invented "now".
