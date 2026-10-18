@@ -1,0 +1,41 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=180s heartbeat=30s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/ui-status-projection.test.ts:
+(pass) scheduled external assessment requires current-owner heartbeat registration [6.14ms]
+70 |   ]) {
+71 |     const status = projectUiStatus(state, { now: NOW, generation: 2, evidence });
+72 |     assert.equal(status.execution, 'unconfirmed');
+73 |     assert.equal(status.actionability, 'inspect');
+74 |     assert.equal(status.checkAt, at, 'the durable timestamp stays machine-readable');
+75 |     assert.match(status.nextAction, /10 Oct 2026, 12:10 UTC/);
+                ^
+AssertionError: The input did not match the regular expression /10 Oct 2026, 12:10 UTC/. Input:
+
+'Check saved for 2026-10-10T12:10:00.000Z; host/wake unconfirmed — reopen the session and inspect /glla status'
+
+ generatedMessage: true,
+     actual: "Check saved for 2026-10-10T12:10:00.000Z; host/wake unconfirmed — reopen the session and inspect /glla status",
+   expected: /10 Oct 2026, 12:10 UTC/,
+   operator: "match",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/ui-status-projection.test.ts:75:12
+      at fn (node:test:215:18)
+(fail) unconfirmed saved checks keep a human time in compact and detailed cards [1.38ms]
+(pass) background activity is attributed to the owned dependency, not parent chat [0.25ms]
+(pass) saved active or auditing state never proves execution [0.07ms]
+(pass) saved deadline differs from attributed armed timer [0.10ms]
+(pass) replaced owner, generation, stale or future snapshots do not establish liveness [0.08ms]
+(pass) manual decision and supervisor holds outrank provider timers [0.11ms]
+(pass) silence does not prove death; independently observed closure does [0.07ms]
+(pass) in-budget tool is a wait and queued is not running [0.07ms]
+(pass) hourly-only timer does not advertise a regular saved deadline [0.06ms]
+(pass) terminal state outranks old observations; workflow issue survives independently [0.08ms]
+
+ 10 pass
+ 1 fail
+Ran 11 tests across 1 file. [417.00ms]
+[run-tests] failure diagnostics retained at /tmp/glla-test-processes-fB53yn/failure.json
+[run-tests] cleanup evidence retained at /tmp/glla-test-processes-fB53yn
+[run-tests] finished in 0s (exit 1)
