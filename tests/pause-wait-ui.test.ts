@@ -45,7 +45,7 @@ for (const stopReason of ['aborted', 'error']) {
 }
 
 test('real errors, unmarked cancellations and changed pauses are never relabeled as waiting', async () => {
-  const { handler, ctx, goal, mark } = await fixture();
+  const { pi, handler, ctx, goal, mark } = await fixture();
   const cancelled = { role: 'assistant', stopReason: 'error', errorMessage: 'This operation was aborted', content: [] };
   assert.equal(await handler({ message: cancelled } as never, ctx as never), undefined, 'no owned marker');
   mark();
@@ -55,7 +55,7 @@ test('real errors, unmarked cancellations and changed pauses are never relabeled
   replaceState({ goal: { ...goal, pauseReason: 'A different pause now owns this goal.' }, list: [], loop: null });
   assert.equal(await handler({ message: cancelled } as never, ctx as never), undefined, 'changed pause identity');
   replaceState({ goal, list: [], loop: null }); mark();
-  await (await fixture()).pi.fire('agent_start', {}, ctx); // a new start invalidates the prior global turn marker
+  await pi.fire('agent_start', {}, ctx); // a new start invalidates the prior turn marker
   assert.equal(await handler({ message: cancelled } as never, ctx as never), undefined, 'stale turn');
 });
 
@@ -83,7 +83,9 @@ test('waiting card leads with status and next check, not investigation or failur
 test('pause tool renders one short wait receipt; expanded, partial and error results retain their content', async () => {
   const { pi, ctx, goal } = await fixture();
   const args = { kind: 'wait', reason: goal.pauseReason!, resumeAt: goal.pauseResumeAt! };
-  const result = await pi.runTool('pause_goal', args, ctx);
+  const raw = await pi.runTool('pause_goal', args, ctx);
+  assert.ok(raw.content.every(c => c.type === 'text'));
+  const result = { details: raw.details, content: raw.content.map(c => ({ type: 'text' as const, text: c.text })) };
   const tool = pi.tools.get('pause_goal')!;
   assert.ok(tool.renderCall); assert.ok(tool.renderResult);
   const context: ToolRenderContext = { args, toolCallId: 'fixture', invalidate() {}, lastComponent: undefined, state: {}, cwd: ctx.cwd, executionStarted: true, argsComplete: true, isPartial: false, expanded: false, showImages: false, isError: false };
