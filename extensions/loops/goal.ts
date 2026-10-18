@@ -20,7 +20,7 @@ import "./goal-tools.js";
 import "./goal-settings-ui.js";
 import { registerActionReminderRenderer } from "../action-reminder.js";
 import { registerSummaryRenderer } from "../summary-renderer.js";
-import { abortZombieRun, enqueueFaultRepairTask, registerGoalRuntime, resetLengthExhaustionEpisodes, __testOnlyResetLengthExhaustionEpisodes, __testOnlyResetZombieAutoRetry, __testOnlyResetUnsupervisedErrorRetry } from "./goal-activation.js";
+import { abortZombieRun, enqueueFaultRepairTask, registerGoalRuntime, resetLengthExhaustionEpisodes, resetZombieRetryStreak, __testOnlyResetLengthExhaustionEpisodes, __testOnlyResetZombieAutoRetry, __testOnlyResetUnsupervisedErrorRetry } from "./goal-activation.js";
 // v0.38.88: members of the __testOnlyResetProcessState composite.
 import { __testOnlyResetOwnerSession, __testOnlyResetStaleFlag, __testOnlyResetTerminalFlags, __testOnlyResetOwnershipRecheck } from "./goal-session.js";
 import { __testOnlyResetStarvationGate, __testOnlyResetToolActivity, __testOnlyResetAuditorQuietWatch, __testOnlyResetPostCompactDebt } from "./goal-ui.js";
@@ -198,6 +198,7 @@ const commandDeps: CommandDeps = {
   releaseInitialSessionLoadBarrier,
   resolveCarryover,
   resetLengthExhaustionEpisodes,
+  resetZombieRetryStreak,
   safeSteerUser,
   scheduleContinuation,
   scheduleSessionTimeout,
@@ -237,6 +238,7 @@ const loopDeps: LoopDeps = {
   releaseContinuationDispatchStandDown,
   releaseInitialSessionLoadBarrier,
   rememberCtx,
+  resetZombieRetryStreak,
   resolveCarryover,
   scheduleSessionTimeout,
   sendContinuation,

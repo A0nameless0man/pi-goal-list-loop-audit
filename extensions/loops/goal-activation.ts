@@ -1033,6 +1033,23 @@ export function abortZombieRun(
   // so in the park copy instead of promising budget retries that never come.
   const neverStreamed = lastTurnStartAt > 0 && observedStreamAt <= lastTurnStartAt;
   const retryPlan = scheduleZombieAutoRetry(current, generation, goal?.id, observedStreamAt, silentMinutes);
+  // v0.39.x: an exhausted budget must report its actual cause and next
+  // action on the durable park itself — not just the transient notice. The
+  // frozen stream clock plus the attempt count tells the operator the route
+  // is wedged (not merely slow); explicit resume grants a fresh budget and
+  // prefers the fallback route when one is configured. Prefix matchers
+  // (RESUMABLE_STOP, refinable reasons, display) only read the head, so the
+  // suffix cannot break resume eligibility.
+  if (!retryPlan.scheduled && retryPlan.reason === "budget-exhausted") {
+    const frozenIso = new Date(observedStreamAt).toISOString();
+    const cause = `automatic zero-stream retries exhausted after ${retryPlan.maxAttempts} attempts with the provider stream frozen since ${frozenIso}${zombieRetryRoutedViaFallback ? " (later attempts rerouted via fallback)" : ""}; explicit ${resume} grants a fresh budget and prefers the fallback route when one is configured`;
+    if (loop?.stopReason) {
+      loop.stopReason = `${loop.stopReason}; ${cause}`;
+      persistState(current);
+    } else if (goal) {
+      updateGoal({ pauseSuggestedAction: `The stalled ${goal.policy === "list" ? "list item" : "goal"} turn was aborted safely and the work is saved. ${cause}; ${cancel} discards it.` }, current);
+    }
+  }
   const loopRecap = loop
     ? compactLoopCompletionSummary({ ...loop, historyLength: loop.history.length })
     : undefined;

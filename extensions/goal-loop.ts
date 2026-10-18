@@ -153,6 +153,7 @@ export interface LoopDeps {
   releaseContinuationDispatchStandDown: () => void;
   releaseInitialSessionLoadBarrier: () => void;
   rememberCtx: (ctx: ExtensionContext) => void;
+  resetZombieRetryStreak: (cwd: string, key?: string) => void;
   resolveCarryover: (ctx: ExtensionContext, trigger: "goal" | "loop" | "list") => boolean;
   scheduleSessionTimeout: (callback: () => void, delayMs: number) => NodeJS.Timeout;
   sendContinuation: (goalId: string) => void;
@@ -188,7 +189,7 @@ let GOAL_EVENT_ENTRY: string;
 let accountSendRearm: LoopDeps["accountSendRearm"], armQueueStuckProbe: LoopDeps["armQueueStuckProbe"], buildPostCompactResync: LoopDeps["buildPostCompactResync"], clearMainModelRecoveryTimer: LoopDeps["clearMainModelRecoveryTimer"], dispatchAccepted: LoopDeps["dispatchAccepted"],
     dispatchFailed: LoopDeps["dispatchFailed"], dispatchPrepare: LoopDeps["dispatchPrepare"], displaySlice: LoopDeps["displaySlice"], freshCtx: LoopDeps["freshCtx"], freshCtxForGeneration: LoopDeps["freshCtxForGeneration"],
     goStaleTerminal: LoopDeps["goStaleTerminal"], mainModelRecoveryActive: LoopDeps["mainModelRecoveryActive"], manuallyResumeMainModelRecovery: LoopDeps["manuallyResumeMainModelRecovery"], notifyExternal: LoopDeps["notifyExternal"], persistState: LoopDeps["persistState"],
-    probeExtensionApiStale: LoopDeps["probeExtensionApiStale"], probeMainModelRecovery: LoopDeps["probeMainModelRecovery"], releaseContinuationDispatchStandDown: LoopDeps["releaseContinuationDispatchStandDown"], releaseInitialSessionLoadBarrier: LoopDeps["releaseInitialSessionLoadBarrier"], rememberCtx: LoopDeps["rememberCtx"],
+    probeExtensionApiStale: LoopDeps["probeExtensionApiStale"], probeMainModelRecovery: LoopDeps["probeMainModelRecovery"], releaseContinuationDispatchStandDown: LoopDeps["releaseContinuationDispatchStandDown"], releaseInitialSessionLoadBarrier: LoopDeps["releaseInitialSessionLoadBarrier"], rememberCtx: LoopDeps["rememberCtx"], resetZombieRetryStreak: LoopDeps["resetZombieRetryStreak"],
     resolveCarryover: LoopDeps["resolveCarryover"], scheduleSessionTimeout: LoopDeps["scheduleSessionTimeout"], sendContinuation: LoopDeps["sendContinuation"], sendRearmDelayMs: LoopDeps["sendRearmDelayMs"], sessionManagerId: LoopDeps["sessionManagerId"], warnIfStaleAtEntry: LoopDeps["warnIfStaleAtEntry"],
     startDrafting: LoopDeps["startDrafting"], activeGoalSurfaceCommand: LoopDeps["activeGoalSurfaceCommand"], archiveCurrentGoal: LoopDeps["archiveCurrentGoal"];
 
@@ -197,7 +198,7 @@ export function createGoalLoop(d: LoopDeps): void {
   accountSendRearm = d.accountSendRearm; armQueueStuckProbe = d.armQueueStuckProbe; buildPostCompactResync = d.buildPostCompactResync; clearMainModelRecoveryTimer = d.clearMainModelRecoveryTimer; dispatchAccepted = d.dispatchAccepted;
   dispatchFailed = d.dispatchFailed; dispatchPrepare = d.dispatchPrepare; displaySlice = d.displaySlice; freshCtx = d.freshCtx; freshCtxForGeneration = d.freshCtxForGeneration;
   goStaleTerminal = d.goStaleTerminal; mainModelRecoveryActive = d.mainModelRecoveryActive; manuallyResumeMainModelRecovery = d.manuallyResumeMainModelRecovery; notifyExternal = d.notifyExternal; persistState = d.persistState;
-  probeExtensionApiStale = d.probeExtensionApiStale; probeMainModelRecovery = d.probeMainModelRecovery; releaseContinuationDispatchStandDown = d.releaseContinuationDispatchStandDown; releaseInitialSessionLoadBarrier = d.releaseInitialSessionLoadBarrier; rememberCtx = d.rememberCtx;
+  probeExtensionApiStale = d.probeExtensionApiStale; probeMainModelRecovery = d.probeMainModelRecovery; releaseContinuationDispatchStandDown = d.releaseContinuationDispatchStandDown; releaseInitialSessionLoadBarrier = d.releaseInitialSessionLoadBarrier; rememberCtx = d.rememberCtx; resetZombieRetryStreak = d.resetZombieRetryStreak;
   resolveCarryover = d.resolveCarryover; scheduleSessionTimeout = d.scheduleSessionTimeout; sendContinuation = d.sendContinuation; sendRearmDelayMs = d.sendRearmDelayMs; sessionManagerId = d.sessionManagerId; warnIfStaleAtEntry = d.warnIfStaleAtEntry;
   startDrafting = d.startDrafting; activeGoalSurfaceCommand = d.activeGoalSurfaceCommand; archiveCurrentGoal = d.archiveCurrentGoal;
 }
@@ -1568,6 +1569,10 @@ async function cmdLoop(args: string, ctx: ExtensionContext): Promise<void> {
         ...(stored.builder && stored.stopReason?.startsWith("max iterations reached") ? { maxIterations: stored.iteration + stored.maxIterations } : {}),
       };
       if (!persistState(ctx)) { state.loop = stored; return; }
+      // An explicit resume grants the zero-stream watchdog a fresh budget
+      // for this loop: the operator saying "push again" wins over the
+      // exhausted streak (same precedent as the stall-window reset above).
+      resetZombieRetryStreak(ctx.cwd, "loop");
       if (resetTimeWindow || resetTokenBudget) {
         appendLedger(ctx.cwd, "loop_bound_window_reset", {
           timeWindow: resetTimeWindow,
