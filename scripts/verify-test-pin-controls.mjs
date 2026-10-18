@@ -71,7 +71,7 @@ function stripComments(text) {
   return result;
 }
 try {
-  for (const name of ["extensions", "tests", "prompts", "scripts", ".github", "package.json", "bunfig.toml"]) fs.cpSync(path.join(root, name), path.join(scratch, name), { recursive: true });
+  for (const name of ["extensions", "tests", "prompts", "scripts", "schemas", ".github", "package.json", "bunfig.toml"]) fs.cpSync(path.join(root, name), path.join(scratch, name), { recursive: true });
   fs.symlinkSync(path.join(root, "node_modules"), path.join(scratch, "node_modules"), "dir");
   fs.mkdirSync(path.join(scratch, "audit"));
   for (const name of ["EXTERNAL-REPAIR-PROPOSALS-2026-10-12.md", "EXTERNAL-REPAIR-EVIDENCE-2026-10-12.json"]) fs.copyFileSync(path.join(root, "audit", name), path.join(scratch, "audit", name));
@@ -115,12 +115,9 @@ try {
     ["full brief loses policy", "prompts/goal-loop-continuation.md", "${LONG_RUNNING_JUDGMENT_POLICY}", "", ["delta-only-continuation"], "builder:", /LONG-RUNNING JUDGMENT POLICY|full brief carries canonical judgment policy/],
     // 7 specific configuration regressions: a release-isolation control already
     // inspects each branch in tests/ci-workflow-concurrency.test.ts.
-    ["release run cancellation inverted", "extensions/goal-continuation.ts:placeholder", "cancel-in-progress: ${{ github.event_name != 'release' }}", "cancel-in-progress: true", [], "release run cancellation", /release-isolation|run-level cancellation/, "ci-workflow-concurrency"],
+    ["release run cancellation inverted", ".github/workflows/publish.yml", "cancel-in-progress: ${{ github.event_name != 'release' }}", "cancel-in-progress: true", ["ci-workflow-concurrency"], "release run cancellation", /run-level cancellation applies to push/],
   ];
-  for (const [name, file, before, after, files, pattern, failure, altFile] of mutations) {
-    if (!file.includes(":placeholder")) edit(file, text => text.replaceAll(before, after));
-    run(name, files, pattern, failure);
-  }
+  for (const [name, file, before, after, files, pattern, failure] of mutations) { edit(file, text => text.replaceAll(before, after)); run(name, files, pattern, failure); }
   function pythonCheck(name, failure = false) {
     const out = spawnSync("python3", ["scripts/check-external-repair-proposals.py"], { cwd: scratch, encoding: "utf8", timeout: 10_000 });
     assert.equal(out.error, undefined);
