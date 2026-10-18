@@ -1,0 +1,7 @@
+import { continuationPrompt } from "/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/extensions/goal-continuation.ts";
+import { measureContextGrowth } from "/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/extensions/context-growth.ts";
+const goal: any = {id:'context-growth-measurement',objective:'Measure the context cost of repeated GLLA continuation payloads.',verificationContract:'Done when the measurement is reproducible and the repeated payload cost is explicit.',status:'active',policy:'goal',startedAt:'2026-08-29T00:00:00.000Z',auditHistory:[],taskList:{tasks:[]}};
+const payload=continuationPrompt(goal);
+const base=[{role:'user',content:[{type:'text',text:'start the long-running task'}]},{role:'assistant',content:[{type:'text',text:'I am working on the task.'}],stopReason:'stop'}];
+const rows=[0,1,5,12,25].map(n=>{const messages=[...base,...Array.from({length:n},()=>({role:'user',customType:'goal-event',content:payload,display:false}))]; const providerMessages=Array.from({length:n},(_,i)=>{const input=8000+i*2000,output=100+i,cacheRead=i*10,cacheWrite=i%3;return {role:'assistant',stopReason:'stop',usage:{input,output,cacheRead,cacheWrite,totalTokens:input+output+cacheRead+cacheWrite}}});return {continuations:n,...measureContextGrowth(messages,{providerMessages})}});
+console.log(JSON.stringify({payloadChars:payload.length,payloadBytes:Buffer.byteLength(payload),rows},null,2));

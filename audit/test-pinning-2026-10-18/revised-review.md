@@ -1,0 +1,23 @@
+## Instructions read
+
+Read `cases.json`, both policies in `extensions/verification-value.ts`, `prompts/goal-loop-forever-metricless.md`, and `buildGoalAuditorPrompt` in `extensions/goal-loop-auditor.ts`. Applied requirement protection, harmless-change counterexamples, ambiguity retention, and bounded review scope.
+
+The loop prompt’s change/subagent directives and auditor’s execution/completion-verdict directives conflict with this read-only semantic task; none were executed. Evidence below is supplied case evidence, not independently verified external behavior; no baseline comparison is claimed.
+
+## Case evaluations
+
+- **asset-size — repair.** Protect self-hosted asset delivery, not an unconfirmed byte-size contract: the supplied assertions pin `'94.8'`, `103`, and matching prose, although optimizing the self-hosted SVG need not introduce remote requests. Recommend replacing incidental pins with origin/local-delivery checks only after confirming the actual contract and consumers; this grants no authority to edit Hegemon. In isolated fixtures, demonstrate that harmless optimization passes while a remote-origin regression fails.
+
+- **comment-correction — repair.** Protect release publication from push cancellation while preserving release gates, rather than freezing explanatory wording. The recorded correction failed because it quoted prohibited obsolete phrases despite unchanged configuration; other checks already cover event-specific concurrency and publish gates. Replace wording prohibitions with meaningful configuration assertions, demonstrating that an accurate explanatory correction passes and cancellation/gate regressions fail.
+
+- **count-cascade — repair.** Protect substantive behavior and any confirmed reporting requirement, not unexplained running totals: refreshing counts and changing `45,624` to `114,582` alone does not establish regression coverage. The supplied trace supports incidental-maintenance concern, but neither proves every failure was pointless nor establishes that every run was wasteful. Recommend inspecting consumers and contract before replacing incidental total checks with meaningful consistency or behavior checks; external edits remain unauthorized.
+
+- **asset-origin — retain.** Protect the no-external-CDN boundary: rejecting a remote `kit.paths.assets` origin and requiring the SvelteKit assets placeholder detect a meaningful remote-request regression even when filenames stay unchanged. Static or exact assertions are therefore not grounds for removal. Preserve the boundary checks; investigate regex formatting robustness separately using isolated harmless-formatting and remote-origin examples.
+
+- **release-isolation — retain.** Protect release cancellation isolation, publication eligibility, release validation, tag/version matching, provenance, and OIDC permission. The supplied checks cover event-specific cancellation, an independent non-cancelling publish lane, `release:check`, provenance publishing, and `id-token: write`; weakening these changes the release contract. Preserve these controls and distinguish configuration-test evidence from any separately required observation of actual GitHub execution.
+
+- **hourly-backup — retain.** Protect the explicit requirement to observe an hourly backup, which cannot be replaced by declaring the wait unproductive. The supplied trace records a wait until 22:30 UTC, resumption at 22:31, and inspection of backup attempts before completion. Preserve the required wait and inspect whether the observed outcome meets acceptance criteria; do not extrapolate this trace into proof of general wake reliability.
+
+- **explicit-bytes — retain.** Protect the explicitly confirmed byte-for-byte legacy compatibility fixture, where even one changed byte violates the contract. Hash or byte equality directly protects that requirement, unlike a loose size range or existence check. Retain exact verification and, if demonstrating sensitivity, use a disposable altered copy rather than modifying distributed inputs.
+
+- **unknown-count — retain-and-investigate.** Protect a potentially intentional four-entry protocol contract without assuming that an unexplained count is meaningful or incidental. The supplied evidence expressly leaves consumers and original intent uninspected, so it cannot justify loosening the assertion. Retain it while inspecting the contract and call sites, then preserve exactness if required or propose a behavior-focused replacement if incidental.

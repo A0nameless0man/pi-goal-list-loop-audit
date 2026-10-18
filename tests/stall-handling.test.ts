@@ -601,8 +601,13 @@ test("v0.34.51: the hanging-verification cause is named by the timeout branch (p
   // The 3-strike pause is gone; a hanging verification command is now caught
   // by the auditor watchdog timeout, which names the cause before asking for
   // an explicit resume.
-  assert.match(g, /Check long-running verification commands, then \$\{activeGoalSurfaceCommand\("resume"\)\} to retry the isolated auditor\./, "timeout action names long-running commands");
-  assert.match(g, /completion audit timed out — no verifier verdict was produced/, "timeout copy is sanitized while the diagnostic is retained separately");
+  // Both the initial completion and restored-audit paths must explain the
+  // timeout. A concatenated-source match could hide one broken handler.
+  for (const file of ["extensions/loops/goal-auditor-hooks.ts", "extensions/loops/goal-tools.ts"]) {
+    const handler = fs.readFileSync(file, "utf-8");
+    assert.match(handler, /Check long-running verification commands, then \$\{activeGoalSurfaceCommand\("resume"\)\} to retry the isolated auditor\./, `${file}: actionable timeout`);
+    assert.match(handler, /completion audit timed out — no verifier verdict was produced/, `${file}: sanitized timeout`);
+  }
   assert.ok(!g.includes("a verification command is hanging (ssh/sudo/long test runs stall the stream)"), "3-strike pauseReason gone");
   assert.ok(!g.includes("model broken or a verification command hanging"), "3-strike notify gone");
 });
