@@ -28,6 +28,19 @@ function jobSection(text: string, name: string): string {
   return next < 0 ? body : body.slice(0, next);
 }
 
+function assertFailureTempScope(text: string): void {
+  for (const name of ['quality', 'publish']) {
+    const job = jobSection(text, name);
+    const jobEnv = /^    env:[^\n]*(?:\n(?: {6}[^\n]*|[ \t]*))*/m.exec(job)?.[0] ?? '';
+    assert.doesNotMatch(jobEnv, /\$\{\{\s*runner\./, `${name}: runner context is invalid in job-level env`);
+    const checkStep = job.split(/^      - /m).find(step => /run:\s*npm run release:check/.test(step));
+    assert.ok(checkStep, `${name} release-check step exists`);
+    for (const key of ['TMPDIR', 'TEMP', 'TMP']) {
+      assert.match(checkStep, new RegExp(`${key}:\\s*\\$\\{\\{\\s*runner\\.temp\\s*\\}\\}`), `${name}: ${key} is set on the producer step`);
+    }
+  }
+}
+
 function assertReleaseIsolation(text: string): void {
   const head = runLevel(text);
   assert.match(head, /github\.event_name == 'release'/, "run-level group separates release events");
@@ -74,6 +87,7 @@ test("release isolation, gates and quality permissions remain configured", () =>
   assertReleaseIsolation(publish);
   assertReleaseGates(publish);
   assertQuality(publish);
+  assertFailureTempScope(publish);
   assertCompatibility(compat);
 });
 
@@ -84,6 +98,7 @@ test("harmless comment edits, error prose and line endings do not change the con
   assertReleaseGates(comments + edited);
   assertQuality(edited.replace("  quality:\n", "  quality:\n    # npm publish; id-token: write are not allowed here\n"));
   assertCompatibility(comments + compat.replace(/^\s*#.*$/gm, ""));
+  assertFailureTempScope(comments + edited.replace(/\n/g, "\r\n"));
 });
 
 for (const [risk, before, after, check] of [
@@ -94,6 +109,7 @@ for (const [risk, before, after, check] of [
   ["provenance removed", "npm publish --provenance --access public", "npm publish --access public", assertReleaseGates],
   ["OIDC removed", "id-token: write", "id-token: read", assertReleaseGates],
   ["tag comparison inverted", "process.env.RELEASE_TAG !== expected", "process.env.RELEASE_TAG === expected", assertReleaseGates],
+  ["invalid job-level runner context", "    steps:", "    env:\n      TMPDIR: ${{ runner.temp }}\n    steps:", assertFailureTempScope],
 ] as const) {
   test(`meaningful invalid configuration is rejected: ${risk}`, () => {
     assert.ok(publish.includes(before), "mutation applies to the fixture");
