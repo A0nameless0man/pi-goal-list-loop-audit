@@ -2,7 +2,20 @@
 
 ## Unreleased
 
+## 0.39.37 — publishable waiting UI release (2026-10-18)
+
+- Includes the clearer waiting/completion UI and reliability improvements
+  described under 0.39.36 below.
+- Fix GitHub's workflow-validation failure: set runner-based temporary
+  directories on the release-check steps, not in job-level environment blocks.
+  Keep failure-artifact capture, release isolation, OIDC and all release gates.
+- Add a regression control rejecting the invalid job-level runner context.
+
 ## 0.39.36 — clearer waiting UI and human handoffs (2026-10-18)
+
+GitHub tag retained, but not published to npm: workflow validation rejected
+job-level runner context before the publication job could start. Superseded by
+0.39.37 without rewriting the tag.
 
 ### Human-facing completion and waiting messages
 
