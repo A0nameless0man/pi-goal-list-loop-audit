@@ -145,6 +145,8 @@ test("main agent tab starts with the current agent and drills in", () => {
     "mainAgent",
     "mainModelFallbacks",
     "mainModelFallbackThinkingLevels",
+    "forbiddenModels",
+    "blockForbiddenModelSwitches",
     "mainModelRetryMinutes",
     "mainModelSameModelRetries",
     "hourlyRetryProbe",
