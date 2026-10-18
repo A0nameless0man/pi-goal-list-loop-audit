@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { compactDisplayText } from "./goal-loop-core.js";
 import { Box, Text, truncateToWidth } from "@earendil-works/pi-tui";
+import { humanCheckTime, humanTextPreview } from "./human-handoff.js";
 
 export const ACTION_REMINDER_CUSTOM_TYPE = "glla-action-reminder";
 
@@ -146,8 +147,8 @@ export function buildAbortedAssistantNotice(input: {
 }): string {
   const reminder = buildActionReminder(input);
   return reminder.presentation.parkState === "automatic"
-    ? `${input.kind === "wait" ? "Scheduled" : "Background"} wait saved; this turn ended intentionally — ${reminder.presentation.why} ${reminder.presentation.next} No manual resume is needed while the owned wake remains registered and no hold applies.`
-    : `GLLA paused this turn safely — ${reminder.presentation.why} ${reminder.presentation.next}`;
+    ? "Waiting saved; this turn ended intentionally. See the waiting card for the next check. Your work is saved."
+    : "GLLA paused this turn intentionally. Your work is saved; see the action card above for what to do next.";
 }
 
 /** Build the durable, user-facing explanation for a GLLA pause. Pi's core
@@ -183,11 +184,11 @@ export function buildActionReminder(input: {
     presentation.next,
     ...(presentation.resumeHint ? [presentation.resumeHint] : []),
     parkState === "redirect"
-      ? "The saved goal is held while the current turn handles the new request."
+      ? "Your work is saved while I handle the new request."
       : parkState === "automatic"
-        ? "This turn ends intentionally. Pi may show a red abort line; this is not a failed assessment. Your saved work is intact; no manual action is needed while the owned wake remains registered and no hold applies."
-        : "Your saved work is intact; this turn stopped before more work could be lost.",
-    ...(diagnostic ? [`Diagnostic: ${compactDisplayText(diagnostic)}`] : []),
+        ? "Your work is saved. This turn ends intentionally; a host abort message does not mean the work was lost."
+        : "Your work is saved.",
+    ...(presentation.why !== compactDisplayText(reason) || diagnostic ? ["More details are available in the expanded message and /glla status."] : []),
   ].join("\n");
   return {
     content,
@@ -217,7 +218,7 @@ export function buildPausePresentation(input: {
   parkState: ActionReminderParkState;
 }): ActionReminderPresentation {
   const displayed = { ...input, reason: compactDisplayText(input.reason), action: compactDisplayText(input.action), resumeCommand: compactDisplayText(input.resumeCommand), resumeAt: input.resumeAt ? compactDisplayText(input.resumeAt) : undefined };
-  const why = displayed.reason.trim() || "The current turn cannot continue safely.";
+  const why = humanTextPreview(displayed.reason) || "The current turn cannot continue safely.";
   if (displayed.parkState === "redirect") {
     return {
       heading: "Goal safely parked — handling your new request now",
@@ -229,25 +230,25 @@ export function buildPausePresentation(input: {
   }
   if (displayed.kind === "standby") {
     return {
-      heading: "Waiting — work is safely parked",
+      heading: "Waiting",
       why,
-      next: "No action is needed; the background completion will wake this work automatically.",
+      next: "No action is needed while this session is active. I will check the background result when it arrives.",
       parkState: displayed.parkState,
     };
   }
   if (displayed.kind === "wait") {
     return {
-      heading: "Waiting — work is safely parked",
+      heading: "Waiting",
       why,
       next: displayed.resumeAt
-        ? `Assessment check saved for ${displayed.resumeAt}${displayed.resumeAt.endsWith("Z") ? " (UTC)" : ""}. GLLA's admitted heartbeat releases it shortly after that deadline; holds can delay it. A saved deadline does not prove completion or a live wake after closing the session. Inspect /glla status for current registration.`
-        : "No check deadline is recorded; automatic wake is unconfirmed. Inspect /glla status rather than waiting on prose.",
+        ? `Next check: ${humanCheckTime(displayed.resumeAt)}. This is a progress check, not a promise of completion. No action is needed while the session is active and automatic checks are enabled; use /glla status if unsure.`
+        : "No next check is scheduled. Use /glla status to check what is needed before waiting.",
       parkState: displayed.parkState,
     };
   }
   if (displayed.kind === "decision") {
     return {
-      heading: "Decision needed — work is safely parked",
+      heading: "Your decision is needed",
       why,
       next: displayed.action
         ? (frameTweakSuggestion(displayed.action) ?? `Next: ${displayed.action}`)
@@ -262,20 +263,20 @@ export function buildPausePresentation(input: {
     // prominent and point to it when the only suggested action is retry.
     const resumeOnly = !displayed.action || /^(?:(?:run|use)\s+)?[`'"]?\/(?:goal|list|loop|glla)\s+resume[`'"]?[.!]?$/i.test(displayed.action);
     return {
-      heading: "Action needed — work is safely parked",
+      heading: "Your help is needed",
       why,
       next: resumeOnly
-        ? "Next: Resolve the prerequisite described above and report the result."
+        ? "Next: Complete the requirement described above, then tell me the result."
         : (frameTweakSuggestion(displayed.action) ?? `Next: ${displayed.action}`),
       resumeHint: displayed.resumeCommand
-        ? `After the prerequisite is resolved: ${displayed.resumeCommand} retries the work; it does not resolve the blocker.`
+        ? `Then use ${displayed.resumeCommand} to continue. Resuming alone does not fix the blocker.`
         : undefined,
       resumeCommand: displayed.resumeCommand,
       parkState: displayed.parkState,
     };
   }
   return {
-    heading: "Action needed — work is safely parked",
+    heading: "Work needs attention",
     why,
     next: frameTweakSuggestion(displayed.action) ?? `Next: ${displayed.action || displayed.resumeCommand}`,
     resumeCommand: displayed.resumeCommand,
@@ -284,7 +285,7 @@ export function buildPausePresentation(input: {
 }
 
 export function registerActionReminderRenderer(pi: ExtensionAPI): void {
-  pi.registerMessageRenderer(ACTION_REMINDER_CUSTOM_TYPE, (message, { outputPad }, theme) => {
+  pi.registerMessageRenderer(ACTION_REMINDER_CUSTOM_TYPE, (message, { outputPad, expanded }, theme) => {
     const details = message.details as Partial<ActionReminderDetails> | undefined;
     const diagnostics = compactDisplayText(details?.diagnostic ?? "");
     const kind = details?.kind ?? "blocked";
@@ -306,20 +307,20 @@ export function registerActionReminderRenderer(pi: ExtensionAPI): void {
     const box = new Box(outputPad, 1, (t) => theme.bg("customMessageBg", t));
     box.addChild(new Text(theme.fg(color, heading), 0, 0));
     // The prerequisite is primary information, not a muted diagnostic.
-    box.addChild(new Text(`Why: ${presentation.why}`, 0, 0));
+    box.addChild(new Text(`Why: ${expanded ? compactDisplayText(details?.reason ?? presentation.why) : presentation.why}`, 0, 0));
     if (presentation.next) box.addChild(new Text(theme.fg("accent", presentation.next), 0, 0));
     if (presentation.resumeCommand && presentation.parkState !== "automatic") {
       box.addChild(new Text(presentation.resumeHint ?? theme.fg("dim", `Resume: ${presentation.resumeCommand}`), 0, 0));
     }
     if (presentation.parkState === "redirect") {
-      box.addChild(new Text(theme.fg("dim", "The saved goal is held while the current turn handles the new request."), 0, 0));
-    } else if (presentation.parkState === "automatic") {
-      box.addChild(new Text(theme.fg("dim", "Your saved work is intact; no manual action is needed while the owned wake remains registered and no hold applies."), 0, 0));
+      box.addChild(new Text(theme.fg("dim", "Your work is saved while I handle the new request."), 0, 0));
     } else {
-      box.addChild(new Text(theme.fg("dim", "Your saved work is intact; this turn stopped before more work could be lost."), 0, 0));
+      box.addChild(new Text(theme.fg("dim", "Your work is saved."), 0, 0));
     }
-    if (diagnostics) {
+    if (expanded && diagnostics) {
       box.addChild(new Text(theme.fg("dim", `Diagnostic: ${diagnostics}`), 0, 0));
+    } else if (diagnostics || presentation.why !== compactDisplayText(details?.reason ?? "")) {
+      box.addChild(new Text(theme.fg("dim", "More details: expand this message or use /glla status."), 0, 0));
     }
     return {
       render: (width: number) => width <= 0 ? [] : box.render(width).map((line) => truncateToWidth(line, width, "…")),

@@ -811,7 +811,9 @@ export function buildRichTerminalParts(args: {
    * evidence remains in the archive. */
   showVerification?: boolean;
 }): RichTerminalParts {
-  const { findings, tests, next } = partitionRichDetails(args.details);
+  const { findings, tests, next } = partitionRichDetails(args.chat
+    ? args.details.filter(detail => !/^\s*Evidence\s*:/i.test(detail))
+    : args.details);
   if (!args.chat) {
     // The archive preserves technical Verdict:/Audit: details in the evidence
     // table instead of dropping them — partitionRichDetails routes only
@@ -1316,8 +1318,12 @@ export function buildTerminalApprovalRender(input: TerminalApprovalRenderInput):
   // filter; absent stays absent.
   // v0.38.55 (full parity): values ride unclipped — the card shares
   // everything the archive knows.
+  const resolution = resolveCompletionSummary(facts, candidate);
+  // A legacy/incomplete recap still has useful human fields. Read those
+  // directly for display; keep the strict recorded-facts resolver unchanged
+  // for the durable archive and independent audit.
   const richBrief = humanCompletionBrief(
-    resolveCompletionSummary(facts, candidate).summary,
+    resolution.usedFallback ? candidate : resolution.summary,
     140,
     RICH_FULL_VALUE_BUDGET,
     input.priorCompletionSummary,
@@ -1327,8 +1333,12 @@ export function buildTerminalApprovalRender(input: TerminalApprovalRenderInput):
   // earns the full `### Summary` section on the terminal card (and the
   // archive human layer). Headline echo, verification, Next, recap, and
   // every recycled payload keep their bounds.
-  const resolvedSummary = resolveCompletionSummary(facts, candidate).summary;
-  const structured = structuredSummaryLines(resolvedSummary);
+  if (resolution.usedFallback && richBrief.outcome === "(outcome not recorded)") {
+    richBrief.outcome = input.status === "complete"
+      ? "Work finished; a plain-language result was not recorded."
+      : "Work stopped; a plain-language result was not recorded.";
+  }
+  const structured = structuredSummaryLines(resolution.usedFallback ? candidate : resolution.summary);
   // v0.38.37 (audit 2026-09-08): the deliberate non-do comes from the
   // agent's complete_goal leftOut claim — never invented. Filler ("none")
   // drops via the same briefValueContent filter; absent stays absent.

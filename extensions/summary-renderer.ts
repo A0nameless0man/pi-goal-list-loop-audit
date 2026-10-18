@@ -1,5 +1,6 @@
 import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
 import { Box, Markdown, stripTerminalSequences, truncateToWidth, type MarkdownTheme } from "@earendil-works/pi-tui";
+import { compactHumanSummary } from "./human-handoff.js";
 
 export type SummaryTone = "success" | "warning" | "error" | "accent" | "dim" | "text";
 
@@ -76,12 +77,13 @@ function summaryTheme(theme: Theme, sectionTone: SummaryTone): MarkdownTheme {
 }
 
 export function registerSummaryRenderer(pi: Pick<ExtensionAPI, "registerMessageRenderer">): void {
-  pi.registerMessageRenderer("goal-event", (message, { outputPad }, theme) => {
+  pi.registerMessageRenderer("goal-event", (message, { outputPad, expanded }, theme) => {
     // Continuations share this custom type. Only durable terminal receipts
     // receive summary styling; the default host renderer handles other events.
     if (!(message.details as { terminalApprovalGoalId?: string } | undefined)?.terminalApprovalGoalId || typeof message.content !== "string") return undefined;
     const box = new Box(outputPad, 1, text => theme.bg("customMessageBg", text));
-    for (const block of summaryMarkdownBlocks(message.content)) {
+    const content = expanded ? message.content : compactHumanSummary(message.content).content;
+    for (const block of summaryMarkdownBlocks(content)) {
       const firstLine = block.split("\n")[0] ?? "";
       const heading = structuralHeading(firstLine) ?? "";
       const tone = summaryHeadingTone(heading);

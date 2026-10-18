@@ -306,6 +306,7 @@ import { buildStatusText, buildWidgetLines, type AuditDisplayProgress } from "..
 import { selectQuotaWaitReroute } from "../quota-retry.js";
 import { buildFinalRepoStateLines, buildTerminalApprovalRender, clipSummaryValue, compactCompletionSummary, compactTerminalCompletionSummary, completionSummaryDensityNote } from "../completion-summary.js";
 import { persistApprovalRender, replayUndeliveredApprovalRenders } from "../approval-render-store.js";
+import { HUMAN_HANDOFF_GUIDANCE } from "../human-handoff.js";
 import { resolveAuditorThinkingLevel } from "../auditor-thinking.js";
 import {
   defaultAgentDir,
@@ -617,7 +618,7 @@ function registerAgentTools(pi: any): void {
     name: "complete_goal",
     label: "Complete goal",
     description: "Submit a completion claim for detached audit; this does NOT complete or approve the goal. Use only when the objective is genuinely satisfied. Return without waiting for the auditor; GLLA delivers the final user summary after verified approval and durable archive.",
-    promptGuidelines: ["complete_goal queues a nonterminal claim. Do not say done, complete, approved, or accepted as a completion verdict while audit is pending. Do not poll or wait; if needed give only a brief pending status. GLLA posts the final outcome summary after approval; do not duplicate it."],
+    promptGuidelines: ["complete_goal queues a nonterminal claim. Do not say done, complete, approved, or accepted as a completion verdict while audit is pending. Do not poll or wait; if needed give only a brief pending status. GLLA posts the final outcome summary after approval; do not duplicate it.", HUMAN_HANDOFF_GUIDANCE],
     parameters: Type.Object({
       // v0.34.136: completionSummary adopts the six-label recap from
       // audit/COMPLETION-SUMMARY-POLICY-2026-08-19.md (Outcome / Changed
@@ -629,11 +630,11 @@ function registerAgentTools(pi: any): void {
       completionSummary: Type.Optional(Type.String({
         description:
           "Six-label recap — one line per label, every label required (use `none` when empty): " +
-          "Outcome: <what was delivered> · Changed: <files/behavior/decision> · Evidence: <key commit/report/result> · " +
+          "Outcome: <plain-language result for the user> · Changed: <short explanation of changed behavior, not a file inventory> · Evidence: <key commit/report/result> · " +
           "Tests: <bounded commands + pass/fail, or `not run — <reason>`> · Unresolved: <remaining risk, or `none`> · " +
           "Next: <one follow-up hint, or `none`>. " +
-          "A section-structured Outcome (##/### headers) renders in full as the card Summary section — " +
-          "structure is the price of length. " +
+          "Keep the human explanation short; put detailed findings in findingGroups and proof in verificationSummary/gateRows. " +
+          "Structured-long Outcome and findings remain available in the detailed record. " +
           "See audit/COMPLETION-SUMMARY-POLICY-2026-08-19.md and docs/DESIGN-long-running-supervision.md. Free-form prose is allowed but discouraged; incomplete input receives a recorded-facts-only fallback at terminalization.",
       })),
       outcomeClaims: Type.Optional(Type.Array(Type.Object({
@@ -2592,11 +2593,12 @@ function registerAgentTools(pi: any): void {
   pi.registerTool(defineTool({
     name: "pause_goal",
     label: "Pause goal",
+    promptGuidelines: [HUMAN_HANDOFF_GUIDANCE],
     description: "Pause the active goal with a reason and suggested action. Classify proposed human decisions with interruption.reason and concrete interruption.evidence; material exceptions cannot auto-default. Authorized mechanical/reversible work should continue, not pause. For manual-action blockers, lead with the unmet prerequisite and give the human action needed to resolve it, not just a resume command. Verify available authorized tools before claiming you cannot inspect a page or inbox; do not assume access or permission to handle payment details. Unknown decisions are returned for local classification without adopting an option. Use when blocked on user input or unable to make progress. Pausing ABORTS the current turn immediately — after this call, stop; never keep working. When the user interrupts with a NEW task ('do X first'), pass redirect=\"<their request>\" instead: the goal parks but the turn CONTINUES so you work X immediately — a plain pause strands the redirect until the user nudges. Never use redirect to dodge a real blocker, decision, or wait. When the user must CHOOSE between options, pass kind=\"decision\" with the options list (recommended = 1-based index of the best one) — decision pauses render as a prominent DECISION NEEDED card and pop a picker for the user. Time-gated waits (retry at a specific time) use kind=\"wait\" with resumeAt (ISO). Quota-caused parks (rate-limit/plan-quota/billing wording in the reason, or a recent subagent quota error) are automatically converted to monitored auto-retry waits — park normally and the reset wait re-fires on its own. Operational failures use kind=\"error\". If you have a concrete fix command, put the exact command in suggestedAction with kind blocked/error — it is offered as an Accept-first decision (no separate question needed). A `/goal tweak` or `/list tweak` suggestion rewrites the operator's objective or contract, so phrase it as a question for the operator rather than an imperative `Run ...` order; the pause card frames any tweak suggestion as `Question: should this tweak be applied?` automatically. For background dependencies use wait_for_background with exact runIds instead of pausing. Legacy kind=\"standby\" requires those same runIds and admits an owned wait, not a freeze. VOCABULARY (v0.28.24): decision options and reasons must reference REAL commands only — /goal resume, /goal cancel, /goal tweak \"<new text>\", /list remove N, /list next, /list resume, /loop stop, /loop resume. These all act on the ACTIVE goal/item: there is NO /goal drop and NO command takes a goal id. Never show goal ids to the user — name the thing ('the active goal', 'list item \"<short name>\"'); ids are internal plumbing the user cannot act on.",
     parameters: Type.Object({
-      reason: Type.String({ description: "Why the work is paused: name the unmet prerequisite first; put completed-work context afterward" }),
+      reason: Type.String({ description: "One or two plain sentences saying what is preventing progress. Do not paste the investigation, completed-work report or verifier mechanics here; put supporting evidence in interruption.evidence. For waits name the condition being awaited." }),
       runIds: Type.Optional(Type.Array(Type.String(), { description: "Legacy standby only: exact owned dependency run ids. Prefer wait_for_background.", minItems: 1, maxItems: 32 })),
-      suggestedAction: Type.Optional(Type.String({ description: "Concrete action that resolves the blocker, or the decision needed. A resume command retries work; it does not resolve a prerequisite" })),
+      suggestedAction: Type.Optional(Type.String({ description: "Tell the person exactly what to do: concrete steps, the relevant document or exact command, and what result to report. A resume command alone does not resolve a blocker. Do not repeat the reason or investigation." })),
       kind: Type.Optional(Type.Union([Type.Literal("decision"), Type.Literal("error"), Type.Literal("wait"), Type.Literal("blocked"), Type.Literal("standby")], { description: "Pause class: decision (user picks an option), error (operational failure), wait (time-gated), blocked (generic), standby (waiting on a background subagent — its native completion wakes the goal, no manual action)" })),
       options: Type.Optional(Type.Array(Type.String(), { description: "For kind=decision: the options the user picks between (one line each)" })),
       recommended: Type.Optional(Type.Number({ description: "For kind=decision: 1-based index of the recommended option" })),
@@ -3094,11 +3096,11 @@ function registerAgentTools(pi: any): void {
           details: reminder.details,
         }, { triggerTurn: false });
         if (effectiveKind === "wait" && !redirect) {
-          ctx.ui.notify(`Scheduled wait saved — ${safePauseReason}\n${reminder.presentation.next}`, "info");
-          notifyExternal(ctx, `Scheduled wait saved. ${reminder.presentation.next}`);
+          // The canonical card already explains why and when. Do not echo
+          // the entire report in a second transcript notification.
+          notifyExternal(ctx, `Waiting. ${reminder.presentation.next}`);
         } else {
-          ctx.ui.notify(`${goalNoun()} paused by agent: ${safePauseReason}${safePauseAction ? `\n\n→ ${safePauseAction}` : ""}`, "info");
-          notifyExternal(ctx, `${goalNoun()} paused: ${(safePauseAction ? `${safePauseReason} → ${safePauseAction}` : safePauseReason).slice(0, 200)}`);
+          notifyExternal(ctx, `${reminder.presentation.heading}: ${reminder.presentation.why}`);
         }
       }
       if (!droppedImpossible && !redirect) {

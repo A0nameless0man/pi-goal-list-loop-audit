@@ -1,5 +1,6 @@
 import type { State, MainModelRecoveryRuntime } from './goal-loop-core.js';
 import { unconfirmedCompactionStatus, type CompactionStatus } from './compaction-status.js';
+import { humanCheckTime } from './human-handoff.js';
 
 /** Presentation only. Never use these states as dispatch permissions. */
 export type ExecutionHealth = 'idle' | 'complete' | 'cancelled' | 'running' | 'tool-wait'
@@ -148,8 +149,8 @@ export function projectUiStatus(state: State, context: UiStatusContext): UiStatu
   if (goal?.status === 'paused' && goal.pauseKind !== 'wait' && goal.pauseKind !== 'standby' && !legacyProviderPause) {
     base.resumeAction = goal.pauseKind === 'decision'
       ? `${mode === 'list' ? '/list decide' : '/goal decide'} resolves the pending choice`
-      : `${resume} retries work after the prerequisite is resolved; it does not fix the blocker`;
-    return finish('blocked', 'user', goal.pauseSuggestedAction ?? (goal.pauseKind === 'decision' ? '/goal decide to resolve the pending choice' : `${resume} when the prerequisite is resolved`), goal.pauseReason ?? 'Work paused');
+      : `After completing the required action, use ${resume} to continue`;
+    return finish('blocked', 'user', goal.pauseSuggestedAction ?? (goal.pauseKind === 'decision' ? `${mode === 'list' ? '/list decide' : '/goal decide'} to resolve the pending choice` : 'Complete the requirement described below, then report the result'), goal.pauseReason ?? 'Work paused');
   }
   if (recoveryOwned && recovery?.manualResumeRequired) return finish('blocked', 'user', `${resume} after resolving the recovery prerequisite`, recovery.reason);
   if (loop && !loop.active && !providerWait && !loop.backgroundWait) return finish('blocked', 'user', `${resume} when ready`, loop.stopReason ?? 'Loop held');
@@ -185,9 +186,9 @@ export function projectUiStatus(state: State, context: UiStatusContext): UiStatu
           && evidence.scheduledCheck?.heartbeatArmed === true;
         return finish(registered ? 'waiting' : 'unconfirmed', registered ? 'automatic' : 'inspect',
           registered
-            ? `Assessment at ${base.checkAt}${base.checkAt?.endsWith('Z') ? ' (UTC)' : ''} · GLLA heartbeat; completion must be checked`
-            : `Check saved for ${base.checkAt}; live wake registration missing — /glla status`,
-          registered ? undefined : 'Saved deadline is not a live wake');
+            ? `Next check: ${humanCheckTime(base.checkAt!)}. No action needed while this session is active; this checks progress, not completion.`
+            : `Check saved for ${humanCheckTime(base.checkAt!)}. Automatic checking is not confirmed; use /glla status`,
+          registered ? undefined : 'A check time is saved, but no automatic check is registered');
       }
       const tool = evidence.tool;
       if (tool && validTime(tool.startedAt, now) && Number.isFinite(tool.budgetMs) && tool.budgetMs > 0 && now - tool.startedAt < tool.budgetMs) {
