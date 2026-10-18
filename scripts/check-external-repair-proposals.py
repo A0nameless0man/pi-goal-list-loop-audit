@@ -46,8 +46,13 @@ tree = ast.parse(collector)
 imports = {alias.name for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
 assert imports <= {'datetime','hashlib','json','os','stat'}
 # Inspect actual open flags and output destination rather than their spelling.
-opens = [node for node in ast.walk(tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == 'open']
-assert opens and all({'O_RDONLY', 'O_NOFOLLOW'} <= {part.attr for part in ast.walk(node) if isinstance(part, ast.Attribute)} for node in opens)
+opens = [node for node in ast.walk(tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) and node.func.value.id == 'os' and node.func.attr == 'open']
+def open_flags(node):
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
+        return open_flags(node.left) | open_flags(node.right)
+    assert isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == 'os'
+    return {node.attr}
+assert opens and all(len(node.args) >= 2 and open_flags(node.args[1]) == {'O_RDONLY', 'O_NOFOLLOW'} for node in opens)
 writes = [node for node in ast.walk(tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == 'write_text']
 assert len(writes) == 1
 expected_output = ast.parse("ROOT / 'audit' / 'EXTERNAL-REPAIR-EVIDENCE-2026-10-12.json'", mode='eval').body
