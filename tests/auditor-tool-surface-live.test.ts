@@ -100,8 +100,8 @@ async function runProbe(args: string[]): Promise<ProbeOutcome> {
           },
         },
       );
-      child.stdout.on("data", () => {});
-      child.stderr.on("data", () => {});
+      child.stdout?.on("data", () => {});
+      child.stderr?.on("data", () => {});
       const timer = setTimeout(() => {
         exit = "timeout-kill";
         try { child.kill("SIGKILL"); } catch { /* already gone */ }
