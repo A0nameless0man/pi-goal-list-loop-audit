@@ -28,8 +28,18 @@ function run(name, files, pattern, failure) {
   const log = `${out.stdout ?? ""}${out.stderr ?? ""}`;
   fs.writeFileSync(path.join(scratch, `${results.length}.log`), log);
   assert.equal(out.error, undefined, `${name}: process ran within bound`);
-  if (failure) { assert.notEqual(out.status, 0, `${name}: must reject regression`); assert.match(log, failure, `${name}: intended check must fail, not an import error`); }
-  else assert.equal(out.status, 0, `${name}: ${log}`);
+  // bun test does NOT prefix a (fail) marker; failures appear as
+  // "AssertionError: <intended-message>" or "fail: <test>". The intended
+  // check is verified by (a) the actual exit status and (b) the absence of
+  // "is not a function / cannot find module" so we know we didn't import-error.
+  if (failure) {
+    assert.notEqual(out.status, 0, `${name}: must reject regression (got exit ${out.status})`);
+    const intended = typeof failure === "string" ? new RegExp(failure) : failure;
+    assert.match(log, intended, `${name}: intended check must fail, not an import error`);
+    assert.doesNotMatch(log, /Cannot find module|is not a function|SyntaxError/, `${name}: import/parse error, not the intended assertion`);
+  } else {
+    assert.equal(out.status, 0, `${name}: harmless change must still pass\n${log}`);
+  }
   results.push({ name, expected: failure ? "meaningful regression rejected" : "harmless change accepted", status: "pass", processExit: out.status });
   fs.writeFileSync(path.join(scratch, "results.json"), JSON.stringify(results, null, 2));
   restore();
