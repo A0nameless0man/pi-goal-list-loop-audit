@@ -34,6 +34,7 @@ import {
   __testOnlySetZombieRetryDelay,
   __testOnlySetZombieRetryMaxAttempts,
   __testOnlySetZombieFallbackAttempt,
+  __testOnlySetTurnStartAt,
 } from "../extensions/loops/goal-activation.js";
 import activate, {
   __testOnlyLoadState,
@@ -411,24 +412,31 @@ test("v0.39.x: a fresh episode after a fallback episode reports same-route (no s
   assert.equal(retryNotifies().length, 1);
   assert.ok(!retryNotifies()[0]!.message.includes("routed via the fallback model"), "first attempt reports same-route");
 
-  // The retried turn streams: a later hang is a FRESH episode, not a
-  // recurrence of episode 1 — its retry must report same-route even though
-  // an earlier episode engaged fallback.
-  await pi.fire("agent_start", {}, ctx);
-  __testOnlyHeartbeatTick();
-  await tick(300);
-  assert.equal((readState(cwd).loop as { active: boolean }).active, true, "fresh-episode retry reactivates");
-  assert.equal(fallbackCalls.length, 0, "fresh episode does not engage fallback");
-  assert.equal(retryNotifies().length, 2);
-  assert.ok(!retryNotifies()[1]!.message.includes("routed via the fallback model"), "fresh episode reports same-route (stale flag cleared)");
-
-  // Still silent afterwards: the next abort IS recurrent — fallback engages.
+  // Still silent: the next abort IS recurrent — fallback engages (flag set).
   __testOnlyHeartbeatTick();
   await tick(300);
   assert.equal((readState(cwd).loop as { active: boolean }).active, true);
-  assert.equal(fallbackCalls.length, 1, "recurrence re-engages fallback");
+  assert.equal(fallbackCalls.length, 1, "recurrence engages fallback");
+  assert.equal(retryNotifies().length, 2);
+  assert.ok(retryNotifies()[1]!.message.includes("routed via the fallback model"), "recurrent attempt reports fallback routing");
+
+  // The retried turn then STREAMS: a later hang is a FRESH episode, not a
+  // recurrence — its retry must report same-route even though an earlier
+  // episode engaged fallback (audit 2026-10-18 Gap 1: without the per-attempt
+  // reset the stale flag would falsely claim fallback routing here while
+  // the stub is never even called). agent_start opens the turn, the
+  // backdated begin-marker plus a tool_call prove stream flowed after it
+  // (deterministic: no same-millisecond flake in the never-streamed guard).
+  await pi.fire("agent_start", {}, ctx);
+  __testOnlySetTurnStartAt(Date.now() - 5000);
+  await pi.fire("tool_call", { toolName: "read", name: "read" }, ctx);
+  __testOnlyHeartbeatTick();
+  await tick(300);
+  assert.equal((readState(cwd).loop as { active: boolean }).active, true, "fresh-episode retry reactivates");
+  assert.equal(fallbackCalls.length, 1, "fresh episode does not re-engage fallback");
   assert.equal(retryNotifies().length, 3);
-  assert.ok(retryNotifies()[2]!.message.includes("routed via the fallback model"), "recurrent attempt reports fallback routing");
+  assert.ok(!retryNotifies()[2]!.message.includes("routed via the fallback model"), "fresh episode reports same-route (stale flag cleared)");
+  assert.equal(readLedger(cwd).filter((e) => e.type === "zombie_retry_fallback_engaged").length, 1, "no new engagement ledgered for the fresh episode");
 });
 
 test("v0.39.x: a missing-permission park never arms the automatic retry and keeps its reason", async () => {
