@@ -39,6 +39,7 @@ import activate, {
   __testOnlyLoadState,
   __testOnlyResetOwnerSession,
   __testOnlyResetStaleFlag,
+  __testOnlyResetTerminalFlags,
 } from "../extensions/loops/goal.js";
 import { __testOnlyResetZombieRunWatchdog, __testOnlyHeartbeatTick, __testOnlySetZombieRunWindows } from "../extensions/goal-heartbeat.js";
 import { readState } from "../extensions/goal-loop-core.js";
@@ -98,6 +99,7 @@ function zombieStop(loop: { stopReason?: unknown }): boolean {
 beforeEach(() => {
   __testOnlyResetStaleFlag();
   __testOnlyResetOwnerSession();
+  __testOnlyResetTerminalFlags();
   __testOnlyResetZombieRunWatchdog();
   __testOnlyResetZombieAutoRetry();
   __testOnlySetZombieRetryMaxAttempts(3);
