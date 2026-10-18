@@ -36,7 +36,7 @@ import { AUDIT_FINDINGS_REL, LOOP_AUDIT_MARKER, listAuditCollectTarget, projectA
 import { buildLoopCompletionSummary, compactCompletionSummary, compactTerminalCompletionSummary } from "./completion-summary.js";
 import { ProjectRollup, discoverGllaProjects, filterPremature, formatChallengesJson, formatChallengesTable, formatReliabilityJson, formatReliabilityTable, formatOutcomesJson, formatOutcomesTable, formatRollupJson, formatRollupTable, rollupProject } from "./goal-loop-stats.js";
 import { OVERRIDABLE_AGENT_TYPES, resolveEffectiveSubagentModel } from "./goal-loop-subagents.js";
-import { Settings, globalSettingsPath, loadSettings, projectSettingsPath, saveSettings, settingsProvenance } from "./goal-settings.js";
+import { Settings, globalSettingsPath, loadSettings, projectSettingsPath, saveSettings, settingsProvenance, subagentFallbackRoleSources } from "./goal-settings.js";
 import { resolveGllaStateDir } from "./glla-state-root.js";
 import { resolveAuditorThinkingLevel } from "./auditor-thinking.js";
 import { modelRef } from "./main-model-recovery.js";
@@ -3637,7 +3637,10 @@ async function cmdSettings(args: string, ctx: ExtensionContext): Promise<void> {
       fmt("subagentModelStrategy", "subagentModelStrategy"),
       fmt("subagentModelOverrides", "subagentModelOverrides"),
       fmt("subagentThinkingOverrides", "subagentThinking"),
-      fmt("subagentFallbacks", "subagentFallbacks"),
+      ...(Object.keys(effectiveSettings.subagentFallbacks ?? {}).length
+        ? Object.entries(effectiveSettings.subagentFallbacks ?? {}).map(([role, chain]) =>
+          `subagentFallbacks:${role}: ${(chain as string[]).join(" → ")}  [${subagentFallbackRoleSources(ctx.cwd)[role] ?? "default"}]`)
+        : [`subagentFallbacks: (unset)  [${prov.subagentFallbacks?.source ?? "default"}]`]),
       fmt("toolOverrides", "toolOverrides"),
       fmt("auditCap", "auditCap"),
       fmt("auditCapHard", "auditCapHard"),
