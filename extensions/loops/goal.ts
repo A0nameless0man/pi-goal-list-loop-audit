@@ -90,7 +90,7 @@ export {
 } from "./goal-session.js";
 export { __testOnlySetLastCompactionAt, __testOnlyResetStarvationGate, __testOnlyLoadState, __testOnlyRegisterAgentTools, __testOnlyRememberCtx, __testOnlyDisplayActivityFor, __testOnlyResetToolActivity, __testOnlySetLastRealActivityAt, __testOnlySetLastActivityAt, __testOnlySetCompactionInFlight, __testOnlyPostCompactDebt, __testOnlyResetPostCompactDebt, noteCompactionStarted, noteCompactionSettled, isCompactionInFlight } from "./goal-ui.js";
 export { auditorRetryPlan, runDetachedCompletionWithFallback, __testOnlySetAuditorRecoveryRetryDelay, __testOnlyResetAuditorRecoveryRuntime, type AuditorModelCandidate } from "./goal-auditor-hooks.js";
-export { handleSettingChoice } from "./goal-settings-ui.js";
+export { handleSettingChoice, saveSubagentFallbackChain } from "./goal-settings-ui.js";
 
 /* ------------------------------------------------------------------ */
 /* Decomposition step 2: the command surface and loop machinery moved  */
