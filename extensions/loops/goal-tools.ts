@@ -3100,7 +3100,7 @@ function registerAgentTools(pi: any): void {
           // the entire report in a second transcript notification.
           notifyExternal(ctx, `Waiting. ${reminder.presentation.next}`);
         } else {
-          notifyExternal(ctx, `${reminder.presentation.heading}: ${reminder.presentation.why}`);
+          notifyExternal(ctx, `${reminder.presentation.heading}: ${reminder.presentation.why}\n${reminder.presentation.next}`);
         }
       }
       if (!droppedImpossible && !redirect) {

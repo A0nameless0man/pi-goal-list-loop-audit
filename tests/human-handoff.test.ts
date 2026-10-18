@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 import { compactHumanSummary, humanCheckTime, humanTextPreview, HUMAN_HANDOFF_GUIDANCE } from "../extensions/human-handoff.js";
 import { buildActionReminder, registerActionReminderRenderer } from "../extensions/action-reminder.js";
@@ -7,7 +8,7 @@ import { buildUiStatusCard } from "../extensions/goal-loop-display.js";
 import { projectUiStatus } from "../extensions/ui-status.js";
 import activate, { __testOnlyResetProcessState } from "../extensions/loops/goal.js";
 import { MockPi, seedGoal, seedState, makeMockCtx, tmpCwd } from "./harness/mock-pi.js";
-import type { Goal, State } from "../extensions/goal-loop-core.js";
+import { readState, type Goal, type State } from "../extensions/goal-loop-core.js";
 
 function renderedReminder(reason: string, action?: string, expanded = false) {
   const pi = new MockPi(); registerActionReminderRenderer(pi.api);
@@ -113,6 +114,41 @@ test("human handoff guidance reaches the real tool registrations", async () => {
     await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
     __testOnlyResetProcessState();
   }
+});
+
+test("the actual pause tool sends one card and keeps the required action in external notifications", async () => {
+  __testOnlyResetProcessState();
+  const cwd = tmpCwd(); seedState(cwd, { goal: seedGoal({ status: "active", autoContinue: false }) });
+  fs.writeFileSync(`${cwd}/.pi-glla/settings.json`, JSON.stringify({ notifyCmd: "capture-human-notice", autoResume: false }));
+  const notices: string[] = [];
+  const pi = new MockPi();
+  pi.execHandler = (_cmd, args) => { if (args[1] === "capture-human-notice") notices.push(args[3]!); return { code: 0, stdout: "", stderr: "" }; };
+  activate(pi.api); const ctx = makeMockCtx(cwd);
+  const reason = "Browser authorization is missing.";
+  const action = "Run /chrome authorize, then reply here.";
+  try {
+    await pi.fire("session_start", { reason: "startup" }, ctx);
+    await pi.fire("agent_start", {}, ctx);
+    await pi.runTool("pause_goal", { kind: "blocked", reason, suggestedAction: action,
+      interruption: { reason: "missing-permission", evidence: "Browser control requires the user's explicit authorization." } }, ctx);
+    assert.equal(pi.sent.filter(sent => sent.message.customType === "glla-action-reminder").length, 1);
+    assert.ok(notices.some(notice => notice.includes(reason) && notice.includes(action)));
+    assert.ok(!ctx.ui.notifies.some(notice => notice.message.includes(reason)), "no second full transcript notification");
+    assert.equal(readState(cwd).goal?.pauseSuggestedAction, action);
+    assert.equal(readState(cwd).goal?.status, "paused");
+  } finally {
+    await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
+    __testOnlyResetProcessState();
+  }
+});
+
+test("code samples cannot turn a supporting section into a user-action section", () => {
+  const source = "## Done\nSummary\nShort result.\n```md\nNext\nSome sample text.\n```\nA second short sentence.\nMore supporting text.\n• no completion review was recorded.\n• record: saved.md";
+  const compact = compactHumanSummary(source);
+  assert.doesNotMatch(compact.content, /Some sample text|More supporting text/);
+  assert.match(compact.content, /Short result/);
+  assert.match(compact.content, /no completion review was recorded/);
+  assert.match(compact.content, /record: saved.md/);
 });
 
 test("time and preview projections are timezone explicit, safe and honest about abbreviation", () => {

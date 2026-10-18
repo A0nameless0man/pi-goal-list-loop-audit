@@ -42,6 +42,10 @@ export function compactHumanSummary(content: string): { content: string; omitted
       if (hidden) omitted = true; else result.push(line);
       continue;
     }
+    // Canonical receipt trailers are outside the agent's body sections.
+    // A Summary-only receipt must never lose its no-review qualification,
+    // challenge disclosure or saved-record link to the paragraph budget.
+    if (/^•\s/.test(line)) section = "";
     const heading = line.trim().replace(/^#{2,4}\s+/, "").replace(/^\*\*(.*?)\*\*$/, "$1");
     if (/^(Summary|What Changed|Remaining|Verification|Next|Final Repository State)$/.test(heading)) {
       section = heading;

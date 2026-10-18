@@ -1,0 +1,121 @@
+# Production renderer captures
+
+Representative fixtures, not a live project run. Width: 100 terminal columns.
+
+## Blocked (default)
+
+⏸ GLLA Your help is needed
+ Why: A human reviewer needs to run the four desktop playtest tasks and record the results.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths…
+ Next: Follow docs/premium/HUMAN-PLAYTEST-QUICKSTART.md, record your observations, then reply here.
+ Then use /list resume to continue. Resuming alone does not fix the blocker.
+ Your work is saved.
+ More details: expand this message or use /glla status.
+
+## Blocked (expanded)
+
+⏸ GLLA Your help is needed
+ Why: A human reviewer needs to run the four desktop playtest tasks and record the results.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ Supporting investigation: verifier details, historical paths, passing gates and durable judgments.
+ End of supporting investigation.
+ Next: Follow docs/premium/HUMAN-PLAYTEST-QUICKSTART.md, record your observations, then reply here.
+ Then use /list resume to continue. Resuming alone does not fix the blocker.
+ Your work is saved.
+ More details: expand this message or use /glla status.
+
+## Waiting (default)
+
+⏳ GLLA Waiting
+ Why: The backup succeeded. The retention check still needs the normal rotation at 22:17 UTC.
+ Next check: 18 Oct 2026, 10:44 UTC. This is a progress check, not a promise of completion. No
+ action is needed while the session is active and automatic checks are enabled; use /glla status if
+ unsure.
+ Your work is saved.
+
+## Waiting (expanded)
+
+⏳ GLLA Waiting
+ Why: The backup succeeded. The retention check still needs the normal rotation at 22:17 UTC.
+ Next check: 18 Oct 2026, 10:44 UTC. This is a progress check, not a promise of completion. No
+ action is needed while the session is active and automatic checks are enabled; use /glla status if
+ unsure.
+ Your work is saved.
+
+## Completion (default)
+
+Done — Both panels now show readable field names.
+
+ — 0s elapsed · 1 audit
+ What Changed
+
+ - Both panels show readable questions
+ - Supporting change 1
+ - Supporting change 2
+ - Supporting change 3
+ Remaining
+
+ - The signed-in LinkedIn flow was not rechecked.
+   → Next: Try the signed-in flow.
+
+ • completion audit approved (1 review).
+ • record: saved.md
+
+ More details are available in the expanded message and saved record.
+
+## Completion (expanded)
+
+Done — Both panels now show readable field names.
+
+ — 0s elapsed · 1 audit
+ What Changed
+
+ 1. Labels
+ - Both panels show readable questions
+     - shared resolver in · labels.ts:42
+ - Supporting change 1
+     - implementation detail in · implementation.ts:1
+ - Supporting change 2
+     - implementation detail in · implementation.ts:2
+ - Supporting change 3
+     - implementation detail in · implementation.ts:3
+ - Supporting change 4
+     - implementation detail in · implementation.ts:4
+ - Supporting change 5
+     - implementation detail in · implementation.ts:5
+ - Supporting change 6
+     - implementation detail in · implementation.ts:6
+ - Supporting change 7
+     - implementation detail in · implementation.ts:7
+ - Supporting change 8
+     - implementation detail in · implementation.ts:8
+ Remaining
+
+ - The signed-in LinkedIn flow was not rechecked.
+   → Next: Try the signed-in flow.
+
+ • completion audit approved (1 review).
+ • record: saved.md

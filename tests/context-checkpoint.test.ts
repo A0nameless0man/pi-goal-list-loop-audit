@@ -186,10 +186,13 @@ test("real continuation payload growth is bounded after checkpoint projection", 
   // the one retained payload (27670 → 28465).
   // Shared durable-solution policy adds 1,186 serialized bytes to the ONE
   // retained payload. Cardinality/removal and exact flat-growth pins remain.
+  // Baseline 09be4350 already emitted 31547 (the prior policy added 1896
+  // bytes without refreshing this fixture). Human-handoff guidance adds
+  // another 788. Baseline/current logs are retained in the handoff audit.
   assert.deepEqual(bounded, [
-    { count: 5, messageCount: 4, serializedBytes: 29651, gllaMessageCount: 2, repeatedPayloads: 0, removedPayloads: 4 },
-    { count: 12, messageCount: 4, serializedBytes: 29651, gllaMessageCount: 2, repeatedPayloads: 0, removedPayloads: 11 },
-    { count: 25, messageCount: 4, serializedBytes: 29651, gllaMessageCount: 2, repeatedPayloads: 0, removedPayloads: 24 },
+    { count: 5, messageCount: 4, serializedBytes: 32335, gllaMessageCount: 2, repeatedPayloads: 0, removedPayloads: 4 },
+    { count: 12, messageCount: 4, serializedBytes: 32335, gllaMessageCount: 2, repeatedPayloads: 0, removedPayloads: 11 },
+    { count: 25, messageCount: 4, serializedBytes: 32335, gllaMessageCount: 2, repeatedPayloads: 0, removedPayloads: 24 },
   ]);
   // Serialized bytes consistent across counts (bounded by checkpoint + 1 payload)
   const b0 = bounded[0]!;

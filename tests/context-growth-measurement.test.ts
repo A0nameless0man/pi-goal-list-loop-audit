@@ -155,17 +155,20 @@ test("fixture: repeated real continuation payloads grow context linearly and are
   // 2026-10-18: intentional verification-value policy adds 1,887 chars,
   // 1,889 UTF-8 bytes and 1,896 serialized bytes. Exact measurement contract
   // retained; independently measured in audit/test-pinning-2026-10-18/measurements.json.
-  assert.equal(payload.length, 27_985);
-  assert.equal(new TextEncoder().encode(payload).byteLength, 28_101);
+  // Human-handoff authoring guidance: +788 chars / +784 UTF-8 bytes /
+  // +788 serialized bytes. Independently reproduced by the measurement
+  // receipt in audit/human-handoff-2026-10-18/context-measurements.json.
+  assert.equal(payload.length, 28_773);
+  assert.equal(new TextEncoder().encode(payload).byteLength, 28_885);
   assert.deepEqual(one, {
     messageCount: 3,
-    serializedBytes: 28_642,
-    textChars: 28_037,
-    estimatedTokens: 7_010,
+    serializedBytes: 29_430,
+    textChars: 28_825,
+    estimatedTokens: 7_207,
     gllaMessageCount: 1,
-    gllaSerializedBytes: 28_459,
-    gllaTextChars: 27_985,
-    gllaEstimatedTokens: 6_997,
+    gllaSerializedBytes: 29_247,
+    gllaTextChars: 28_773,
+    gllaEstimatedTokens: 7_194,
     uniqueGllaPayloadCount: 1,
     repeatedGllaPayloadCount: 0,
     repeatedGllaSerializedBytes: 0,
@@ -289,10 +292,10 @@ test("reported checkpoint shape stays pinned across all probe sizes", () => {
   // the per-payload constant moved: 25_451 -> 24_221 -> 24_131 chars.
   assert.deepEqual(rows, [
     { continuations: 0,  messageCount: 2,  serializedBytes: 183,  textChars: 52,  estimatedTokens: 13,  gllaMessageCount: 0,  gllaSerializedBytes: 0,  gllaTextChars: 0,  gllaEstimatedTokens: 0,  repeatedGllaPayloadCount: 0,  repeatedGllaSerializedBytes: 0,  provider: { sampleCount: 0,  inputTokens: 0,  outputTokens: 0,  cacheReadTokens: 0,  cacheWriteTokens: 0,  totalTokens: 0,  firstInputTokens: null,  latestInputTokens: null,    inputTokenDelta: null, incompleteSampleCount: 0 } },
-    { continuations: 1,  messageCount: 3,  serializedBytes: 28_642,  textChars: 28_037,  estimatedTokens: 7_010,  gllaMessageCount: 1,  gllaSerializedBytes: 28_459,  gllaTextChars: 27_985,  gllaEstimatedTokens: 6_997,  repeatedGllaPayloadCount: 0,  repeatedGllaSerializedBytes: 0,  provider: { sampleCount: 1,  inputTokens: 8_000,  outputTokens: 100,  cacheReadTokens: 0,  cacheWriteTokens: 0,  totalTokens: 8_100,  firstInputTokens: 8_000,  latestInputTokens: 8_000,    inputTokenDelta: 0, incompleteSampleCount: 0 } },
-    { continuations: 5,  messageCount: 7,  serializedBytes: 142_478,  textChars: 139_977,  estimatedTokens: 34_995,  gllaMessageCount: 5,  gllaSerializedBytes: 142_295,  gllaTextChars: 139_925,  gllaEstimatedTokens: 34_982,  repeatedGllaPayloadCount: 4,  repeatedGllaSerializedBytes: 113_836,  provider: { sampleCount: 5,  inputTokens: 60_000,  outputTokens: 510,  cacheReadTokens: 100,  cacheWriteTokens: 4,  totalTokens: 60_614,  firstInputTokens: 8_000,  latestInputTokens: 16_000,    inputTokenDelta: 8_000, incompleteSampleCount: 0 } },
-    { continuations: 12,  messageCount: 14,  serializedBytes: 341_691,  textChars: 335_872,  estimatedTokens: 83_968,  gllaMessageCount: 12,  gllaSerializedBytes: 341_508,  gllaTextChars: 335_820,  gllaEstimatedTokens: 83_955,  repeatedGllaPayloadCount: 11,  repeatedGllaSerializedBytes: 313_049,  provider: { sampleCount: 12,  inputTokens: 228_000,  outputTokens: 1_266,  cacheReadTokens: 660,  cacheWriteTokens: 12,  totalTokens: 229_938,  firstInputTokens: 8_000,  latestInputTokens: 30_000,    inputTokenDelta: 22_000, incompleteSampleCount: 0 } },
-    { continuations: 25,  messageCount: 27,  serializedBytes: 711_658,  textChars: 699_677,  estimatedTokens: 174_920,  gllaMessageCount: 25,  gllaSerializedBytes: 711_475,  gllaTextChars: 699_625,  gllaEstimatedTokens: 174_907,  repeatedGllaPayloadCount: 24,  repeatedGllaSerializedBytes: 683_016,  provider: { sampleCount: 25,  inputTokens: 800_000,  outputTokens: 2_800,  cacheReadTokens: 3_000,  cacheWriteTokens: 24,  totalTokens: 805_824,  firstInputTokens: 8_000,  latestInputTokens: 56_000,    inputTokenDelta: 48_000, incompleteSampleCount: 0 } },
+    { continuations: 1,  messageCount: 3,  serializedBytes: 29_430,  textChars: 28_825,  estimatedTokens: 7_207,  gllaMessageCount: 1,  gllaSerializedBytes: 29_247,  gllaTextChars: 28_773,  gllaEstimatedTokens: 7_194,  repeatedGllaPayloadCount: 0,  repeatedGllaSerializedBytes: 0,  provider: { sampleCount: 1,  inputTokens: 8_000,  outputTokens: 100,  cacheReadTokens: 0,  cacheWriteTokens: 0,  totalTokens: 8_100,  firstInputTokens: 8_000,  latestInputTokens: 8_000,    inputTokenDelta: 0, incompleteSampleCount: 0 } },
+    { continuations: 5,  messageCount: 7,  serializedBytes: 146_418,  textChars: 143_917,  estimatedTokens: 35_980,  gllaMessageCount: 5,  gllaSerializedBytes: 146_235,  gllaTextChars: 143_865,  gllaEstimatedTokens: 35_967,  repeatedGllaPayloadCount: 4,  repeatedGllaSerializedBytes: 116_988,  provider: { sampleCount: 5,  inputTokens: 60_000,  outputTokens: 510,  cacheReadTokens: 100,  cacheWriteTokens: 4,  totalTokens: 60_614,  firstInputTokens: 8_000,  latestInputTokens: 16_000,    inputTokenDelta: 8_000, incompleteSampleCount: 0 } },
+    { continuations: 12,  messageCount: 14,  serializedBytes: 351_147,  textChars: 345_328,  estimatedTokens: 86_332,  gllaMessageCount: 12,  gllaSerializedBytes: 350_964,  gllaTextChars: 345_276,  gllaEstimatedTokens: 86_319,  repeatedGllaPayloadCount: 11,  repeatedGllaSerializedBytes: 321_717,  provider: { sampleCount: 12,  inputTokens: 228_000,  outputTokens: 1_266,  cacheReadTokens: 660,  cacheWriteTokens: 12,  totalTokens: 229_938,  firstInputTokens: 8_000,  latestInputTokens: 30_000,    inputTokenDelta: 22_000, incompleteSampleCount: 0 } },
+    { continuations: 25,  messageCount: 27,  serializedBytes: 731_358,  textChars: 719_377,  estimatedTokens: 179_845,  gllaMessageCount: 25,  gllaSerializedBytes: 731_175,  gllaTextChars: 719_325,  gllaEstimatedTokens: 179_832,  repeatedGllaPayloadCount: 24,  repeatedGllaSerializedBytes: 701_928,  provider: { sampleCount: 25,  inputTokens: 800_000,  outputTokens: 2_800,  cacheReadTokens: 3_000,  cacheWriteTokens: 24,  totalTokens: 805_824,  firstInputTokens: 8_000,  latestInputTokens: 56_000,    inputTokenDelta: 48_000, incompleteSampleCount: 0 } },
   ]);
 });
 

@@ -1,0 +1,84 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=180s heartbeat=30s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/context-checkpoint.test.ts:
+(pass) authoritative checkpoint carries stable state only — no dynamic fields [4.38ms]
+184 |   // Continuation template growth since the last pin (interruption-
+185 |   // classification and honesty-era guidance): +795 serialized bytes on
+186 |   // the one retained payload (27670 → 28465).
+187 |   // Shared durable-solution policy adds 1,186 serialized bytes to the ONE
+188 |   // retained payload. Cardinality/removal and exact flat-growth pins remain.
+189 |   assert.deepEqual(bounded, [
+               ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
+    {
+      count: 5,
+      gllaMessageCount: 2,
+      messageCount: 4,
+      removedPayloads: 4,
+      repeatedPayloads: 0,
++     serializedBytes: 31547
+-     serializedBytes: 29651
+    },
+    {
+      count: 12,
+      gllaMessageCount: 2,
+      messageCount: 4,
+      removedPayloads: 11,
+      repeatedPayloads: 0,
++     serializedBytes: 31547
+-     serializedBytes: 29651
+    },
+    {
+      count: 25,
+      gllaMessageCount: 2,
+      messageCount: 4,
+      removedPayloads: 24,
+      repeatedPayloads: 0,
++     serializedBytes: 31547
+-     serializedBytes: 29651
+    }
+  ]
+
+ generatedMessage: true,
+     actual: [
+  [Object ...], [Object ...], [Object ...]
+],
+   expected: [
+  [Object ...], [Object ...], [Object ...]
+],
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-human-baseline-e2s0qB/tests/context-checkpoint.test.ts:189:10
+      at fn (node:test:215:18)
+(fail) real continuation payload growth is bounded after checkpoint projection [7.50ms]
+(pass) projection removes old goal events, inserts one checkpoint, and keeps newest payload [0.24ms]
+(pass) one goal event is a no-op and does not inject a checkpoint [0.03ms]
+(pass) zero-retention mode resynchronizes from the checkpoint without retaining payloads [0.02ms]
+(pass) loop-only projection bounds repeated payloads and carries loop authority [0.48ms]
+(pass) loop checkpoint is byte-stable across volatile loop progress (prefix-cache stability) [0.15ms]
+(pass) context hook projects loop-only state and records loop authority [23.52ms]
+(pass) paused goal plus active loop preserves both authorities in the checkpoint [0.77ms]
+(pass) oversized paused goal plus active loop reserves required checkpoint fields [0.52ms]
+(pass) context hook uses current durable state and records the projection [0.59ms]
+(pass) audit-2026-09-06: marker text without customType is content, never control plane [0.10ms]
+(pass) v0.38.54: context hook leaves the transcript alone by default (prefix-cache continuity) [0.36ms]
+(pass) v0.38.54: junk contextCheckpointProjection normalizes to unset (default off) [0.24ms]
+(pass) v0.38.54: settings menu carries the opt-in row, off by default [7.59ms]
+
+tests/context-growth-measurement.test.ts:
+(pass) fixture: repeated real continuation payloads grow context linearly and are isolated [8.81ms]
+(pass) reported checkpoint shape stays pinned across all probe sizes [5.76ms]
+(pass) provider capture preserves exact pi-ai usage and rejects partial data [0.14ms]
+(pass) measurement: failed turns and ordinary conversation remain separate from GLLA payload bytes [0.97ms]
+
+ 18 pass
+ 1 fail
+Ran 19 tests across 2 files. [685.00ms]
+[run-tests] failure diagnostics retained at /tmp/glla-test-processes-q1wmAf/failure.json
+[run-tests] cleanup evidence retained at /tmp/glla-test-processes-q1wmAf
+[run-tests] finished in 1s (exit 1)
