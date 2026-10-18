@@ -138,6 +138,15 @@ export function consumePauseAbort(input: {
   return marker;
 }
 
+/** Hosts may encode cancellation as an error stop. Recognizing this narrow
+ * transport vocabulary is not sufficient to hide it: callers must also
+ * consume the exact current-turn pause marker and match the saved pause. */
+export function isPauseAbortMessage(message: { stopReason?: unknown; errorMessage?: unknown }): boolean {
+  return message.stopReason === "aborted" || (message.stopReason === "error"
+    && typeof message.errorMessage === "string"
+    && /^(?:AbortError:\s*)?(?:This operation was aborted|The operation was aborted|Request was aborted|Operation aborted)\.?$/i.test(message.errorMessage.trim()));
+}
+
 export function buildAbortedAssistantNotice(input: {
   kind: ActionReminderKind;
   reason: string;
@@ -238,7 +247,7 @@ export function buildPausePresentation(input: {
   }
   if (displayed.kind === "wait") {
     return {
-      heading: "Waiting",
+      heading: "Waiting — work saved",
       why,
       next: displayed.resumeAt
         ? `Next check: ${humanCheckTime(displayed.resumeAt)}. This is a progress check, not a promise of completion. No action is needed while the session is active and automatic checks are enabled; use /glla status if unsure.`
@@ -289,7 +298,7 @@ export function registerActionReminderRenderer(pi: ExtensionAPI): void {
     const details = message.details as Partial<ActionReminderDetails> | undefined;
     const diagnostics = compactDisplayText(details?.diagnostic ?? "");
     const kind = details?.kind ?? "blocked";
-    const color = kind === "error" ? "error" : kind === "decision" ? "accent" : "warning";
+    const color = kind === "error" ? "error" : kind === "decision" || kind === "wait" || kind === "standby" ? "accent" : "warning";
     const parkState = details?.parkState ?? (kind === "wait" || kind === "standby" ? "automatic" : "stopped");
     const presentation = buildPausePresentation({
       kind,
@@ -306,9 +315,17 @@ export function registerActionReminderRenderer(pi: ExtensionAPI): void {
         : `⏸ GLLA ${presentation.heading}`;
     const box = new Box(outputPad, 1, (t) => theme.bg("customMessageBg", t));
     box.addChild(new Text(theme.fg(color, heading), 0, 0));
-    // The prerequisite is primary information, not a muted diagnostic.
-    box.addChild(new Text(`Why: ${expanded ? compactDisplayText(details?.reason ?? presentation.why) : presentation.why}`, 0, 0));
-    if (presentation.next) box.addChild(new Text(theme.fg("accent", presentation.next), 0, 0));
+    // A wait's check/action comes before its supporting reason. Blockers
+    // still lead with the prerequisite the person needs to resolve.
+    const timedWait = kind === "wait" && parkState === "automatic";
+    if (timedWait) {
+      box.addChild(new Text(theme.fg("accent", details?.resumeAt ? `Next check: ${humanCheckTime(details.resumeAt)}` : "No next check is scheduled."), 0, 0));
+      box.addChild(new Text("This turn stopped intentionally to wait — not because the task failed.", 0, 0));
+    }
+    box.addChild(new Text(`${timedWait ? "Waiting for" : "Why"}: ${expanded ? compactDisplayText(details?.reason ?? presentation.why) : presentation.why}`, 0, 0));
+    if (presentation.next) box.addChild(new Text(theme.fg("accent", timedWait && details?.resumeAt
+      ? "No action is needed while this session is active and automatic checks are enabled. This checks progress, not completion; use /glla status if unsure."
+      : presentation.next), 0, 0));
     if (presentation.resumeCommand && presentation.parkState !== "automatic") {
       box.addChild(new Text(presentation.resumeHint ?? theme.fg("dim", `Resume: ${presentation.resumeCommand}`), 0, 0));
     }

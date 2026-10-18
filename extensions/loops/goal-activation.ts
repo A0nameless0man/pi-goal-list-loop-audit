@@ -299,7 +299,7 @@ import {
 } from "../model-picker.js";
 import { bindBackgroundWaitRuntime, observeBackgroundStart, observeBackgroundTerminal, reconcileBackgroundWait, consumeBackgroundYield, backgroundWaitPromptContext } from "../background-wait-runtime.js";
 import { consumeRecoveryResume } from "../goal-recovery.js"; // decomposition step 3 (v0.34.111)
-import { buildAbortedAssistantNotice, buildActionReminder, clearPauseAbort, consumePauseAbort, markActionReminderTurnStart, observePausedHostAbort } from "../action-reminder.js";
+import { buildAbortedAssistantNotice, buildActionReminder, clearPauseAbort, consumePauseAbort, isPauseAbortMessage, markActionReminderTurnStart, observePausedHostAbort } from "../action-reminder.js";
 import { payloadGuardProjection } from "../payload-guard.js"; // v0.35.51 image-413 guard
 import { dropFailedErrorOnlyTurns, pruneCompactionPreparation } from "../context-hygiene.js"; // v0.35.52 error-turn hygiene
 import { projectCompactionPreparation } from "../compaction-input.js"; // bounded default-compactor input
@@ -1736,13 +1736,17 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
   pi.on("message_end", async (event: any, ctx: ExtensionContext) => {
     const msg: any = event?.message;
     if (isForeignCtx(ctx)) return;
-    if (msg?.role === "assistant" && msg.stopReason === "aborted") {
+    if (msg?.role === "assistant" && isPauseAbortMessage(msg)) {
       const marker = consumePauseAbort({
         ownerSession: ctx.sessionManager,
         goalId: state.goal?.id,
         aborted: true,
       });
-      if (marker && state.goal?.id === marker.goalId && state.goal.status === "paused") {
+      if (marker && state.goal?.id === marker.goalId && state.goal.status === "paused"
+        && (state.goal.pauseKind ?? "blocked") === marker.kind
+        && state.goal.pauseReason === marker.reason && state.goal.pauseResumeAt === marker.resumeAt) {
+        appendLedger(ctx.cwd, "pause_goal_abort_presented", { goalId: marker.goalId, kind: marker.kind,
+          transportStopReason: msg.stopReason });
         return {
           message: {
             ...msg,
