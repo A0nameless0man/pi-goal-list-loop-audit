@@ -11,7 +11,7 @@ import {
   resetContinuationInitialSend,
   sendContinuation,
 } from "../extensions/goal-continuation.js";
-import type { Goal } from "../extensions/goal-loop-core.js";
+import { LONG_RUNNING_JUDGMENT_POLICY, ACTIVE_EXECUTION_QUESTION_GUIDANCE, type Goal } from "../extensions/goal-loop-core.js";
 import activate, { __testOnlyResetOwnerSession } from "../extensions/loops/goal.js";
 import { MockPi, makeMockCtx, seedState, tick, tmpCwd } from "./harness/mock-pi.js";
 
@@ -42,6 +42,14 @@ function cleanGoal(overrides: Partial<Goal> = {}): Goal {
   } as Goal;
 }
 
+function assertFullBrief(content: string, goal: Goal): void {
+  assert.ok(content.includes(goal.objective), "full brief carries objective");
+  assert.ok(content.includes(goal.verificationContract!), "full brief carries contract");
+  assert.ok(content.includes(LONG_RUNNING_JUDGMENT_POLICY), "full brief carries canonical judgment policy");
+  assert.ok(content.includes(ACTIVE_EXECUTION_QUESTION_GUIDANCE), "full brief carries execution discipline");
+  assert.notEqual(content, buildMarkerContent(goal.id), "full brief is not merely the checkpoint");
+}
+
 test("marker is tiny and carries the dispatch marker", () => {
   const m = buildMarkerContent("20260903000000-delta01");
   assert.equal(m, "[GOAL CHECKPOINT goalId=20260903000000-delta01]");
@@ -69,7 +77,7 @@ test("clean goal needs no full — repair/recovery/audit/designer do", () => {
   );
   assert.equal(needsFullContinuation(cleanGoal({ agentRole: "designer" as any })), true);
   const full = continuationPrompt(cleanGoal());
-  assert.ok(full.length > 15000, `full prompt must stay material, got ${full.length}`);
+  assertFullBrief(full, cleanGoal());
 });
 
 test("builder: steady-state marker, resync+marker, dirty full", () => {
@@ -80,7 +88,7 @@ test("builder: steady-state marker, resync+marker, dirty full", () => {
 
   const first = buildContinuationContent(goal, { firstSend: true });
   assert.equal(first.kind, "full");
-  assert.ok(first.content.length > 15000, `first send must teach discipline once, got ${first.content.length}`);
+  assertFullBrief(first.content, goal);
 
   const resyncBlock = "[POST-COMPACTION RESYNC] trust disk\n\n";
   const resyncOnly = buildContinuationContent(goal, { resync: resyncBlock, firstSend: false });
@@ -92,7 +100,7 @@ test("builder: steady-state marker, resync+marker, dirty full", () => {
   const dirty = cleanGoal({ auditHistory: [{ at: "2026-09-03T00:00:00.000Z", approved: false, report: "needs work" } as any] });
   const dirtySend = buildContinuationContent(dirty, { firstSend: false });
   assert.equal(dirtySend.kind, "full");
-  assert.ok(dirtySend.content.length > 15000);
+  assertFullBrief(dirtySend.content, dirty);
 });
 
 test("v0.38.94: consecutive sends go full once, then marker (field: 909 full sends)", async () => {
@@ -111,7 +119,7 @@ test("v0.38.94: consecutive sends go full once, then marker (field: 909 full sen
   await tick(80);
   assert.equal(pi.sent.length, 1, "first send dispatches");
   const first = pi.sent[0]?.message.content ?? "";
-  assert.ok(first.length > 15000, `first send teaches the full brief, got ${first.length} chars`);
+  assertFullBrief(first, cleanGoal({ id }));
 
   await pi.fire("before_agent_start", { prompt: first }, ctx);
   await tick(80);
@@ -150,10 +158,7 @@ test("v0.38.94: rebind reset re-arms the one full brief (fresh context)", async 
   await sendContinuation(id);
   await tick(80);
   assert.equal(pi.sent.length, 3, "post-rebind send dispatches");
-  assert.ok(
-    (pi.sent[2]?.message.content ?? "").length > 15000,
-    "post-rebind first send is full again",
-  );
+  assertFullBrief(pi.sent[2]?.message.content ?? "", cleanGoal({ id }));
 });
 
 test("sendContinuation wires the delta-only branch with kind ledger", () => {
