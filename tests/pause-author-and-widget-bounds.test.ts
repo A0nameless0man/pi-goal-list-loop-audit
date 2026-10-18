@@ -21,7 +21,7 @@ test('pause attribution is explicit and unknown legacy sources are never blamed 
     const context = { now };
     const status = projectUiStatus(state, context);
     assert.equal(status.pauseSource, source ?? 'unknown');
-    assert.match(status.resumeAction!, /retries work.*does not fix the blocker/);
+    assert.match(status.resumeAction!, /After completing the required action, use \/goal resume to continue/);
     const card = buildWidgetLines(state, undefined, now, undefined, 120, { uiStatusContext: context })!.join('\n');
     const footer = buildStatusText(state, undefined, now, undefined, { uiStatusContext: context }, 200)!;
     assert.ok(card.includes(label), card);

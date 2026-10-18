@@ -74,7 +74,7 @@ test("redirect parks the goal but keeps the turn alive for the user's new task",
     assert.equal(reminder?.message.display, true, "redirect gets a prominent reminder card");
     assert.match(String(reminder?.message.content), /Goal safely parked — handling your new request now/);
     assert.match(String(reminder?.message.content), /open the two Gmail links/);
-    assert.match(String(reminder?.message.content), /saved goal is held while the current turn handles the new request/);
+    assert.match(String(reminder?.message.content), /Your work is saved while I handle the new request/);
     assert.doesNotMatch(String(reminder?.message.content), /this turn stopped/);
     assert.equal((reminder?.message as { details?: { parkState?: string } } | undefined)?.details?.parkState, "redirect");
   } finally {

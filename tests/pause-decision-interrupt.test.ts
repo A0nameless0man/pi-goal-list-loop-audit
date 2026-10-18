@@ -25,6 +25,7 @@
 //      stays pinned in the source.
 
 import { test, afterEach } from "node:test";
+import { conditionalBody } from "./harness/source-structure.js";
 import * as assert from "node:assert/strict";
 import * as fs from "node:fs";
 
@@ -155,7 +156,7 @@ test("decision pause persists options AND aborts the turn so the picker owns an 
   assert.match(res.content[0]!.text, /turn ends here/);
   assert.ok(pi.sent.some((entry) => entry.message.customType === "glla-action-reminder" && entry.message.display === true), "the pause has a GLLA-owned actionable reminder");
   const reminder = pi.sent.find((entry) => entry.message.customType === "glla-action-reminder");
-  assert.match(String(reminder?.message.content), /safely parked/);
+  assert.match(String(reminder?.message.content), /Your work is saved/);
   assert.match(String(reminder?.message.content), /decision card/);
 });
 
@@ -261,19 +262,12 @@ test("source pins: decision picker wiring + abort ordering survive refactors", (
   );
   // Abort is inside pause_goal's execute, guarded against the drop path.
   // v0.38.97: a user redirect is a second no-abort path (park-and-continue).
-  const exec = src.match(/name: "pause_goal",[\s\S]*?^ {4}\},$/m);
-  assert.ok(exec, "pause_goal registration found");
-  assert.match(
-    exec![0],
-    /if \(!droppedImpossible && !redirect\) \{[\s\S]{0,600}?ctx\.abort\(\)/,
-    "abort guarded by !droppedImpossible && !redirect",
-  );
-  assert.match(exec![0], /pause_goal_aborted_turn/, "abort ledgered");
-  assert.match(
-    exec![0],
-    /else if \(redirect && !droppedImpossible\) \{[\s\S]{0,300}?pause_goal_redirect/,
-    "redirect park skips the abort with its own ledger event",
-  );
+  const abort = conditionalBody(src, "!droppedImpossible && !redirect");
+  assert.match(abort, /ctx\.abort\(\)/, "abort is inside the guarded branch");
+  assert.match(abort, /pause_goal_aborted_turn/, "abort ledgered");
+  const redirect = conditionalBody(src, "redirect && !droppedImpossible");
+  assert.match(redirect, /pause_goal_redirect/, "redirect has its own ledger event");
+  assert.doesNotMatch(redirect, /ctx\.abort\(\)/, "redirect does not abort");
   // Lenient inference lives before the state guard.
   assert.match(
     src,
