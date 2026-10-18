@@ -25,7 +25,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import * as fs from "node:fs";
 import * as http from "node:http";
 import * as os from "node:os";
@@ -107,9 +107,9 @@ async function runProbe(args: string[]): Promise<ProbeOutcome> {
         try { child.kill("SIGKILL"); } catch { /* already gone */ }
         // Reap grandchildren (systemd-inhibit, node) orphaned by the kill.
         try {
-          const kids = Bun.spawnSync(["pgrep", "-P", String(child.pid)]).stdout.toString().trim().split("\n").filter(Boolean);
+          const kids = execSync(`pgrep -P ${child.pid}`).toString().trim().split("\n").filter(Boolean);
           for (const k of kids) { try { process.kill(Number(k), "SIGKILL"); } catch { /* gone */ } }
-        } catch { /* pgrep unavailable; runner reaps the rest */ }
+        } catch { /* no children left or pgrep unavailable */ }
         resolve();
       }, 90_000);
       child.on("close", (code, signal) => {
