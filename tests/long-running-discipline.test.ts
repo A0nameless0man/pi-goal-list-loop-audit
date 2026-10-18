@@ -5,6 +5,7 @@ import path from "node:path";
 
 import {
   ACTIVE_EXECUTION_QUESTION_GUIDANCE,
+  isMonitorGoal,
   buildSeedGrillMessage,
   LONG_RUNNING_JUDGMENT_POLICY,
 } from "../extensions/goal-loop-core.ts";
@@ -33,9 +34,10 @@ test("long-running supervision is event-driven with 250ms→15s fallback, not du
 
 test("monitor goals are display-only — scheduling is event-driven for every plane", () => {
   const cont = fs.readFileSync(path.resolve("extensions/goal-continuation.ts"), "utf8");
-  assert.match(cont, /scheduling is event-driven for every plane/i, "monitor throttle comment explains event-driven scheduling");
-  assert.match(cont, /Objective keywords do not attest monitoring/i);
-  assert.match(cont, /void MONITOR_CHECK_INTERVAL_MS; \/\/ deprecated throttle/i, "monitor throttle is retired but kept for compat");
+  for (const objective of ["monitor the server", "check hourly", "implement a feature"]) {
+    assert.equal(isMonitorGoal({ objective, createdAt: "2020-01-01T00:00:00Z" }), false,
+      "keywords and goal age cannot attest monitoring or authorize a throttle");
+  }
   // the old throttle block must not be present as active scheduling logic
   assert.doesNotMatch(cont, /if\s*\(delayMs === undefined && state\.goal && isMonitorGoal/);
   // Compatibility predicate fails closed; no inferred monitor throttles work.
