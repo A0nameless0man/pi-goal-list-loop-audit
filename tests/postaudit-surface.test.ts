@@ -14,25 +14,24 @@ import * as assert from "node:assert/strict";
 import * as fs from "node:fs";
 import { resolveReviewerConfig, type ReviewerConfig } from "../extensions/reviewer.ts";
 import { readGoalRuntimeSource } from "./harness/goal-source.js";
+import { conditionalBody } from "./harness/source-structure.js";
+import { SETTINGS_KEYS, type Settings } from "../extensions/goal-settings.js";
 
 const SRC = readGoalRuntimeSource();
 const CMDS = fs.readFileSync("extensions/goal-commands.ts", "utf-8");
-const SETTINGS_SRC = fs.readFileSync("extensions/goal-settings.ts", "utf-8");
 
 test("fireReviewer emits a SECOND notify with the review file path after the cascade", () => {
-  const branch = SRC.indexOf("if (!opts.manual && outcome.fired && outcome.reportPath)");
-  assert.ok(branch > 0, "surface-notify guard exists");
-  // The notify call may have its template string on the next line.
-  const ctxUiNotify = SRC.indexOf("ctx.ui.notify(", branch);
-  const arrow = SRC.indexOf("review written:", ctxUiNotify);
-  assert.ok(ctxUiNotify > 0 && arrow > 0 && arrow < ctxUiNotify + 200, "ctx.ui.notify with review-written prefix exists in that branch");
+  const branch = conditionalBody(SRC, "!opts.manual && outcome.fired && outcome.reportPath");
+  assert.match(branch, /ctx\.ui\.notify\(/);
+  assert.match(branch, /review written:/);
+  assert.match(branch, /outcome\.reportPath/);
 });
 
-test("surface-notify branch is preceded by the existing manual-suppressed notify", () => {
-  const suppressedIdx = SRC.indexOf("Postaudit suppressed: ${outcome.suppressedReason}");
-  const surfaceIdx = SRC.indexOf("↳ review written:");
-  assert.ok(suppressedIdx > 0 && surfaceIdx > 0, "both notify branches exist");
-  assert.ok(suppressedIdx < surfaceIdx, "surface notify comes after the suppressed notify");
+test("manual suppression notification has its own mutually exclusive guard", () => {
+  const branch = conditionalBody(SRC, "!outcome.fired && outcome.suppressedReason && opts.manual");
+  assert.match(branch, /ctx\.ui\.notify\(/);
+  assert.match(branch, /Postaudit suppressed:/);
+  assert.match(branch, /outcome\.suppressedReason/);
 });
 
 test("postaudit settings key takes precedence over legacy reviewer key (fireReviewer)", () => {
@@ -42,23 +41,20 @@ test("postaudit settings key takes precedence over legacy reviewer key (fireRevi
 });
 
 test("Settings type accepts both reviewer and postaudit keys", () => {
-  // goal-settings.ts has both fields as optional Record<string, unknown>.
-  assert.match(SETTINGS_SRC, /\/\*\*[^*]*v0\.26\.0: reviewer[\s\S]*?reviewer\?:\s*Record<string, unknown>;/);
-  assert.match(SETTINGS_SRC, /\/\*\*[^*]*v0\.27\.5: post-completion audit config[\s\S]*?postaudit\?:\s*Record<string, unknown>;/);
+  const settings: Settings = { reviewer: { mode: "on" }, postaudit: { mode: "off" } };
+  assert.deepEqual(settings.postaudit, { mode: "off" });
 });
 
 test("SETTINGS_KEYS includes postaudit and toolOverrides", () => {
-  // The display list pins both new keys; legacy `reviewer` is resolved
-  // via dual-read in fireReviewer but kept opaque in SETTINGS_KEYS.
-  assert.match(SETTINGS_SRC, /SETTINGS_KEYS[\s\S]*?"postaudit",?\s*\n\s*"toolOverrides",[\s\S]*?\]/); // v0.33.1: "reviewer" legacy alias follows
+  assert.ok(SETTINGS_KEYS.includes("postaudit"));
+  assert.ok(SETTINGS_KEYS.includes("toolOverrides"));
 });
 
 test("/glla postaudit opens the same menu as /glla reviewer (no behavioral split)", () => {
-  // Both keywords route to cmdReviewerSettings — there's ONE settings menu.
-  const keywordCheck = CMDS.indexOf('if (/^postaudit(?:\\s|$)/.test(trimmed))');
-  const routeCheck = CMDS.indexOf('await cmdReviewerSettings(ctx);', keywordCheck);
-  assert.ok(keywordCheck > 0, "/glla postaudit keyword check exists");
-  assert.ok(routeCheck > 0 && routeCheck < keywordCheck + 200, "the postaudit branch routes to cmdReviewerSettings");
+  for (const keyword of ["postaudit", "reviewer"]) {
+    const branch = conditionalBody(CMDS, `/^${keyword}(?:\\s|$)/.test(trimmed)`);
+    assert.match(branch, /await cmdReviewerSettings\(ctx\)/, `${keyword} opens the shared menu`);
+  }
 });
 
 test("/glla routes reviewer (legacy) and postaudit (new) without completion rows", () => {
