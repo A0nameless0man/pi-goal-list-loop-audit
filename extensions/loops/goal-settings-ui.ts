@@ -195,6 +195,7 @@ import {
   resolveDesignerConfig,
   saveSettings as persistSettings,
   settingsProvenance,
+  subagentFallbackRoleSources,
   type Settings,
 } from "../goal-settings.js";
 import { resolveDesignerModel } from "../designer-model.js";
@@ -773,6 +774,7 @@ async function openSettingsUI(ctx: ExtensionContext, initialSection?: SettingsSe
     const session = ctx.model as any;
     const sessionModel = session?.provider && session?.id ? `${session.provider}/${session.id}` : undefined;
     const rows = buildSettingsRows(settings, prov, {
+      subagentFallbackSources: subagentFallbackRoleSources(ctx.cwd),
       sessionModel,
       sessionThinkingLevel: ctx.thinkingLevel ?? "off",
       thinkingLevelsByRef: menuThinkingLevelsByRef(ctx),
