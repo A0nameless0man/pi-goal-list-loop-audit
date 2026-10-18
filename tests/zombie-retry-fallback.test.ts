@@ -385,6 +385,107 @@ test("v0.39.x: auto-retry preserves a refinement-parked builder without overridi
   assert.match(JSON.stringify(claimed), /replanning; expected building/, "refinement park gates submission until the scope question is answered");
 });
 
+test("v0.39.x: a fresh episode after a fallback episode reports same-route (no stale routing flag)", async () => {
+  __testOnlySetZombieRunWindows(0, 0);
+  __testOnlySetZombieRetryDelay(50);
+  const fallbackCalls: unknown[] = [];
+  __testOnlySetZombieFallbackAttempt(async () => { fallbackCalls.push(1); return true; });
+  const cwd = tmpCwd();
+  seedState(cwd, { loop: buildingLoop(3) });
+  const ctx = await freshSession(cwd, "zrf-episode");
+  currentCtx = ctx;
+  (globalThis as any).compactionGraceUntil = 0;
+  (globalThis as any).postCompletionSettleUntil = 0;
+  await pi.command("loop", "resume", ctx);
+  await tick();
+  const ui = ctx.ui as unknown as { notifies: Array<{ message: string }> };
+  const retryNotifies = () => ui.notifies.filter((n) => n.message.includes("Automatic retry"));
+
+  // Episode 1, attempt 1: fresh streak — same-route, honestly reported.
+  __testOnlyHeartbeatTick();
+  await tick(300);
+  assert.equal((readState(cwd).loop as { active: boolean }).active, true);
+  assert.equal(fallbackCalls.length, 0);
+  assert.equal(retryNotifies().length, 1);
+  assert.ok(!retryNotifies()[0]!.message.includes("routed via the fallback model"), "first attempt reports same-route");
+
+  // The retried turn streams: a later hang is a FRESH episode, not a
+  // recurrence of episode 1 — its retry must report same-route even though
+  // an earlier episode engaged fallback.
+  await pi.fire("agent_start", {}, ctx);
+  __testOnlyHeartbeatTick();
+  await tick(300);
+  assert.equal((readState(cwd).loop as { active: boolean }).active, true, "fresh-episode retry reactivates");
+  assert.equal(fallbackCalls.length, 0, "fresh episode does not engage fallback");
+  assert.equal(retryNotifies().length, 2);
+  assert.ok(!retryNotifies()[1]!.message.includes("routed via the fallback model"), "fresh episode reports same-route (stale flag cleared)");
+
+  // Still silent afterwards: the next abort IS recurrent — fallback engages.
+  __testOnlyHeartbeatTick();
+  await tick(300);
+  assert.equal((readState(cwd).loop as { active: boolean }).active, true);
+  assert.equal(fallbackCalls.length, 1, "recurrence re-engages fallback");
+  assert.equal(retryNotifies().length, 3);
+  assert.ok(retryNotifies()[2]!.message.includes("routed via the fallback model"), "recurrent attempt reports fallback routing");
+});
+
+test("v0.39.x: a missing-permission park never arms the automatic retry and keeps its reason", async () => {
+  __testOnlySetZombieRunWindows(0, 0);
+  __testOnlySetZombieRetryDelay(50);
+  const cwd = tmpCwd();
+  const ctx = await freshSession(cwd, "zrf-permission");
+  currentCtx = ctx;
+  (globalThis as any).compactionGraceUntil = 0;
+  (globalThis as any).postCompletionSettleUntil = 0;
+
+  await pi.runTool("list_add", { items: ["permission fence item — done when the hold stands"] }, ctx);
+  assert.equal((readState(cwd).goal as { status?: string } | null)?.status, "active");
+  const paused = await pi.runTool("pause_goal", {
+    reason: "missing permission: cannot read /secure/deploy-creds — grant access then /goal resume",
+    kind: "blocked",
+    interruption: { reason: "missing-permission", evidence: "deploy step requires /secure/deploy-creds which this session cannot read" },
+  }, ctx);
+  assert.ok(!JSON.stringify(paused).includes("Not paused"), "permission pause admitted");
+  const park = readState(cwd).goal as { status?: string; pauseReason?: string } | null;
+  assert.equal(park?.status, "paused");
+  assert.match(park?.pauseReason ?? "", /missing permission/);
+  assert.equal(readLedger(cwd).filter((e) => e.type === "interruption_admitted").length, 1);
+
+  // The watchdog sees a held owner, not a hung turn: nothing arms, nothing
+  // dispatches, the permission reason stands.
+  __testOnlyHeartbeatTick();
+  assert.equal(abortsOf(ctx), 0, "held turn is never aborted");
+  assert.equal(readLedger(cwd).filter((e) => e.type === "zombie_auto_retry_scheduled").length, 0, "no retry arms on a permission hold");
+  await tick(300);
+  const after = readState(cwd).goal as { status?: string; pauseReason?: string } | null;
+  assert.equal(after?.status, "paused");
+  assert.match(after?.pauseReason ?? "", /missing permission/, "original permission reason stands");
+  assert.equal(readLedger(cwd).filter((e) => e.type === "zombie_auto_retry_dispatched").length, 0, "no automatic dispatch under a permission hold");
+});
+
+test("v0.39.x: an explicit /goal pause superseding the abort wins over the pending retry", async () => {
+  __testOnlySetZombieRunWindows(0, 0);
+  __testOnlySetZombieRetryDelay(50);
+  const cwd = tmpCwd();
+  const ctx = await freshSession(cwd, "zrf-goal-supersede");
+  currentCtx = ctx;
+  (globalThis as any).compactionGraceUntil = 0;
+  (globalThis as any).postCompletionSettleUntil = 0;
+
+  await pi.runTool("list_add", { items: ["goal supersede item — done when the user pause wins"] }, ctx);
+  __testOnlyHeartbeatTick();
+  assert.equal(readLedger(cwd).filter((e) => e.type === "zombie_auto_retry_scheduled").length, 1);
+  await pi.command("goal", "pause", ctx);
+  await tick();
+  const stopped = readState(cwd).goal as { status?: string; pauseReason?: string } | null;
+  assert.equal(stopped?.status, "paused");
+  await tick(300);
+  const after = readState(cwd).goal as { status?: string; pauseReason?: string } | null;
+  assert.equal(after?.status, "paused", "superseded park stays parked");
+  assert.equal(after?.pauseReason, "paused by user", "explicit pause reason stands");
+  assert.equal(readLedger(cwd).filter((e) => e.type === "zombie_auto_retry_dispatched").length, 0, "pending retry bails on the superseded park");
+});
+
 test("v0.39.x: goal-owner recurrence routes via fallback and reactivates", async () => {
   __testOnlySetZombieRunWindows(0, 0);
   __testOnlySetZombieRetryDelay(50);
