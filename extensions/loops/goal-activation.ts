@@ -545,6 +545,11 @@ export function __testOnlySetZombieFallbackAttempt(fn: ((ctx: ExtensionContext) 
  * the v0.29.19 stall-window reset in cmdLoop resume). Auto-retry never calls
  * this — only explicit /goal resume · /loop resume · /glla resume paths. */
 export function resetZombieRetryStreak(cwd: string, key?: string): void {
+  // The resumed turn must be watchable: with a frozen stream clock the next
+  // abort would reproduce the latched abort key, and the latched stand-down
+  // would suppress it — leaving the resumed turn hanging forever unwatched.
+  abortedStandDown = false;
+  releaseZombieAbortKey();
   if (zombieRetryStreak.count === 0) return;
   if (key !== undefined && zombieRetryStreak.key !== "" && zombieRetryStreak.key !== key) return;
   zombieRetryStreak = { key: "", count: 0, lastAbortStreamAt: 0 };
