@@ -31,8 +31,9 @@ test('scheduled external assessment requires current-owner heartbeat registratio
   for (const width of [40, 120]) for (const compact of [true, false]) {
     const card = buildUiStatusCard(state, live, NOW, undefined, width, compact).join('\n');
     assert.match(card, /WAITING/);
-    assert.match(card, /check: 2026-10-10T12:10:00\.000Z/);
-    assert.match(card, /wake: GLLA assessment heartbeat/);
+    assert.match(card.replace(/\s+/g, ' '), /check: 10 Oct 2026,.*12:10 UTC/);
+    if (!compact) assert.match(card, /wake: GLLA assessment heartbeat/);
+    else assert.doesNotMatch(card, /wake: GLLA assessment heartbeat/);
     assert.doesNotMatch(card, /BLOCKED|paused by/);
     assert.match(buildUiStatusFooter(live, NOW, undefined, width), /WAITING/);
   }

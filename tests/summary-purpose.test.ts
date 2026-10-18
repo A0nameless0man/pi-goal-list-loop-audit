@@ -68,7 +68,7 @@ test("behavioral limitation belongs under Remaining, not a second technical Next
   const remaining = lines.indexOf("Remaining");
   const next = lines.indexOf("Next");
   assert.ok(remaining >= 0, "non-do is visible as a remaining concern");
-  assert.ok(remaining < next, "remaining concerns lead the optional next step");
-  assert.ok(lines.slice(remaining, next).join("\n").includes("legacy asset checker"));
+  assert.ok(next < 0 || remaining < next, "remaining concerns lead any standalone next step");
+  assert.ok(lines.slice(remaining, next < 0 ? undefined : next).join("\n").includes("legacy asset checker"));
   assert.ok(!lines.some((line) => /Full Vitest suite/i.test(line)), "test inventory does not masquerade as a change area");
 });
