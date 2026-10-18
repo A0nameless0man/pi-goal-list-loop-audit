@@ -14,6 +14,7 @@ import * as fs from "node:fs";
 import { wrap, buildWidgetLines } from "../extensions/goal-loop-display.ts";
 import type { Goal, State } from "../extensions/goal-loop-core.ts";
 import { readGoalRuntimeSource } from "./harness/goal-source.js";
+import { buildActionReminder } from "../extensions/action-reminder.js";
 
 function pausedGoal(over: Partial<Goal> = {}): Goal {
   return {
@@ -59,11 +60,15 @@ test("paused card wraps the suggested action and closes the branch on its last l
   assert.ok(lines.some((l) => l.startsWith("└─") && l.includes("regenerate the list fresh")), JSON.stringify(lines));
 });
 
-test("pause_goal tool notification carries the FULL reason AND suggested action", () => {
-  const src = readGoalRuntimeSource();
-  assert.match(src, /ctx\.ui\.notify\(`\$\{goalNoun\(\)\} paused by agent: \$\{safePauseReason\}\$\{safePauseAction \? `\\n\\n→ \$\{safePauseAction\}`/);
-  // external push carries both too (bounded), using the sanitized projections.
-  assert.match(src, /notifyExternal\(ctx, `\$\{goalNoun\(\)\} paused: \$\{\(safePauseAction/);
+test("pause handoff preserves the full reason while presenting the concrete action separately", () => {
+  const reason = "A human reviewer is needed. " + "Supporting investigation. ".repeat(100);
+  const action = "Run the four playtest tasks and report your observations.";
+  const reminder = buildActionReminder({ kind: "blocked", reason, action, resumeCommand: "/goal resume" });
+  assert.equal(reminder.details.reason, reason.trim());
+  assert.equal(reminder.details.action, action);
+  assert.ok(reminder.content.includes(action));
+  assert.ok(reminder.content.length < reason.length);
+  assert.match(reminder.content, /expanded message/);
 });
 
 const SRC = readGoalRuntimeSource();
@@ -112,7 +117,7 @@ test("pause_goal tool: structured kind/options/recommended/resumeAt persist to t
 
 test("pause_goal description: teaches the real command surface + no-id vocabulary (v0.28.24)", () => {
   // Extract the registration's string literal, independent of description length.
-  const m = SRC.match(/name: "pause_goal",\s*label: "Pause goal",\s*description: ("(?:[^"\\]|\\.)*"),\s*parameters: Type\.Object\(/);
+  const m = SRC.match(/name: "pause_goal",[\s\S]*?description: ("(?:[^"\\]|\\.)*"),\s*parameters: Type\.Object\(/);
   assert.ok(m, "pause_goal registration found");
   const desc = JSON.parse(m![1]!) as string;
   assert.match(desc, /\/list remove N/, "enumerates the real /list command");

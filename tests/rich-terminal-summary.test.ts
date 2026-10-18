@@ -59,7 +59,7 @@ test("card opens with the outcome, then a change-first account and compact verif
   const findingsIdx = chatLines.findIndex((l) => l === "What Changed");
   assert.ok(findingsIdx > 0, "findings section present");
   assert.match(chatLines[findingsIdx + 1] ?? "", /^1\. extensions\/completion-summary\.ts/, "numbered outcome first");
-  assert.match(chatLines[findingsIdx + 2] ?? "", /^2\. gate green/, "second finding numbered");
+  assert.ok(!chatLines.some(line => /^2\. gate green/.test(line)), "verification receipt is not a second change");
   assert.ok(chatLines.some((l) => /extensions\/completion-summary\.ts/.test(l)), "code refs ride the finding bodies");
 });
 
@@ -175,8 +175,8 @@ test("trailer contract holds: approval bullet, record pointer last", () => {
   assert.equal(recordIdx, chatLines.length - 1, "record pointer is the final line");
 });
 
-test("change and next lines render uncapped", () => {
-  // v0.38.55: every informing detail reaches the chat — caps retired.
+test("detailed receipt keeps the supplied change and next action, not evidence as a second change", () => {
+  // The saved message remains complete; the default renderer previews it.
   const crowded = [
     "Outcome: many things",
     `Changed: ${Array.from({ length: 10 }, (_, i) => `extensions/part-${i}.ts`).join("; ")}`,
@@ -196,7 +196,9 @@ test("change and next lines render uncapped", () => {
     }) as unknown as Goal,
   });
   const numbered = r.chatLines.filter((l) => /^\d+\. /.test(l));
-  assert.equal(numbered.length, 2, `every flat finding renders, got ${numbered.length}`);
+  assert.equal(numbered.length, 1, "Changed is the finding; Evidence is saved separately");
+  assert.ok(r.chatLines.join("\n").includes("extensions/part-9.ts"));
+  assert.ok(r.chatLines.join("\n").includes("ship it"));
 });
 
 test("no audit history means no Audit row, approval voice still closes", () => {

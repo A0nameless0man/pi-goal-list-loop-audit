@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { compactHumanSummary, humanCheckTime, humanTextPreview, HUMAN_HANDOFF_GUIDANCE } from "../extensions/human-handoff.js";
 import { buildActionReminder, registerActionReminderRenderer } from "../extensions/action-reminder.js";
-import { buildTerminalApprovalRender, buildRichArchiveSection } from "../extensions/completion-summary.js";
+import { buildTerminalApprovalRender, buildRichArchiveSection, buildRecordedFactsCompletionSummary } from "../extensions/completion-summary.js";
 import { buildUiStatusCard } from "../extensions/goal-loop-display.js";
 import { projectUiStatus } from "../extensions/ui-status.js";
 import activate, { __testOnlyResetProcessState } from "../extensions/loops/goal.js";
@@ -54,6 +54,17 @@ test("no supplied result means an honest missing explanation, not an invented fi
   const human = buildTerminalApprovalRender({ goal, status: "complete", approval: "— approved.", record: "— record: saved.md" }).chatLines.join("\n");
   assert.match(human, /plain-language result was not recorded/);
   assert.doesNotMatch(human, /file-write|bash calls|terminal reason|Objective.*archived/);
+});
+
+test("a previously persisted system fallback stays out of human changes on replay", () => {
+  const goal = seedGoal({ objective: "Fix readable field names", telemetry: { turns: 0, fileWrites: 37, bashCalls: 55, files: ["/home/user/internal.ts"] } }) as unknown as Goal;
+  goal.completionSummary = buildRecordedFactsCompletionSummary({ goal, status: "complete", archivePath: "saved.md", stopReason: "auditor approved" });
+  const render = buildTerminalApprovalRender({ goal, status: "complete", approval: "— approved.", record: "— record: saved.md" });
+  for (const human of [render.chatLines.join("\n"), render.transcriptLines.join("\n"), render.recap]) {
+    assert.match(human, /plain-language result was not recorded/);
+    assert.doesNotMatch(human, /file-write|bash calls|terminal reason|internal.ts|status=|review the durable/);
+  }
+  assert.match(goal.completionSummary, /file-write/);
 });
 
 test("compact completion shows primary changes; exact actions and limitations remain intact", () => {

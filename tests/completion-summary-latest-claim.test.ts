@@ -32,7 +32,7 @@ for (const structuredPrior of [false, true]) {
       assert.match(chat.split("\n")[0]!, /Delivered 6 committed fixes/);
       assert.doesNotMatch(chat, /Delivered 5|5 repaired|5 checked|Delivered 5 corrections/);
       assert.equal((chat.match(/6 repaired boundaries/g) ?? []).length, 1);
-      assert.equal((chat.match(/6 checked findings/g) ?? []).length, 1);
+      assert.equal((chat.match(/6 checked findings/g) ?? []).length, 0, "verification receipts stay in the archive, not the change story");
       assert.match(render.recap, /Delivered 6/);
       assert.doesNotMatch(render.transcriptLines.join("\n"), /Delivered 5|5 repaired|5 checked/);
       if (structuredLatest) assert.match(chat, /Delivered 6 corrections/);

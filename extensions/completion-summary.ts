@@ -1311,7 +1311,6 @@ export function buildTerminalApprovalRender(input: TerminalApprovalRenderInput):
     archivePath: input.archivePath,
   };
   const candidate = input.completionSummary ?? input.goal.completionSummary;
-  const recap = compactTerminalCompletionSummary(facts, candidate, 72, input.showVerification === true);
   // Rich voice (field 20260911_*): the chat/transcript render uses a
   // verbose brief (200-char values) while the outcome headline keeps
   // the 140-char budget. Filler drops via the same briefValueContent
@@ -1319,11 +1318,18 @@ export function buildTerminalApprovalRender(input: TerminalApprovalRenderInput):
   // v0.38.55 (full parity): values ride unclipped — the card shares
   // everything the archive knows.
   const resolution = resolveCompletionSummary(facts, candidate);
-  // A legacy/incomplete recap still has useful human fields. Read those
+  // A persisted fallback already satisfies the six-label validator. Detect
+  // the system's reserved template as well as newly resolved fallbacks;
+  // otherwise replaying an archived receipt resurrects telemetry as changes.
+  const persistedFallback = /^Outcome: Objective ".*" archived with status=\w+\.$/m.test(candidate ?? "")
+    && /^Evidence: goal .*; .*; .*\.$/m.test(candidate ?? "")
+    && /^Tests: not recorded — .*terminal test result was captured/m.test(candidate ?? "");
+  const humanSource = persistedFallback ? undefined : resolution.usedFallback ? candidate : resolution.summary;
+  // A legacy/incomplete recap can still have useful human fields. Read those
   // directly for display; keep the strict recorded-facts resolver unchanged
   // for the durable archive and independent audit.
   const richBrief = humanCompletionBrief(
-    resolution.usedFallback ? candidate : resolution.summary,
+    humanSource,
     140,
     RICH_FULL_VALUE_BUDGET,
     input.priorCompletionSummary,
@@ -1333,12 +1339,13 @@ export function buildTerminalApprovalRender(input: TerminalApprovalRenderInput):
   // earns the full `### Summary` section on the terminal card (and the
   // archive human layer). Headline echo, verification, Next, recap, and
   // every recycled payload keep their bounds.
-  if (resolution.usedFallback && richBrief.outcome === "(outcome not recorded)") {
+  if ((resolution.usedFallback || persistedFallback) && richBrief.outcome === "(outcome not recorded)") {
     richBrief.outcome = input.status === "complete"
       ? "Work finished; a plain-language result was not recorded."
       : "Work stopped; a plain-language result was not recorded.";
   }
-  const structured = structuredSummaryLines(resolution.usedFallback ? candidate : resolution.summary);
+  const recap = richBrief.outcome;
+  const structured = structuredSummaryLines(humanSource);
   // v0.38.37 (audit 2026-09-08): the deliberate non-do comes from the
   // agent's complete_goal leftOut claim — never invented. Filler ("none")
   // drops via the same briefValueContent filter; absent stays absent.

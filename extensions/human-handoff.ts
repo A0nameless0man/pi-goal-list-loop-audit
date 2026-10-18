@@ -25,13 +25,34 @@ export function humanCheckTime(value: string): string {
 export function compactHumanSummary(content: string): { content: string; omitted: boolean } {
   let section = "";
   let findings = 0;
+  let summaryLines = 0;
   let omitted = false;
+  let fence: { char: string; size: number; hidden: boolean } | undefined;
   const result: string[] = [];
   for (const line of content.split("\n")) {
+    const marker = /^\s{0,3}(`{3,}|~{3,})/.exec(line)?.[1];
+    if (fence) {
+      if (!fence.hidden) result.push(line);
+      if (marker?.[0] === fence.char && marker.length >= fence.size && /^\s{0,3}(?:`+|~+)\s*$/.test(line)) fence = undefined;
+      continue;
+    }
+    if (marker) {
+      const hidden = section === "Summary" || section === "What Changed";
+      fence = { char: marker[0]!, size: marker.length, hidden };
+      if (hidden) omitted = true; else result.push(line);
+      continue;
+    }
     const heading = line.trim().replace(/^#{2,4}\s+/, "").replace(/^\*\*(.*?)\*\*$/, "$1");
     if (/^(Summary|What Changed|Remaining|Verification|Next|Final Repository State)$/.test(heading)) {
       section = heading;
       result.push(line);
+      continue;
+    }
+    if (section === "Summary" && line.trim()) {
+      if (/^#{2,4}\s|^\*\*.*\*\*$/.test(line) || ++summaryLines > 2) { omitted = true; continue; }
+      const preview = humanTextPreview(line);
+      if (preview !== line.trim()) omitted = true;
+      result.push(preview);
       continue;
     }
     if (section === "What Changed") {
@@ -50,6 +71,6 @@ export function compactHumanSummary(content: string): { content: string; omitted
     // command, a permission boundary or an important limitation.
     result.push(line);
   }
-  if (omitted) result.push("", "More change details are available in the expanded message and saved record.");
+  if (omitted) result.push("", "More details are available in the expanded message and saved record.");
   return { content: result.join("\n"), omitted };
 }
