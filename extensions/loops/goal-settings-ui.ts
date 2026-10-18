@@ -1108,6 +1108,27 @@ function resyncDesignerRegistration(ctx: ExtensionContext, designerRequested = f
   }
 }
 
+/** Save one role's fallback chain to its owning layer. A project-scoped
+ * role writes back to the project file, a global (or new) role to the
+ * global file — only the edited role's layer map is rewritten, so unrelated
+ * roles in either layer survive the edit (the old whole-merged-map global
+ * write cloned project roles into global, where they resurfaced after the
+ * project entry was removed). Exported for focused tests. */
+export function saveSubagentFallbackChain(ctx: ExtensionContext, agentType: string, refs: string[]): { scope: "project" | "global" } {
+  const scope = subagentFallbackRoleSources(ctx.cwd)[agentType] === "project" ? "project" : "global";
+  const layerMap: Record<string, string[]> = scope === "project"
+    ? { ...((migrateLegacySettings(readSettingsFile(projectSettingsPath(ctx.cwd))).subagentFallbacks ?? {}) as Record<string, string[]>) }
+    : { ...(loadGlobalSettings().subagentFallbacks ?? {}) };
+  if (refs.length > 0) layerMap[agentType] = refs;
+  else delete layerMap[agentType];
+  const probe = (globalThis as any).warnIfStaleAtEntry as ((ctx: ExtensionContext, what: string) => boolean) | undefined;
+  if (typeof probe === "function" && probe(ctx, "settings save")) {
+    throw new Error("settings save refused: the session handle went stale during the edit (a replacement session owns the state root)");
+  }
+  persistSettings(scope, ctx.cwd, { subagentFallbacks: Object.keys(layerMap).length > 0 ? layerMap : undefined });
+  return { scope };
+}
+
 export async function handleSettingChoice(id: string, ctx: ExtensionContext): Promise<void> {
   // Current pi-subagents roles are data-driven. Keep this dispatch in front
   // of the switch so adding a built-in role does not require another hard-coded
