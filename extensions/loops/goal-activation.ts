@@ -528,6 +528,29 @@ function clearDurablePostCompactRecovery(ctx: ExtensionContext): void {
 // the park standing for manual resume — an honest degradation.
 let zombieRetryStreak: ZombieRetryStreak = { key: "", count: 0, lastAbortStreamAt: 0 };
 let zombieRetryTimer: NodeJS.Timeout | null = null;
+// v0.39.x (zero-stream recurrence): an abort whose stream clock is identical
+// to the previous abort's clock proves the intervening retry produced zero
+// new provider stream — the model route is wedged, not merely slow. The next
+// dispatch then goes through the owned fallback envelope instead of replaying
+// the same route. Process-memory like the streak itself; cleared with it.
+let zombieRetryRoutedViaFallback = false;
+let zombieFallbackAttemptOverride: ((ctx: ExtensionContext) => Promise<boolean>) | null = null;
+/** Test-only: stub the fallback-routing attempt (null restores the real
+ * tryMainModelFallback call). Never called by production code. */
+export function __testOnlySetZombieFallbackAttempt(fn: ((ctx: ExtensionContext) => Promise<boolean>) | null): void {
+  zombieFallbackAttemptOverride = fn;
+}
+/** Explicit resume is operator consent to a fresh budget for that owner: the
+ * user saying "push again" wins over the ladder's memory (same precedent as
+ * the v0.29.19 stall-window reset in cmdLoop resume). Auto-retry never calls
+ * this — only explicit /goal resume · /loop resume · /glla resume paths. */
+export function resetZombieRetryStreak(cwd: string, key?: string): void {
+  if (zombieRetryStreak.count === 0) return;
+  if (key !== undefined && zombieRetryStreak.key !== "" && zombieRetryStreak.key !== key) return;
+  zombieRetryStreak = { key: "", count: 0, lastAbortStreamAt: 0 };
+  zombieRetryRoutedViaFallback = false;
+  appendLedger(cwd, "zombie_retry_streak_reset_on_resume", { key: key ?? "all" });
+}
 // v0.38.18 (track 2): the stream clock when the current turn's begin-marker
 // was last observed. Compared against the abort's observation point to tell
 // "wedged after streaming" (deserves budget retries) from "never streamed
