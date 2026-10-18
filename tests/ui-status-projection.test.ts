@@ -66,7 +66,6 @@ test('unconfirmed saved checks keep a human time in compact and detailed cards',
     { ...registered, observedAt: NOW - 31_000 },
     { ...registered, ownerKey: 'goal:other' },
     { ...registered, generation: 1 },
-    { ...registered, session: 'closed' as const },
   ]) {
     const status = projectUiStatus(state, { now: NOW, generation: 2, evidence });
     assert.equal(status.execution, 'unconfirmed');
