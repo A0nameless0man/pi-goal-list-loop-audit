@@ -4,20 +4,28 @@
 // Live proof of the auditor --tools/--extension boundary against the
 // installed pi binary (DECIDED 2026-10-17: verify against Pi core first).
 // A fixture extension registers a disallowed tool plus a rigged provider
-// whose stub answers EVERY turn with a tool call for that tool. Results:
-// the extension's trusted code runs (load markers), the tool registers,
-// but the model-visible surface never contains it and it never executes —
-// even under ~forced tool-call pressure. The unfiltered control run proves
-// the rig can expose and execute the tool, so the filtered absence is the
-// boundary holding, not a broken fixture.
+// whose stub answers the first 3 turns with a tool call for that tool,
+// then a final text turn so pi exits promptly (unbounded stubs loop).
+// Results: the extension's trusted code runs (load markers), the tool
+// registers, but the model-visible surface never contains it and it never
+// executes — even under forced tool-call pressure. The unfiltered control
+// run proves the rig can expose and execute the tool, so the filtered
+// absence is the boundary holding, not a broken fixture.
 //
 // Hermetic: ephemeral loopback stub, isolated PI_CODING_AGENT_DIR,
-// PI_OFFLINE=1, tmp probe dir. The stub serves at most 3 tool-call turns
-// then a final text turn so pi exits promptly (unbounded stubs loop).
+// PI_OFFLINE=1, tmp probe dir.
+//
+// Spawn discipline (learned 2026-10-18, keep): pi -p reads stdin
+// (piped-prompt support). Under bun AND node, execFile maps stdio
+// "ignore" to a never-EOF socketpair for fd 0, so pi blocks on stdin
+// forever with zero output and zero provider traffic — while the same
+// command via spawn (or shell </dev/null) dials in <1s. This file must
+// use spawn with an explicit /dev/null fd for stdin, never execFile or
+// stdio "ignore".
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
+import { spawn } from "node:child_process";
 import * as fs from "node:fs";
 import * as http from "node:http";
 import * as os from "node:os";
@@ -30,6 +38,7 @@ interface ProbeOutcome {
   declared: Set<string>;
   toolCallsServed: number;
   dir: string;
+  exit: string;
 }
 
 async function runProbe(args: string[]): Promise<ProbeOutcome> {
@@ -70,72 +79,88 @@ async function runProbe(args: string[]): Promise<ProbeOutcome> {
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const port = (server.address() as { port: number }).port;
-  // Async spawn: a sync exec would block this process's event loop and starve
-  // the loopback stub (fail-closed deadlock until timeout). Bound 90s.
-  let spawnError: unknown = null;
-  let stderrTail = "";
-  await new Promise<void>((resolve) => {
-    const child = execFile(
-      PI,
-      ["-p", "probe the boundary", "--no-session", "--model", "glla-probe-rig/rig-model", ...args],
-      {
-        timeout: 90_000,
-        stdio: ["ignore", "pipe", "pipe"],
-        maxBuffer: 4 * 1024 * 1024,
-        env: {
-          ...process.env,
-          PI_CODING_AGENT_DIR: home,
-          PI_OFFLINE: "1",
-          GLLA_PROBE_DIR: dir,
-          GLLA_PROBE_PROVIDER_URL: `http://127.0.0.1:${port}/v1`,
+  // Explicit /dev/null fd: stdio "ignore" is a never-EOF socketpair under
+  // execFile (and bun's spawn), which wedges pi's stdin read. See header.
+  const nullFd = fs.openSync("/dev/null", "r");
+  let exit = "unknown";
+  try {
+    await new Promise<void>((resolve) => {
+      const child = spawn(
+        PI,
+        ["-p", "probe the boundary", "--no-session", "--model", "glla-probe-rig/rig-model", ...args],
+        {
+          timeout: 90_000,
+          stdio: [nullFd, "pipe", "pipe"],
+          env: {
+            ...process.env,
+            PI_CODING_AGENT_DIR: home,
+            PI_OFFLINE: "1",
+            GLLA_PROBE_DIR: dir,
+            GLLA_PROBE_PROVIDER_URL: `http://127.0.0.1:${port}/v1`,
+          },
         },
-      },
-      (error, stdout, stderr) => {
-        spawnError = error;
-        stderrTail = String(stderr ?? stdout ?? "").slice(-1500);
+      );
+      child.stdout.on("data", () => {});
+      child.stderr.on("data", () => {});
+      const timer = setTimeout(() => {
+        exit = "timeout-kill";
+        try { child.kill("SIGKILL"); } catch { /* already gone */ }
+        // Reap grandchildren (systemd-inhibit, node) orphaned by the kill.
+        try {
+          const kids = Bun.spawnSync(["pgrep", "-P", String(child.pid)]).stdout.toString().trim().split("\n").filter(Boolean);
+          for (const k of kids) { try { process.kill(Number(k), "SIGKILL"); } catch { /* gone */ } }
+        } catch { /* pgrep unavailable; runner reaps the rest */ }
         resolve();
-      },
-    );
-    // A non-zero exit still yields surface evidence; absence of the probe
-    // tool in the declared set is asserted below, not the exit code.
-    child.on("error", () => resolve());
-  });
-  fs.writeFileSync(path.join(dir, `spawn-debug.log`), `ERR:${String(spawnError).slice(0, 500)}\nSTDERR:${stderrTail}`);
-  server.close();
-  return { declared, toolCallsServed, dir };
+      }, 90_000);
+      child.on("close", (code, signal) => {
+        clearTimeout(timer);
+        exit = signal ?? `exit(${code})`;
+        resolve();
+      });
+      child.on("error", (err) => {
+        clearTimeout(timer);
+        exit = `spawn-error(${String(err).slice(0, 120)})`;
+        resolve();
+      });
+    });
+  } finally {
+    fs.closeSync(nullFd);
+    server.close();
+  }
+  return { declared, toolCallsServed, dir, exit };
 }
 
 function markers(dir: string): Set<string> {
-  return new Set(fs.readdirSync(dir).filter((f) => !f.endsWith(".log")));
+  return new Set(fs.readdirSync(dir));
 }
 
 test("v0.39.38: allowed extension cannot expose a tool outside --tools (live pi)", { timeout: 150_000 }, async () => {
-  const { declared, toolCallsServed, dir } = await runProbe([
+  const { declared, toolCallsServed, dir, exit } = await runProbe([
     "--no-extensions",
     "--extension", FIXTURE,
     "--tools", "read,grep,find,ls,bash",
   ]);
   const ran = markers(dir);
   try {
-    assert.ok(ran.has("extension-code-ran"), "fixture trusted code executed at load");
-    assert.ok(ran.has("tool-registered"), "the probe tool registered with the extension host");
-    assert.ok(toolCallsServed > 0, "the rigged model actually demanded the probe tool");
-    assert.ok(!declared.has("glla_probe_tool"), `probe tool never on the model-visible surface (saw: ${[...declared].sort().join(",")})`);
+    assert.ok(ran.has("extension-code-ran"), `fixture trusted code executed at load (${exit}; saw: ${[...ran].sort().join(",")})`);
+    assert.ok(ran.has("tool-registered"), `the probe tool registered with the extension host (${exit})`);
+    assert.ok(toolCallsServed > 0, `the rigged model actually demanded the probe tool (${exit})`);
+    assert.ok(!declared.has("glla_probe_tool"), `probe tool never on the model-visible surface (${exit}; saw: ${[...declared].sort().join(",")})`);
     for (const allowed of ["read", "grep", "find", "ls", "bash"]) {
-      assert.ok(declared.has(allowed), `allowlisted tool still declared: ${allowed}`);
+      assert.ok(declared.has(allowed), `allowlisted tool still declared: ${allowed} (${exit}; saw: ${[...declared].sort().join(",")})`);
     }
-    assert.ok(!ran.has("tool-executed"), "the disallowed tool never executed under forced demand");
+    assert.ok(!ran.has("tool-executed"), `the disallowed tool never executed under forced demand (${exit})`);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
 
 test("v0.39.38: unfiltered control exposes and executes the probe tool (rig validity)", { timeout: 150_000 }, async () => {
-  const { declared, dir } = await runProbe(["--no-extensions", "--extension", FIXTURE]);
+  const { declared, dir, exit } = await runProbe(["--no-extensions", "--extension", FIXTURE]);
   const ran = markers(dir);
   try {
-    assert.ok(declared.has("glla_probe_tool"), "without --tools the fixture tool is declared");
-    assert.ok(ran.has("tool-executed"), "without --tools the fixture tool executes on model demand");
+    assert.ok(declared.has("glla_probe_tool"), `without --tools the fixture tool is declared (${exit}; saw: ${[...declared].sort().join(",")})`);
+    assert.ok(ran.has("tool-executed"), `without --tools the fixture tool executes on model demand (${exit}; saw: ${[...ran].sort().join(",")})`);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
