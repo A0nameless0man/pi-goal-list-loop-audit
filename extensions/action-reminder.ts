@@ -322,7 +322,7 @@ export function registerActionReminderRenderer(pi: ExtensionAPI): void {
       box.addChild(new Text(theme.fg("accent", details?.resumeAt ? `Next check: ${humanCheckTime(details.resumeAt)}` : "No next check is scheduled."), 0, 0));
       box.addChild(new Text("This turn stopped intentionally to wait — not because the task failed.", 0, 0));
     }
-    box.addChild(new Text(`${timedWait ? "Waiting for" : "Why"}: ${expanded ? compactDisplayText(details?.reason ?? presentation.why) : presentation.why}`, 0, 0));
+    box.addChild(new Text(`Why: ${expanded ? compactDisplayText(details?.reason ?? presentation.why) : presentation.why}`, 0, 0));
     if (presentation.next) box.addChild(new Text(theme.fg("accent", timedWait && details?.resumeAt
       ? "No action is needed while this session is active and automatic checks are enabled. This is a progress check, not a promise of completion; use /glla status if unsure."
       : presentation.next), 0, 0));

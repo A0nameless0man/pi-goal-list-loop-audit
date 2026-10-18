@@ -72,7 +72,7 @@ test('waiting card leads with status and next check, not investigation or failur
     assert.ok(lines.every(line => visibleWidth(line) <= width));
     const text = stripTerminalSequences(lines.join('\n')).replace(/\s+/g, ' ');
     assert.match(text, /Waiting — work saved/);
-    assert.ok(text.indexOf('Next check:') < text.indexOf('Waiting for:'));
+    assert.ok(text.indexOf('Next check:') < text.indexOf('Why:'));
     assert.match(text, /18 Oct 2026, 16:00 UTC/);
     assert.match(text, /stopped intentionally to wait/);
     assert.match(text, /not because the task failed/);
