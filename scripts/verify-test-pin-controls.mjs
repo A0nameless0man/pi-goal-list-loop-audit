@@ -64,6 +64,14 @@ try {
   edit("extensions/loops/goal-auditor-hooks.ts", text => text.replace("if (!opts.manual && outcome.fired && outcome.reportPath) {", `if (!opts.manual && outcome.fired && outcome.reportPath) { ${long}`));
   edit("extensions/goal-commands.ts", text => text.replace('if (/^postaudit(?:\\s|$)/.test(trimmed)) {', `if (/^postaudit(?:\\s|$)/.test(trimmed)) { ${long}`));
   run("long explanations do not break notification/routing geometry", ["postaudit-surface"], "SECOND notify|same menu|manual suppression");
+  edit("extensions/goal-settings.ts", text => {
+    const file = ts.createSourceFile("settings.ts", text, ts.ScriptTarget.Latest, true);
+    let array;
+    function visit(node) { if (ts.isVariableDeclaration(node) && node.name.getText(file) === "SETTINGS_KEYS" && node.initializer && ts.isArrayLiteralExpression(node.initializer)) array = node.initializer; ts.forEachChild(node, visit); }
+    visit(file); assert.ok(array, "settings key array exists");
+    return text.slice(0, array.getStart(file)) + `[${[...array.elements].reverse().map(e => e.getText(file)).join(",")}]` + text.slice(array.end);
+  });
+  run("independent provenance key order is incidental", ["postaudit-surface", "tool-overrides"], "SETTINGS_KEYS");
   edit("prompts/goal-loop-continuation.md", () => "[GOAL CHECKPOINT goalId=${GOAL_ID}]\n${OBJECTIVE}\n${VERIFICATION_CONTRACT}\n${LONG_RUNNING_JUDGMENT_POLICY}\n${ACTIVE_EXECUTION_QUESTION_GUIDANCE}\n${DYNAMIC_DIRECTIVES}\n");
   run("short full brief still carries contract and canonical policies", ["delta-only-continuation"], "clean goal|builder:|consecutive sends|rebind reset");
   edit("extensions/loops/goal-tools.ts", text => text.replace(/text: `The auditor has now disapproved[\s\S]*?`,/g, "text: `The auditor has now disapproved. INVESTIGATE audit history; provide YOUR ASSESSMENT.`,"));
@@ -76,6 +84,7 @@ try {
     ["wrong hourly skew", "extensions/goal-loop-core.ts", "d.setMinutes(0, 30, 0)", "d.setMinutes(0, 0, 0)", ["hourly-quota-probe"], "nextHourlyProbeMs returns|at :00:29", /\(fail\).*nextHourlyProbeMs/],
     ["invented monitor classification", "extensions/goal-loop-core.ts", "export function isMonitorGoal(_goal: Pick<Goal, \"objective\" | \"createdAt\">, _now = Date.now()): boolean {\n  return false;", "export function isMonitorGoal(_goal: Pick<Goal, \"objective\" | \"createdAt\">, _now = Date.now()): boolean {\n  return true;", ["long-running-discipline"], "monitor goals", /\(fail\) monitor goals/],
     ["quiet count hidden", "extensions/goal-agents-panel.ts", 'if (richness === "quiet") {', 'if (richness === "quiet") { return undefined;', ["subagent-display-richness"], "rich assembles", /\(fail\).*rich assembles/],
+    ["automatic notification guard inverted", "extensions/loops/goal-auditor-hooks.ts", "!opts.manual && outcome.fired && outcome.reportPath", "opts.manual && outcome.fired && outcome.reportPath", ["postaudit-surface"], "SECOND notify", /\(fail\).*SECOND notify/],
     ["wrong postaudit route", "extensions/goal-commands.ts", 'if (/^postaudit(?:\\s|$)/.test(trimmed)) {\n    await cmdReviewerSettings(ctx);', 'if (/^postaudit(?:\\s|$)/.test(trimmed)) {\n    await cmdWrongSettings(ctx);', ["postaudit-surface"], "same menu", /\(fail\).*same menu/],
     ["investigation guidance removed", "extensions/loops/goal-tools.ts", "YOUR ASSESSMENT", "no assessment", ["pause-message-content"], "audit-cap pause", /\(fail\).*audit-cap pause/],
     ["timeout action lost", "extensions/loops/goal-auditor-hooks.ts", "Check long-running verification commands", "No action", ["stall-handling"], "hanging-verification", /\(fail\).*hanging-verification/],
