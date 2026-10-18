@@ -13,7 +13,7 @@ function render(summary?: string, overrides: Record<string, unknown> = {}) {
   const goal = seedGoal({
     id: "20260923-purpose",
     objective: "ship the release",
-    completionSummary: summary,
+    completionSummary: summary ?? "Outcome: Saves and release packages are consistent. Changed: Confirmed saves retain their revisions. Evidence: saved report. Tests: 747 passed, 0 failed. Unresolved: The signed-in browser flow was not checked. Next: Try the signed-in browser flow.",
     telemetry: { turns: 1, fileWrites: 0, bashCalls: 0 },
     auditHistory: [{ at: "2026-09-23T22:00:00.000Z", approved: true, disapproved: false, model: "m", report: "approved" }],
   }) as unknown as Goal;

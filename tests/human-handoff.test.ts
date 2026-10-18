@@ -4,7 +4,7 @@ import { compactHumanSummary, humanCheckTime, humanTextPreview, HUMAN_HANDOFF_GU
 import { buildActionReminder, registerActionReminderRenderer } from "../extensions/action-reminder.js";
 import { buildTerminalApprovalRender, buildRichArchiveSection } from "../extensions/completion-summary.js";
 import { buildUiStatusCard } from "../extensions/goal-loop-display.js";
-import { projectUiStatus, uiOwnerKey } from "../extensions/ui-status.js";
+import { projectUiStatus } from "../extensions/ui-status.js";
 import activate from "../extensions/loops/goal.js";
 import { MockPi, seedGoal } from "./harness/mock-pi.js";
 import type { State } from "../extensions/goal-loop-core.js";
@@ -76,7 +76,7 @@ test("compact footer prioritizes the actual action and bounds the repeated reaso
     pauseSuggestedAction: "Run the four playtest tasks in HUMAN-PLAYTEST-QUICKSTART.md and report your observations." });
   const state = { goal } as State;
   const now = Date.now();
-  const status = projectUiStatus(state, { now, ownerKey: uiOwnerKey(state), generation: 1 });
+  const status = projectUiStatus(state, { now, generation: 1 });
   const compact = buildUiStatusCard(state, status, now, undefined, 100, true).join("\n");
   const detail = buildUiStatusCard(state, status, now, undefined, 160, false).join("\n");
   assert.match(compact, /next: Run the four playtest tasks/);
@@ -90,7 +90,7 @@ test("compact footer prioritizes the actual action and bounds the repeated reaso
 test("human handoff guidance reaches the real tool registrations", () => {
   const pi = new MockPi(); activate(pi.api);
   for (const name of ["complete_goal", "pause_goal"]) {
-    const definition = pi.tools.get(name)!;
+    const definition = pi.tools.get(name) as { promptGuidelines?: string[] };
     assert.ok(definition.promptGuidelines?.includes(HUMAN_HANDOFF_GUIDANCE), `${name} carries the shared policy`);
   }
 });
