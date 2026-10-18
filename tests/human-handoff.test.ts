@@ -30,6 +30,7 @@ test("football-style wall is a preview with the original report available on exp
   assert.match(collapsed.text, /More details/);
   assert.doesNotMatch(collapsed.text, /SENTINEL-END/);
   assert.match(expanded.text, /SENTINEL-END/);
+  assert.doesNotMatch(expanded.text, /More details: expand/);
   assert.ok(expanded.text.split("\n").length > collapsed.text.split("\n").length * 2);
   assert.equal(collapsed.reminder.details.reason, reason, "display never truncates the durable report");
   assert.equal(collapsed.reminder.details.action, action);

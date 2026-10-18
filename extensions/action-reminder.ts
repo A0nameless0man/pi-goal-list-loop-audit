@@ -319,7 +319,7 @@ export function registerActionReminderRenderer(pi: ExtensionAPI): void {
     }
     if (expanded && diagnostics) {
       box.addChild(new Text(theme.fg("dim", `Diagnostic: ${diagnostics}`), 0, 0));
-    } else if (diagnostics || presentation.why !== compactDisplayText(details?.reason ?? "")) {
+    } else if (!expanded && (diagnostics || presentation.why !== compactDisplayText(details?.reason ?? ""))) {
       box.addChild(new Text(theme.fg("dim", "More details: expand this message or use /glla status."), 0, 0));
     }
     return {
