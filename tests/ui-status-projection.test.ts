@@ -27,7 +27,7 @@ test('scheduled external assessment requires current-owner heartbeat registratio
   assert.equal(live.execution, 'waiting');
   assert.equal(live.actionability, 'automatic');
   assert.equal(live.checkAt, at);
-  assert.match(live.nextAction, /completion must be checked/);
+  assert.match(live.nextAction, /progress, not completion/);
   for (const width of [40, 120]) for (const compact of [true, false]) {
     const card = buildUiStatusCard(state, live, NOW, undefined, width, compact).join('\n');
     assert.match(card, /WAITING/);

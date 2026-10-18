@@ -4,6 +4,7 @@ import { test, afterEach } from "node:test";
 import activate, { __testOnlyResetProcessState } from "../extensions/loops/goal.js";
 import { readState } from "../extensions/goal-loop-core.js";
 import { ACTION_REMINDER_CUSTOM_TYPE, markPauseAbort, markActionReminderTurnStart, consumePauseAbort, observePausedHostAbort, clearPauseAbort } from "../extensions/action-reminder.js";
+import { humanCheckTime } from "../extensions/human-handoff.js";
 import { MockPi, makeMockCtx, seedGoal, seedState, tmpCwd } from "./harness/mock-pi.js";
 
 let session: { pi: MockPi; ctx: ReturnType<typeof makeMockCtx> } | undefined;
@@ -55,10 +56,10 @@ test("scheduled wait tool and card agree: assessment, intentional turn stop, no 
   const result = await pi.runTool("pause_goal", { kind: "wait", reason: "Soak needs more elapsed time", resumeAt: deadline }, ctx);
   const card = pi.sent.find(sent => sent.message.customType === ACTION_REMINDER_CUSTOM_TYPE)!.message.content!;
   const text = result.content[0]!.text;
-  assert.match(text, /assessment/i);
+  assert.match(text, /progress check/i);
   assert.match(text, /intentional/i);
   assert.doesNotMatch(text, /\/list resume to continue|Resume after the saved check/i);
-  assert.ok(text.includes(deadline));
+  assert.ok(text.includes(humanCheckTime(deadline)));
   assert.match(card, /intentional/i);
   assert.match(card, /host.*abort|Pi.*abort/i);
   assert.match(card, /UTC/);
@@ -87,7 +88,7 @@ test("unmarked wait abort is reported once without prescribing resume, and a new
   const notices = ctx.ui.notifies.filter(notice => /host ended the turn/.test(notice.message));
   assert.equal(notices.length, 1);
   assert.doesNotMatch(notices[0]!.message, /Resume after|\/list resume/);
-  assert.ok(notices[0]!.message.includes(deadline));
+  assert.ok(notices[0]!.message.includes(humanCheckTime(deadline)));
   await pi.fire("agent_start", {}, ctx);
   await pi.fire("agent_end", endAbort(), ctx);
   assert.equal(ctx.ui.notifies.filter(notice => /host ended the turn/.test(notice.message)).length, 2);
