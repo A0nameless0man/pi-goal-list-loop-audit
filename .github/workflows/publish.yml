@@ -21,9 +21,8 @@ permissions:
 # group by event so release runs never share a lane with push churn. Note:
 # release runs check out the tag, so this takes effect from the next tag onward.
 # v0.39.x (chosen 2026-10-17): cancel superseded push-quality runs, keep
-# publish protected. Corrected premise (the old note claimed GitHub cancels
-# all but the newest queued run and supersede-cancels queued-never-started
-# runs even with cancel-in-progress:false — inaccurate): a concurrency group
+# publish protected. Corrected premise (the old note misdescribed queue
+# supersession under a false flag — inaccurate): a concurrency group
 # holds ONE running and ONE pending run. cancel-in-progress:true cancels the
 # in-progress run when a newer run enters the group (newest-state-wins); false
 # serializes through the queue. Quality is therefore per-ref with cancel on:
