@@ -1689,7 +1689,7 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   // the terminal from hiding the permission/alternative at the end. Detailed
   // status offers a larger bounded view; the compact card links to it.
   const prose = (label: 'next' | 'why' | 'resume', value: string, color: DisplayColor): void => {
-    wrap(`${label}: ${uiSafeText(compact && label === 'why' ? humanTextPreview(value, 160) : value, true)}`, Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3), compact ? (label === 'why' ? 2 : 4) : 32)
+    wrap(`${label}: ${uiSafeText(compact && label === 'why' ? humanTextPreview(value, Math.max(160, width * 2 - 24)) : value, true)}`, Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3), compact ? (label === 'why' ? 2 : 4) : 32)
       .forEach((line, index) => rows.push(row(index === 0 ? '├─ ' : '│  ', line, color, true)));
   };
   if (status.checkAt && !compact) rows.push(row('├─ ', `check: ${humanCheckTime(status.checkAt)}`, 'accent'));
@@ -1711,7 +1711,7 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
     rows.push(row('├─ ', judgment[judgment.length - 1]!, 'dim'));
   }
   if (status.resumeAction) {
-    const resumeCmd = status.resumeAction.match(/^\/(?:goal|list) resume\b/)?.[0];
+    const resumeCmd = status.resumeAction.match(/\/(?:goal|list) resume\b/)?.[0];
     const resumeText = compact && width < 80 && resumeCmd ? `${resumeCmd}; fix first` : status.resumeAction;
     prose('resume', resumeText, 'dim');
   }
