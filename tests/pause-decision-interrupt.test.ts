@@ -25,7 +25,7 @@
 //      stays pinned in the source.
 
 import { test, afterEach } from "node:test";
-import { conditionalBody } from "./harness/source-structure.js";
+import { conditionalBody, conditionalBodies } from "./harness/source-structure.js";
 import * as assert from "node:assert/strict";
 import * as fs from "node:fs";
 
@@ -265,9 +265,9 @@ test("source pins: decision picker wiring + abort ordering survive refactors", (
   const abort = conditionalBody(src, "!droppedImpossible && !redirect");
   assert.match(abort, /ctx\.abort\(\)/, "abort is inside the guarded branch");
   assert.match(abort, /pause_goal_aborted_turn/, "abort ledgered");
-  const redirect = conditionalBody(src, "redirect && !droppedImpossible");
-  assert.match(redirect, /pause_goal_redirect/, "redirect has its own ledger event");
-  assert.doesNotMatch(redirect, /ctx\.abort\(\)/, "redirect does not abort");
+  const redirects = conditionalBodies(src, "redirect && !droppedImpossible");
+  assert.ok(redirects.some(body => body.includes("pause_goal_redirect")), "redirect has its own ledger event");
+  for (const redirect of redirects) assert.doesNotMatch(redirect, /ctx\.abort\(\)/, "redirect does not abort");
   // Lenient inference lives before the state guard.
   assert.match(
     src,
