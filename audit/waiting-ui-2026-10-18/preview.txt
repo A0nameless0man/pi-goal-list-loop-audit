@@ -1,0 +1,26 @@
+Production waiting-card renderer fixture; not a live-session capture.
+
+## 40 columns
+
+⏳ GLLA Waiting — work saved
+ Next check: 18 Oct 2026, 16:00 UTC
+ This turn stopped intentionally to
+ wait — not because the task failed.
+ Waiting for: Waiting for the normal
+ backup rotation.
+ No action is needed while this session
+ is active and automatic checks are
+ enabled. This is a progress check, not
+ a promise of completion; use /glla
+ status if unsure.
+ Your work is saved.
+
+## 100 columns
+
+⏳ GLLA Waiting — work saved
+ Next check: 18 Oct 2026, 16:00 UTC
+ This turn stopped intentionally to wait — not because the task failed.
+ Waiting for: Waiting for the normal backup rotation.
+ No action is needed while this session is active and automatic checks are enabled. This is a
+ progress check, not a promise of completion; use /glla status if unsure.
+ Your work is saved.

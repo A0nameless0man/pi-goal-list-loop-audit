@@ -1,0 +1,129 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=180s heartbeat=30s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/pause-admission-failure.test.ts:
+(pass) pause result reflects durable admission=false [27.95ms]
+(pass) pause result reflects durable admission=true [1.27ms]
+
+tests/scheduled-wait-presentation.test.ts:
+(pass) abort disposition cannot cross owner, goal or changed-pause boundaries [1.05ms]
+(pass) scheduled wait tool and card agree: assessment, intentional turn stop, no manual resume [80.38ms]
+(pass) matching pause abort is quiet and deduplicated even after message_end consumes its marker [15.95ms]
+(pass) unmarked wait abort is reported once without prescribing resume, and a new turn is not suppressed [10.13ms]
+
+tests/human-handoff.test.ts:
+(pass) football-style wall is a preview with the original report available on expansion [42.02ms]
+(pass) a missing completion field never turns telemetry into human changes [5.30ms]
+(pass) no supplied result means an honest missing explanation, not an invented fix [0.20ms]
+(pass) a previously persisted system fallback stays out of human changes on replay [0.34ms]
+(pass) compact completion shows primary changes; exact actions and limitations remain intact [0.36ms]
+(pass) compact footer prioritizes the actual action and bounds the repeated reason, detailed status keeps it [3.63ms]
+(pass) human handoff guidance reaches the real tool registrations [55.88ms]
+(pass) the actual pause tool sends one card and keeps the required action in external notifications [18.04ms]
+(pass) code samples cannot turn a supporting section into a user-action section [0.47ms]
+(pass) time and preview projections are timezone explicit, safe and honest about abbreviation [0.80ms]
+
+tests/tool-overrides.test.ts:
+(pass) Settings type accepts toolOverrides (allow / hide / perToolConfig) [0.16ms]
+(pass) SETTINGS_KEYS includes toolOverrides for provenance tracking [0.08ms]
+(pass) goal.ts ensureAgentToolsActive applies toolOverrides.allow and .hide [4.56ms]
+(pass) /glla tooloverride keyword routes to cmdToolOverride [0.53ms]
+(pass) cmdToolOverride supports allow / hide / unallow / unhide / set / unset / list [0.42ms]
+(pass) parseToolOverrideValue coerces booleans, numbers, JSON; else string [0.60ms]
+(pass) reviewer 4-mode set (off | on | auto | aggressive) is the contract surface [0.13ms]
+(pass) legacy 'default' and 'report' modes auto-migrate to 'on' in resolveReviewerConfig [0.11ms]
+(pass) paused widget renders `awaiting first turn` for zero-telemetry (literal contract) [0.49ms]
+(pass) auditor prompt (extensions/goal-loop-auditor.ts) carries the chunk-near-context-full hint [0.14ms]
+
+tests/pause-wait-ui.test.ts:
+(pass) expected pause cancellation renders as a normal wait, including host aborted stops [40.81ms]
+(pass) expected pause cancellation renders as a normal wait, including host error stops [6.59ms]
+(pass) real errors, unmarked cancellations and changed pauses are never relabeled as waiting [6.40ms]
+(pass) waiting card leads with status and next check, not investigation or failure styling [8.55ms]
+(pass) pause tool renders one short wait receipt; expanded, partial and error results retain their content [15.78ms]
+
+tests/unsupervised-error-retry.test.ts:
+(pass) empty provider response with no goal schedules and dispatches a retry [206.83ms]
+(pass) consecutive errors advance the streak; a clean turn clears it [311.76ms]
+(pass) composite isolation clears a poisoned unsupervised retry streak, timer, and override [23.75ms]
+(pass) user aborts never retry [158.41ms]
+(pass) a goal paused with kind=blocked refuses the unsupervised retry (incident 111955) [161.14ms]
+(pass) 'This operation was aborted' on a blocked-paused goal never reaches the retry path [157.19ms]
+(pass) 'This operation was aborted' on a wait-paused goal records pause context and does not retry [160.66ms]
+(pass) 'This operation was aborted' on an ACTIVE (unpaused) goal does not reach the unsupervised-error-retry path [157.27ms]
+(pass) policy refusals, auth, billing, and deterministic 400s refuse with a reason [159.93ms]
+(pass) context overflow compacts instead of retrying [156.59ms]
+(pass) hinted quota sleeps until the provider reset; hintless quota retries eagerly [9.02ms]
+(pass) an active goal owns error turns — the unsupervised lane stays silent [172.54ms]
+(pass) a load-held session refuses instead of promising a retry it cannot send [167.15ms]
+(pass) a fresh turn stands down the pending retry [156.27ms]
+(pass) a busy session at fire time stands down instead of double-driving [166.05ms]
+(pass) default same-model budget retains the ordinary request and schedules a paced retry before rotation [156.82ms]
+(pass) fallback continues an interrupted ordinary task after settlement with the original request [14.05ms]
+(pass) fallback handoff waits for idle and does not override a user abort [14.67ms]
+(pass) a successful core retry consumes fallback recovery without a duplicate handoff [38.09ms]
+(pass) fallback send failure preserves the pending handoff and retries the same request on fresh settlement [23.64ms]
+(pass) long interrupted requests use a bounded handoff without growing nested retry prompts [78.89ms]
+(pass) exhausted ordinary fallback chain uses backoff instead of another immediate switch handoff [427.27ms]
+(pass) ordinary exhaustion retry respects a supervisor pause introduced while waiting [408.77ms]
+(pass) authentication failure after ordinary chain exhaustion does not become a blind handoff [190.75ms]
+
+tests/pause-informativeness.test.ts:
+(pass) wrap: short text stays one line; long text wraps at width; cap ellipsizes [5.28ms]
+(pass) paused card wraps the reason over multiple lines instead of truncating at 60 [2.10ms]
+(pass) paused card answers 'did I lose the work?' with a saved line [1.00ms]
+(pass) paused card wraps the suggested action and closes the branch on its last line [0.36ms]
+(pass) pause handoff preserves the full reason while presenting the concrete action separately [0.37ms]
+(pass) pause_goal tool: structured kind/options/recommended/resumeAt persist to the goal (v0.28.22) [4.36ms]
+(pass) pause_goal description: teaches the real command surface + no-id vocabulary (v0.28.24) [0.99ms]
+(pass) late pause calls cannot overwrite a paused or auditing lifecycle [0.50ms]
+(pass) v0.28.30: pause/abort notifies name the policy (List item vs Goal) via goalNoun [3.92ms]
+(pass) v0.34.98: long-wait pause (> 6h) surfaces a tweak-prompt notification + ledger entry [5.04ms]
+(pass) v0.34.98: short-wait pause (≤ 6h) does NOT trigger the tweak offer [4.90ms]
+
+tests/stale-continuation-integration.test.ts:
+(pass) integration: stale goal continuation is sanitized at message_end and ledgered, raw source dropped [51.70ms]
+(pass) integration: a GLLA pause abort becomes an actionable assistant message [8.57ms]
+(pass) integration: a marked pause without suggestedAction still replaces generic abort text [7.98ms]
+(pass) integration: starting a later turn invalidates an unconsumed pause marker [9.12ms]
+(pass) integration: a stale pause marker cannot rewrite a later unrelated abort [7.73ms]
+(pass) integration: a later same-owner abort after a silent prior marker is not rewritten [9.09ms]
+(pass) integration: an unrelated owner abort is not rewritten [13.59ms]
+(pass) integration: a foreign assistant abort is not rewritten [12.15ms]
+(pass) integration: fresh continuation for active goal is NOT sanitized [20.65ms]
+(pass) integration: foreign ctx never sanitizes (subagent isolation) [9.73ms]
+
+tests/action-reminder.test.ts:
+(pass) legacy blocker does not pretend resume solves the requirement (undefined) [9.27ms]
+(pass) legacy blocker does not pretend resume solves the requirement (/list resume) [0.41ms]
+(pass) legacy blocker does not pretend resume solves the requirement (Run '/list resume'.) [0.21ms]
+(pass) legacy blocker does not pretend resume solves the requirement (`/glla resume`) [0.22ms]
+(pass) concrete action and conditional retry survive both reminder surfaces [0.38ms]
+(pass) legacy renderer rebuilds copy without changing the saved reason or action [0.31ms]
+(pass) decision preserves the picker handoff (undefined) [0.60ms]
+(pass) decision preserves the picker handoff (Choose one in the decision card.) [0.20ms]
+(pass) redirect remains a handoff to work now, not a stopped turn [0.34ms]
+(pass) diagnostics are expandable supporting detail, not a competing primary message [0.68ms]
+(pass) standby explains the automatic background handoff with its active-session condition [0.48ms]
+(pass) timed wait names the next progress check without claiming completion or a live wake [1.15ms]
+(pass) abort notice points to the canonical card instead of duplicating its reason and action [0.35ms]
+(pass) reminders fit narrow widths and strip unsafe terminal sequences [5.27ms]
+(pass) tweak proposals remain questions and retain the exact command for consent [0.96ms]
+
+tests/ui-status-projection.test.ts:
+(pass) scheduled external assessment requires current-owner heartbeat registration [11.64ms]
+(pass) unconfirmed saved checks keep a human time in compact and detailed cards [3.35ms]
+(pass) background activity is attributed to the owned dependency, not parent chat [0.44ms]
+(pass) saved active or auditing state never proves execution [0.08ms]
+(pass) saved deadline differs from attributed armed timer [0.15ms]
+(pass) replaced owner, generation, stale or future snapshots do not establish liveness [0.09ms]
+(pass) manual decision and supervisor holds outrank provider timers [0.14ms]
+(pass) silence does not prove death; independently observed closure does [0.10ms]
+(pass) in-budget tool is a wait and queued is not running [0.12ms]
+(pass) hourly-only timer does not advertise a regular saved deadline [0.07ms]
+(pass) terminal state outranks old observations; workflow issue survives independently [0.07ms]
+
+ 102 pass
+ 0 fail
+Ran 102 tests across 10 files. [7.73s]
+[run-tests] finished in 8s (exit 0)
