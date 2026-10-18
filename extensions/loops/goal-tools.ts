@@ -306,7 +306,8 @@ import { buildStatusText, buildWidgetLines, type AuditDisplayProgress } from "..
 import { selectQuotaWaitReroute } from "../quota-retry.js";
 import { buildFinalRepoStateLines, buildTerminalApprovalRender, clipSummaryValue, compactCompletionSummary, compactTerminalCompletionSummary, completionSummaryDensityNote } from "../completion-summary.js";
 import { persistApprovalRender, replayUndeliveredApprovalRenders } from "../approval-render-store.js";
-import { HUMAN_HANDOFF_GUIDANCE } from "../human-handoff.js";
+import { HUMAN_HANDOFF_GUIDANCE, humanCheckTime } from "../human-handoff.js";
+import { Text } from "@earendil-works/pi-tui";
 import { resolveAuditorThinkingLevel } from "../auditor-thinking.js";
 import {
   defaultAgentDir,
@@ -2593,6 +2594,20 @@ function registerAgentTools(pi: any): void {
   pi.registerTool(defineTool({
     name: "pause_goal",
     label: "Pause goal",
+    renderCall(args, theme, context) {
+      const label = args.kind === "wait" && !args.redirect ? "pause_goal · scheduling a progress check" : "pause_goal";
+      return new Text(theme.fg("toolTitle", label)
+        + (context.expanded ? `\n${sanitizeDisplayText(JSON.stringify(args, null, 2))}` : ""), 0, 0);
+    },
+    renderResult(result, options, theme, context) {
+      const details = result.details as { pauseState?: unknown; resumeAt?: unknown } | undefined;
+      if (!options.expanded && !options.isPartial && !context.isError && details?.pauseState === "waiting") {
+        const at = typeof details.resumeAt === "string" ? ` · ${humanCheckTime(details.resumeAt)}` : "";
+        return new Text(theme.fg("accent", `Wait saved${at}. See the Waiting card.`), 0, 0);
+      }
+      const text = result.content.filter(c => c.type === "text").map(c => c.text).join("\n");
+      return new Text(theme.fg(context.isError ? "error" : "toolOutput", sanitizeDisplayText(text)), 0, 0);
+    },
     promptGuidelines: [HUMAN_HANDOFF_GUIDANCE],
     description: "Pause the active goal with a reason and suggested action. Classify proposed human decisions with interruption.reason and concrete interruption.evidence; material exceptions cannot auto-default. Authorized mechanical/reversible work should continue, not pause. For manual-action blockers, lead with the unmet prerequisite and give the human action needed to resolve it, not just a resume command. Verify available authorized tools before claiming you cannot inspect a page or inbox; do not assume access or permission to handle payment details. Unknown decisions are returned for local classification without adopting an option. Use when blocked on user input or unable to make progress. Pausing ABORTS the current turn immediately — after this call, stop; never keep working. When the user interrupts with a NEW task ('do X first'), pass redirect=\"<their request>\" instead: the goal parks but the turn CONTINUES so you work X immediately — a plain pause strands the redirect until the user nudges. Never use redirect to dodge a real blocker, decision, or wait. When the user must CHOOSE between options, pass kind=\"decision\" with the options list (recommended = 1-based index of the best one) — decision pauses render as a prominent DECISION NEEDED card and pop a picker for the user. Time-gated waits (retry at a specific time) use kind=\"wait\" with resumeAt (ISO). Quota-caused parks (rate-limit/plan-quota/billing wording in the reason, or a recent subagent quota error) are automatically converted to monitored auto-retry waits — park normally and the reset wait re-fires on its own. Operational failures use kind=\"error\". If you have a concrete fix command, put the exact command in suggestedAction with kind blocked/error — it is offered as an Accept-first decision (no separate question needed). A `/goal tweak` or `/list tweak` suggestion rewrites the operator's objective or contract, so phrase it as a question for the operator rather than an imperative `Run ...` order; the pause card frames any tweak suggestion as `Question: should this tweak be applied?` automatically. For background dependencies use wait_for_background with exact runIds instead of pausing. Legacy kind=\"standby\" requires those same runIds and admits an owned wait, not a freeze. VOCABULARY (v0.28.24): decision options and reasons must reference REAL commands only — /goal resume, /goal cancel, /goal tweak \"<new text>\", /list remove N, /list next, /list resume, /loop stop, /loop resume. These all act on the ACTIVE goal/item: there is NO /goal drop and NO command takes a goal id. Never show goal ids to the user — name the thing ('the active goal', 'list item \"<short name>\"'); ids are internal plumbing the user cannot act on.",
     parameters: Type.Object({
@@ -3141,7 +3156,7 @@ function registerAgentTools(pi: any): void {
               ? `${buildAbortedAssistantNotice({ kind: "wait", reason: safePauseReason, resumeCommand: activeGoalSurfaceCommand("resume"), resumeAt: storedResumeAt })} Do NOT continue working in this turn.${waitClampNotice}${quotaRerouteNotice}`
               : `Goal paused. The turn ends here — do NOT continue working. ${activeGoalSurfaceCommand("resume")} to continue.${waitClampNotice}${quotaRerouteNotice}`,
         }],
-        details: {},
+        details: { pauseState: droppedImpossible ? "advanced" : effectiveKind === "wait" ? "waiting" : "paused", resumeAt: storedResumeAt },
       };
     },
   }));
