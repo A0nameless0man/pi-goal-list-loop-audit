@@ -382,7 +382,7 @@ test("v0.39.x: auto-retry preserves a refinement-parked builder without overridi
   assert.deepEqual(revived.builder.tasks, [], "cleared tasks stay cleared — no stale resurrection");
   assert.equal(revived.builder.scopeChanges[0]!.reason, "gold-gate wording", "pending scope decision preserved");
   const claimed = await pi.runTool("claim_project_task", { id: "t5" }, ctx);
-  assert.match(JSON.stringify(claimed), /Unknown task/, "cleared tasks cannot be claimed back into existence");
+  assert.match(JSON.stringify(claimed), /replanning; expected building/, "refinement park gates submission until the scope question is answered");
 });
 
 test("v0.39.x: goal-owner recurrence routes via fallback and reactivates", async () => {
