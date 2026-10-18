@@ -49,14 +49,8 @@ jobs:
     # now kills a stalled run, and this bounds the job even if the runner
     # itself wedges.
     timeout-minutes: 45
-    # v0.39.38: unify temp dirs — run-tests.mjs writes failure diagnostics
-    # via os.tmpdir(), which ignores RUNNER_TEMP unless TMPDIR is set. Point
-    # all three at runner.temp so the producer lands where the upload step
-    # below collects it.
-    env:
-      TMPDIR: ${{ runner.temp }}
-      TEMP: ${{ runner.temp }}
-      TMP: ${{ runner.temp }}
+    # Set test temp dirs at step scope below: runner context is unavailable
+    # in job-level env and makes GitHub reject the entire workflow.
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -76,10 +70,14 @@ jobs:
         run: npm ci
 
       - name: Run the release contract
+        env:
+          TMPDIR: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
         run: npm run release:check
 
       # Failure diagnostics live under os.tmpdir()/glla-test-processes-*
-      # (see scripts/run-tests.mjs); the job env above pins os.tmpdir() to
+      # (see scripts/run-tests.mjs); the test-step env above pins os.tmpdir() to
       # runner.temp, and the runner is discarded on failure, so upload them
       # or the cause is unrecoverable.
       - name: Upload failure diagnostics
@@ -106,14 +104,8 @@ jobs:
     # v0.38.108: same bound as the quality lane — a hung release contract
     # must fail fast, not hold the publish lane for GitHub's 6-hour default.
     timeout-minutes: 45
-    # v0.39.38: unify temp dirs — run-tests.mjs writes failure diagnostics
-    # via os.tmpdir(), which ignores RUNNER_TEMP unless TMPDIR is set. Point
-    # all three at runner.temp so the producer lands where the upload step
-    # below collects it.
-    env:
-      TMPDIR: ${{ runner.temp }}
-      TEMP: ${{ runner.temp }}
-      TMP: ${{ runner.temp }}
+    # Keep os.tmpdir() aligned with artifact collection at the test step,
+    # where GitHub permits the runner context.
     steps:
       - name: Check out the released tag
         uses: actions/checkout@v4
@@ -153,6 +145,10 @@ jobs:
         run: npm ci
 
       - name: Test and inspect the package
+        env:
+          TMPDIR: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
         run: npm run release:check
 
       # Configure npm Trusted Publishing for this repository/workflow once in
