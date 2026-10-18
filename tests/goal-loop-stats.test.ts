@@ -123,6 +123,33 @@ test("discovery finds nested projects and dedupes via cwd", () => {
   assert.deepEqual(found, [nested]);
 });
 
+test("discovery excludes non-file ledgers without losing healthy projects", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "glla-stats-invalid-"));
+  try {
+    const good = mkProject(dir, "healthy", [{ type: "goal_created", value: {}, at: "2026-07-20T10:00:00Z" }]);
+    const bad = path.join(dir, "invalid");
+    fs.mkdirSync(path.join(bad, ".pi-glla", "active.jsonl"), { recursive: true });
+    if (process.platform !== "win32") {
+      const linked = path.join(dir, "linked", ".pi-glla");
+      fs.mkdirSync(linked, { recursive: true });
+      fs.symlinkSync(path.join(good, ".pi-glla", "active.jsonl"), path.join(linked, "active.jsonl"));
+    }
+    assert.deepEqual(discoverGllaProjects({ home: dir, cwd: bad, budgetMs: 2000 }), [good]);
+    assert.equal(rollupProject(good)?.goalsCreated, 1);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("a ledger replaced by a directory cannot crash a stats rollup or fabricate empty success", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "glla-stats-replaced-"));
+  try {
+    const root = mkProject(dir, "project", [{ type: "goal_created", value: {}, at: "2026-07-20T10:00:00Z" }]);
+    assert.equal(rollupProject(root)?.goalsCreated, 1);
+    const ledger = path.join(root, ".pi-glla", "active.jsonl");
+    fs.unlinkSync(ledger); fs.mkdirSync(ledger);
+    assert.equal(rollupProject(root), undefined, "unreadable ledgers remain unavailable, not zero-valued stats");
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("parseLedgerEntries skips malformed lines", () => {
   const entries = parseLedgerEntries('{"type":"a"}\nnot json\n{"type":"b","at":"x"}\n{"no_type":1}\n');
   assert.equal(entries.length, 2);
