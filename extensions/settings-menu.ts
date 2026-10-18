@@ -108,6 +108,10 @@ export interface MenuProvenance {
 
 /** Subagent model provenance context needed to render the subagent pins column. */
 export interface MenuSubagentContext {
+  /** Per-role source of each subagent fallback chain (project/global).
+   * Roles absent here fall back to the whole-map source for a chained row
+   * and `default` for a chain-less row. */
+  subagentFallbackSources?: Partial<Record<string, ProvenanceSource>>;
   /** Active session model id (provider/model) — used by inherit-parent resolution. */
   sessionModel?: string;
   /** Active session thinking level — used to show inherited agent settings. */

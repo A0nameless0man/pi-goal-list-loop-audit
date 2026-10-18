@@ -1000,6 +1000,25 @@ export const SETTINGS_KEYS: Array<keyof Settings> = [
   "reviewer", // v0.33.1: legacy alias — menu saves can still write it (when postaudit is unset) and load-migration consolidates it into postaudit on the next read; provenance must know it exists or reviewer-sourced values report "unknown"
 ];
 
+/** Per-role source of each subagent fallback chain: the layer whose map
+ * actually defines that role after normalization (project role wins, else
+ * global). Roles in neither map are absent from the result — the row
+ * builder falls back to `default` for a chain-less role. */
+export function subagentFallbackRoleSources(cwd: string): Record<string, "project" | "global"> {
+  const normalizeLayer = (value: Record<string, unknown>): Record<string, unknown> =>
+    normalizeLoadedSettings({ ...value } as Settings) as unknown as Record<string, unknown>;
+  const proj = normalizeLayer(migrateLegacySettings(readSettingsFile(projectSettingsPath(cwd))));
+  const glob = normalizeLayer(migrateLegacySettings(readSettingsFile(globalSettingsPath())));
+  const projMap = (proj.subagentFallbacks ?? {}) as Record<string, string[]>;
+  const globMap = (glob.subagentFallbacks ?? {}) as Record<string, string[]>;
+  const out: Record<string, "project" | "global"> = {};
+  for (const role of new Set([...Object.keys(projMap), ...Object.keys(globMap)])) {
+    // Normalized layers prune empty chains, so presence means a live chain.
+    out[role] = Object.prototype.hasOwnProperty.call(projMap, role) ? "project" : "global";
+  }
+  return out;
+}
+
 /** Where each effective setting comes from (for the /glla display). */
 export function settingsProvenance(cwd: string): Record<keyof Settings, { value: unknown; source: "project" | "global" | "default" }> {
   const rawProject = migrateLegacySettings(readSettingsFile(projectSettingsPath(cwd)));
