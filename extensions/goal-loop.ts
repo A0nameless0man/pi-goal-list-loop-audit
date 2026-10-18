@@ -1,4 +1,5 @@
 import { safeDiagnostic } from "./safe-diagnostic.js";
+import { VERIFICATION_VALUE_POLICY } from "./verification-value.js";
 import { DURABLE_SOLUTION_POLICY, solutionJudgmentBrief } from "./durable-solution.js";
 import { infrastructureRetryDelay, nextInfrastructureRetry } from "./infrastructure-retry.js";
 import { respecAuditLiveScope, respecAuditStatus, respecBlockerDetails, respecBlockerActions } from "./respec-builder-ui.js";
@@ -449,7 +450,7 @@ async function parkLoopOnWrongBranch(ctx: ExtensionContext, loop: LoopState, whe
 }
 
 export function loopPrompt(loop: LoopState, regressionNote: string, strategyNote: string, boundsNote: string, interventionNote = "", variantNote = "", hypothesisNote = "", refineHintNote = ""): string {
-  const solutionPolicy = `${DURABLE_SOLUTION_POLICY}\n\n${solutionJudgmentBrief(loop.durableSolution, { mode: loop.builder ? "project" : "loop", id: loop.builder?.projectId ?? loop.startedAt, revision: loop.builder?.revision ?? loop.refinements?.length ?? 0 })}\n\n`;
+  const solutionPolicy = `${DURABLE_SOLUTION_POLICY}\n\n${VERIFICATION_VALUE_POLICY}\n\n${solutionJudgmentBrief(loop.durableSolution, { mode: loop.builder ? "project" : "loop", id: loop.builder?.projectId ?? loop.startedAt, revision: loop.builder?.revision ?? loop.refinements?.length ?? 0 })}\n\n`;
   if (loop.builder) {
     return solutionPolicy + loadPromptWhole("goal-loop-respec-builder.md")
       .replace(/\$\{ITERATION\}/g, String(loop.iteration + 1))

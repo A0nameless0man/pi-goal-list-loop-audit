@@ -1,4 +1,5 @@
 import { sanitizeInfrastructureRetry } from "./infrastructure-retry.js";
+import { VERIFICATION_VALUE_POLICY } from "./verification-value.js";
 /**
  * pi-goal-list-loop-audit — v0.24.5
  * extensions/goal-loop-core.ts
@@ -4134,7 +4135,7 @@ export function formatDurableDeferPolicyLine(): string {
  * product rule, not a user preference toggle: changing it between sessions
  * would make the same verification contract produce different decisions.
  */
-export const LONG_RUNNING_JUDGMENT_POLICY = `${DURABLE_SOLUTION_POLICY}\n\nLONG-RUNNING JUDGMENT POLICY:
+export const LONG_RUNNING_JUDGMENT_POLICY = `${DURABLE_SOLUTION_POLICY}\n\n${VERIFICATION_VALUE_POLICY}\n\nLONG-RUNNING JUDGMENT POLICY:
 - Preserve the objective and verification contract as the source of truth. The default answer is the durable, maintainable root-cause fix — decide it and proceed; do not stop at a cosmetic workaround merely because it is faster.
 - "Band-aid now vs do it proper" is NEVER a question: when the durable fix is the clearly best call, do it — no ask_user_question, no pause_goal, no "which do you prefer" framing. Record the choice and the reasoning in the turn.
 ${formatDurableDeferPolicyLine()}

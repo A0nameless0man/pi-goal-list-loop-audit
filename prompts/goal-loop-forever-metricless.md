@@ -45,7 +45,9 @@ ${STRATEGY_NOTE}
 
 - ONE change per turn. Small beats clever — the next iteration gets another turn.
 - REAL work only: a change a reviewer could inspect and call progress
-  (a section written, a case handled, a defect fixed, a test added).
+  (a section written, a case handled, a defect fixed, or a test closing a
+  meaningful coverage gap — adding assertions or refreshing literals alone
+  is not progress).
   Cosmetic reshuffles, reformatting churn, comment shuffling, and re-wording
   what already reads well are doorknob-polishing — the exact failure this
   loop exists despite.
