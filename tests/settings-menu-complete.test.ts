@@ -475,6 +475,10 @@ test("headless `/glla` fallback keeps stall brakes and the v0.34.127 sync list",
   ]) {
     assert.match(fallback, new RegExp(`fmt\\(\\"${key}\\"`), `headless fallback missing synced key: ${key}`);
   }
+  // v0.39.x: subagentFallbacks renders per role (not one whole-map line) so
+  // mixed global/project fixtures keep per-role provenance headlessly too.
+  assert.match(fallback, /subagentFallbacks:\\$\\{role\\}/, "headless fallback renders per-role fallback chains");
+  assert.match(fallback, /subagentFallbackRoleSources\\(ctx\\.cwd\\)/, "headless per-role chains carry per-role provenance");
 });
 
 test("the legacy flat-row startsWith logic is removed (no more `──` section headers in code)", () => {
