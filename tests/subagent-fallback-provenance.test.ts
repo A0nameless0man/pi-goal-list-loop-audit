@@ -183,3 +183,49 @@ test("the picker editor routes a project role to the project file end to end", a
   );
   assert.ok(ctx.ui.matching("project settings").length > 0, "the save notice names the scope");
 });
+
+test("a dead project chain falls through to the live global role", () => {
+  const { ctx } = { ctx: makeMockCtx(tmpCwd()) } as { ctx: MockCtx };
+  const cwd = (ctx as unknown as { cwd: string }).cwd;
+  writeGlobal({ subagentFallbacks: { worker: ["provider/global-worker"], scout: ["provider/global-scout"] } });
+  // Hand-edited dead entries: an empty chain and whitespace/`unset` junk.
+  // They must not shadow the live global roles.
+  writeProject(cwd, { subagentFallbacks: { worker: [], scout: ["  ", "unset"] } });
+
+  const effective = loadSettings(cwd).subagentFallbacks;
+  assert.deepEqual(effective, {
+    worker: ["provider/global-worker"],
+    scout: ["provider/global-scout"],
+  }, "dead project entries fall through instead of shadowing");
+
+  const sources = subagentFallbackRoleSources(cwd);
+  assert.deepEqual(sources, { worker: "global", scout: "global" },
+    "provenance agrees with the merge: both roles read global");
+
+  // The row builder on that state must show the global chain with a
+  // global source — never `none` labelled `global`.
+  const rows = buildSettingsRows(
+    { subagentFallbacks: effective } as Settings,
+    {},
+    { subagentFallbackSources: sources },
+  );
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  assert.equal(byId.get("subagentFallbacks:worker")?.valueText, "provider/global-worker");
+  assert.equal(byId.get("subagentFallbacks:worker")?.sourceText, "global");
+  assert.equal(byId.get("subagentFallbacks:scout")?.valueText, "provider/global-scout");
+  assert.equal(byId.get("subagentFallbacks:scout")?.sourceText, "global");
+});
+
+test("headless /glla renders per-role chains with per-role sources", async () => {
+  const { pi, ctx } = await boot();
+  const cwd = (ctx as unknown as { cwd: string }).cwd;
+  writeGlobal({ subagentFallbacks: { worker: ["provider/global-worker"] } });
+  writeProject(cwd, { subagentFallbacks: { scout: ["provider/project-scout"] } });
+  (ctx as unknown as { hasUI: boolean }).hasUI = false;
+  await pi.command("glla", "", ctx);
+  const text = (ctx.ui.notifies as { message: string }[]).map((n) => n.message).join("\n");
+  assert.match(text, /subagentFallbacks:worker: provider\/global-worker  \[global\]/,
+    "headless names the worker chain with its global source");
+  assert.match(text, /subagentFallbacks:scout: provider\/project-scout  \[project\]/,
+    "headless names the scout chain with its project source");
+});
