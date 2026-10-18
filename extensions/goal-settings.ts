@@ -867,11 +867,20 @@ export function loadSettings(cwd: string): Settings {
   const project = migrateLegacySettings(readSettingsFile(projectSettingsPath(cwd)));
   const global = migrateLegacySettings(readSettingsFile(globalSettingsPath()));
   for (const key of GLOBAL_ONLY_KEYS) delete project[key];
-  const out = normalizeLoadedSettings(mergeSettings(
+  const merged = mergeSettings(
     DEFAULT_SETTINGS as unknown as Record<string, unknown>,
     global,
     project as Record<string, unknown>,
-  ) as unknown as Settings);
+  ) as unknown as Settings;
+  // v0.39.x: subagent fallback chains resolve per role — a project chain for
+  // one role no longer shadows every global role. Project role wins, else
+  // the global role; normalization prunes empties afterwards.
+  const globalFallbacks = global.subagentFallbacks as Record<string, string[]> | undefined;
+  const projectFallbacks = project.subagentFallbacks as Record<string, string[]> | undefined;
+  if (globalFallbacks || projectFallbacks) {
+    merged.subagentFallbacks = { ...(globalFallbacks ?? {}), ...(projectFallbacks ?? {}) };
+  }
+  const out = normalizeLoadedSettings(merged);
   // C10: surface dead hand-edited values as ledger evidence (throttled once
   // per distinct junk value inside noteDroppedSetting). loadGlobalSettings
   // has no cwd to ledger to, so it leaves reports queued for the next
