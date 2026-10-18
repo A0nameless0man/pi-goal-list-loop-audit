@@ -116,9 +116,11 @@ test("main-agent tab starts with the runtime agent; drafter and subagent chains 
   assert.equal(byId.get("blockForbiddenModelSwitches")?.section, "main-agent", "explicit-switch gate sits next to the patterns it enforces");
   assert.deepEqual(
     rows.filter((r) => r.section === "main-agent").map((r) => r.id),
-    ["mainAgent", "mainModelFallbacks", "mainModelFallbackThinkingLevels", "forbiddenModels", "blockForbiddenModelSwitches", "mainModelRetryMinutes", "mainModelFallbackThinkingLevels" === "x" ? "x" : rows.filter((r) => r.section === "main-agent")[5]!.id],
+    ["mainAgent", "mainModelFallbacks", "mainModelFallbackThinkingLevels", "forbiddenModels", "blockForbiddenModelSwitches", "mainModelRetryMinutes", "mainModelSameModelRetries", "hourlyRetryProbe", "mainModelFailback", "mainModelPrimaryProbeMinutes"],
     "main-agent tab keeps runtime, chain, policy gates, then recovery controls in order",
   );
+  assert.ok(!rows.some((r) => r.section === "keep-going" && (r.id === "forbiddenModels" || r.id === "blockForbiddenModelSwitches")),
+    "no policy row remains under keep-going");
 });
 
 test("main fallback row explains ordered, deselectable selection", () => {
