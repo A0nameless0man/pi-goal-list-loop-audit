@@ -343,6 +343,48 @@ test("v0.39.x: an explicit user stop superseding the abort wins over the pending
   assert.equal(readLedger(cwd).filter((e) => e.type === "zombie_auto_retry_dispatched").length, 0, "pending retry bails on the superseded park");
 });
 
+test("v0.39.x: auto-retry preserves a refinement-parked builder without overriding the pending scope decision", async () => {
+  __testOnlySetZombieRunWindows(0, 0);
+  __testOnlySetZombieRetryDelay(50);
+  const cwd = tmpCwd();
+  seedState(cwd, { loop: seedLoop({
+    active: true,
+    iteration: 3,
+    maxIterations: 10,
+    measureCmd: "",
+    builder: {
+      projectId: "hellhunter-probe",
+      phase: "replanning",
+      revision: 3,
+      cycle: 3,
+      vision: "probe vision",
+      requirements: [{ id: "r1", text: "Req one", acceptance: "Observable one works", status: "open" }],
+      tasks: [],
+      audit: undefined,
+      feedback: [],
+      history: [],
+      scopeChanges: [{ revision: 3, reason: "gold-gate wording", removedIds: [] }],
+    },
+  }) });
+  const ctx = await freshSession(cwd, "zrf-refine");
+  currentCtx = ctx;
+  (globalThis as any).compactionGraceUntil = 0;
+  (globalThis as any).postCompletionSettleUntil = 0;
+  await pi.command("loop", "resume", ctx);
+  await tick();
+
+  __testOnlyHeartbeatTick();
+  await tick(300);
+  const revived = readState(cwd).loop as { active: boolean; builder: { phase: string; revision: number; tasks: unknown[]; scopeChanges: Array<{ reason: string }> } };
+  assert.equal(revived.active, true, "infra hold revives the loop");
+  assert.equal(revived.builder.phase, "replanning", "explicit refinement park untouched");
+  assert.equal(revived.builder.revision, 3);
+  assert.deepEqual(revived.builder.tasks, [], "cleared tasks stay cleared — no stale resurrection");
+  assert.equal(revived.builder.scopeChanges[0]!.reason, "gold-gate wording", "pending scope decision preserved");
+  const claimed = await pi.runTool("claim_project_task", { id: "t5" }, ctx);
+  assert.match(JSON.stringify(claimed), /Unknown task/, "cleared tasks cannot be claimed back into existence");
+});
+
 test("v0.39.x: goal-owner recurrence routes via fallback and reactivates", async () => {
   __testOnlySetZombieRunWindows(0, 0);
   __testOnlySetZombieRetryDelay(50);
