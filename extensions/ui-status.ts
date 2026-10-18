@@ -216,6 +216,6 @@ export function projectUiStatus(state: State, context: UiStatusContext): UiStatu
   // cannot prove.
   if (providerWait) base.recoveryNote = 'main-model recovery — retry saved (unconfirmed)';
   if (scheduledCheck) return finish('unconfirmed', 'inspect',
-    `Check saved for ${base.checkAt}; host/wake unconfirmed — reopen the session and inspect /glla status`);
+    `Check saved for ${humanCheckTime(base.checkAt!)}; host/wake unconfirmed — reopen the session and inspect /glla status`);
   return finish('unconfirmed', 'inspect', base.workflow === 'settling' ? '/glla status · settlement/archive owed' : '/glla status to inspect execution', providerWait ? 'Retry saved; execution unconfirmed' : undefined);
 }
