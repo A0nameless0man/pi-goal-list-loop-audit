@@ -22,7 +22,7 @@ async function fixture() {
   const goal = readState(cwd).goal; assert.ok(goal);
   const ctx = makeMockCtx(cwd);
   await pi.fire('session_start', { reason: 'startup' }, ctx);
-  replaceState({ goal, list: [], loop: null });
+  replaceState({ goal, list: [] });
   const handler = pi.handlers.get('message_end'); assert.ok(handler);
   const mark = () => {
     markActionReminderTurnStart();
@@ -54,9 +54,9 @@ test('real errors, unmarked cancellations and changed pauses are never relabeled
   for (const errorMessage of ['HTTP 500', 'This operation was aborted because billing failed', 'Connection aborted by provider', 'AbortError: credential rejected']) {
     assert.equal(await handler({ message: { ...cancelled, errorMessage } } as never, ctx as never), undefined, errorMessage);
   }
-  replaceState({ goal: { ...goal, pauseReason: 'A different pause now owns this goal.' }, list: [], loop: null });
+  replaceState({ goal: { ...goal, pauseReason: 'A different pause now owns this goal.' }, list: [] });
   assert.equal(await handler({ message: cancelled } as never, ctx as never), undefined, 'changed pause identity');
-  replaceState({ goal, list: [], loop: null }); mark();
+  replaceState({ goal, list: [] }); mark();
   await pi.fire('agent_start', {}, ctx); // a new start invalidates the prior turn marker
   assert.equal(await handler({ message: cancelled } as never, ctx as never), undefined, 'stale turn');
 });
@@ -85,6 +85,7 @@ test('waiting card leads with status and next check, not investigation or failur
 test('pause tool renders one short wait receipt; expanded, partial and error results retain their content', async () => {
   const { pi, ctx, goal } = await fixture();
   const args = { kind: 'wait', reason: goal.pauseReason!, resumeAt: goal.pauseResumeAt! };
+  replaceState({ goal: { ...goal, status: 'active', pauseKind: undefined, pauseReason: undefined, pauseResumeAt: undefined }, list: [] });
   const raw = await pi.runTool('pause_goal', args, ctx);
   assert.ok(raw.content.every(c => c.type === 'text'));
   const result = { details: raw.details, content: raw.content.map(c => ({ type: 'text' as const, text: c.text })) };

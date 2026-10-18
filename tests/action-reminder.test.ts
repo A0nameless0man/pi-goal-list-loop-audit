@@ -105,7 +105,7 @@ test("timed wait names the next progress check without claiming completion or a 
   const reminder = buildActionReminder({ kind: "wait", reason: "The soak needs more elapsed time.", resumeCommand: "/list resume", resumeAt: at });
   for (const text of [reminder.content, render(reminder)]) {
     assert.ok(text.includes(humanCheckTime(at)));
-    assert.match(text, /progress check, not a promise of completion/);
+    assert.match(text.replace(/\s+/g, ' '), /progress check, not a promise of completion/);
     assert.match(text, /session is active and automatic checks are enabled/);
     assert.doesNotMatch(text, /Resume: \/list resume|owned wake|admitted heartbeat/);
   }
