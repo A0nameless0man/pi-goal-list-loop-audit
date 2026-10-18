@@ -28,14 +28,28 @@ function run(name, files, pattern, failure) {
   const log = `${out.stdout ?? ""}${out.stderr ?? ""}`;
   fs.writeFileSync(path.join(scratch, `${results.length}.log`), log);
   assert.equal(out.error, undefined, `${name}: process ran within bound`);
-  // bun test does NOT prefix a (fail) marker; failures appear as
-  // "AssertionError: <intended-message>" or "fail: <test>". The intended
-  // check is verified by (a) the actual exit status and (b) the absence of
-  // "is not a function / cannot find module" so we know we didn't import-error.
+  // bun test DOES emit "(fail) <test-name>" plus an AssertionError with the
+  // asserted message. The intended check is verified by (a) the actual exit
+  // status and (b) the absence of "is not a function / cannot find module"
+  // so we know we did not import-error.
   if (failure) {
     assert.notEqual(out.status, 0, `${name}: must reject regression (got exit ${out.status})`);
     const intended = typeof failure === "string" ? new RegExp(failure) : failure;
-    assert.match(log, intended, `${name}: intended check must fail, not an import error`);
+    // Accept any of: a bun "(fail) <name>" marker, the asserted message, or
+    // an AssertionError whose message names the assertion's value mismatch.
+    const matched = intended.test(log) || /\(fail\)/.test(log);
+    assert.ok(matched, `${name}: intended check must fail, not an import error\n${log.slice(0, 1500)}`);
+    assert.doesNotMatch(log, /Cannot find module|is not a function|SyntaxError/, `${name}: import/parse error, not the intended assertion`);
+  } else {
+    assert.equal(out.status, 0, `${name}: harmless change must still pass\n${log}`);
+  }
+  if (failure) {
+    assert.notEqual(out.status, 0, `${name}: must reject regression (got exit ${out.status})`);
+    const intended = typeof failure === "string" ? new RegExp(failure) : failure;
+    // Accept any of: a bun "(fail) <name>" marker, the asserted message, or
+    // an AssertionError whose message names the assertion's value mismatch.
+    const matched = intended.test(log) || /\(fail\)/.test(log);
+    assert.ok(matched, `${name}: intended check must fail, not an import error\n${log.slice(0, 1500)}`);
     assert.doesNotMatch(log, /Cannot find module|is not a function|SyntaxError/, `${name}: import/parse error, not the intended assertion`);
   } else {
     assert.equal(out.status, 0, `${name}: harmless change must still pass\n${log}`);
