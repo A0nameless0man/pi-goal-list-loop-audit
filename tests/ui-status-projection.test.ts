@@ -55,6 +55,42 @@ test('scheduled external assessment requires current-owner heartbeat registratio
     evidence: registered, persistenceHold: 'writes failing' }).execution, 'blocked');
 });
 
+test('unconfirmed saved checks keep a human time in compact and detailed cards', () => {
+  const state = fixture();
+  const at = new Date(NOW + 600_000).toISOString();
+  Object.assign(state.goal!, { status: 'paused', pauseKind: 'wait', pauseResumeAt: at });
+  const registered = observed(state, { scheduledCheck: { resumeAt: at, heartbeatArmed: true } });
+  // A reopened session has no runtime sample; stale or mismatched samples
+  // must use the same readable fallback without implying an armed wake.
+  for (const evidence of [undefined,
+    { ...registered, observedAt: NOW - 31_000 },
+    { ...registered, ownerKey: 'goal:other' },
+    { ...registered, generation: 1 },
+    { ...registered, session: 'closed' as const },
+  ]) {
+    const status = projectUiStatus(state, { now: NOW, generation: 2, evidence });
+    assert.equal(status.execution, 'unconfirmed');
+    assert.equal(status.actionability, 'inspect');
+    assert.equal(status.checkAt, at, 'the durable timestamp stays machine-readable');
+    assert.match(status.nextAction, /10 Oct 2026, 12:10 UTC/);
+    assert.match(status.nextAction, /unconfirmed/);
+    assert.doesNotMatch(status.nextAction, /2026-10-10T|No action needed/);
+    for (const width of [40, 120]) for (const compact of [true, false]) {
+      const card = buildUiStatusCard(state, status, NOW, undefined, width, compact).join('\n');
+      // Wrapped lines have rail glyphs; normalize only those display glyphs.
+      const text = card.replace(/[│├─└]/g, ' ').replace(/\s+/g, ' ');
+      assert.match(text, /10 Oct 2026, 12:10 UTC/);
+      assert.match(text, /unconfirmed/i);
+      assert.match(text, /\/glla status/);
+      assert.doesNotMatch(text, /2026-10-10T|No action needed/);
+      if (compact) {
+        assert.match(text, /next: Check saved for 10 Oct 2026,/);
+        assert.doesNotMatch(text, /check: 10 Oct/);
+      } else assert.match(text, /check: 10 Oct 2026, 12:10 UTC/);
+    }
+  }
+});
+
 test('background activity is attributed to the owned dependency, not parent chat', () => {
   const state = fixture();
   state.goal!.backgroundWait = { version: 1, id: 'wait-1', targetId: state.goal!.id,
