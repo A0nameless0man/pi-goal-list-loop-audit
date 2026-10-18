@@ -125,16 +125,23 @@ The human layer follows two different purposes:
   gate tables, commands, hashes, and machine evidence stay out of the default
   user view. If the user explicitly asks for verification, the terminal render
   may add one compact `Verification` sentence; the archive always retains the
-  complete evidence.
+  complete evidence. The default terminal view previews structured results
+  and a few primary changes; expansion retains the complete saved message.
+  Required actions, Remaining limitations, review qualifications and the saved
+  record link are not lost to that preview. Evidence-only recap fields are
+  not reclassified as changes. Legacy incomplete recaps may supply useful
+  human fields, but a missing result stays explicitly missing: telemetry is
+  not a substitute for an explanation.
 - The archive's `## Terminal summary` remains forensic and complete: detailed
   findings grouped or tabulated at 4+ groups, per-finding proof, the full
   Verification Summary table (Quality Gate | Command | Scope | Status | Notes
   when supplied), and Final Repository State.
 
-Both surfaces retain the independent completion review and the full six-label
-machine recap. A lone approval may be promoted to the chat headline because
-it is a durable review fact, not because tests passed. Width-bound and
-external surfaces use the compact single-line projection of all six labels.
+Both surfaces retain the independent completion review and access to the full
+six-label machine recap in the saved record. A lone approval may be promoted
+to the chat headline because it is a durable review fact, not because tests
+passed. Goal-approval external notifications use the short human outcome,
+not telemetry or a projection of every machine label.
 Every terminal goal notification, including version-bearing already-shipped
 claims and explicit cancellation, carries the change-first human view or the
 compact projection; loop notifications do the same. The executor recap and
@@ -145,6 +152,28 @@ Metric-loop stops use the same six-label contract in their durable loop state
 and `/loop status`, and every terminal loop notification carries a compact
 projection of that recap. Lifecycle/recovery holds are not falsely presented
 as terminal completion.
+
+## Human-facing pauses and waits
+
+Write the unmet prerequisite in one or two plain sentences. Put concrete human
+steps, the relevant document or exact command in `suggestedAction`; put the
+investigation in supporting evidence. A resume command does not itself resolve
+a prerequisite. Legacy verbose reasons are marked previews, not invented
+paraphrases; expansion preserves the original reason and diagnostics.
+
+Emit one primary card, not another full-reason transcript notification. The
+intentional turn-stop notice points back to the card; external notifications
+retain the concrete action or framed consent question. Compact footers keep
+the action prominent and link to `/glla status` for detail.
+
+A wait names the condition, a readable UTC progress-check time and whether
+human action is needed. A check is not a promise of completion, and a saved
+deadline is not evidence of a registered wake. Current-owner, generation and
+heartbeat evidence still determine whether automatic checking is live. These
+presentation rules do not alter pause, scheduler or independent-audit policy.
+
+See [the human-handoff implementation evidence](../audit/human-handoff-2026-10-18/README.md)
+for rendered examples, regression controls and verification boundaries.
 
 ## Future decision checklist
 
