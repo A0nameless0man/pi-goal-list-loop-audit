@@ -127,6 +127,11 @@ test("v0.39.x: zero-stream abort auto-retries a loop owner, preserves iteration+
   currentCtx = ctx;
   (globalThis as any).compactionGraceUntil = 0;
   (globalThis as any).postCompletionSettleUntil = 0;
+  // Seeded active loops boot onto the cold-restore hold; resume so the
+  // watchdog sees a live owner (mirrors the operator-visible path).
+  await pi.command("loop", "resume", ctx);
+  await tick();
+  assert.equal((readState(cwd).loop as { active: boolean }).active, true, "setup: loop resumed");
 
   __testOnlyHeartbeatTick();
   assert.equal(abortsOf(ctx), 1, "the silent turn is aborted");
@@ -164,6 +169,11 @@ test("v0.39.x: a recurrence-proven wedge routes the next retry via fallback inst
   currentCtx = ctx;
   (globalThis as any).compactionGraceUntil = 0;
   (globalThis as any).postCompletionSettleUntil = 0;
+  // Seeded active loops boot onto the cold-restore hold; resume so the
+  // watchdog sees a live owner (mirrors the operator-visible path).
+  await pi.command("loop", "resume", ctx);
+  await tick();
+  assert.equal((readState(cwd).loop as { active: boolean }).active, true, "setup: loop resumed");
 
   // Abort #1: fresh episode, same-route retry (no recurrence yet).
   __testOnlyHeartbeatTick();
@@ -195,6 +205,11 @@ test("v0.39.x: fallback attempt failure degrades to the same-route retry", async
   currentCtx = ctx;
   (globalThis as any).compactionGraceUntil = 0;
   (globalThis as any).postCompletionSettleUntil = 0;
+  // Seeded active loops boot onto the cold-restore hold; resume so the
+  // watchdog sees a live owner (mirrors the operator-visible path).
+  await pi.command("loop", "resume", ctx);
+  await tick();
+  assert.equal((readState(cwd).loop as { active: boolean }).active, true, "setup: loop resumed");
 
   __testOnlyHeartbeatTick();
   await tick(300);
@@ -215,6 +230,11 @@ test("v0.39.x: exhausted budget reports cause + next action on the park and refu
   currentCtx = ctx;
   (globalThis as any).compactionGraceUntil = 0;
   (globalThis as any).postCompletionSettleUntil = 0;
+  // Seeded active loops boot onto the cold-restore hold; resume so the
+  // watchdog sees a live owner (mirrors the operator-visible path).
+  await pi.command("loop", "resume", ctx);
+  await tick();
+  assert.equal((readState(cwd).loop as { active: boolean }).active, true, "setup: loop resumed");
 
   __testOnlyHeartbeatTick();
   await tick(300);
@@ -245,6 +265,11 @@ test("v0.39.x: explicit /loop resume after exhaustion grants a fresh budget", as
   currentCtx = ctx;
   (globalThis as any).compactionGraceUntil = 0;
   (globalThis as any).postCompletionSettleUntil = 0;
+  // Seeded active loops boot onto the cold-restore hold; resume so the
+  // watchdog sees a live owner (mirrors the operator-visible path).
+  await pi.command("loop", "resume", ctx);
+  await tick();
+  assert.equal((readState(cwd).loop as { active: boolean }).active, true, "setup: loop resumed");
 
   __testOnlyHeartbeatTick();
   await tick(300);
@@ -272,6 +297,11 @@ test("v0.39.x: supervisor freeze during the waystation keeps the park standing",
   currentCtx = ctx;
   (globalThis as any).compactionGraceUntil = 0;
   (globalThis as any).postCompletionSettleUntil = 0;
+  // Seeded active loops boot onto the cold-restore hold; resume so the
+  // watchdog sees a live owner (mirrors the operator-visible path).
+  await pi.command("loop", "resume", ctx);
+  await tick();
+  assert.equal((readState(cwd).loop as { active: boolean }).active, true, "setup: loop resumed");
 
   __testOnlyHeartbeatTick();
   assert.equal((readState(cwd).loop as { active: boolean }).active, false);
@@ -292,6 +322,11 @@ test("v0.39.x: an explicit user stop superseding the abort wins over the pending
   currentCtx = ctx;
   (globalThis as any).compactionGraceUntil = 0;
   (globalThis as any).postCompletionSettleUntil = 0;
+  // Seeded active loops boot onto the cold-restore hold; resume so the
+  // watchdog sees a live owner (mirrors the operator-visible path).
+  await pi.command("loop", "resume", ctx);
+  await tick();
+  assert.equal((readState(cwd).loop as { active: boolean }).active, true, "setup: loop resumed");
 
   __testOnlyHeartbeatTick();
   assert.equal(readLedger(cwd).filter((e) => e.type === "zombie_auto_retry_scheduled").length, 1);
