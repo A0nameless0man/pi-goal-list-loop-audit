@@ -469,7 +469,6 @@ test("headless `/glla` fallback keeps stall brakes and the v0.34.127 sync list",
     "mainModelPrimaryProbeMinutes",
     "subagentModelStrategy",
     "subagentModelOverrides",
-    "subagentFallbacks",
     "toolOverrides",
     "zombieRetryMaxAttempts",
   ]) {
