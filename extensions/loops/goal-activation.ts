@@ -690,7 +690,7 @@ function scheduleZombieAutoRetry(
       });
       releaseZombieAbortKey();
       try {
-        fresh.ui.notify(`Automatic retry ${retryAttempt}/${retryMaxAttempts} starting — the earlier ${goal.policy === "list" ? "list item" : "goal"} turn was aborted after ${silentMinutes}m of zero stream activity. If it hangs again, GLLA keeps retrying within this budget before requiring ${activeGoalSurfaceCommand("resume")}.`, "info");
+        fresh.ui.notify(`Automatic retry ${retryAttempt}/${retryMaxAttempts} starting — the earlier ${goal.policy === "list" ? "list item" : "goal"} turn was aborted after ${silentMinutes}m of zero stream activity.${zombieRetryRoutedViaFallback ? " This attempt is routed via the fallback model: the previous attempt produced no provider stream on the wedged route." : ""} If it hangs again, GLLA keeps retrying within this budget before requiring ${activeGoalSurfaceCommand("resume")}.`, "info");
       } catch { /* best-effort */ }
       scheduleContinuation(fresh, true);
       return;
@@ -712,7 +712,7 @@ function scheduleZombieAutoRetry(
     });
     releaseZombieAbortKey();
     try {
-      fresh.ui.notify(`Automatic retry ${retryAttempt}/${retryMaxAttempts} starting — the loop was stopped after a zero-stream abort. GLLA keeps retrying within this budget; if it hangs again after the budget, it stays stopped for /loop resume.`, "info");
+      fresh.ui.notify(`Automatic retry ${retryAttempt}/${retryMaxAttempts} starting — the loop was stopped after a zero-stream abort.${zombieRetryRoutedViaFallback ? " This attempt is routed via the fallback model: the previous attempt produced no provider stream on the wedged route." : ""} GLLA keeps retrying within this budget; if it hangs again after the budget, it stays stopped for /loop resume.`, "info");
     } catch { /* best-effort */ }
     scheduleLoopTick(fresh);
   }, zombieRetryDelayOverride ?? ZOMBIE_RETRY_DELAY_MS);
@@ -726,6 +726,8 @@ export function __testOnlyResetZombieAutoRetry(): void {
     zombieRetryTimer = null;
   }
   zombieRetryStreak = { key: "", count: 0, lastAbortStreamAt: 0 };
+  zombieRetryRoutedViaFallback = false;
+  zombieFallbackAttemptOverride = null;
   zombieRetryMaxAttemptsOverride = null;
   lastTurnStartAt = 0;
 }
