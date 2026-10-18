@@ -399,7 +399,9 @@ test("v0.39.x: a fresh episode after a fallback episode reports same-route (no s
   await pi.command("loop", "resume", ctx);
   await tick();
   const ui = ctx.ui as unknown as { notifies: Array<{ message: string }> };
-  const retryNotifies = () => ui.notifies.filter((n) => n.message.includes("Automatic retry"));
+  // The schedule site also notifies ("starts in ~90s"); only the dispatch
+  // site ("starting —") carries the per-attempt routing claim under test.
+  const retryNotifies = () => ui.notifies.filter((n) => n.message.includes("Automatic retry") && n.message.includes("starting —"));
 
   // Episode 1, attempt 1: fresh streak — same-route, honestly reported.
   __testOnlyHeartbeatTick();
@@ -452,9 +454,11 @@ test("v0.39.x: a missing-permission park never arms the automatic retry and keep
   assert.equal(readLedger(cwd).filter((e) => e.type === "interruption_admitted").length, 1);
 
   // The watchdog sees a held owner, not a hung turn: nothing arms, nothing
-  // dispatches, the permission reason stands.
+  // dispatches, the permission reason stands. (The pause itself aborts the
+  // live turn once — snapshot after it and require no FURTHER abort.)
+  const abortsAfterPause = abortsOf(ctx);
   __testOnlyHeartbeatTick();
-  assert.equal(abortsOf(ctx), 0, "held turn is never aborted");
+  assert.equal(abortsOf(ctx), abortsAfterPause, "held turn is never re-aborted");
   assert.equal(readLedger(cwd).filter((e) => e.type === "zombie_auto_retry_scheduled").length, 0, "no retry arms on a permission hold");
   await tick(300);
   const after = readState(cwd).goal as { status?: string; pauseReason?: string } | null;
