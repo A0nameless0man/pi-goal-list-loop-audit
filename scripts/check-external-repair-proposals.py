@@ -33,20 +33,25 @@ for link in re.findall(r'\[[^\]]+\]\(([^)]+)\)', report):
     assert target.is_relative_to(ROOT) and target.is_file(), link
 commands = (ROOT / 'extensions/goal-commands.ts').read_text()
 assert 'async function cmdTweak(' in commands
-assert 'const expectedStatus = mode === "list" ? "paused" : "active"' in commands
+assert re.search(r'''mode\s*===\s*["']list["']\s*\?\s*["']paused["']\s*:\s*["']active["']''', commands)
 assert 'if (sub === "pause" && !rest)' in commands
 assert 'if (sub === "tweak")' in commands
-assert 'no standalone verification-contract subcommand or flag' in commands
-assert 'patch.verificationContract = proposed.verificationContract' in commands
-assert 'patch.revision = (latest.revision ?? 0) + 1' in commands
+# Command behavior is additionally exercised by the tweak/contract runtime suites;
+# local variable names and explanatory comments are not part of this report's API.
+assert re.search(r'\w+\.verificationContract\s*=\s*\w+\.verificationContract', commands)
+assert re.search(r'\w+\.revision\s*=\s*\(\w+\.revision\s*\?\?\s*0\)\s*\+\s*1', commands)
 # Guard the collector's authority boundary without executing/reimporting it.
 collector = (ROOT / 'scripts/external-repair-proposal-evidence.py').read_text()
 tree = ast.parse(collector)
 imports = {alias.name for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
 assert imports <= {'datetime','hashlib','json','os','stat'}
-assert 'os.O_RDONLY | os.O_NOFOLLOW' in collector
+# Inspect actual open flags and output destination rather than their spelling.
+opens = [node for node in ast.walk(tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == 'open']
+assert opens and all({'O_RDONLY', 'O_NOFOLLOW'} <= {part.attr for part in ast.walk(node) if isinstance(part, ast.Attribute)} for node in opens)
 writes = [node for node in ast.walk(tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == 'write_text']
 assert len(writes) == 1
-assert "path = ROOT / 'audit' / 'EXTERNAL-REPAIR-EVIDENCE-2026-10-12.json'" in collector
+expected_output = ast.parse("ROOT / 'audit' / 'EXTERNAL-REPAIR-EVIDENCE-2026-10-12.json'", mode='eval').body
+output_names = {target.id for node in ast.walk(tree) if isinstance(node, ast.Assign) and ast.dump(node.value) == ast.dump(expected_output) for target in node.targets if isinstance(target, ast.Name)}
+assert isinstance(writes[0].func.value, ast.Name) and writes[0].func.value.id in output_names
 assert not any(isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr in {'system','popen','unlink','rename','mkdir','rmdir','write','spawn'} for node in ast.walk(tree))
 print('PASS: 8 case sections / 9 evidence keys, bounded observations, local references, public-source semantics and read-only collector boundary')
