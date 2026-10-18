@@ -295,12 +295,15 @@ test("v0.29.19: audit plateau with OPEN findings stands down (reprieve), then st
   });
   // measure reads 1 = best → stall 5 → plateau — but 2 boxes are OPEN:
   // the well isn't dry, the stop must stand down.
+  const sentBeforeReprieve = pi.sent.length;
   await fireWork(ctx);
   let l = loop(cwd);
   assert.equal(l.active, true, "plateau stands down while findings are open");
   assert.equal(l.stallCount, 0, "stall reset by the reprieve");
   assert.equal(l.auditPlateauReprieves, 1, "reprieve counted");
-  assert.ok((l.auditReprieveNote ?? "").includes("2 finding(s) still OPEN"), "one-shot shove armed");
+  assert.ok((l.auditReprieveNote ?? "").includes("2 finding(s) still OPEN")
+    || pi.sent.slice(sentBeforeReprieve).some(entry => entry.message.content?.includes("2 finding(s) still OPEN")),
+    "one-shot strategy shove is pending or already delivered, never lost");
   assert.ok(ledger(cwd).includes('"audit_plateau_reprieve"'), "reprieve ledgered");
   // burn the second reprieve + the final plateau (5 turns each):
   for (let round = 0; round < 2; round++) {
