@@ -1,4 +1,5 @@
 import { safeDiagnostic } from "./safe-diagnostic.js";
+import { humanCheckTime, humanTextPreview } from "./human-handoff.js";
 import { respecAuditObservation, respecAuditStatus, respecBlockerHeadline, type RespecAuditLiveScope } from "./respec-builder-ui.js";
 /**
  * pi-goal-list-loop-audit — v0.9.0
@@ -1688,16 +1689,17 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   // the terminal from hiding the permission/alternative at the end. Detailed
   // status offers a larger bounded view; the compact card links to it.
   const prose = (label: 'next' | 'why' | 'resume', value: string, color: DisplayColor): void => {
-    wrap(`${label}: ${uiSafeText(value, true)}`, Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3), compact ? 4 : 32)
+    wrap(`${label}: ${uiSafeText(compact && label === 'why' ? humanTextPreview(value, 160) : value, true)}`, Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3), compact ? (label === 'why' ? 2 : 4) : 32)
       .forEach((line, index) => rows.push(row(index === 0 ? '├─ ' : '│  ', line, color, true)));
   };
-  if (status.checkAt) rows.push(row('├─ ', `check: ${status.checkAt}`, 'accent'));
-  if (status.wakeOwner) {
+  if (status.checkAt && !compact) rows.push(row('├─ ', `check: ${humanCheckTime(status.checkAt)}`, 'accent'));
+  if (status.wakeOwner && !(compact && status.checkAt)) {
     wrap(`wake: ${status.wakeOwner}`, Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3), 3)
       .forEach((line, index) => rows.push(row(index === 0 ? '├─ ' : '│  ', line, 'dim', true)));
   }
   if (status.actionability === 'user' || status.wakeOwner) prose('next', status.nextAction, 'dim');
   if (status.blocker) prose('why', status.blocker, 'warning');
+  else if (compact && status.checkAt && g?.pauseReason) prose('why', g.pauseReason, 'dim');
   // Admission holds own the action rail; the saved claim still needs its
   // parked/no-verdict meaning without implying an auditor is running.
   if (g && isCompletionAuditNoVerdict(g) && (status.execution === 'blocked' || status.execution === 'dormant')) {
