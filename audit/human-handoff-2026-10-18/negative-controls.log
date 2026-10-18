@@ -1,0 +1,47 @@
+bun test v1.3.14 (0d9b296a)
+
+tests/summary-renderer.test.ts:
+21 |   const theme = loadThemeFromPath(path.resolve(import.meta.dirname, "../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/dark.json"), "truecolor");
+22 |   const pi = new MockPi(); registerSummaryRenderer(pi.api);
+23 |   const output = (expanded: boolean) => stripTerminalSequences((pi.messageRenderers.get("goal-event")!(message, { outputPad: 1, expanded }, theme) as Component).render(100).join("\n")).replace(/\s+/g, " ");
+24 |   for (const expanded of [false, true]) {
+25 |     const text = output(expanded);
+26 |     assert.match(text, /without a recorded completion review/);
+                ^
+AssertionError: The input did not match the regular expression /without a recorded completion review/. Input:
+
+' Done — Updated labels. — 0s elapsed Summary Updated labels. Readable labels. More details are available in the expanded message and saved record. '
+
+ generatedMessage: true,
+     actual: " Done — Updated labels. — 0s elapsed Summary Updated labels. Readable labels. More details are available in the expanded message and saved record. ",
+   expected: /without a recorded completion review/,
+   operator: "match",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-human-controls-6XFoiJ/tests/summary-renderer.test.ts:26:12
+      at fn (node:test:215:18)
+(fail) structured Summary-only receipts preserve review qualifications and record links when collapsed [13.88ms]
+
+tests/human-handoff.test.ts:
+130 |     await pi.fire("session_start", { reason: "startup" }, ctx);
+131 |     await pi.fire("agent_start", {}, ctx);
+132 |     await pi.runTool("pause_goal", { kind: "blocked", reason, suggestedAction: action,
+133 |       interruption: { reason: "missing-permission", evidence: "Browser control requires the user's explicit authorization." } }, ctx);
+134 |     assert.equal(pi.sent.filter(sent => sent.message.customType === "glla-action-reminder").length, 1);
+135 |     assert.ok(notices.some(notice => notice.includes("Your help is needed") && notice.includes(action)), JSON.stringify(notices));
+                 ^
+AssertionError: ["[\"-c\",\"capture-human-notice\",\"pi-goal-list-loop-audit\",\"Your help is needed: provider error\"]"]
+ generatedMessage: false,
+     actual: false,
+   expected: true,
+   operator: "==",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-human-controls-6XFoiJ/tests/human-handoff.test.ts:135:12
+      at processTicksAndRejections (native:7:39)
+(fail) the actual pause tool sends one card and keeps the required action in external notifications [53.84ms]
+
+ 0 pass
+ 16 filtered out
+ 2 fail
+Ran 2 tests across 2 files. [584.00ms]

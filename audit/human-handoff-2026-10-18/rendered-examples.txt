@@ -45,7 +45,6 @@ Representative fixtures, not a live project run. Width: 100 terminal columns.
  Next: Follow docs/premium/HUMAN-PLAYTEST-QUICKSTART.md, record your observations, then reply here.
  Then use /list resume to continue. Resuming alone does not fix the blocker.
  Your work is saved.
- More details: expand this message or use /glla status.
 
 ## Waiting (default)
 
