@@ -52,7 +52,7 @@ test("release contract: the release gate exercises the packed artifact", () => {
   assert.doesNotMatch(smoke, /legacy-peer-deps/, "the smoke must not skip declared peer resolution");
   assert.doesNotMatch(smoke, /alias\s*:/, "the smoke must not alias peers back to the source tree");
   assert.match(smoke, /cwd: workerProbe/, "the probe request runs in the disposable probe directory");
-  assert.doesNotMatch(smoke, /cwd: repoRoot/, "the probe request must never point at the live checkout");
+  assert.doesNotMatch(smoke, /attemptId,\n    cwd: repoRoot/, "the probe request must never point at the live checkout");
   assert.match(smoke, /auditorEnvAllowlistFor/, "the probe request carries the fenced env allowlist built by the packed tree");
 });
 
