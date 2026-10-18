@@ -638,7 +638,9 @@ function scheduleZombieAutoRetry(
   const { retry, streak, neverStreamed } = zombieRetryDecision(observedStreamAt, key, zombieRetryStreak, maxAttempts, lastTurnStartAt);
   // Recurrence compares against the PRE-update streak: the same frozen clock
   // as the previous abort means the retry between them streamed nothing.
-  const recurrent = false; // NEUTRALIZED-CONTROL
+  const recurrent = zombieRetryStreak.key === key
+    && zombieRetryStreak.count >= 1
+    && zombieRetryStreak.lastAbortStreamAt === observedStreamAt;
   zombieRetryStreak = streak;
   const plan = { scheduled: retry, attempt: streak.count, maxAttempts, reason: neverStreamed ? "never-streamed" as const : retry ? undefined : "budget-exhausted" as const };
   appendLedger(ctx.cwd, retry ? "zombie_auto_retry_scheduled" : neverStreamed ? "zombie_auto_retry_refused_never_streamed" : "zombie_auto_retry_refused_streak", {
