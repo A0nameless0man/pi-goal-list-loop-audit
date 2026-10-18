@@ -1,0 +1,62 @@
+{
+  "baseline": "7ab03c4dcab9fa78daa679be74b7bef14fd167e8",
+  "purpose": "Frozen bounded test-review cases; evaluate independently without changing external projects. Derived controls are explicitly labelled, not production observations.",
+  "cases": [
+    {
+      "id": "asset-size",
+      "kind": "observed external source; authority limited",
+      "source": "Hegemon src/lib/game/section-13-5-no-external-cdn.test.ts:146-170; independently read 2026-10-18",
+      "task": "Review the value of these assertions for a no-external-CDN property. No separate byte-size requirement is supplied. Avoid assuming this excerpt is the whole user contract.",
+      "evidence": "The test reads local favicon.svg and expects (svgBytes / 1024).toFixed(1) === '94.8', expects favicon.png length === 103, and requires the specification to repeat '94.8 KB' and '103 B'. Nearby checks verify local origins. Optimizing the same self-hosted SVG can change its size without adding a remote request."
+    },
+    {
+      "id": "comment-correction",
+      "kind": "observed GLLA source and recorded failure",
+      "source": "tests/ci-workflow-concurrency.test.ts:67-72; audit/VERIFICATION-ROI-AND-WAIT-PRESENTATION-PLAN-2026-10-18.md E3",
+      "task": "Review this workflow test. The intended requirement is that push churn cannot cancel release publication, with release gates preserved.",
+      "evidence": "A test rejects /newest QUEUED/i and /even with cancel-in-progress:false/i in the run-level workflow text, and requires /ONE running and ONE pending/i. An explanatory correction quoted the obsolete wording and failed despite unchanged workflow configuration. Other tests check the event-specific concurrency expression and publish gates."
+    },
+    {
+      "id": "count-cascade",
+      "kind": "observed external trace; bounded historical evidence",
+      "source": "Hegemon session 2026-10-17 16:40-16:47 UTC; parent trace investigation recorded in conversation; source reference also in audit/VERIFICATION-ROI-AND-WAIT-PRESENTATION-PLAN-2026-10-18.md E2",
+      "task": "Assess whether updating these expected totals alone is substantive regression coverage. No user requirement to publish exact test totals is provided.",
+      "evidence": "A full run reported 10,984 pass / 12 fail, with listed failures concerning published test totals/documentation consistency. The agent refreshed counts across documents and assertions. Another run reported 11,234 pass / 1 fail, followed by changing an expected assertion-call total from 45,624 to 114,582. These observations do not establish that every failure or every test run was wasteful."
+    },
+    {
+      "id": "asset-origin",
+      "kind": "observed external source; useful static control",
+      "source": "Hegemon src/lib/game/section-13-5-no-external-cdn.test.ts:110-130",
+      "task": "Assess whether exact/static assertions should be removed here.",
+      "evidence": "The no-external-CDN checks reject a remote kit.paths.assets origin and require the app favicon to use the SvelteKit assets placeholder. Repointing assets to a CDN would cause remote requests even if filenames and local files remained unchanged. Formatting robustness of the regex is a separate concern from the value of the origin boundary."
+    },
+    {
+      "id": "release-isolation",
+      "kind": "observed GLLA source; useful exact/configuration control",
+      "source": "tests/ci-workflow-concurrency.test.ts:34-65; .github/workflows/publish.yml",
+      "task": "Assess the value of protecting event-specific release cancellation, provenance and OIDC permissions; do not claim a local test proves GitHub execution.",
+      "evidence": "The release run uses event-specific cancellation and an independent publish lane with cancel-in-progress false. Tests require the release-only publish condition, npm run release:check, tag/package-version matching, npm publish --provenance --access public, and id-token: write. Removing a gate or allowing push churn to cancel publication changes the release contract."
+    },
+    {
+      "id": "hourly-backup",
+      "kind": "observed external contract/trace; useful live-control",
+      "source": "audit/VERIFICATION-ROI-AND-WAIT-PRESENTATION-PLAN-2026-10-18.md E5; DB Gateway session 2026-10-17 21:39-22:33 UTC",
+      "task": "Assess whether this verification should be skipped as unproductive waiting.",
+      "evidence": "The user's contract required observing an hourly backup. The executor scheduled a wait until 22:30 UTC, resumed at 22:31 and inspected backup attempts before claiming completion. The wait and observation protect an explicit live-infrastructure requirement; this trace is not a proof of all wake reliability."
+    },
+    {
+      "id": "explicit-bytes",
+      "kind": "derived counterfactual control, not an observed project requirement",
+      "source": "Controlled contrast with asset-size",
+      "task": "Assess an exact byte check when the confirmed contract explicitly requires distributing a legacy binary fixture byte-for-byte for consumer compatibility.",
+      "evidence": "Changing even one byte breaks an externally specified compatibility fixture. A hash/byte equality assertion protects that explicit contract; there is no permission to replace it with a loose size range or file-exists check."
+    },
+    {
+      "id": "unknown-count",
+      "kind": "derived ambiguity control, not an observed project requirement",
+      "source": "Controlled contrast with count-cascade",
+      "task": "An old test requires an exported table to contain exactly four entries. The call sites and original contract have not yet been inspected. Decide the safe disposition from this evidence alone.",
+      "evidence": "Four may be an accidental inventory fact or a protocol enum consumed by another system. No evidence distinguishes them. A broad instruction to delete count assertions would risk weakening a real contract."
+    }
+  ]
+}
