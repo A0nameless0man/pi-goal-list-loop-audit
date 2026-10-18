@@ -13,8 +13,9 @@ import type { Goal } from "../extensions/goal-loop-core.js";
 const content = "## Done — The audit card is readable\n\nTook 8m.\n\n### What Changed\n1. **Audit activity stays visible**\n   - Keeps the latest observation above the cutoff.\n\n### Remaining\n- **Unresolved** — The owner still needs confirmation.\n  → Next: Confirm the named owner.\n- **Left out** — Live production changes.\n\n### Verification\n190 passed, 0 failures.\n\n### Next\n- **Next** — Reload after the active audit ends.\n";
 
 test("structured Summary-only receipts preserve review qualifications and record links when collapsed", () => {
-  const goal = seedGoal({ completionSummary: "Outcome: Updated labels.\n## Details\nReadable labels.\nFirst supporting paragraph.\nSecond supporting paragraph.\nChanged: none\nEvidence: supporting record\nTests: not run\nUnresolved: none\nNext: none" }) as unknown as Goal;
+  const goal = seedGoal({ completionSummary: "Outcome: Updated labels.\n## Details\nReadable labels.\nFirst supporting paragraph.\n## Supporting details\nSecond supporting paragraph.\nChanged: none\nEvidence: supporting record\nTests: not run\nUnresolved: none\nNext: none" }) as unknown as Goal;
   const receipt = buildTerminalApprovalRender({ goal, status: "complete", approval: "— completed without a recorded completion review.", record: "— record: saved.md", extras: ["inspection-session: session-link"] });
+  assert.ok(receipt.chatLines.includes("Summary"), "fixture takes the structured Summary path");
   const message = { content: receipt.chatLines.join("\n"), details: { terminalApprovalGoalId: goal.id } };
   const before = message.content;
   const theme = loadThemeFromPath(path.resolve(import.meta.dirname, "../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/dark.json"), "truecolor");

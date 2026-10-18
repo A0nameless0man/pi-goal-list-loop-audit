@@ -122,7 +122,7 @@ test("the actual pause tool sends one card and keeps the required action in exte
   fs.writeFileSync(`${cwd}/.pi-glla/settings.json`, JSON.stringify({ notifyCmd: "capture-human-notice", autoResume: false }));
   const notices: string[] = [];
   const pi = new MockPi();
-  pi.execHandler = (_cmd, args) => { if (args[1] === "capture-human-notice") notices.push(args[3]!); return { code: 0, stdout: "", stderr: "" }; };
+  pi.execHandler = (_cmd, args) => { notices.push(JSON.stringify(args)); return { code: 0, stdout: "", stderr: "" }; };
   activate(pi.api); const ctx = makeMockCtx(cwd);
   const reason = "Browser authorization is missing.";
   const action = "Run /chrome authorize, then reply here.";
@@ -132,7 +132,7 @@ test("the actual pause tool sends one card and keeps the required action in exte
     await pi.runTool("pause_goal", { kind: "blocked", reason, suggestedAction: action,
       interruption: { reason: "missing-permission", evidence: "Browser control requires the user's explicit authorization." } }, ctx);
     assert.equal(pi.sent.filter(sent => sent.message.customType === "glla-action-reminder").length, 1);
-    assert.ok(notices.some(notice => notice.includes(reason) && notice.includes(action)));
+    assert.ok(notices.some(notice => notice.includes(reason) && notice.includes(action)), JSON.stringify(notices));
     assert.ok(!ctx.ui.notifies.some(notice => notice.message.includes(reason)), "no second full transcript notification");
     assert.equal(readState(cwd).goal?.pauseSuggestedAction, action);
     assert.equal(readState(cwd).goal?.status, "paused");
