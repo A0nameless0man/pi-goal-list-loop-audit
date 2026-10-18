@@ -191,7 +191,9 @@ import {
   globalSettingsPath,
   loadGlobalSettings,
   loadSettings,
+  migrateLegacySettings,
   projectSettingsPath,
+  readSettingsFile,
   resolveDesignerConfig,
   saveSettings as persistSettings,
   settingsProvenance,
@@ -1131,11 +1133,16 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
       const current = settings.subagentFallbacks?.[agentType] ?? [];
       const refs = await promptModelRefs(ctx, `${agentType} fallback chain — ordered, up to ${MAX_MAIN_MODEL_FALLBACKS} (space to toggle, tab = order mode with ↑/↓, enter to confirm); forbidden models hidden`, current, { excludeRefs: normalizeModelRefs(settings.forbiddenModels), maxSelections: MAX_MAIN_MODEL_FALLBACKS });
       if (refs === undefined) return;
-      const next = { ...(loadSettings(ctx.cwd).subagentFallbacks ?? {}) };
-      if (refs.length > 0) next[agentType] = refs;
-      else delete next[agentType];
-      saveSettings("global", ctx, { subagentFallbacks: Object.keys(next).length > 0 ? next : undefined });
-      ctx.ui.notify(refs.length ? `${agentType} fallback chain saved: ${refs.join(" → ")} — applies to NEW pi sessions.` : `${agentType} fallback chain cleared — falls through to the legacy pin / strategy.`, "info");
+      const { scope } = saveSubagentFallbackChain(ctx, agentType, refs);
+      const where = scope === "project" ? "project settings" : "global settings";
+      if (refs.length) {
+        ctx.ui.notify(`${agentType} fallback chain saved to ${where}: ${refs.join(" → ")} — applies to NEW pi sessions.`, "info");
+        return;
+      }
+      const shineThrough = loadSettings(ctx.cwd).subagentFallbacks?.[agentType] ?? [];
+      ctx.ui.notify(shineThrough.length
+        ? `${agentType} fallback chain cleared from ${where} — the ${subagentFallbackRoleSources(ctx.cwd)[agentType] ?? "global"} chain ${shineThrough.join(" → ")} still applies.`
+        : `${agentType} fallback chain cleared — falls through to the legacy pin / strategy.`, "info");
       return;
     }
   }
