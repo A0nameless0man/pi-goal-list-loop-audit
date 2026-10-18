@@ -147,7 +147,7 @@ export function buildAbortedAssistantNotice(input: {
 }): string {
   const reminder = buildActionReminder(input);
   return reminder.presentation.parkState === "automatic"
-    ? "Waiting saved; this turn ended intentionally. See the waiting card for the next check. Your work is saved."
+    ? `Waiting saved; this turn ended intentionally. ${input.resumeAt ? `Next progress check: ${humanCheckTime(input.resumeAt)}.` : "See the waiting card for the next check."} Your work is saved.`
     : "GLLA paused this turn intentionally. Your work is saved; see the action card above for what to do next.";
 }
 
