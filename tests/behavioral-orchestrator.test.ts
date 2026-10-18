@@ -499,9 +499,9 @@ test("v0.36.0: aborted detached audit can complete without audit only after arch
     assert.ok(briefings.length > 0, "the no-audit briefing reached the visible session");
     const notice = briefings[0].content as string;
     assert.equal(confirmationTitle, "Audit aborted", "the explicit audit-abort choice was presented");
-    assert.match(notice, /^## Done — Objective "complete without audit target/, "the briefing opens with the verdict banner, then the archived objective");
+    assert.match(notice, /^## Done — Work finished; a plain-language result was not recorded\./, "a missing human outcome is stated honestly, not inferred from the objective");
     assert.match(notice, /• completed without a completion review \(your choice\)\./, "the no-audit trailer closes the briefing as a bullet (v0.38.39 uniform voice)");
-    assert.doesNotMatch(notice, /not recorded/, "system placeholders never reach the briefing");
+    assert.doesNotMatch(notice, /tokensUsed|tokensLimit|Terminal status:/, "telemetry is not substituted for the missing human outcome");
     assert.ok(fs.readdirSync(path.join(cwd, ".pi-glla", "archive")).length > 0, "archive landed before success was reported");
   } finally {
     if (previous === undefined) delete process.env.GLLA_PI_BINARY;
@@ -1652,10 +1652,14 @@ test("v0.34.20: registered tools use the replacement invocation context without 
   // lifecycle rather than a late duplicate pause.
   await pi.command("goal", "resume", replacement);
   await tick();
+  let firstAborts = 0; let replacementAborts = 0;
+  first.abort = () => { firstAborts++; };
+  replacement.abort = () => { replacementAborts++; };
   const result = await pi.runTool("pause_goal", { reason: "replacement context probe", kind: "blocked" }, replacement);
   assert.match(result.content[0]!.text, /Goal paused/);
-  assert.ok(replacement.ui.matching("replacement context probe").length >= 1, "replacement UI received the tool result");
-  assert.equal(first.ui.matching("replacement context probe").length, 0, "registration-time UI was not reused");
+  assert.equal(replacementAborts, 1, "the tool aborts the replacement invocation context");
+  assert.equal(firstAborts, 0, "registration-time context was not reused");
+  assert.ok(pi.sent.some(entry => entry.message.customType === "glla-action-reminder" && entry.message.content?.includes("replacement context probe")), "the canonical card retains the reason without a duplicate toast");
 });
 
 test("T3e (v0.28.21): no active goal + queued list + reload → NOT activated by default; autoresume=on → head activates", async () => {
@@ -4200,7 +4204,10 @@ test("v0.34.91: detached approval notify carries the agent's completion recap, n
       assert.ok(!recapNotifs[0]!.message.split("\n").some((line: string) => line.startsWith(label)), `filler ${label} none is dropped from the briefing`);
     }
     assert.doesNotMatch(recapNotifs[0]!.message.split("\n").filter((line: string) => !line.startsWith("• audit:") && !line.startsWith("\u2014 ")).join("\n"), / · /, "approved briefing is lines, not the single-line mash (the counts bullet alone could carry · separators; v0.38.50: the one-line duration ledger `— N turns · …` is exempt for the same reason)");
-    assert.match(recapNotifs[0]!.message, /durable-proof-marker( durable-proof-marker){19}/, "long approved recap values ride unclipped (v0.38.55 full parity)");
+    assert.doesNotMatch(recapNotifs[0]!.message, /durable-proof-marker/, "Evidence stays out of the default human change story");
+    const savedRecord = recapNotifs[0]!.message.match(/• record: (\S+\.md)/)?.[1];
+    assert.ok(savedRecord);
+    assert.ok(fs.readFileSync(path.join(cwd, savedRecord), "utf8").includes(longValidRecap), "the full recap including long evidence survives in the saved record");
     assert.doesNotMatch(recapNotifs[0]!.message, new RegExp(`(${"durable-proof-marker "}){20}`), "approved notification does not flatten the full long recap");
     assert.doesNotMatch(recapNotifs.join("\n"), /^Goal complete — auditor /, "the old process-only line is gone");
     await pi.fire("session_shutdown", { reason: "quit" }, ctx);

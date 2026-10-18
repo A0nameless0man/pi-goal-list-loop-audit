@@ -104,7 +104,8 @@ test("repair re-claim renders the latest approved recap and archives the origina
   assert.doesNotMatch(chat, /^Tests:/m, "technical Tests stays in the archive by default");
   assert.doesNotMatch(chat, /2223 pass/, "test counts are supporting evidence, not the main chat narrative");
   assert.doesNotMatch(chat, /rollout doc plus full suite/, "rejected evidence is not concatenated into approved details");
-  assert.match(chat, /edge-case suite/, "approved evidence supplies the human details");
+  assert.match(chat, /search\.ts edge guard/, "approved changes supply the human details");
+  assert.doesNotMatch(chat, /edge-case suite/, "proof stays in the archive by default");
   // Archive parity: the final section uses the approved recap while a
   // separate forensic section preserves the original claim verbatim.
   const record = (chat.match(/• record: (\S+\.md)/) ?? [])[1];
@@ -113,6 +114,7 @@ test("repair re-claim renders the latest approved recap and archives the origina
   assert.match(archiveMd, /## Terminal summary/);
   assert.ok(archiveMd.includes(WHOLE_WORK), "original raw claim is archived verbatim, without truncation or stripping");
   assert.ok(archiveMd.includes(STRUCTURED_REPAIR), "latest approved claim is archived verbatim too");
+  assert.match(archiveMd, /edge-case suite/, "approved evidence is retained in the record");
   const terminalSection = archiveMd.split("## Terminal summary")[1]!.split("## Original completion claim (verbatim)")[0]!;
   assert.match(terminalSection, /Completed the search rollout with all edge cases fixed/);
   assert.doesNotMatch(terminalSection, /Shipped the search rollout end to end|rollout doc plus full suite/);
