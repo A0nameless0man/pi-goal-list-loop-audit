@@ -589,6 +589,33 @@ export function __testOnlyResetLengthExhaustionEpisodes(): void {
   resetLengthExhaustionEpisodes();
 }
 
+/** Attempt the owned fallback route before a recurrence-proven retry dispatch.
+ * A retry that produced zero new stream proves the model route wedged; the
+ * next dispatch goes through tryMainModelFallback (healthy fallback absorbs
+ * the turn, primary probe restores the route later per the recovery
+ * envelope). No fallback configured — or recovery already owning the turn —
+ * degrades honestly to the same-route retry; exhaustion copy reports it. */
+async function maybeRouteZombieRetryViaFallback(
+  fresh: ExtensionContext,
+  observedStreamAt: number,
+  recurrent: boolean,
+  attempt: number,
+): Promise<void> {
+  if (!recurrent || mainModelRecoveryActive()) return;
+  const reason = `zero-stream recurrence: retry attempt ${attempt} replays a model route with no provider stream since ${new Date(observedStreamAt).toISOString()}`;
+  const run = zombieFallbackAttemptOverride
+    ?? ((c: ExtensionContext) => tryMainModelFallback(c, { kind: "transient", raw: reason }));
+  let engaged = false;
+  try {
+    engaged = await run(fresh);
+  } catch (error) {
+    appendLedger(fresh.cwd, "zombie_retry_fallback_skipped", { attempt, error: error instanceof Error ? error.message : String(error) });
+    return;
+  }
+  zombieRetryRoutedViaFallback = engaged;
+  appendLedger(fresh.cwd, engaged ? "zombie_retry_fallback_engaged" : "zombie_retry_fallback_skipped", { attempt, observedStreamAt });
+}
+
 /** Arm the next automatic re-dispatch after a successful zombie abort.
  * The configured retry budget keeps repeated recovery finite; the caller gets
  * the attempt number so user-facing copy and ledger evidence stay truthful. */
@@ -604,6 +631,11 @@ function scheduleZombieAutoRetry(
     ?? loadSettings(ctx.cwd).zombieRetryMaxAttempts
     ?? DEFAULT_ZOMBIE_RETRY_MAX_ATTEMPTS;
   const { retry, streak, neverStreamed } = zombieRetryDecision(observedStreamAt, key, zombieRetryStreak, maxAttempts, lastTurnStartAt);
+  // Recurrence compares against the PRE-update streak: the same frozen clock
+  // as the previous abort means the retry between them streamed nothing.
+  const recurrent = zombieRetryStreak.key === key
+    && zombieRetryStreak.count >= 1
+    && zombieRetryStreak.lastAbortStreamAt === observedStreamAt;
   zombieRetryStreak = streak;
   const plan = { scheduled: retry, attempt: streak.count, maxAttempts, reason: neverStreamed ? "never-streamed" as const : retry ? undefined : "budget-exhausted" as const };
   appendLedger(ctx.cwd, retry ? "zombie_auto_retry_scheduled" : neverStreamed ? "zombie_auto_retry_refused_never_streamed" : "zombie_auto_retry_refused_streak", {
@@ -621,7 +653,7 @@ function scheduleZombieAutoRetry(
   }
   // scheduleSessionTimeout carries the generation/stale/zombie fences — an
   // old session's callback can never re-arm work after stale/shutdown/reload.
-  zombieRetryTimer = scheduleSessionTimeout(() => {
+  zombieRetryTimer = scheduleSessionTimeout(async () => {
     zombieRetryTimer = null;
     // v0.35.15 semantics: a frozen supervisor keeps everything automatic off.
     // The parked claim stays durable; /glla resume then /goal resume apply.
@@ -640,6 +672,7 @@ function scheduleZombieAutoRetry(
       if (goal.pauseReason !== ZOMBIE_PAUSE_REASON) return; // superseded pause — not ours to clear
       const freshLimit = loadSettings(fresh.cwd).tokenLimit ?? DEFAULT_TOKEN_LIMIT;
       const usage = goal.usage ? { tokensUsed: goal.usage.tokensUsed, tokensLimit: freshLimit } : undefined;
+      await maybeRouteZombieRetryViaFallback(fresh, observedStreamAt, recurrent, retryAttempt);
       abortedStandDown = false;
       setContinuationDispatchStoodDownRef(false);
       updateGoal({
@@ -665,6 +698,7 @@ function scheduleZombieAutoRetry(
     // Loop owner: revive the preserved iteration and tick once.
     const loop = state.loop;
     if (!loop || !loop.stopReason?.includes("zero-stream abort")) return;
+    await maybeRouteZombieRetryViaFallback(fresh, observedStreamAt, recurrent, retryAttempt);
     abortedStandDown = false;
     setContinuationDispatchStoodDownRef(false);
     loop.active = true;
