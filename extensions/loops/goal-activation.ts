@@ -606,7 +606,14 @@ async function maybeRouteZombieRetryViaFallback(
   recurrent: boolean,
   attempt: number,
 ): Promise<void> {
-  if (!recurrent || mainModelRecoveryActive()) return;
+  // Audit 2026-10-18: per-attempt truth. A previous episode's routing must
+  // not leak into this attempt's notify or a later exhaustion report: a
+  // fresh episode (clock advanced between aborts) retries same-route, so
+  // the flag resets here and is set again only when THIS attempt engages.
+  if (!recurrent || mainModelRecoveryActive()) {
+    zombieRetryRoutedViaFallback = false;
+    return;
+  }
   const reason = `zero-stream recurrence: retry attempt ${attempt} replays a model route with no provider stream since ${new Date(observedStreamAt).toISOString()}`;
   const run = zombieFallbackAttemptOverride
     ?? ((c: ExtensionContext) => tryMainModelFallback(c, { kind: "transient", raw: reason }));
