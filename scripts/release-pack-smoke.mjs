@@ -104,6 +104,7 @@ try {
   if (typeof activate !== "function") throw new Error("packed extension entry did not export a default activation function");
   const auditor = await jiti.import(path.join(installedPackage, "extensions/goal-loop-auditor-process.ts"));
   if (typeof auditor.resolveWorkerCommand !== "function") throw new Error("packed auditor process did not expose its worker command resolver");
+  if (typeof auditor.auditorEnvAllowlistFor !== "function") throw new Error("packed auditor process did not expose its env allowlist builder");
   if (auditor.resolveWorkerCommand("/usr/bin/node") !== "/usr/bin/node") throw new Error("packed auditor resolver returned an unexpected command");
   const packedLauncher = await import(pathToFileURL(path.join(installedPackage, "scripts/goal-auditor-launch.mjs")).href);
   if (typeof packedLauncher.buildAuditorPiSpawnSpec !== "function") throw new Error("packed launcher did not load");
@@ -133,6 +134,10 @@ try {
     prompt: "packed worker smoke probe",
     model: "packed-probe/model",
     thinkingLevel: "minimal",
+    // v0.39.38 env fence: the worker forwards ONLY these keys to its RPC
+    // child and fails closed without the list — the probe speaks the real
+    // protocol, built by the packed tree's own allowlist builder.
+    auditorEnvAllowlist: auditor.auditorEnvAllowlistFor(process.env),
   };
   request.requestHash = createHash("sha256").update(stableJson(request), "utf8").digest("hex");
   fs.writeFileSync(path.join(workerProbe, "request.json"), `${JSON.stringify(request)}\n`);
