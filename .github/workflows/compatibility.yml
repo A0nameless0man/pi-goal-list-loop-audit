@@ -5,9 +5,14 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+# v0.39.x (chosen 2026-10-17): same newest-state-wins as the quality lane —
+# a concurrency group holds one running and one pending run, and cancel on a
+# newer same-ref trigger cancels the stale in-progress matrix instead of
+# burning 3-OS runners on a superseded push. Per-ref so branches never
+# cross-cancel; a same-ref manual dispatch also follows newest-wins.
 concurrency:
   group: glla-compatibility-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   compatibility:
     strategy:
