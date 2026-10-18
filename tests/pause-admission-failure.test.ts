@@ -4,6 +4,7 @@ import * as fs from 'node:fs';
 import * as vm from 'node:vm';
 import ts from 'typescript';
 import { classifyInterruption } from '../extensions/interruption-policy.js';
+import { buildActionReminder } from '../extensions/action-reminder.js';
 
 // Exercise the actual tool method with the same boolean refusal exposed by
 // the production transaction boundary, without touching the live journal.
@@ -30,7 +31,7 @@ for (const admitted of [false, true]) test(`pause result reflects durable admiss
     providerErrorPresentation: (raw: string) => ({ sensitive: false, display: raw }),
     sanitizeProviderDisplayText: (text: string) => text,
     updateGoal: (patch: object) => { if (admitted) Object.assign(state.goal, patch); return admitted; },
-    maybeDecisionPopup: noop, buildActionReminder: () => ({ content: 'paused', details: {} }),
+    maybeDecisionPopup: noop, buildActionReminder,
     extensionApi: { sendMessage: () => events.push('card') }, ACTION_REMINDER_CUSTOM_TYPE: 'fixture',
     activeGoalSurfaceCommand: (command: string) => `/goal ${command}`, goalNoun: () => 'Goal',
     notifyExternal: noop, markPauseAbort: noop, clearPauseAbort: noop, appendLedger: noop,
@@ -44,7 +45,7 @@ for (const admitted of [false, true]) test(`pause result reflects durable admiss
   } else {
     assert.equal(state.goal.status, 'paused');
     assert.equal(result.isError, undefined);
-    assert.deepEqual(events, ['card', 'notify', 'abort']);
+    assert.deepEqual(events, ['card', 'abort'], 'one canonical card, not a duplicate full-reason notification');
     assert.match(result.content[0].text, /Goal paused/);
   }
 });
