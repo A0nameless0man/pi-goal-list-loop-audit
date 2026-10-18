@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import test, { afterEach } from 'node:test';
-import type { ToolRenderContext } from '@earendil-works/pi-coding-agent';
+import type { ToolDefinition } from '@earendil-works/pi-coding-agent';
+type ToolRenderContext = Parameters<NonNullable<ToolDefinition['renderResult']>>[3];
 import { visibleWidth, stripTerminalSequences } from '@earendil-works/pi-tui';
 import { loadThemeFromPath } from '../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/theme.js';
 import activate, { __testOnlyResetProcessState } from '../extensions/loops/goal.js';
-import { replaceState } from '../extensions/goal-loop-core.js';
+import { readState } from '../extensions/goal-loop-core.js';
+import { replaceState } from '../extensions/goal-state.js';
 import { buildActionReminder, clearPauseAbort, markActionReminderTurnStart, markPauseAbort, registerActionReminderRenderer } from '../extensions/action-reminder.js';
 import { humanCheckTime } from '../extensions/human-handoff.js';
 import { MockPi, seedGoal, seedState, makeMockCtx, tmpCwd } from './harness/mock-pi.js';
@@ -16,8 +18,8 @@ async function fixture() {
   __testOnlyResetProcessState();
   const pi = new MockPi(); activate(pi.api);
   const cwd = tmpCwd();
-  const goal = seedGoal({ status: 'paused', pauseKind: 'wait', pauseReason: 'Waiting for the normal backup rotation.', pauseResumeAt: new Date(Date.now() + 600_000).toISOString() });
-  seedState(cwd, { goal });
+  seedState(cwd, { goal: seedGoal({ status: 'paused', pauseKind: 'wait', pauseReason: 'Waiting for the normal backup rotation.', pauseResumeAt: new Date(Date.now() + 600_000).toISOString() }) });
+  const goal = readState(cwd).goal; assert.ok(goal);
   const ctx = makeMockCtx(cwd);
   await pi.fire('session_start', { reason: 'startup' }, ctx);
   replaceState({ goal, list: [], loop: null });

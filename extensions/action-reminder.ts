@@ -324,7 +324,7 @@ export function registerActionReminderRenderer(pi: ExtensionAPI): void {
     }
     box.addChild(new Text(`${timedWait ? "Waiting for" : "Why"}: ${expanded ? compactDisplayText(details?.reason ?? presentation.why) : presentation.why}`, 0, 0));
     if (presentation.next) box.addChild(new Text(theme.fg("accent", timedWait && details?.resumeAt
-      ? "No action is needed while this session is active and automatic checks are enabled. This checks progress, not completion; use /glla status if unsure."
+      ? "No action is needed while this session is active and automatic checks are enabled. This is a progress check, not a promise of completion; use /glla status if unsure."
       : presentation.next), 0, 0));
     if (presentation.resumeCommand && presentation.parkState !== "automatic") {
       box.addChild(new Text(presentation.resumeHint ?? theme.fg("dim", `Resume: ${presentation.resumeCommand}`), 0, 0));
