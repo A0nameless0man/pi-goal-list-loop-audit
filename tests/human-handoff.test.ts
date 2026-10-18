@@ -5,9 +5,9 @@ import { buildActionReminder, registerActionReminderRenderer } from "../extensio
 import { buildTerminalApprovalRender, buildRichArchiveSection } from "../extensions/completion-summary.js";
 import { buildUiStatusCard } from "../extensions/goal-loop-display.js";
 import { projectUiStatus } from "../extensions/ui-status.js";
-import activate from "../extensions/loops/goal.js";
-import { MockPi, seedGoal } from "./harness/mock-pi.js";
-import type { State } from "../extensions/goal-loop-core.js";
+import activate, { __testOnlyResetProcessState } from "../extensions/loops/goal.js";
+import { MockPi, seedGoal, seedState, makeMockCtx, tmpCwd } from "./harness/mock-pi.js";
+import type { Goal, State } from "../extensions/goal-loop-core.js";
 
 function renderedReminder(reason: string, action?: string, expanded = false) {
   const pi = new MockPi(); registerActionReminderRenderer(pi.api);
@@ -38,7 +38,7 @@ test("football-style wall is a preview with the original report available on exp
 
 test("a missing completion field never turns telemetry into human changes", () => {
   const goal = seedGoal({ completionSummary: "Outcome: Both panels now show readable field labels. Changed: Labels use the stored question text.",
-    telemetry: { turns: 0, fileWrites: 37, bashCalls: 55, files: ["/home/user/project/internal.ts"] } });
+    telemetry: { turns: 0, fileWrites: 37, bashCalls: 55, files: ["/home/user/project/internal.ts"] } }) as unknown as Goal;
   const input = { goal, status: "complete" as const, approval: "— completion audit approved.", record: "— record: saved.md", archivePath: "saved.md", stopReason: "auditor approved" };
   const human = buildTerminalApprovalRender(input).chatLines.join("\n");
   assert.match(human, /Both panels now show readable field labels/);
@@ -50,7 +50,7 @@ test("a missing completion field never turns telemetry into human changes", () =
 });
 
 test("no supplied result means an honest missing explanation, not an invented fix", () => {
-  const goal = seedGoal({ objective: "Fix the panels", completionSummary: undefined, telemetry: { turns: 1, fileWrites: 37, bashCalls: 55 } });
+  const goal = seedGoal({ objective: "Fix the panels", completionSummary: undefined, telemetry: { turns: 1, fileWrites: 37, bashCalls: 55 } }) as unknown as Goal;
   const human = buildTerminalApprovalRender({ goal, status: "complete", approval: "— approved.", record: "— record: saved.md" }).chatLines.join("\n");
   assert.match(human, /plain-language result was not recorded/);
   assert.doesNotMatch(human, /file-write|bash calls|terminal reason|Objective.*archived/);
@@ -73,7 +73,7 @@ test("compact completion shows primary changes; exact actions and limitations re
 test("compact footer prioritizes the actual action and bounds the repeated reason, detailed status keeps it", () => {
   const reason = "A human playtest is needed. " + "Historical evidence and verifier mechanics. ".repeat(80) + "SENTINEL-END";
   const goal = seedGoal({ status: "paused", pauseKind: "blocked", policy: "list", pauseReason: reason,
-    pauseSuggestedAction: "Run the four playtest tasks in HUMAN-PLAYTEST-QUICKSTART.md and report your observations." });
+    pauseSuggestedAction: "Run the four playtest tasks in HUMAN-PLAYTEST-QUICKSTART.md and report your observations." }) as unknown as Goal;
   const state = { goal } as State;
   const now = Date.now();
   const status = projectUiStatus(state, { now, generation: 1 });
@@ -87,11 +87,20 @@ test("compact footer prioritizes the actual action and bounds the repeated reaso
   assert.equal(goal.pauseReason, reason);
 });
 
-test("human handoff guidance reaches the real tool registrations", () => {
+test("human handoff guidance reaches the real tool registrations", async () => {
+  __testOnlyResetProcessState();
   const pi = new MockPi(); activate(pi.api);
-  for (const name of ["complete_goal", "pause_goal"]) {
-    const definition = pi.tools.get(name) as { promptGuidelines?: string[] };
-    assert.ok(definition.promptGuidelines?.includes(HUMAN_HANDOFF_GUIDANCE), `${name} carries the shared policy`);
+  const cwd = tmpCwd(); seedState(cwd, { goal: seedGoal({ status: "active", autoContinue: false }) });
+  const ctx = makeMockCtx(cwd);
+  try {
+    await pi.fire("session_start", { reason: "startup" }, ctx);
+    for (const name of ["complete_goal", "pause_goal"]) {
+      const definition = pi.tools.get(name) as { promptGuidelines?: string[] };
+      assert.ok(definition?.promptGuidelines?.includes(HUMAN_HANDOFF_GUIDANCE), `${name} carries the shared policy`);
+    }
+  } finally {
+    await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
+    __testOnlyResetProcessState();
   }
 });
 
