@@ -487,12 +487,17 @@ export function buildSettingsRows(
   // Designer is excluded: its chain lives on the Designer tab.
   for (const name of OVERRIDABLE_AGENT_TYPES.filter((name) => name !== "Designer")) {
     const chain = settings.subagentFallbacks?.[name] ?? [];
+    // v0.39.x: per-role provenance — a project chain for one role must not
+    // label every other role's row. Chain-less roles read `default`; a
+    // chained role without per-role data keeps the whole-map source.
+    const roleSource = subagent.subagentFallbackSources?.[name]
+      ?? (chain.length ? src("subagentFallbacks") : "default");
     rows.push({
       id: `subagentFallbacks:${name}`,
       section: "subagents",
       label: `${name} fallback agents`,
       valueText: chain.length ? chain.join(" → ") : "none (uses pin or inherits)",
-      sourceText: src("subagentFallbacks"),
+      sourceText: roleSource,
       description: `ordered fallback agents; the FIRST eligible provider/model ref is written as the ${name}.md override. Empty → falls through to subagentModelOverrides / subagentModelStrategy.`,
     });
   }
