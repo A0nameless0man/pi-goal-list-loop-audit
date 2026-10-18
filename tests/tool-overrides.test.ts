@@ -11,18 +11,16 @@ import { test } from "node:test";
 import * as assert from "node:assert/strict";
 import * as fs from "node:fs";
 import { readGoalRuntimeSource } from "./harness/goal-source.js";
+import { SETTINGS_KEYS, type Settings } from "../extensions/goal-settings.js";
 
 test("Settings type accepts toolOverrides (allow / hide / perToolConfig)", () => {
-  const src = fs.readFileSync("extensions/goal-settings.ts", "utf-8");
-  assert.match(src, /toolOverrides\?:\s*\{\s*\n\s*\/\*\* Tools that MUST be active/);
-  assert.match(src, /allow\?:\s*string\[\]/);
-  assert.match(src, /hide\?:\s*string\[\]/);
-  assert.match(src, /perToolConfig\?:\s*Record<string,\s*Record<string,\s*unknown>>/);
+  // The typecheck gate verifies the accepted shape, not its JSDoc spelling.
+  const settings: Settings = { toolOverrides: { allow: ["read"], hide: ["write"], perToolConfig: { read: { limit: 5 } } } };
+  assert.deepEqual(settings.toolOverrides?.perToolConfig?.read, { limit: 5 });
 });
 
 test("SETTINGS_KEYS includes toolOverrides for provenance tracking", () => {
-  const src = fs.readFileSync("extensions/goal-settings.ts", "utf-8");
-  assert.match(src, /SETTINGS_KEYS[\s\S]*?"toolOverrides",[\s\S]*?"reviewer"[\s\S]*?\]/);
+  assert.ok(SETTINGS_KEYS.includes("toolOverrides"));
 });
 
 test("goal.ts ensureAgentToolsActive applies toolOverrides.allow and .hide", () => {

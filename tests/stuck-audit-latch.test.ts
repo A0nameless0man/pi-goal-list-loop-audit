@@ -36,9 +36,8 @@ test("Fix A: the apply gate defers + parks instead of silently dropping a comple
   assert.match(SRC, /const currentAfterAudit = freshCtxForGeneration\(generation\);\n  if \(!currentAfterAudit \|\| !state\.goal \|\| state\.goal\.id !== goalId\) \{/);
   assert.match(SRC, /audit_verdict_deferred/, "the deferred-verdict ledger event exists");
   assert.match(SRC, /markCompletionAuditRecoveryPending\((?:recoveryCtx|lastCtx), "verdict-apply-gate"\)/, "the claim parks as recovery-pending");
-  assert.match(SRC, /NEVER drop a completed verdict silently/, "the intent comment is pinned");
   // The legit-supersede case (a NEWER attempt owns the durable claim) stays silent:
-  assert.match(SRC, /if \(state\.goal\.pendingCompletion\?\.attemptId !== claim\.attemptId\) return; \/\/ a newer attempt owns the durable claim/);
+  assert.match(SRC, /if\s*\(state\.goal\.pendingCompletion\?\.attemptId !== claim\.attemptId\)\s*return;/);
 });
 
 test("Fix B: the stale-latch stranded park runs BEFORE the extensionApiStale early return", () => {
@@ -83,7 +82,7 @@ test("audit 2026-09-25: stranded_audit_recovered is ledgered only after the park
   // Fresh-ctx branch: the failure notify + early return precede the ledger.
   assert.match(
     HB,
-    /if \(!markCompletionAuditRecoveryPending\(current, "stale-latch-recovery"\)\) \{[^]*?could not be persisted[^]*?return;[^]*?\}\s*\/\/ The recovery projection landed[^]*?appendLedger\(current\.cwd, "stranded_audit_recovered"/,
+    /if \(!markCompletionAuditRecoveryPending\(current, "stale-latch-recovery"\)\) \{[^]*?could not be persisted[^]*?return;[^]*?\}[^]*?appendLedger\(current\.cwd, "stranded_audit_recovered"/,
     "fresh-ctx ledger follows the successful park",
   );
   // Context-free branch: the ledger sits after the failure-check block.

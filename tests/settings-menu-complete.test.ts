@@ -649,8 +649,8 @@ test("audit 2026-09-06: legacy reviewer block migrates to postaudit", async () =
 });
 
 test("audit 2026-09-07 (LOW, findings 392-394): quiet copy names the count line at every surface", () => {
-  const SETTINGS = fs.readFileSync("extensions/goal-settings.ts", "utf-8");
-  assert.match(SETTINGS, /The count\n   \* line stays at every level/, "type comment documents the count line");
+  // Actual quiet-mode count visibility is covered by subagent-display-richness.test.ts;
+  // the remaining checks protect user-visible descriptions, not a type comment.
   const MENU = fs.readFileSync("extensions/settings-menu.ts", "utf-8");
   assert.match(MENU, /quiet shows troubled workers only \+ the count line/, "menu description names the count line");
   const UI = fs.readFileSync("extensions/loops/goal-settings-ui.ts", "utf-8");
