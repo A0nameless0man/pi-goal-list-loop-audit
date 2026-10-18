@@ -381,10 +381,10 @@ export function rollupEntries(project: string, entries: LedgerEntry[]): ProjectR
 }
 
 export function rollupProject(projectPath: string): ProjectRollup | undefined {
-  const files = ledgerFiles(projectPath);
-  if (files.length === 0) return undefined;
   const acc = newRollupAccumulator();
   try {
+    const files = ledgerFiles(projectPath);
+    if (files.length === 0) return undefined;
     scanLedgerRecords(projectPath, (entry) => addRollupEntry(acc, entry));
   } catch {
     return undefined;
@@ -411,8 +411,7 @@ export function discoverGllaProjects(opts: { home?: string; cwd?: string; budget
 
   const hasLedger = (dir: string): boolean => {
     try {
-      fs.accessSync(path.join(piGlaDir(dir), "active.jsonl"));
-      return true;
+      return fs.lstatSync(path.join(piGlaDir(dir), "active.jsonl")).isFile();
     } catch {
       return false;
     }
