@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+## 0.39.36 — clearer waiting UI and human handoffs (2026-10-18)
+
+### Human-facing completion and waiting messages
+
+- Lead completion cards with the result and primary changes. Keep supporting
+  reports expandable, preserve limitations, actions, review qualifications and
+  saved-record links, and leave verification evidence in the archive by default.
+- Make waiting unmistakable: show **Waiting — work saved** and the next UTC
+  progress check before the reason, with a compact tool receipt instead of
+  repeated reporting. Saved checks remain readable when live wake evidence is
+  absent; an unconfirmed wake never becomes a promise of automatic execution.
+- Present the host's exact intentional cancellation error as a normal pause
+  only for the matching GLLA owner, goal, turn and saved pause. Genuine errors,
+  unmarked cancellations and changed-pause messages remain visible.
+
+### Verification value and execution reliability
+
+- Teach agents to protect meaningful requirements rather than incidental
+  wording, counts or byte sizes; capture diagnostics once and inspect them
+  before justified reruns. Preserve exact protocol, security and release checks.
+- Harden continuation acknowledgement persistence and wrong-record fences,
+  fingerprint audit evidence by content, and keep cold-restored audit displays
+  scoped to their owner. Improve auditor process-tree cleanup and child
+  environment isolation without changing the independent audit requirement.
+- Improve settings visibility, test-runner/package diagnostics and CI failure
+  capture. Isolate packed-release smoke probes from the checkout and retain
+  negative-control coverage for meaningful test contracts.
+
 ### Scheduled waits: intentional stop, consistent next action
 
 - Align scheduled-wait tool output, reminders and notifications around the
@@ -11,8 +39,9 @@
   turn. Retain it after the one-shot message rewrite, record the transport
   observation once and suppress redundant expected-abort notifications.
   Unmarked aborts still notify once; new turns/owners/pauses are not hidden.
-- Explain Pi's possible red abort line as an intentional turn stop on the
-  admitted wait card. Pi's renderer is unchanged; wait admission, deadlines,
+- Explain intentional turn stops on the admitted wait card, and normalize the
+  matching host cancellation through Pi's public message hook. Pi's renderer
+  itself is unchanged; wait admission, deadlines,
   heartbeat ownership, explicit holds and retry policy are unchanged.
 
 ## 0.39.35 — durable-solution authority and evidence (2026-10-16)
