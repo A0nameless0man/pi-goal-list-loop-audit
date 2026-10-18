@@ -1,270 +1,144 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
-import {
-  buildAbortedAssistantNotice,
-  buildActionReminder,
-  frameTweakSuggestion,
-  registerActionReminderRenderer,
-  type ActionReminderCopy,
-} from "../extensions/action-reminder.js";
+import { buildAbortedAssistantNotice, buildActionReminder, frameTweakSuggestion, registerActionReminderRenderer, type ActionReminderCopy } from "../extensions/action-reminder.js";
+import { humanCheckTime } from "../extensions/human-handoff.js";
 import { MockPi } from "./harness/mock-pi.js";
 
-function renderReminder(reminder: ActionReminderCopy, width = 120, dimmed: string[] = []): string {
-  const pi = new MockPi();
-  registerActionReminderRenderer(pi.api);
+function render(reminder: ActionReminderCopy, expanded = false, width = 120): string {
+  const pi = new MockPi(); registerActionReminderRenderer(pi.api);
   const renderer = pi.messageRenderers.get("glla-action-reminder")!;
-  const testTheme = { fg: (color: string, text: string) => { if (color === "dim") dimmed.push(text); return text; }, bg: (_color: string, text: string) => text };
-  const component = renderer(
-    { customType: "glla-action-reminder", content: reminder.content, display: true, details: reminder.details },
-    { expanded: false, outputPad: 1 },
-    testTheme as never,
-  ) as { render(width: number): string[] };
-  return component.render(width).join("\n");
+  const component = renderer({ customType: "glla-action-reminder", content: reminder.content, display: true, details: reminder.details },
+    { expanded, outputPad: 1 }, { fg: (_: string, s: string) => s, bg: (_: string, s: string) => s }) as { render(width: number): string[] };
+  const lines = component.render(width);
+  assert.ok(lines.every(line => visibleWidth(line) <= width), `fits ${width} columns`);
+  return lines.join("\n");
 }
 
-test("standby renderer keeps the background-wake explanation visible", () => {
-  const text = renderReminder(buildActionReminder({
-    kind: "standby",
-    reason: "Waiting for the auditor.",
-    resumeCommand: "/goal resume",
-  }));
-  assert.match(text, /GLLA Waiting/);
-  assert.match(text, /background completion will wake/);
-  assert.match(text, /no manual action is needed/);
-  assert.doesNotMatch(text, /this turn stopped/);
-  assert.doesNotMatch(text, /Next:/);
-});
-
 for (const action of [undefined, "/list resume", "Run '/list resume'.", "`/glla resume`"]) {
-  test(`blocked reminder prioritizes prerequisite, not resume-only action (${action})`, () => {
-    const reminder = buildActionReminder({
-      kind: "blocked", reason: "Complete the $0 checkout and confirm the receipt.",
-      action, resumeCommand: "/list resume",
-    });
-    const dimmed: string[] = [];
-    const rendered = renderReminder(reminder, 120, dimmed);
-    for (const text of [reminder.content, rendered]) {
-      assert.match(text, /Why: Complete the \$0 checkout and confirm the receipt/);
-      assert.match(text, /Next: Resolve the prerequisite described above and report the result/);
-      assert.match(text, /After the prerequisite is resolved: \/list resume/);
-      assert.match(text, /does not resolve the blocker/);
+  test(`legacy blocker does not pretend resume solves the requirement (${action})`, () => {
+    const reminder = buildActionReminder({ kind: "blocked", reason: "Complete the $0 checkout and confirm the receipt.", action, resumeCommand: "/list resume" });
+    for (const text of [reminder.content, render(reminder)]) {
+      assert.match(text, /Complete the \$0 checkout and confirm the receipt/);
+      assert.match(text, /Next: Complete the requirement/);
+      assert.match(text, /Then use \/list resume/);
+      assert.match(text, /Resuming alone does not fix/);
       assert.doesNotMatch(text, /Next: (?:Run )?[`']?\/(?:list|glla) resume/);
-      assert.ok(text.indexOf("Why:") < text.indexOf("After the prerequisite"));
+      assert.ok(text.indexOf("Why:") < text.indexOf("Then use"));
     }
-    assert.ok(!dimmed.some(text => text.startsWith("Why:") || text.startsWith("After the prerequisite")), "blocker and conditional retry must be readable");
     assert.equal(reminder.details.reason, "Complete the $0 checkout and confirm the receipt.");
+    assert.equal(reminder.details.safelyParked, true);
   });
 }
 
-test("blocked reminder preserves a concrete human action ahead of conditional retry", () => {
-  const reminder = buildActionReminder({ kind: "blocked", reason: "Browser authorization is missing.",
-    action: "Authorize browser access, then reply here.", resumeCommand: "/goal resume" });
-  for (const text of [reminder.content, renderReminder(reminder)]) {
+test("concrete action and conditional retry survive both reminder surfaces", () => {
+  const reminder = buildActionReminder({ kind: "blocked", reason: "Browser authorization is missing.", action: "Authorize browser access, then reply here.", resumeCommand: "/goal resume" });
+  for (const text of [reminder.content, render(reminder)]) {
     assert.match(text, /Next: Authorize browser access, then reply here/);
-    assert.match(text, /After the prerequisite is resolved: \/goal resume/);
-    assert.ok(text.indexOf("Next:") < text.indexOf("After the prerequisite"));
+    assert.match(text, /Then use \/goal resume/);
+    assert.ok(text.indexOf("Next:") < text.indexOf("Then use"));
+    assert.match(text, /Your work is saved/);
+    assert.doesNotMatch(text, /Operation aborted/);
   }
+  assert.equal(reminder.details.parkState, "stopped");
 });
 
-test("replaying legacy blocked details replaces old resume-only card copy", () => {
+test("legacy renderer rebuilds copy without changing the saved reason or action", () => {
   const pi = new MockPi(); registerActionReminderRenderer(pi.api);
   const details = { kind: "blocked", reason: "Confirm the checkout receipt.", resumeCommand: "/list resume" };
   const before = JSON.stringify(details);
   const renderer = pi.messageRenderers.get("glla-action-reminder")!;
   const component = renderer({ details, content: "Next: /list resume" }, { outputPad: 1 },
-    { fg: (_: string, text: string) => text, bg: (_: string, text: string) => text }) as { render(width: number): string[] };
+    { fg: (_: string, s: string) => s, bg: (_: string, s: string) => s }) as { render(width: number): string[] };
   const text = component.render(120).join("\n");
-  assert.match(text, /Why: Confirm the checkout receipt/);
-  assert.match(text, /Next: Resolve the prerequisite/);
-  assert.match(text, /After the prerequisite is resolved: \/list resume/);
+  assert.match(text, /Confirm the checkout receipt/);
+  assert.match(text, /Next: Complete the requirement/);
   assert.doesNotMatch(text, /Next: \/list resume/);
-  assert.equal(JSON.stringify(details), before, "rendering never rewrites saved state");
+  assert.equal(JSON.stringify(details), before);
 });
 
-test("registers a dedicated GLLA reminder renderer", () => {
-  const pi = new MockPi();
-  registerActionReminderRenderer(pi.api);
-  assert.equal(pi.messageRenderers.has("glla-action-reminder"), true);
-});
-
-test("blocked reminder is actionable and says the work is safely parked", () => {
-  const reminder = buildActionReminder({
-    kind: "blocked",
-    reason: "The native browser popup needs a manual observation.",
-    action: "Open the popup and record the result.",
-    resumeCommand: "/list resume",
+for (const action of [undefined, "Choose one in the decision card."]) {
+  test(`decision preserves the picker handoff (${action})`, () => {
+    const reminder = buildActionReminder({ kind: "decision", reason: "Choose the rollout approach.", action, resumeCommand: "/list resume" });
+    for (const text of [reminder.content, render(reminder)]) {
+      assert.match(text, /Choose/);
+      assert.match(text, /decision card/);
+      assert.doesNotMatch(text, /Next: \/list resume/);
+    }
+    assert.equal(reminder.details.kind, "decision");
+    assert.equal(reminder.details.safelyParked, true);
   });
-  const text = renderReminder(reminder);
-  assert.match(text, /GLLA Action needed — work is safely parked/);
-  assert.match(text, /Why: The native browser popup/);
-  assert.match(text, /Next: Open the popup and record the result/);
-  assert.match(text, /After the prerequisite is resolved: \/list resume/);
-  assert.doesNotMatch(text, /Operation aborted/);
-  assert.equal(reminder.details.parkState, "stopped");
-  assert.equal(reminder.details.safelyParked, true);
-});
+}
 
-test("decision reminder is prominent, safely parked, and names the exact picker action", () => {
-  const reminder = buildActionReminder({
-    kind: "decision",
-    reason: "Two valid architectures remain.",
-    action: "Choose one in the decision card.",
-    resumeCommand: "/list resume",
-  });
-  const text = renderReminder(reminder);
-  assert.match(text, /GLLA Decision needed — work is safely parked/);
-  assert.match(text, /Why: Two valid architectures remain/);
-  assert.match(text, /Next: Choose one in the decision card/);
-  assert.match(text, /Resume: \/list resume/);
-  assert.doesNotMatch(text, /Operation aborted/);
-  assert.equal(reminder.details.kind, "decision");
-  assert.equal(reminder.details.safelyParked, true);
-});
-
-test("redirect reminder says the goal is held while the new request runs", () => {
-  const reminder = buildActionReminder({
-    kind: "blocked",
-    reason: "The user redirected the current turn.",
-    action: "Handle the new request now: inspect the inbox",
-    resumeCommand: "/goal resume",
-    parkState: "redirect",
-  });
-  const text = renderReminder(reminder);
-  assert.match(text, /Goal safely parked — handling your new request now/);
-  assert.match(text, /Why: The user redirected the current turn/);
-  assert.match(text, /Next: Handle the new request now: inspect the inbox/);
-  assert.match(text, /saved goal is held while the current turn handles the new request/);
-  assert.match(text, /Resume: \/goal resume/);
+test("redirect remains a handoff to work now, not a stopped turn", () => {
+  const reminder = buildActionReminder({ kind: "blocked", reason: "The user redirected the current turn.", action: "Handle the new request now: inspect the inbox", resumeCommand: "/goal resume", parkState: "redirect" });
+  const text = render(reminder);
+  assert.match(text, /handling your new request now/);
+  assert.match(text, /inspect the inbox/);
+  assert.match(text, /while I handle the new request/);
   assert.doesNotMatch(text, /this turn stopped/);
   assert.equal(reminder.details.parkState, "redirect");
 });
 
-test("diagnostics trail the actionable reminder as subordinate text", () => {
-  const reminder = buildActionReminder({
-    kind: "blocked",
-    reason: "A required credential is missing.",
-    action: "Configure the credential.",
-    resumeCommand: "/goal resume",
-    diagnostic: "provider request id=req-42",
-  });
-  const text = renderReminder(reminder);
-  const actionIndex = text.indexOf("Next: Configure the credential.");
-  const diagnosticIndex = text.indexOf("Diagnostic: provider request id=req-42");
-  assert.ok(actionIndex >= 0, "primary action is visible");
-  assert.ok(diagnosticIndex > actionIndex, "diagnostic is rendered after the primary action");
-  assert.match(text, /GLLA Action needed — work is safely parked[\s\S]*Why:[\s\S]*Next:/);
+test("diagnostics are expandable supporting detail, not a competing primary message", () => {
+  const reminder = buildActionReminder({ kind: "blocked", reason: "A required credential is missing.", action: "Configure the credential.", resumeCommand: "/goal resume", diagnostic: "provider request id=req-42" });
+  assert.doesNotMatch(render(reminder), /req-42/);
+  assert.match(render(reminder), /More details/);
+  const expanded = render(reminder, true);
+  assert.ok(expanded.indexOf("Diagnostic:") > expanded.indexOf("Next: Configure"));
+  assert.match(expanded, /req-42/);
+  assert.equal(reminder.details.diagnostic, "provider request id=req-42");
 });
 
-test("standby reminder says background completion wakes the work", () => {
-  const reminder = buildActionReminder({
-    kind: "standby",
-    reason: "Waiting for the background auditor.",
-    resumeCommand: "/goal resume",
-  });
-  assert.match(reminder.content, /No action is needed/);
-  assert.match(reminder.content, /wake/);
-  assert.equal(reminder.details.safelyParked, true);
+test("standby explains the automatic background handoff with its active-session condition", () => {
+  const reminder = buildActionReminder({ kind: "standby", reason: "Waiting for the auditor.", resumeCommand: "/goal resume" });
+  for (const text of [reminder.content, render(reminder)]) {
+    assert.match(text, /No action is needed while this session is active/);
+    assert.match(text, /background result when it arrives/);
+    assert.doesNotMatch(text, /Resume:|Next:/);
+  }
   assert.equal(reminder.details.parkState, "automatic");
 });
 
-test("timed wait is automatic and does not invent a manual action", () => {
-  const reminder = buildActionReminder({
-    kind: "wait",
-    reason: "The rate limit resets later.",
-    resumeCommand: "/list resume",
-    resumeAt: "2026-09-24T23:59:00.000Z",
-  });
-  const text = renderReminder(reminder);
-  assert.match(text, /GLLA Waiting — work is safely parked/);
-  assert.match(text, /Assessment check saved for 2026-09-24T23:59:00\.000Z/);
-  assert.match(text, /does not prove completion/);
-  assert.match(text, /no manual action is needed/);
-  assert.doesNotMatch(text, /this turn stopped/);
-  assert.doesNotMatch(text, /Next:/);
-  assert.doesNotMatch(text, /Resume: \/list resume/);
-  assert.equal(reminder.details.safelyParked, true);
+test("timed wait names the next progress check without claiming completion or a live wake", () => {
+  const at = "2026-09-24T23:59:00.000Z";
+  const reminder = buildActionReminder({ kind: "wait", reason: "The soak needs more elapsed time.", resumeCommand: "/list resume", resumeAt: at });
+  for (const text of [reminder.content, render(reminder)]) {
+    assert.ok(text.includes(humanCheckTime(at)));
+    assert.match(text, /progress check, not a promise of completion/);
+    assert.match(text, /session is active and automatic checks are enabled/);
+    assert.doesNotMatch(text, /Resume: \/list resume|owned wake|admitted heartbeat/);
+  }
+  assert.equal(reminder.details.resumeAt, at);
   assert.equal(reminder.details.parkState, "automatic");
 });
 
-test("assistant abort notice is a GLLA explanation, not generic transport text", () => {
-  const notice = buildAbortedAssistantNotice({
-    kind: "error",
-    reason: "The turn reached its safety boundary.",
-    action: "Inspect the saved work, then /goal resume.",
-    resumeCommand: "/goal resume",
-  });
-  assert.match(notice, /GLLA paused this turn safely/);
-  assert.match(notice, /Inspect the saved work/);
-  assert.doesNotMatch(notice, /Operation aborted/);
+test("abort notice points to the canonical card instead of duplicating its reason and action", () => {
+  const reason = "The turn reached its safety boundary.";
+  const notice = buildAbortedAssistantNotice({ kind: "error", reason, action: "Inspect the saved work, then /goal resume.", resumeCommand: "/goal resume" });
+  assert.match(notice, /intentionally/);
+  assert.match(notice, /action card/);
+  assert.doesNotMatch(notice, /Operation aborted|safety boundary/);
+  const at = "2026-09-24T23:59:00.000Z";
+  const wait = buildAbortedAssistantNotice({ kind: "wait", reason, resumeCommand: "/goal resume", resumeAt: at });
+  assert.ok(wait.includes(humanCheckTime(at)));
+  assert.match(wait, /progress check/);
+  assert.doesNotMatch(wait, /safety boundary|\/goal resume/);
 });
 
-test("wait abort notice uses the same automatic-wake explanation as its card", () => {
-  const notice = buildAbortedAssistantNotice({
-    kind: "wait",
-    reason: "The rate limit resets later.",
-    resumeCommand: "/goal resume",
-    resumeAt: "2026-09-24T23:59:00.000Z",
-  });
-  assert.match(notice, /Scheduled wait saved; this turn ended intentionally/);
-  assert.match(notice, /The rate limit resets later/);
-  assert.match(notice, /Assessment check saved for 2026-09-24T23:59:00\.000Z/);
-  assert.match(notice, /current registration/);
-  assert.doesNotMatch(notice, /Next:/);
-  assert.doesNotMatch(notice, /Operation aborted/);
-});
-
-test("reminder rendering bounds narrow rows and strips terminal commands", () => {
+test("reminders fit narrow widths and strip unsafe terminal sequences", () => {
   const reminder = buildActionReminder({ kind: "blocked", reason: "verify\x1b[2J the result", action: "resume\x9b after checking", diagnostic: "details\x1b[2J", resumeCommand: "/goal resume" });
-  const pi = new MockPi(); registerActionReminderRenderer(pi.api);
-  const renderer = pi.messageRenderers.get("glla-action-reminder")!;
-  const component = renderer({ details: reminder.details, content: reminder.content }, { outputPad: 1 }, { fg: (_: string, s: string) => s, bg: (_: string, s: string) => s }) as { render(width: number): string[] };
-  for (const width of [0, 1, 20, 40, 80]) {
-    const lines = component.render(width);
-    assert.ok(lines.every(line => !/\x1b\[2J|\x9b/.test(line)), "provider/tool text must not clear the terminal");
-    assert.ok(lines.every(line => visibleWidth(line) <= width), `reminder fits ${width} columns`);
+  for (const expanded of [false, true]) for (const width of [0, 1, 20, 40, 80]) {
+    assert.doesNotMatch(render(reminder, expanded, width), /\x1b\[2J|\x9b/);
   }
 });
 
-test("tweak suggestions are posed as questions, never imperative orders", () => {
-  const reminder = buildActionReminder({
-    kind: "blocked",
-    reason: "Contract-conflict: the verification command can never reach the auditor.",
-    action: `Run '/goal tweak "5. update the contract"'`,
-    resumeCommand: "/list resume",
-  });
-  const text = renderReminder(reminder);
-  assert.match(text, /Question: should this tweak be applied\?/);
-  assert.match(text, /Run '\/goal tweak "5\. update the contract"'/);
-  assert.doesNotMatch(text, /Next: Run/);
-  // The exact command survives verbatim for copy-paste.
-  assert.ok(text.includes(`Run '/goal tweak "5. update the contract"'`));
-});
-
-test("frameTweakSuggestion only fires on tweak commands", () => {
-  assert.equal(frameTweakSuggestion("Open the popup and record the result."), undefined);
-  assert.equal(frameTweakSuggestion("/goal resume"), undefined);
-  assert.equal(frameTweakSuggestion(""), undefined);
-  const framed = frameTweakSuggestion(`Run '/list tweak "drop item 3"'`);
-  assert.ok(framed?.startsWith("Question: should this tweak be applied?"));
-  assert.ok(framed?.includes(`Run '/list tweak "drop item 3"'`));
-});
-
-test("non-tweak blocked reminders keep the imperative Next line", () => {
-  const reminder = buildActionReminder({
-    kind: "blocked",
-    reason: "The native browser popup needs a manual observation.",
-    action: "Open the popup and record the result.",
-    resumeCommand: "/list resume",
-  });
-  const text = renderReminder(reminder);
-  assert.match(text, /Next: Open the popup and record the result/);
-  assert.doesNotMatch(text, /Question:/);
-});
-test("decision reminder rendering agrees with its transcript when no action was supplied", () => {
-  const reminder = buildActionReminder({ kind: "decision", reason: "Choose the rollout approach.", resumeCommand: "/goal resume" });
-  assert.match(reminder.content, /Choose an option in the decision card/);
-  const rendered = renderReminder(reminder);
-  assert.match(rendered, /Choose an option in the decision card/);
-  assert.doesNotMatch(rendered, /Next: \/goal resume/);
+test("tweak proposals remain questions and retain the exact command for consent", () => {
+  const action = `Run '/goal tweak "5. update the contract"'`;
+  const reminder = buildActionReminder({ kind: "blocked", reason: "The contract conflicts with the verifier.", action, resumeCommand: "/list resume" });
+  assert.match(render(reminder), /Question: should this tweak be applied\?/);
+  assert.ok(render(reminder).includes(action));
+  assert.doesNotMatch(render(reminder), /Next: Run/);
+  for (const other of ["Open the popup and record the result.", "/goal resume", ""]) assert.equal(frameTweakSuggestion(other), undefined);
+  assert.ok(frameTweakSuggestion(`Run '/list tweak "drop item 3"'`)?.includes(`/list tweak "drop item 3"`));
 });
