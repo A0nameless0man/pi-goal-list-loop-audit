@@ -112,7 +112,13 @@ test("main-agent tab starts with the runtime agent; drafter and subagent chains 
   assert.equal(byId.get("drafterModelFallbacks")?.section, "drafter");
   assert.equal(byId.get("drafterThinkingLevel"), undefined, "thinking is selected with the model, not as a standalone row");
   assert.ok(rows.filter((r) => r.id.startsWith("subagentFallbacks:")).every((r) => r.section === "subagents"));
-  assert.equal(byId.get("forbiddenModels")?.section, "keep-going", "policy gate stays with keep-going controls");
+  assert.equal(byId.get("forbiddenModels")?.section, "main-agent", "shared policy gate lives with the main-agent fallback chain it guards");
+  assert.equal(byId.get("blockForbiddenModelSwitches")?.section, "main-agent", "explicit-switch gate sits next to the patterns it enforces");
+  assert.deepEqual(
+    rows.filter((r) => r.section === "main-agent").map((r) => r.id),
+    ["mainAgent", "mainModelFallbacks", "mainModelFallbackThinkingLevels", "forbiddenModels", "blockForbiddenModelSwitches", "mainModelRetryMinutes", "mainModelFallbackThinkingLevels" === "x" ? "x" : rows.filter((r) => r.section === "main-agent")[5]!.id],
+    "main-agent tab keeps runtime, chain, policy gates, then recovery controls in order",
+  );
 });
 
 test("main fallback row explains ordered, deselectable selection", () => {

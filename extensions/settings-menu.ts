@@ -320,7 +320,7 @@ export function buildSettingsRows(
     },
     {
       id: "forbiddenModels",
-      section: "keep-going",
+      section: "main-agent",
       label: "Forbidden model patterns",
       valueText: settings.forbiddenModels?.length ? settings.forbiddenModels.join(", ") : "none",
       sourceText: src("forbiddenModels"),
@@ -328,7 +328,7 @@ export function buildSettingsRows(
     },
     {
       id: "blockForbiddenModelSwitches",
-      section: "keep-going",
+      section: "main-agent",
       label: "Block forbidden switches",
       valueText: show("blockForbiddenModelSwitches", "on"),
       sourceText: src("blockForbiddenModelSwitches"),
