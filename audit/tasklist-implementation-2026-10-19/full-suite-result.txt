@@ -1,0 +1,7 @@
+Initial release command exit: 1 (source assertion; corrected afterward)
+(fail) only an admitted host session claims the API and resets session state [11.86ms]
+ 4186 pass
+ 1 skip
+ 1 fail
+Ran 4188 tests across 459 files. [1233.26s]
+[run-tests] finished in 1236s (exit 1)

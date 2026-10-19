@@ -55,8 +55,24 @@ replay; the production archive function and filesystem writers remain real.
   and host-admission invariants remain unchanged. Updating that assertion is the
   sole source/test/document delta since the first full run.
 - Fresh source-assertion, bridge and session-RPC checks: **20 passed, zero
-  failures across three files**. Remaining release stages and final full rerun
-  are being verified; terminal results will replace this status.
+  failures across three files**.
+- All remaining release stages completed with **exit 0**: TypeScript, Node/jiti
+  singleton regression, offline auditor-extension loading, generated inventory,
+  npm pack inspection and the installed-tarball worker/skill smoke. The packed
+  worker confirmed its challenge and the skill loaded without diagnostics.
+- Final validation combines the full unchanged-runtime suite with the fresh
+  corrected-source-assertion run and remaining release stages. The initial
+  `npm run release:check` command exited 1 at the stale assertion; its full
+  suite was not repeated after that test-only correction. This report does
+  not label that original command a pass.
+- All 671 captured source/test/document files match the final hashes; the only
+  delta after the full run is that single source assertion. All production
+  source, fixture behavior, package contents and other test definitions are
+  unchanged from the full run. The original and final digest maps are retained.
+- Current package survey: **197 shipped files, zero unresolved inline document
+  links**. The actual release-contract check also covers reference-style links.
+- Range whitespace check passed; all six checklist entries are complete, and
+  the pictured note entry is drained with durable rationale and regression evidence.
 
 Evidence is retained under [tasklist-implementation-2026-10-19/](tasklist-implementation-2026-10-19/).
 The source/test/document hash snapshot taken before the full gate

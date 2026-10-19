@@ -1,0 +1,3 @@
+R1: five immediate contacts share one refresh child.
+R1: the next contact backs off after registry failure.
+R2: successful late callback creates no cache while sessionDir is unresolved.

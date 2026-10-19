@@ -1,0 +1,21 @@
+{
+  "initialFullSuite": {
+    "pass": 4186,
+    "skip": 1,
+    "fail": 1,
+    "files": 459,
+    "exit": 1
+  },
+  "correctedAssertionAndAdjacentChecks": {
+    "pass": 20,
+    "fail": 0,
+    "files": 3,
+    "exit": 0
+  },
+  "remainingReleaseStagesExit": 0,
+  "postRunDelta": [
+    "tests/stale-api-terminal.test.ts"
+  ],
+  "finalSourceHashMatch": true,
+  "capturedFiles": 671
+}

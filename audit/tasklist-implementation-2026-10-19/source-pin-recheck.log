@@ -1,0 +1,33 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=180s heartbeat=30s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/stale-api-terminal.test.ts:
+(pass) isStaleApiError matches pi's exact stale signature, rejects everything else [0.44ms]
+(pass) both autonomous send paths detect staleness and auto-recover before terminal [0.47ms]
+(pass) terminal path: ledger event, single-fire, goal ACTIVE+marker / loop stop with restart guidance [4.93ms]
+(pass) v0.29.11 — heartbeat PROBES staleness before burning stall refires [0.56ms]
+(pass) v0.30.0 — rebind-first survival: session_shutdown attribution, session_start rebind, zombie stand-down [1.98ms]
+(pass) v0.35.72: pause and low-level activity cannot settle unrelated automatic dispatches [0.27ms]
+(pass) v0.29.11 — stale/stall-stopped loops HOLD on next load (resume, not restart-from-scratch) [1.20ms]
+(pass) v0.29.12 — /glla resume is stale-aware (the zombie must not say 'Nothing to resume') [0.30ms]
+(pass) v0.34.16 — lifecycle handoff replaces terminal keystroke recovery [2.78ms]
+(pass) v0.34.16 — lifecycle recovery has no multiplexer dependency [1.56ms]
+(pass) v0.34.16 — stale paths never inject terminal input [1.24ms]
+(pass) send paths short-circuit once stale (no retry-into-the-void) [2.09ms]
+(pass) only an admitted host session claims the API and resets session state [0.67ms]
+(pass) v0.32.0: audit-opportunistic fix batch — dispose, keys, caps, message [7.25ms]
+(pass) v0.34.94: heartbeat only self-heals when the API and context are fresh [0.98ms]
+(pass) v0.38.104: the preserved heartbeat releases its handle and re-arms across a generation bump [0.19ms]
+
+tests/session-rpc-rebind.test.ts:
+(pass) S6: a claim-raised session generation re-binds the subagent RPC host [1236.27ms]
+
+tests/runtime-globals-contract.test.ts:
+(pass) list handoff uses a typed boundary instead of ambient callable slots [0.32ms]
+(pass) runtime global bridge has one typed declaration for every registration [7.89ms]
+(pass) audit-2026-09-06: runtime globals register exactly once per process [0.67ms]
+
+ 20 pass
+ 0 fail
+Ran 20 tests across 3 files. [3.56s]
+[run-tests] finished in 4s (exit 0)
