@@ -371,11 +371,31 @@ All **26** registered mutations pass (20 pre-existing + 6 new).
   `docs/RUNTIME-INVENTORY.md` (the extension/script line count moved
   72930 → 72963 and the top-level test-file count 453 → 455 with the two new
   test files).
-- Focused suites — 65 pass / 0 fail across 8 files.
-- `node scripts/verify-test-pin-controls.mjs` — 25/25 mutations rejected as
-  expected.
-- Full fast suite — see §5 of `audit/PROJECT-AUDIT-2026-10-19-V2.md` for the
-  standing gate; the docs-review run is recorded in the findings register.
+- Focused suites — 74 pass / 0 fail across the 5 files this review touched
+  (`tests/doc-index.test.ts`, `tests/doc-parity.test.ts`,
+  `tests/settings-same-model-retries-provenance.test.ts`,
+  `tests/settings-editors.test.ts`, `tests/release-contract.test.ts`), plus
+  65 pass / 0 fail across the 8 files covering the prompt-string and
+  reviewer-cascade changes.
+- `node scripts/verify-test-pin-controls.mjs` — **26/26** registered mutations
+  rejected as expected (20 pre-existing + 6 new), exit 0.
+- Full fast suite — **3848 pass / 1 skip (env-gated) / 0 fail / 0 errors**
+  across 442 files, exit 0.
+
+**One earlier run reported 6 failures, and the distinction matters.** Three
+of them were real: the headless-`/glla` completeness gate caught the missing
+`mainModelSameModelRetries` row (finding 1, second half). The other three —
+"terminal summary delivery failure preserves a replayable durable summary",
+"rapid pause/resume discards the cancelled worker result and rearms the saved
+claim", and "paused → resume_goal → complete_goal flows without a manual
+resume" — each took 10–11 s inside the suite and passed in **1.3–3 s** in
+isolation, and none of them touches code this review changed. They are
+load-induced timeouts on a shared, heavily loaded box, not regressions; the
+next full run was clean, and the two runs are recorded here rather than
+quietly dropped, because "it failed once" and "it never failed" are different
+claims. The runner cannot currently distinguish a slow box from a broken
+build — that gap was already recorded as a follow-up in the 2026-10-19
+project-audit pass and is unchanged.
 
 **Neutralized controls were also run in place** on the live tree, not only in
 the disposable harness: each guard was reverted in the working tree, the
@@ -385,7 +405,8 @@ the *first* occurrence of the key literal (in `GLOBAL_ONLY_KEYS`) rather than
 the one in `SETTINGS_KEYS`, so it neutralized the wrong site and the guard
 stayed green. The file was restored from a pre-control copy, the control was
 re-applied with an AST-based edit, and only then did the guard go red on
-exactly the discriminating assertion.
+exactly the discriminating assertion. No history was rewritten; the daemon's
+intermediate commits are expected.
 
 ## Not covered by this review
 

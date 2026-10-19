@@ -1057,10 +1057,31 @@ and its `measure=none max=10 cadence=900` example is explicitly supported
 (extensions/goal-loop-forever.ts:500).
 
 scripts/verify-test-pin-controls.mjs was extended with the scratch copy the
-doc guards need, and five new neutralized controls were registered (same-model
+doc guards need, and six new neutralized controls were registered (same-model
 retries provenance membership lost; doc index entry removed; reviewer cascade
-claim stale; changelog range stale; stop-reason field name stale). All 25
-registered mutations pass.
+claim stale; changelog range stale; stop-reason field name stale; design doc
+names a removed identifier). All 26 registered mutations pass.
+
+Verification for this pass: `npm run check` clean (exit 0); `npm run
+check:inventory` clean after regenerating docs/RUNTIME-INVENTORY.md;
+focused suites 74 pass / 0 fail across the 5 files this review touched and 65
+pass / 0 fail across the 8 covering the prompt-string and reviewer-cascade
+changes; the mutation harness 26/26 (exit 0); the full fast set 3848 pass /
+1 skip (env-gated) / 0 fail / 0 errors across 442 files, exit 0.
+
+One earlier run reported 6 failures and the distinction matters. Three were
+real — the headless-/glla completeness gate caught the missing
+mainModelSameModelRetries row (the second half of finding 1). The other three
+("terminal summary delivery failure preserves a replayable durable summary",
+"rapid pause/resume discards the cancelled worker result and rearms the saved
+claim", "paused -> resume_goal -> complete_goal flows without a manual
+resume") each took 10-11s inside the suite and passed in 1.3-3s in isolation,
+and none touches code this review changed. They are load-induced timeouts on a
+shared, heavily loaded box, not regressions; the next full run was clean.
+Recorded here rather than dropped, because "it failed once" and "it never
+failed" are different claims. The runner still cannot distinguish a slow box
+from a broken build — that gap is unchanged from the 2026-10-19 project-audit
+follow-up.
 
 Honest correction: the FIRST attempt at the SETTINGS_KEYS control matched the
 first occurrence of the key literal (in GLOBAL_ONLY_KEYS) rather than the one
@@ -1075,7 +1096,12 @@ Not covered: audit/ (evidence, not documentation); CHANGELOG.md prose (674 KB,
 line-by-line prose of docs/DESIGN.md (825 lines), docs/RECOVERY.md (530
 lines), docs/OWNERSHIP-AND-SETTLEMENT.md, docs/RELIABILITY-AND-MEASUREMENT.md,
 docs/PROMOTION-CONTRACT.md, docs/VISION-ASSIST.md and the docs/DESIGN-*.md
-files. The read-only scout for that seam overran its tool-call bound without
-returning and was stopped, so it remains the natural next seam. scripts/ and
-.github/workflows/ are still NOT AUDITED (unchanged from the 2026-10-19
-project-audit pass; tasklist #8 in audit/PROJECT-AUDIT-2026-10-19-V2.md).
+files. Those were covered by mechanical sweep instead — links, paths, command
+verbs, settings registries, dependency ranges, named symbols, numeric
+ceilings, and every backticked identifier resolved against the code — and the
+sweep found three real defects in docs/DESIGN.md that a prose read might have
+missed, so it is a partial substitute, not an equivalent one. The read-only
+scout for that seam overran its tool-call bound without returning and was
+stopped; it remains the natural next seam. scripts/ and .github/workflows/ are
+still NOT AUDITED (unchanged from the 2026-10-19 project-audit pass;
+tasklist #8 in audit/PROJECT-AUDIT-2026-10-19-V2.md).
