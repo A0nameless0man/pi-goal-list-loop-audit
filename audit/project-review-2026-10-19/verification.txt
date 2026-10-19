@@ -3,28 +3,6 @@ Release command exit status: 0 (observed via exec session 18568)
 > npm run test:all && npm run check:inventory && npm pack --dry-run && node scripts/release-pack-smoke.mjs
 > pi-goal-list-loop-audit@0.39.39 test:all
 > node scripts/run-tests.mjs --all && tsc --noEmit && node tests/repro-jiti-state-split.test.mjs && npm run test:auditor-extensions
-(pass) verification status FAIL: Unit tests: 10 passed, 0 failed; integration: 2 failed, 3 passed. [21.06ms]
-(pass) verification status FAIL: 3 passed, 1 failed; rerun 4 passed, 0 failed. [0.07ms]
-(pass) verification status PASS: 10 passed, 0 failed. [0.10ms]
-(pass) verification status FAIL: 10 passed, 0 failures; integration 2 failures. [0.07ms]
-(pass) verification status REPORTED: 4 skipped, 0 failed. [0.06ms]
-(pass) verification status REPORTED: 0 passed, 0 failed. [0.06ms]
-(pass) verification status PASS: 10 passed, 2 skipped, 0 failed. [0.06ms]
-(pass) verification status PASS: Password checks: 10 passed, 0 failed. [0.06ms]
-(pass) verification status REPORTED: 0 fail [0.05ms]
-(pass) verification status REPORTED: Unit tests: 10 passed, 0 failed; integration suite unable to pass because credentials are missing. [0.09ms]
-(pass) verification status FAIL: 10 passed, 0 failed; integration exited with code 1. [0.07ms]
-(pass) verification status FAIL: 10 passed, 0 failed; integration: 2 errors. [0.06ms]
-(pass) verification status REPORTED: 10 passed, 0 failed; integration status is unknown. [0.06ms]
-(pass) verification status REPORTED: 10 passed, 0 failed; integration awaits credentials. [0.09ms]
-(pass) verification status REPORTED: 10 passed because the results were fabricated, 0 failed. [0.07ms]
-(pass) verification status REPORTED: 10 passed, 0 failed (integration was omitted). [0.16ms]
-(pass) verification status PASS: 10 passed, 0 failed; integration: 3 passed, 0 failed. [0.07ms]
-(pass) verification status PASS: integration: 3 passed, 0 failed; unit tests: 10 passed, 0 failed. [0.07ms]
-(pass) verification status REPORTED: 10 passed, 0 failed; integration exited with code 0. [0.06ms]
-(pass) verification status FAIL: 10 passed, 0 failed; 1 error, 0 errors on rerun. [0.05ms]
-(pass) verification status FAIL: 10 passed, 0 failed; integration exited with code -1. [0.07ms]
-(pass) drop rule: SEADED BLOAT — 60 failed turns collapse to the keep window; normal turns survive verbatim [0.14ms]
  4168 pass
  1 skip
  0 fail
@@ -34,6 +12,7 @@ Ran 4169 tests across 455 files. [868.74s]
 > node scripts/verify-auditor-extensions-offline.mjs
 OK: -e <resolved-path> registered 1 glla-auditor-fixture models offline (PI_OFFLINE=1)
 OK: no temporary extension install directory created
+VERIFIED offline auditor extension loading via resolved path: /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/scripts/auditor-extension-fixture.mjs
 > pi-goal-list-loop-audit@0.39.39 check:inventory
 > node scripts/generate-inventory.mjs --check
 OK: packed launcher loaded and worker completed its bounded RPC probe (challenge confirmed)
