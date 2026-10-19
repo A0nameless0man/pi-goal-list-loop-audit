@@ -15,6 +15,7 @@
 - [Compatibility](COMPATIBILITY.md): declared peers, tested environments and execution limits.
 - [Reliability and measurements](RELIABILITY-AND-MEASUREMENT.md): what telemetry and canaries do—and do not—establish.
 - [Ownership and settlement](OWNERSHIP-AND-SETTLEMENT.md): runtime ownership and durable completion.
+- [Truthful UI status](UI-STATUS.md): the workflow/execution projection behind what the status line claims.
 - [Vision assist](VISION-ASSIST.md): image evidence and provider routing policy.
 
 ## Contribute
@@ -23,16 +24,19 @@
 - [Design reference](DESIGN.md): implementation concepts and lifecycle details.
 - [Long-running supervision](DESIGN-long-running-supervision.md): progress, recovery and terminal communication.
 - [Subagent visibility](DESIGN-subagent-visibility.md): supervisor/worker display responsibilities.
+- [Work lifecycle and activity](DESIGN-work-lifecycle.md): lifecycle authority, observed activity and the wake contract.
 - [Promotion contract](PROMOTION-CONTRACT.md): queue item → active goal → archive.
 - [Runtime inventory](RUNTIME-INVENTORY.md): generated source and registration counts, not coverage claims.
 - [Release process](RELEASING.md): validation and npm publication.
+- [Historical scaffold plan](../PLAN.md): the v0.1–v0.7 milestone record; not current onboarding or commands.
 - [Historical positioning and decomposition](GLLA-POSITIONING-AND-DECOMPOSITION-2026-08-08.md): dated ecosystem research and the decomposition rationale; not a current companion API reference.
 
 ## Versions and shipped content
 
-[CHANGELOG.md](../CHANGELOG.md) records the release history from
-v0.35.14–v0.39.39, including clearer waiting/completion messages,
-deterministic final-audit persistence, provider-report preservation/privacy
+[CHANGELOG.md](../CHANGELOG.md) records the full release history from
+v0.1.0-alpha.1 (2026-07-19) through v0.39.39 (2026-10-19), including
+clearer waiting/completion messages, deterministic final-audit persistence,
+provider-report preservation/privacy
 fixes and untagged v0.39.29 development changes; the npm registry remains the publication authority. `/glla version` reports the loaded version
 and registry comparison. A checkout can contain changes not yet published.
 

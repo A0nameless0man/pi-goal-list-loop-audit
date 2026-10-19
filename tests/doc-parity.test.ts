@@ -20,6 +20,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { SETTINGS_SECTIONS } from "../extensions/settings-menu.js";
+import { DEFAULT_REVIEWER_CONFIG } from "../extensions/reviewer.js";
 import { SLOW_TEST_FILES } from "../tests/slow-files.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -107,4 +108,91 @@ test("LIST-PHILOSOPHY.md does not point at a section that does not exist", () =>
       `LIST-PHILOSOPHY.md points at ${file} "${section}", which that file does not contain`,
     );
   }
+});
+
+// ---- v0.39.40: docs review (audit 2026-10-19) ----
+//
+// Three more doc claims that had drifted from the code. Each one is
+// written so the DOC is checked against the CODE, not against a frozen
+// copy of the doc: re-adding the behaviour to the code demands the
+// matching doc change, and removing it demands the reverse.
+
+test("LIST-PHILOSOPHY.md matches the reviewer's default cascade", () => {
+  const philosophy = read("LIST-PHILOSOPHY.md");
+  const paragraph = philosophy
+    .split(/\n\s*\n/)
+    .find((p) => p.includes("**Reviewer**") && p.includes("post-completion glue layer"));
+  assert.ok(paragraph, "LIST-PHILOSOPHY.md still has the Reviewer paragraph");
+
+  // The code is the authority. v0.29.0 removed the reflexive
+  // `fire-audit-on-clean` step from the default cascade (it paid for
+  // verification twice and was hydra fuel); the step survives only as an
+  // explicit opt-in under /glla postaudit.
+  const firesByDefault = DEFAULT_REVIEWER_CONFIG.cascade.includes("fire-audit-on-clean");
+  if (firesByDefault) {
+    assert.match(
+      paragraph!,
+      /fires a regression-scan audit on clean completions/i,
+      "the default cascade fires the clean-completion audit, so LIST-PHILOSOPHY.md must say so",
+    );
+  } else {
+    assert.doesNotMatch(
+      paragraph!,
+      /fires a regression-scan audit on clean completions/i,
+      "the default cascade does NOT fire the clean-completion audit, but LIST-PHILOSOPHY.md still claims it does",
+    );
+    assert.match(
+      paragraph!,
+      /opt-in/i,
+      "LIST-PHILOSOPHY.md must say the clean-completion audit is opt-in",
+    );
+  }
+});
+
+test("docs/INDEX.md names the oldest and newest release the CHANGELOG records", () => {
+  const changelog = read("CHANGELOG.md");
+  const versions = [
+    ...changelog.matchAll(/^##\s+\[?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?)\]?/gm),
+  ].map((m) => m[1]!);
+  assert.ok(versions.length > 0, "CHANGELOG.md has release headings");
+
+  const compare = (a: string, b: string): number => {
+    const pa = a.split("-")[0]!.split(".").map(Number);
+    const pb = b.split("-")[0]!.split(".").map(Number);
+    for (let i = 0; i < 3; i++) {
+      const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
+      if (diff !== 0) return diff;
+    }
+    const preA = a.includes("-");
+    const preB = b.includes("-");
+    if (preA !== preB) return preA ? -1 : 1; // a prerelease sorts before its release
+    if (preA && preB) return a < b ? -1 : a > b ? 1 : 0;
+    return 0;
+  };
+  const oldest = versions.reduce((acc, v) => (compare(v, acc) < 0 ? v : acc));
+  const newest = versions.reduce((acc, v) => (compare(v, acc) > 0 ? v : acc));
+
+  const index = read("docs/INDEX.md");
+  assert.ok(
+    index.includes(oldest),
+    `docs/INDEX.md does not mention the oldest CHANGELOG release (v${oldest}) — the changelog records more than the index claims`,
+  );
+  assert.ok(
+    index.includes(newest),
+    `docs/INDEX.md does not mention the newest CHANGELOG release (v${newest})`,
+  );
+});
+
+test("the chunking hint names Pi's real stop-reason field", () => {
+  // Pi's assistant message carries `stopReason: StopReason` ("length" is a
+  // member). There is no `stop_reason` field anywhere in Pi or in GLLA —
+  // naming one in a model-facing prompt sends an operator looking for a
+  // handle that does not exist.
+  const prompt = read("prompts/goal-loop-continuation.md");
+  assert.match(prompt, /stopReason: "length"/, "the continuation prompt names Pi's stopReason field");
+  assert.doesNotMatch(prompt, /stop_reason/, "the continuation prompt names a field that does not exist");
+
+  const auditor = read("extensions/goal-loop-auditor.ts");
+  assert.match(auditor, /stopReason: \\"length\\"/, "the auditor prompt names Pi's stopReason field");
+  assert.doesNotMatch(auditor, /stop_reason/, "the auditor prompt names a field that does not exist");
 });

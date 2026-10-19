@@ -965,6 +965,12 @@ export const SETTINGS_KEYS: Array<keyof Settings> = [
   "compactorModelFallbacks",
   "compactionTokenThreshold",
   "mainModelRetryMinutes",
+  // v0.39.40: this key was a real global-only setting (GLOBAL_ONLY_KEYS,
+  // validated, defaulted) and had its own /glla menu row, but it was never
+  // listed here — so provenance reported "default" for it and the menu
+  // showed the default value with the default source even when the global
+  // file set a different one.
+  "mainModelSameModelRetries",
   "mainModelFailback",
   "mainModelPrimaryProbeMinutes",
   "forbiddenModels",

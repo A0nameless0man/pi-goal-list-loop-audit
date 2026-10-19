@@ -63,9 +63,12 @@ block in `prompts/goal-loop-draft.md`.
 Since v0.26.0 the **Reviewer** is the post-completion glue layer across
 all three modes' terminal states: it converts completion findings into
 `/list` items (bug/refactor, no Confirm), proposes architectural work as
-`/goal` (Confirm), fires a regression-scan audit on clean completions,
-and notifies + idles otherwise. See `docs/DESIGN.md` ("Reviewer =
-strategist, not verifier").
+`/goal` (Confirm), and notifies + idles otherwise. The regression-scan
+audit on clean completions is **opt-in**: since v0.29.0 the reflexive
+`fire-audit-on-clean` step was removed from the default cascade (it paid
+for verification twice and was hydra fuel), and it is enabled per project
+under `/glla postaudit` → "Cascade: audit-on-clean". See `docs/DESIGN.md`
+("Reviewer = strategist, not verifier").
 
 ## Audit Cadence: Why Every `/list` Task is Audited
 

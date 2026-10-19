@@ -310,7 +310,7 @@ work commands (`/goal`, `/list`, `/loop`, `/review`). Common actions:
 | `/glla stats` | Per-project ledger rollups |
 | `/glla fallbacks` / `/glla fallbacks clear` | Show or remove configured main fallback models |
 | `/glla owner` / `/glla takeover` | Inspect or take over this folder's state root |
-| `/glla postaudit` | Configure post-completion follow-ups |
+| `/glla postaudit` (legacy alias: `/glla reviewer`) | Configure post-completion follow-ups |
 | `/glla tooloverride` | Configure tool visibility and optional execution arguments |
 | `/glla switchlog` | Model-switch trail, including blocked forbidden-model switches |
 | `/glla version` | Loaded version versus the registry |
