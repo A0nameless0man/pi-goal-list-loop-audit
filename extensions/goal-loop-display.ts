@@ -1586,13 +1586,17 @@ export function buildUiStatusFooter(status: UiStatus, now: number, theme?: Displ
   const compactAction = command && !actionText.startsWith(command)
     ? `${command} · ${actionText}` : actionText;
   const pauseContext = `· ${uiExecutionLabel(status)} · ${phase}`;
-  const actionBudget = width ? Math.max(1, width - visibleLen(pauseContext) - 7) : 160;
-  const fittedAction = width && width >= 80 && status.workflow === 'paused'
+  // Pi's status bar is shared with other extensions: the terminal width is
+  // not GLLA's segment budget. Keep this glance self-bounded and leave the
+  // complete action to the card and /glla status.
+  const segmentWidth = Math.min(width ?? 96, 96);
+  const actionBudget = Math.max(1, segmentWidth - visibleLen(pauseContext) - 7);
+  const fittedAction = segmentWidth >= 80 && status.workflow === 'paused'
     ? tuiTruncateToWidth(compactAction, actionBudget, '…') : compactAction;
-  const fitted = width && status.actionability === 'user' && visibleLen(text) > width
+  const fitted = status.actionability === 'user' && visibleLen(text) > segmentWidth
     ? `${paint(theme, 'dim', 'glla:')} ${paint(theme, tone, fittedAction)} ${paint(theme, 'dim', pauseContext)}${queueSeg}${recoverySeg}`
     : text;
-  return width ? tuiTruncateToWidth(fitted, Math.max(1, width), '…') : fitted;
+  return tuiTruncateToWidth(fitted, Math.max(1, segmentWidth), '…');
 }
 function uiStatusCardHead(state: State, status: UiStatus, now: number, theme?: DisplayTheme, width = 80) {
   const terminal = status.execution === 'complete' || status.execution === 'cancelled';
@@ -1689,7 +1693,13 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   // the terminal from hiding the permission/alternative at the end. Detailed
   // status offers a larger bounded view; the compact card links to it.
   const prose = (label: 'next' | 'why' | 'resume', value: string, color: DisplayColor): void => {
-    wrap(`${label}: ${uiSafeText(compact && label === 'why' ? humanTextPreview(value, Math.max(160, width * 2 - 24)) : value, true)}`, Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3), compact ? (label === 'why' ? 2 : 4) : 32)
+    const compactValue = compact && label === 'next'
+      ? humanTextPreview(value, Math.max(80, width * 2 - 24))
+      : compact && label === 'why'
+        ? humanTextPreview(value, width >= 200 ? Math.max(160, width * 2 - 24) : Math.max(80, width - 16))
+        : value;
+    const maxRows = compact ? (label === 'why' ? (width >= 200 ? 2 : 1) : 2) : 32;
+    wrap(`${label}: ${uiSafeText(compactValue, true)}`, Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3), maxRows)
       .forEach((line, index) => rows.push(row(index === 0 ? '├─ ' : '│  ', line, color, true)));
   };
   if (status.checkAt && !compact) rows.push(row('├─ ', `check: ${humanCheckTime(status.checkAt)}`, 'accent'));
@@ -1706,13 +1716,11 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
     rows.push(row('├─ ', 'completion audit: parked — no review recorded', 'warning'));
     rows.push(row('│  ', 'the stored completion claim was not evaluated — the audit waits while the item is paused'));
   }
-  if (compact && status.actionability === 'user' && extras?.durableDeferRecommendation) {
-    const judgment = buildDurableDeferDecisionLines(extras.durableDeferRecommendation, width);
-    rows.push(row('├─ ', judgment[judgment.length - 1]!, 'dim'));
-  }
+  // A blocked glance card is for the person's prerequisite, not the agent's
+  // internal durable/defer taxonomy. Detailed status retains the judgment.
   if (status.resumeAction) {
     const resumeCmd = status.resumeAction.match(/\/(?:goal|list) resume\b/)?.[0];
-    const resumeText = compact && width < 80 && resumeCmd ? `${resumeCmd}; fix first` : status.resumeAction;
+    const resumeText = compact && resumeCmd ? `${resumeCmd}; fix first` : status.resumeAction;
     prose('resume', resumeText, 'dim');
   }
   if (status.workflowIssue) rows.push(row('├─ ', `workflow: ${status.workflowIssue}`, 'warning'));
@@ -1730,7 +1738,7 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
       : status.retryAt ? `${status.execution === 'retry-armed' ? 'recovery timer armed' : 'retry schedule saved, not confirmed'} · ${Date.parse(status.retryAt) > now ? `in ${fmtElapsed(Date.parse(status.retryAt) - now)}` : 'deadline due'}` : activity;
     rows.push(row('├─ ', retry));
   }
-  if (!terminal && status.compaction && (!compact || (status.compaction.tokens !== undefined
+  if (!terminal && status.compaction && !(compact && status.actionability === 'user') && (!compact || (status.compaction.tokens !== undefined
     && status.compaction.tokens >= status.compaction.threshold))) {
     rows.push(row('├─ ', compactionStatusText(status.compaction)));
   }
