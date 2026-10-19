@@ -1,0 +1,14 @@
+{
+  "capturedAt": "2026-10-19T19:24:59.191Z",
+  "head": "aa6e4dc156a70b134faf15468339ac84b91c819e",
+  "files": {
+    "package.json": "e24c69b85953fbad8c049ac88275a76e1d78de20dc96acf5688026af67a51298",
+    "extensions/glla-update-check.ts": "660de74161c98aa04588b035c5d11fcb8f234000a3d81b5e86ba176ffc877e4c",
+    "extensions/glla-state-root.ts": "cb7e824703dcdc3865e89fcb394f44c07030ded53e3fdf29b2831e1c1a8042b1",
+    "extensions/loops/goal-activation.ts": "fb774850a2a25d66ce8bc6158a17272c4b796b1230e4611ed3abfce2785dd4b1",
+    "extensions/loops/goal-runtime-globals.ts": "2b937fd87c562b42d58963531cbc919b11458214bebf77e100ba7eefd889a22e",
+    "tests/release-contract.test.ts": "52f5ed13f47191f6c9475978a4809f633e1343aeee07080ef8536a70855c23d4",
+    "docs/RUNTIME-INVENTORY.md": "0583174d00e14efb3dbe81aca42c2b575bf5c8049e2f385c7a33950d7ab83142",
+    "audit/INDEX.md": "c503142949d2345892d64e3b5b2f2157567c28ee70124bf8e03e7a9cfcff907d"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "files": 195,
+  "unpackedBytes": 5270777,
+  "compressedBytes": 1718831,
+  "broken": [
+    {
+      "from": "docs/COMPATIBILITY.md",
+      "target": "audit/improvement-evidence-2026-09-30/",
+      "existsInRepo": true
+    },
+    {
+      "from": "docs/DESIGN-long-running-supervision.md",
+      "target": "audit/human-handoff-2026-10-18/README.md",
+      "existsInRepo": true
+    },
+    {
+      "from": "docs/DESIGN-long-running-supervision.md",
+      "target": "audit/blocked-ui-2026-10-19/README.md",
+      "existsInRepo": true
+    },
+    {
+      "from": "docs/RELIABILITY-AND-MEASUREMENT.md",
+      "target": "audit/improvement-evidence-2026-09-30/runtime-performance.json",
+      "existsInRepo": true
+    }
+  ]
+}

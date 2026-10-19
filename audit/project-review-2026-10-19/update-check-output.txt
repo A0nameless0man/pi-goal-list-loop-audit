@@ -1,0 +1,3 @@
+R1: five immediate contacts spawned five concurrent refresh children.
+R1: next contact immediately spawned again after registry failures.
+R2: successful late callback created cwd/.pi-glla/update-check.json while sessionDir was unresolved.
