@@ -274,7 +274,7 @@ To cut the release:
 | `npm run check:inventory` | clean after regeneration |
 | Focused suites (11 files: stale-resume, load-hold, schema, handoff, doc-parity, resume-admission, neighbour resume/loop suites) | 75 + 14 + 16 + 5 + 19 pass, 0 fail |
 | Invariant suites (state-ownership, release-contract, runtime-globals) | 30 pass, 0 fail |
-| `npm run test:fast` (full fast set) | see the incident note below |
+| `npm run test:fast` (full fast set) | **3838 pass, 1 skip (env-gated), 0 fail** across 439 files, 816s |
 | Neutralized controls | 6 controls applied and reverted; each failed exactly its discriminating assertion |
 
 **Incident note — the first full-suite run was invalid, and why.** The first

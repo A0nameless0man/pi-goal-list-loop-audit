@@ -967,7 +967,18 @@ Three bounded read-only scouts (docs-vs-code drift, the new audit-rework UI
 surfaces, and release/packaging/CI plumbing) ran in parallel over surfaces the
 2026-10-19 pass did not cover; their findings and the deferred items are
 recorded in audit/PROJECT-AUDIT-2026-10-19-V2.md. Survey is bounded, not an
-exhaustive clean bill.
+exhaustive clean bill. The packaging/CI scout overran its 40-tool-call bound
+without returning and was stopped, so that seam is explicitly un-audited.
+
+Verification: `npm run check` clean, `npm run check:inventory` clean, focused
+and invariant suites green, and the full fast set 3838 pass / 1 skip
+(env-gated) / 0 fail across 439 files. The first full-suite run reported 134
+failures that were ALL `ENOENT` errors under `node_modules/@earendil-works/…`
+and not one assertion failure: an external concurrent `npm ci` on this
+multi-session machine emptied the dependency tree two minutes before the run
+started. `npm ci` restored it and the re-run was clean. The runner's inability
+to distinguish a broken environment from broken code is recorded as a
+follow-up item.
 
 ## Scout findings from the 2026-10-19 pass
 
