@@ -106,7 +106,7 @@ test('screenshot-shaped blocked glance keeps action first and diagnostics in det
     assert.ok(text.indexOf('next:') < text.indexOf('why:'), text);
     assert.match(text, /resume: \/goal resume; fix first/);
     assert.doesNotMatch(text, /selected:|compaction:|212109|token target/);
-    assert.match(lines.at(-1)!, /details: \/glla status/);
+    assert.match(lines.at(-1)!, /(?:details|more): \/glla status/);
   }
   const detailed = buildWidgetLines(state, undefined, NOW, undefined, 240, { ...extras, compactAuditCard: false })!.join('\n');
   assert.match(detailed, /UNIQUE-ACTION-TAIL/);
