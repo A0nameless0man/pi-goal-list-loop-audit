@@ -163,8 +163,14 @@ paraphrases; expansion preserves the original reason and diagnostics.
 
 Emit one primary card, not another full-reason transcript notification. The
 intentional turn-stop notice points back to the card; external notifications
-retain the concrete action or framed consent question. Compact footers keep
-the action prominent and link to `/glla status` for detail.
+retain the concrete action or framed consent question. The compact blocked
+card is a glance, not a second report: action first (at most two lines), a
+short reason preview, a one-line conditional resume, and `/glla status`.
+Internal judgment taxonomy and compaction diagnostics stay in detailed status.
+GLLA's shared one-line status segment is capped at 96 cells even on wide
+terminals because other extensions share that bar; successful pause tools
+render a short receipt pointing to the card, while expanded/partial/error
+results keep their full content.
 
 A wait names the condition, a readable UTC progress-check time and whether
 human action is needed. A check is not a promise of completion, and a saved
@@ -173,6 +179,7 @@ heartbeat evidence still determine whether automatic checking is live. These
 presentation rules do not alter pause, scheduler or independent-audit policy.
 
 See [the human-handoff implementation evidence](../audit/human-handoff-2026-10-18/README.md)
+and [the blocked-card compactness evidence](../audit/blocked-ui-2026-10-19/README.md)
 for rendered examples, regression controls and verification boundaries.
 
 ## Future decision checklist
