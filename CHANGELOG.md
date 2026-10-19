@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Consent gates
+
+- A refused `resume_goal` no longer spends the cold-load consent gate. The
+  tool now runs the stale-session probe and refuses BEFORE the release, so a
+  refusal leaves the gate, the durable projection and the journal untouched
+  instead of clearing the hold in RAM, journalling a release that never
+  landed, and telling the user automation was live again.
+- The cold-load gate release is durable BEFORE it is claimed. The new shared
+  `releaseLoadHoldDurably` helper persists the release first, journals and
+  announces it only when it landed, and restores the gate when the snapshot
+  cannot be written — so the live state never drifts from the durable
+  projection and no journal row claims a release the durable state does not
+  carry. All seven gate-release sites (agent resume, `/goal resume`,
+  `/glla resume`, and the four loop paths) use it.
+- Regressions cover the stale-session auditor gate and the cold-load consent
+  gate for the agent-side `resume_goal` tool, plus the helper's
+  not-held / released / failed outcomes. Both new guards are red-proven
+  against neutralized controls.
+
 ## 0.39.39 — actionable audit rejections and compact cards (2026-10-19)
 
 ### Audit rejection handoff

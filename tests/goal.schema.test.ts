@@ -74,3 +74,32 @@ test("schema validates nested task and audit-verdict required fields", () => {
   assert.equal(validate(missingTaskTitle), false);
   assert.match(errors(missingTaskTitle), /title/);
 });
+
+// v0.39.40 (audit 2026-10-19): the published schema declared
+// pendingCompletion.leftOut as an ARRAY while the runtime writes a STRING
+// (extensions/goal-loop-core.ts PendingCompletion.leftOut?: string, written
+// by the complete_goal tool). Any goal the runtime persisted with a
+// non-empty leftOut was therefore invalid under the schema shipped in the
+// npm package, and the parity fixture used the array shape, so CI could not
+// see the contradiction.
+//
+// This pins the SCHEMA to the RUNTIME shape: the string form the runtime
+// writes must validate, and the old array form must not.
+test("pendingCompletion.leftOut matches the runtime shape (string, not array)", () => {
+  const runtimeShape = goalFixture({
+    pendingCompletion: {
+      at: "2026-09-23T00:02:00.000Z",
+      leftOut: "skipped the migration",
+    },
+  });
+  assert.equal(validate(runtimeShape), true, errors(runtimeShape));
+
+  const staleArrayShape = goalFixture({
+    pendingCompletion: {
+      at: "2026-09-23T00:02:00.000Z",
+      leftOut: ["skipped the migration"],
+    },
+  });
+  assert.equal(validate(staleArrayShape), false, "the array shape the runtime never writes must not validate");
+  assert.match(errors(staleArrayShape), /leftOut/);
+});

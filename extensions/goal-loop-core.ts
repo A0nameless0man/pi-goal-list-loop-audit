@@ -3231,6 +3231,7 @@ export function releaseLoadHoldDurably(
   // The snapshot did not land: keep the gate held so the live state and the
   // durable projection still agree, and so no caller can announce a release
   // the durable state does not carry.
+  (state as { loadHoldAt?: number }).loadHoldAt = heldAt;
   ctx.ui.notify("The load hold could not be released durably — automation stays held. Fix .pi-glla storage and retry.", "warning");
   return "failed";
 }

@@ -287,8 +287,7 @@
         "automaticRecoveryUntil": { "type": "string", "format": "date-time" },
         "priorCompletionSummary": { "type": "string" },
         "leftOut": {
-          "type": "array",
-          "items": { "type": "string" },
+          "type": "string",
           "description": "v0.38.37: what the agent deliberately left out of this turn's work. Renders as the closing non-do bullet in the terminal summary."
         },
         "showVerification": { "type": "boolean", "description": "v0.38.98: opt in to a compact verification sentence in the human terminal summary. Full evidence stays in the archive." },

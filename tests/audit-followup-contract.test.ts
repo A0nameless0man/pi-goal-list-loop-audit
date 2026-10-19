@@ -114,7 +114,7 @@ describe("the published schema matches what the runtime persists", () => {
     const goal = goalFixture({
       pendingCompletion: {
         at: "2026-09-29T00:00:00.000Z",
-        leftOut: ["skipped the migration"],
+        leftOut: "skipped the migration",
         showVerification: true,
         gateRows: [{ gate: "tsc", command: "npx tsc --noEmit", scope: "repo", notes: "clean" }],
         findingGroups: [{ title: "Caps", findings: ["the shield branch is uncapped"], tests: ["8/8 pass"] }],
