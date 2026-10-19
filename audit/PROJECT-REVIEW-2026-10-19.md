@@ -90,8 +90,28 @@ Its [saved output](project-review-2026-10-19/update-check-output.txt) records
 the three observed outcomes. All eight selected source digests match both the
 baseline commit and current worktree; all report artifact links resolve.
 The npm dry-run file comparison confirmed R3 without installing or publishing.
-Full local `npm run release:check` is being observed; its terminal result and
-selected output will be added before this review is finalized.
+Full local release gate completed with **exit 0**:
+
+```sh
+GLLA_GLOBAL_SETTINGS_PATH=/tmp/glla-project-review-20261019/settings.json timeout 1800 npm run release:check
+```
+
+- Bun: **4,168 passed, one environment-gated skip, zero failures**, 4,169 tests
+  across 455 files; runner completed in 870 seconds.
+- TypeScript, Node/jiti singleton regression, offline auditor-extension boundary,
+  generated inventory, npm package inspection and installed-tarball smoke all
+  completed successfully through the release command's sequential gate.
+- Packed worker executed its RPC probe with challenge confirmed; the packaged
+  delegation skill loaded with zero diagnostics.
+- `git diff --check` passed. The full transient log is
+  `/tmp/glla-project-review-20261019/release-check.log`; tracked
+  [verification excerpts](project-review-2026-10-19/verification.txt) retain the
+  important results. Temporary logs are not promised as durable evidence.
+
+The green release gate does not invalidate R1–R3: current tests omit the
+reproduced contact overlap/root-transition scenarios and those document links.
+The requested review and task list are complete; the proposed implementation
+work remains open in TASKLIST.md.
 
 No paid live-provider canary, hosted CI rerun, registry advisory analysis,
 remote-history repair, publication or changes to external projects were part
