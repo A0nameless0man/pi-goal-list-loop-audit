@@ -3583,6 +3583,10 @@ async function cmdSettings(args: string, ctx: ExtensionContext): Promise<void> {
       `mainAgentFallbackModels: ${formatMainModelFallbacks(effectiveSettings.mainModelFallbacks)}  [${prov.mainModelFallbacks?.source ?? "default"}]`,
       fmt("mainModelFallbackThinkingLevels", "mainAgentFallbackThinkingLevels"),
       fmt("mainModelRetryMinutes", "mainModelRetryMinutes (base minutes; doubles per attempt)"),
+      // v0.39.40: the same-model retry budget is a real global-only setting
+      // with its own menu row, and this list must cover every SETTINGS_KEYS
+      // entry (tests/settings-editors.test.ts). It was invisible headlessly.
+      fmt("mainModelSameModelRetries", "mainModelSameModelRetries (same-model retries before rotation)"),
       fmt("mainModelFailback", "mainModelFailback (auto/sticky)"),
       fmt("mainModelPrimaryProbeMinutes", "mainModelPrimaryProbeMinutes"),
       fmt("drafterModel", "drafterAgent (drafting only)"),
