@@ -3826,3 +3826,4 @@ tests/stale-settling-retry.test.ts:
 [run-tests] progress: 1830s elapsed · 20s since last output · 288 KiB of suite output
 (pass) live retry-waiting claim is unaffected by the fence (origin=provider-retry) [46727.57ms]
 [run-tests] progress: 1860s elapsed · 4s since last output · 288 KiB of suite output
+[run-tests] progress: 1890s elapsed · 34s since last output · 288 KiB of suite output
