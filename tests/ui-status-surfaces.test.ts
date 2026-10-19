@@ -4,6 +4,7 @@ import { visibleWidth } from '@earendil-works/pi-tui';
 import type { State } from '../extensions/goal-loop-core.js';
 import { buildUiStatusFooter, buildStatusText, buildWidgetLines, type DisplayTheme } from '../extensions/goal-loop-display.js';
 import { projectUiStatus, uiStatusOwnerKey, type UiStatusContext } from '../extensions/ui-status.js';
+import { projectCompactionStatus } from '../extensions/compaction-status.js';
 
 const NOW = Date.parse('2026-10-10T12:00:00Z');
 function fixture(): State {
@@ -83,6 +84,40 @@ test('persistence-hold footer preserves the inspection command after prerequisit
   }
   const wide = buildUiStatusFooter(status, NOW, undefined, 200);
   assert.match(wide, /Resolve persistence failure before continuing; \/glla status for details/);
+});
+
+test('screenshot-shaped blocked glance keeps action first and diagnostics in detailed status', () => {
+  const state = fixture();
+  state.goal!.objective = 'Qualify live upload and fresh restoration on the watched fixture repository';
+  state.goal!.status = 'paused'; state.goal!.pauseKind = 'blocked';
+  state.goal!.pauseReason = 'Normal sync remains running and recent commits verified. Only this qualification is parked because installing the prepared service still requires interactive administrator execution. Pausing it does not pause the daemon. UNIQUE-WHY-TAIL';
+  state.goal!.pauseSuggestedAction = 'Keep ordinary sync running. When ready, run the prepared command in the administrator handoff and return its complete output. UNIQUE-ACTION-TAIL';
+  const base = context(state);
+  const uiStatusContext: UiStatusContext = { ...base, evidence: { ...base.evidence!, compaction: projectCompactionStatus({
+    tokens: 212_109, threshold: 200_000, observedAt: NOW, supervising: true, audit: false, paused: true,
+    recovery: false, idle: true, pending: false, available: true, pressureBudget: false, marker: 'absent',
+  }) } };
+  const extras = { uiStatusContext, durableDeferRecommendation: { durableFix: 'install the operator service', deferRecommendations: ['keep the current user service'], durableBlocked: true } };
+  for (const width of [40, 120, 240]) {
+    const lines = buildWidgetLines(state, undefined, NOW, undefined, width, { ...extras, compactAuditCard: true })!;
+    const text = lines.join('\n');
+    assert.ok(lines.length <= 8, `${width} compact rows: ${lines.length}\n${text}`);
+    assert.ok(lines.every(line => visibleWidth(line) <= width));
+    assert.ok(text.indexOf('next:') < text.indexOf('why:'), text);
+    assert.match(text, /resume: \/goal resume; fix first/);
+    assert.doesNotMatch(text, /selected:|compaction:|212109|token target/);
+    assert.match(lines.at(-1)!, /details: \/glla status/);
+  }
+  const detailed = buildWidgetLines(state, undefined, NOW, undefined, 240, { ...extras, compactAuditCard: false })!.join('\n');
+  assert.match(detailed, /UNIQUE-ACTION-TAIL/);
+  assert.match(detailed, /UNIQUE-WHY-TAIL/);
+  assert.match(detailed, /selected:|compaction:/);
+  const status = projectUiStatus(state, uiStatusContext);
+  for (const width of [undefined, 240]) {
+    const footer = buildUiStatusFooter(status, NOW, undefined, width);
+    assert.ok(visibleWidth(footer) <= 96, `shared status segment is self-bounded: ${footer}`);
+    assert.match(footer, /BLOCKED/);
+  }
 });
 
 test('cohesive active card retains primary and fallback model context', () => {

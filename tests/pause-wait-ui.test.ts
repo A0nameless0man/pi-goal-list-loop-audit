@@ -103,6 +103,11 @@ test('pause tool renders one short wait receipt; expanded, partial and error res
   assert.match(text(tool.renderResult(result, { expanded: false, isPartial: true }, theme, { ...context, isPartial: true })), /Do NOT continue/);
   assert.match(text(tool.renderCall(args, theme, { ...context, expanded: true })), /backup rotation/);
   assert.match(text(Reflect.apply(tool.renderResult, undefined, [result, { expanded: false, isPartial: false }, theme])), /Do NOT continue/, 'older hosts without error context keep the full result');
+  const blockedResult = { details: { pauseState: 'paused' }, content: [{ type: 'text' as const, text: 'Goal paused. The turn ends here — do NOT continue working. /goal resume to continue.' }] };
+  const blocked = text(tool.renderResult(blockedResult, { expanded: false, isPartial: false }, theme, context));
+  assert.match(blocked, /Paused\. See the action card\./);
+  assert.doesNotMatch(blocked, /turn ends here|Do NOT continue/);
+  assert.match(text(tool.renderResult(blockedResult, { expanded: true, isPartial: false }, theme, { ...context, expanded: true })), /turn ends here/);
   const failure = { content: [{ type: 'text' as const, text: 'Wait admission failed: writes unavailable.' }], details: { pauseState: 'waiting' } };
   for (const isPartial of [false, true]) {
     assert.match(text(tool.renderResult(failure, { expanded: false, isPartial }, theme, { ...context, isError: true, isPartial })), /Wait admission failed/);
