@@ -3361,3 +3361,94 @@ tests/audit-convergence-breaker.test.ts:
 (pass) audit-convergence-breaker — hard cap > hard cap binds the detached settlement path [3287.74ms]
 (pass) audit-convergence-breaker — hard cap > soft-cap pause offers accept-with-followups first [6511.61ms]
 [run-tests] progress: 1650s elapsed · 1s since last output · 253 KiB of suite output
+(pass) audit-convergence-breaker — hard cap > severity census lands on the objections ledger event [7195.98ms]
+(pass) audit-convergence-breaker — severity extraction > tags parse per item; missing section yields nothing [0.31ms]
+(pass) audit-convergence-breaker — severity extraction > only leading tags count; buried tags and bare items are untagged [0.05ms]
+(pass) audit-convergence-breaker — severity extraction > auditor brief mandates severity tags [0.27ms]
+(pass) audit-convergence-breaker — settings > hard-cap default is 8 (soft 5 + three grace rounds) [0.03ms]
+(pass) audit-convergence-breaker — settings > normalize keeps valid values, drops garbage [0.41ms]
+(pass) audit-convergence-breaker — settings > v0.38.104: mainModelRetryMinutes and auditFeedbackChars drop junk instead of displaying a dead value [0.28ms]
+(pass) audit-convergence-breaker — settings > v0.38.104: drafter/auditor thinking levels are pruned against the one ladder [0.53ms]
+(pass) audit-convergence-breaker — settings > menu rows exist for both keys [1.82ms]
+
+tests/id-invalidation.test.ts:
+(pass) classifyIdInvalidationReason: each mechanism maps to its reason [0.47ms]
+(pass) forced rewrite: a fresh session with a different sidecar id ledgeres id_invalidation [766.78ms]
+(pass) clean shutdown: the sidecar shutdownReason flows into the event [904.96ms]
+(pass) same id (plain reload): no id_invalidation [1000.53ms]
+(pass) first boot (no sidecar): no id_invalidation [810.27ms]
+(pass) successor absorption also emits id_invalidation (source-level pin) [89.99ms]
+(pass) unknown-session ids are not emitted (the mock default has no getSessionId) [897.66ms]
+
+tests/durable-wait-prewritten.test.mjs:
+(pass) prewritten durable state: completion [577.57ms]
+(pass) prewritten durable state: provider failure [0.36ms]
+(pass) prewritten durable state: failure takes precedence over approval [0.28ms]
+
+tests/fleet-malformed-workflow.test.ts:
+(pass) malformed builder phases never reach fleet output as private text or terminal controls [5.08ms]
+
+tests/same-model-retry-window.test.ts:
+(pass) count and time bound primary retries independently; no candidate preserves paced retry [174.71ms]
+(pass) bounded recovery card states retry progress and fallback eligibility without claiming a successful switch [4.92ms]
+(pass) recovery order deduplicates the primary and repeated backups like the selector [0.35ms]
+(pass) real recovery clamps reset waits, rotates after slow failures, and restores old long waits [16.51ms]
+
+tests/reviewer-source-curation.test.ts:
+(pass) stripCodeSpans removes fenced blocks and inline spans [179.64ms]
+(pass) the 4 junk lines from the 0.26.3 misfire extract NOTHING through the curated pipeline [0.70ms]
+(pass) brace-led and quote-led lines are code-ish, never findings [0.06ms]
+(pass) fireReviewer only mines disapproved/error audit reports, never approved ones [0.33ms]
+(pass) v0.35.72: postaudit proposal counts only when safeSteerUser delivers [0.19ms]
+(pass) automatic postaudit excludes archived objective/contract metadata; manual review retains it [0.06ms]
+(pass) a DISAPPROVED report's required-fixes extract as findings; an APPROVED meta-report is inert [1.28ms]
+(pass) superseded-disapproval curation: a disapproval answered by a later approval is NOT re-mined [0.21ms]
+(pass) real prose findings still classify after curation [0.06ms]
+
+tests/long-term-preferences-boundary.test.ts:
+(pass) continuation prompt has no auto-injected preference section [122.12ms]
+(pass) no extension auto-prefers a remembered prose value [25.62ms]
+(pass) Settings has no opaque free-form text field (typed boundary) [0.75ms]
+(pass) saveSettings is the only writer to the settings JSON files [61.47ms]
+(pass) goal-settings.ts header documents the long-term-preferences policy [0.71ms]
+
+tests/defer-durable-ordering.test.ts:
+(pass) defer vs durable — semantic recommendation ordering > v0.38.71: imperative fix verbs do not double against the plaque verb (field UI-SURVEY-2026-09-20) [0.50ms]
+(pass) defer vs durable — semantic recommendation ordering > three defer recommendations still select the safe durable action first [0.25ms]
+(pass) defer vs durable — semantic recommendation ordering > only an explicit blocked fact selects the reversible defer plaque [0.04ms]
+(pass) defer vs durable — semantic recommendation ordering > the policy is generated from the same semantic three-defer path [0.15ms]
+
+tests/retry-armed-display.test.ts:
+(pass) 151113: supervised auditor wait with armed retry renders recovering, not paused [123.36ms]
+(pass) 151113: status line keeps the auto-retrying countdown for the armed wait [1.31ms]
+(pass) 151113: bare user wait with no armed retry still renders paused, never recovering [0.67ms]
+
+tests/reviewer-extraction-hardening.test.ts:
+(pass) the 3 live false-positive lines extract NOTHING [0.47ms]
+(pass) code lines are skipped (test/it/assert/const/import/…) [137.47ms]
+(pass) markdown table rows are skipped [0.31ms]
+(pass) reviewer-report vocabulary is skipped (self-match prevention) [0.08ms]
+(pass) real architectural + strategic text still classifies [0.14ms]
+(pass) v0.34.83: the bare word 'issue' is REMOVED from the bug regex — GitHub issue references and prose don't classify as bugs [0.06ms]
+(pass) v0.34.83: a completion summary referencing GitHub issues enqueues zero bug findings through the curated pipeline [0.85ms]
+(pass) full runReviewer over 0.26.2-style source text produces zero architectural findings [0.47ms]
+(pass) extraction dedupe + cap still work after hardening [0.31ms]
+(pass) hard-wrapped finding joins into ONE full-sentence finding (hellhunter regression) [0.18ms]
+(pass) uppercase-start lines do NOT join — punctuation-less items stay separate [0.03ms]
+(pass) dangling-connector fragments are rejected [0.03ms]
+(pass) completedObjective prefix-dedupe: a finding restating the completed goal is skipped [0.43ms]
+(pass) cutAtClauseBoundary: long findings cut at a clause, never mid-word [0.12ms]
+
+tests/run-to-done.test.ts:
+(pass) run-to-done: draft consent sets the flag, shows the notice, ledgers consent [1060.98ms]
+(pass) run-to-done: drafts without the flag stay supervised [1111.83ms]
+(pass) run-to-done: batch drafts refuse the flag instead of dropping it [1008.68ms]
+(pass) run-to-done: classified reversible work continues without adopting a decision option [993.18ms]
+[run-tests] progress: 1680s elapsed · 3s since last output · 259 KiB of suite output
+(pass) run-to-done: the audit cap parks instead of converting to TODOs [7103.25ms]
+(pass) run-to-done: aggressive cap conversion is preserved without the flag [8303.63ms]
+(pass) run-to-done: session start resumes held work without global autoResume; blocked parks stay parked [579.91ms]
+(pass) run-to-done: held work stays held without the flag or global consent [592.67ms]
+(pass) run-to-done: the status line names the mode [0.88ms]
+
+tests/durable-wait.test.mjs:
