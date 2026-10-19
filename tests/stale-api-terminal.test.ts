@@ -194,7 +194,7 @@ test("send paths short-circuit once stale (no retry-into-the-void)", () => {
 
 test("only an admitted host session claims the API and resets session state", () => {
   assert.match(SRC, /export default function \(pi: ExtensionAPI\): void \{\n  \/\/ Factory evaluation can also happen inside pi-subagents child sessions\./);
-  assert.match(SRC, /registerGoalRuntime\(pi\);\n\}/, "factory evaluation is registration-only");
+  assert.match(SRC, /registerGoalRuntime\(pi, undefined, pendingListOperations\);\n\}/, "factory evaluation only registers the runtime with its typed handoff dependency");
   const ACT = fs.readFileSync("extensions/loops/goal-activation.ts", "utf8");
   assert.match(ACT, /extensionApi = pi;\n\s*\/\/ Session-scoped resources are reset only after this context has passed[\s\S]*?resetLengthContinue\(\);/);
 });
