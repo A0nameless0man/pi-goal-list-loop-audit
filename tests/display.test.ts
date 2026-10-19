@@ -458,8 +458,7 @@ test("lifecycle interruption keeps durable auditor disapproval feedback visible"
     const rendered = widget.join("\\n");
     assert.ok(rendered.includes(lifecycleText), `lifecycle marker missing: ${rendered}`);
     assert.ok(rendered.includes("completion review disapproved — durable required fixes"), rendered);
-    const unwrappedFeedback = widget.map(line => line.replace(/^[│├└─]+\s*/, '')).join(' ');
-    assert.ok(unwrappedFeedback.includes("required-fixes excerpt after lifecycle failure"), rendered);
+    assert.ok(rendered.includes("required-fixes excerpt after lifecycle failure"), rendered);
     assert.ok(rendered.includes("/goal resume"), rendered);
   }
 });
