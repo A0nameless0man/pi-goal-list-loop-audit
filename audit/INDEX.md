@@ -6,6 +6,7 @@ plus a `v0.34.x-<TOPIC>.md` symlink for versioned docs). Older docs
 
 ## Recent reviews
 
+- [Task-list implementation — 19 October 2026](TASKLIST-IMPLEMENTATION-2026-10-19.md): six improvements and the suspicious-goal screenshot correction, with validation evidence.
 - [Project review and task list — 19 October 2026](PROJECT-REVIEW-2026-10-19.md): six prioritized follow-ups with reproduction evidence.
 - [Project audit — 19 October 2026](PROJECT-AUDIT-2026-10-19.md): carryover and resume durability corrections.
 - [Documentation review — 19 October 2026](DOCS-REVIEW-2026-10-19.md): documentation and provenance review.
