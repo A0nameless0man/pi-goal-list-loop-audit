@@ -71,9 +71,17 @@ function stripComments(text) {
   return result;
 }
 try {
-  for (const name of ["extensions", "tests", "prompts", "scripts", "schemas", ".github", "package.json", "bunfig.toml"]) fs.cpSync(path.join(root, name), path.join(scratch, name), { recursive: true });
+  for (const name of ["extensions", "tests", "prompts", "scripts", "schemas", ".github", "docs", "skills", "examples", "package.json", "bunfig.toml", "README.md", "INSTALL.md", "LIST-PHILOSOPHY.md", "CHANGELOG.md", "PLAN.md", "note.md", "LICENSE"]) fs.cpSync(path.join(root, name), path.join(scratch, name), { recursive: true });
   fs.symlinkSync(path.join(root, "node_modules"), path.join(scratch, "node_modules"), "dir");
   fs.mkdirSync(path.join(scratch, "audit"));
+  // The shipped docs link into audit/; the doc-index link test resolves those
+  // targets, so the scratch copy needs the linked files to exist.
+  for (const rel of ["audit/blocked-ui-2026-10-19/README.md", "audit/human-handoff-2026-10-18/README.md", "audit/improvement-evidence-2026-09-30/runtime-performance.json"]) {
+    const dest = path.join(scratch, rel);
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(path.join(root, rel), dest);
+  }
+  fs.mkdirSync(path.join(scratch, "audit/improvement-evidence-2026-09-30"), { recursive: true });
   for (const name of ["EXTERNAL-REPAIR-PROPOSALS-2026-10-12.md", "EXTERNAL-REPAIR-EVIDENCE-2026-10-12.json"]) fs.copyFileSync(path.join(root, "audit", name), path.join(scratch, "audit", name));
   // The dated report also links tracked local evidence/docs; copy those targets only.
   const report = fs.readFileSync(path.join(scratch, "audit/EXTERNAL-REPAIR-PROPOSALS-2026-10-12.md"), "utf8");
@@ -96,6 +104,19 @@ try {
     return text.slice(0, array.getStart(file)) + `[${[...array.elements].reverse().map(e => e.getText(file)).join(",")}]` + text.slice(array.end);
   });
   run("independent provenance key order is incidental", ["postaudit-surface", "tool-overrides"], "SETTINGS_KEYS");
+  // The same-model-retries key is the SECOND occurrence of its own literal in
+  // this file (the first is GLOBAL_ONLY_KEYS), so the element is dropped from
+  // the SETTINGS_KEYS array literal by AST rather than by string replace.
+  edit("extensions/goal-settings.ts", text => {
+    const file = ts.createSourceFile("settings.ts", text, ts.ScriptTarget.Latest, true);
+    let array;
+    function visit(node) { if (ts.isVariableDeclaration(node) && node.name.getText(file) === "SETTINGS_KEYS" && node.initializer && ts.isArrayLiteralExpression(node.initializer)) array = node.initializer; ts.forEachChild(node, visit); }
+    visit(file); assert.ok(array, "settings key array exists");
+    const kept = array.elements.filter(e => e.getText(file) !== '"mainModelSameModelRetries"');
+    assert.notEqual(kept.length, array.elements.length, "the same-model-retries key is in SETTINGS_KEYS");
+    return text.slice(0, array.getStart(file)) + `[${kept.map(e => e.getText(file)).join(",")}]` + text.slice(array.end);
+  });
+  run("same-model-retries provenance membership lost", ["settings-same-model-retries-provenance"], "mainModelSameModelRetries is a provenance-tracked settings key", /missing from SETTINGS_KEYS/);
   edit("prompts/goal-loop-continuation.md", () => "[GOAL CHECKPOINT goalId=${GOAL_ID}]\n${OBJECTIVE}\n${VERIFICATION_CONTRACT}\n${LONG_RUNNING_JUDGMENT_POLICY}\n${ACTIVE_EXECUTION_QUESTION_GUIDANCE}\n${DYNAMIC_DIRECTIVES}\n");
   run("short full brief still carries contract and canonical policies", ["delta-only-continuation"], "clean goal|builder:|consecutive sends|rebind reset");
   edit("extensions/loops/goal-tools.ts", text => text.replace(/text: `The auditor has now disapproved[\s\S]*?`,/g, "text: `The auditor has now disapproved. INVESTIGATE audit history; provide YOUR ASSESSMENT.`,"));
@@ -116,6 +137,12 @@ try {
     // 7 specific configuration regressions: a release-isolation control already
     // inspects each branch in tests/ci-workflow-concurrency.test.ts.
     ["release run cancellation inverted", ".github/workflows/publish.yml", "cancel-in-progress: ${{ github.event_name != 'release' }}", "cancel-in-progress: true", ["ci-workflow-concurrency"], "release run cancellation", /run-level cancellation applies to push/],
+    // v0.39.40 (docs review): the shipped documentation is now guarded by
+    // regressions, and these are the neutralized controls for those guards.
+    ["doc index entry removed", "docs/INDEX.md", "- [Truthful UI status](UI-STATUS.md): the workflow/execution projection behind what the status line claims.\n", "", ["doc-index"], "every shipped doc is reachable from the documentation index", /does not link these shipped documents/],
+    ["reviewer cascade claim stale", "LIST-PHILOSOPHY.md", "`/goal` (Confirm), and notifies + idles otherwise. The regression-scan\naudit on clean completions is **opt-in**: since v0.29.0 the reflexive\n`fire-audit-on-clean` step was removed from the default cascade (it paid\nfor verification twice and was hydra fuel), and it is enabled per project\nunder `/glla postaudit` → \"Cascade: audit-on-clean\". See `docs/DESIGN.md`\n(\"Reviewer = strategist, not verifier\").", "`/goal` (Confirm), fires a regression-scan audit on clean completions,\nand notifies + idles otherwise. See `docs/DESIGN.md` (\"Reviewer =\nstrategist, not verifier\").", ["doc-parity"], "LIST-PHILOSOPHY.md matches the reviewer's default cascade", /still claims it does/],
+    ["changelog range stale", "docs/INDEX.md", "[CHANGELOG.md](../CHANGELOG.md) records the full release history from\nv0.1.0-alpha.1 (2026-07-19) through v0.39.39 (2026-10-19), including", "[CHANGELOG.md](../CHANGELOG.md) records the release history from\nv0.35.14–v0.39.39, including", ["doc-parity"], "docs/INDEX.md names the oldest and newest release the CHANGELOG records", /does not mention the oldest CHANGELOG release/],
+    ["stop-reason field name stale", "prompts/goal-loop-continuation.md", "`stopReason: \"length\"`", "`stop_reason=\"length\"`", ["doc-parity"], "the chunking hint names Pi's real stop-reason field", /names Pi's stopReason field/],
   ];
   for (const [name, file, before, after, files, pattern, failure] of mutations) { edit(file, text => text.replaceAll(before, after)); run(name, files, pattern, failure); }
   function pythonCheck(name, failure = false) {
@@ -134,5 +161,5 @@ try {
   console.log(JSON.stringify({ scratch, results, scope: "disposable GLLA copies only; no live workflows or external projects changed" }, null, 2));
 } finally {
   // Preserve bounded logs and result artifacts for inspection, not the source copy.
-  for (const name of ["extensions", "tests", "prompts", "scripts", ".github", "audit", "node_modules"]) fs.rmSync(path.join(scratch, name), { recursive: true, force: true });
+  for (const name of ["extensions", "tests", "prompts", "scripts", ".github", "docs", "skills", "examples", "audit", "node_modules", "README.md", "INSTALL.md", "LIST-PHILOSOPHY.md", "CHANGELOG.md", "PLAN.md", "note.md", "LICENSE"]) fs.rmSync(path.join(scratch, name), { recursive: true, force: true });
 }

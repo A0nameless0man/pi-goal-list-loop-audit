@@ -56,6 +56,49 @@
 - The generated runtime inventory is current again, so the documented release
   gate `npm run release:check` passes its inventory step.
 
+### Settings provenance
+
+- `mainModelSameModelRetries` is now a provenance-tracked settings key. It
+  was a real global-only setting with its own `/glla` main-agent row, but it
+  was missing from the provenance registry every menu row reads its value and
+  source from — so the row showed the built-in default with the source
+  "default" even when the global settings file set a different number. A
+  regression now pins the configured value and source.
+
+### Documentation review
+
+A review of the project's own documentation against the code that implements
+it. Every shipped `.md` file was read and every mechanically checkable claim
+re-derived. Eight defects were fixed, and five candidate findings were closed
+as not-a-defect with reasons.
+
+- `docs/INDEX.md` now links every shipped document. Two current documents
+  (`docs/DESIGN-work-lifecycle.md`, `docs/UI-STATUS.md`) and the historical
+  `PLAN.md` were unreachable from the only map a reader of the published
+  package has. A new `tests/doc-index.test.ts` locks index completeness,
+  relative-link resolution, and the absence of links to documents that do not
+  exist.
+- `LIST-PHILOSOPHY.md` no longer claims the Reviewer fires a regression-scan
+  audit on clean completions. That step was removed from the default cascade
+  in v0.29.0 and survives only as an explicit opt-in under `/glla postaudit`;
+  the doc was two releases stale. The parity test is bidirectional — it reads
+  the default cascade and demands the matching wording either way.
+- `docs/INDEX.md` states the real changelog range (v0.1.0-alpha.1 through
+  v0.39.39, 196 releases) instead of the v0.35.14 it claimed.
+- The continuation prompt and the shipped auditor prompt now name Pi's real
+  stop-reason field, `stopReason: "length"`, instead of `stop_reason`, which
+  exists in neither Pi nor GLLA.
+- `docs/COMPATIBILITY.md` describes the `pi-subagents` development entry as
+  an unpinned range, which is what it became on 2026-10-17.
+- The README's `/glla` table names the `/glla reviewer` legacy alias of
+  `/glla postaudit`, which worked but was undiscoverable.
+- `note.md` opens with a header marking it a transient scratchpad whose
+  citations point at consumed content, so it stops reading like a document of
+  record.
+- Five new neutralized controls were registered in the mutation-evidence
+  harness (`scripts/verify-test-pin-controls.mjs`), which now passes all 25
+  of its registered mutations.
+
 ## 0.39.39 — actionable audit rejections and compact cards (2026-10-19)
 
 ### Audit rejection handoff

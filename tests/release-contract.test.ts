@@ -102,7 +102,19 @@ test("release contract: glla-delegate skill loads without diagnostics (source-tr
 test("release contract: docs index tracks the package version", () => {
   const version = (JSON.parse(fs.readFileSync("package.json", "utf-8")) as { version: string }).version;
   const index = fs.readFileSync("docs/INDEX.md", "utf-8");
-  assert.ok(index.includes(`v0.35.14–v${version}`), "the active-focus trail must reach the current package version");
+  // v0.39.40 (docs review): this used to assert the literal `v0.35.14–v<version>`
+  // in the index, which pinned the START of the changelog trail to a hardcoded
+  // release — and that trail's start was wrong (the changelog records back to
+  // v0.1.0-alpha.1, not v0.35.14). The contract this test actually declares is
+  // "the active-focus trail must reach the current package version", so the
+  // test now asserts exactly that. The trail's endpoints are pinned against
+  // CHANGELOG.md itself by tests/doc-parity.test.ts, which is stronger than a
+  // frozen literal.
+  assert.match(
+    index,
+    new RegExp(`\\bv${version.replaceAll(".", "\\.")}\\b`),
+    "the active-focus trail must reach the current package version",
+  );
 });
 
 test("release contract: package is discoverable as a Pi extension and skill", { timeout: 60_000 }, () => {

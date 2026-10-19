@@ -8,7 +8,7 @@ by the range but are not individually certified.
 
 `pi-subagents` is an optional, separately installed companion. GLLA imposes no
 companion version pin and does not import it as a runtime dependency. Install
-with `pi install npm:pi-subagents`. Development uses a versionless manifest
+with `pi install npm:pi-subagents`. Development uses an unpinned-range manifest
 entry and a lockfile for reproducibility; this release was checked with 0.74.0.
 The GLLA tests exercise lifecycle events, persisted status and ownership-fenced
 stop handling, plus the installed companion's role definitions. They do not

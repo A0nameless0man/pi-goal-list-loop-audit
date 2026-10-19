@@ -1011,3 +1011,68 @@ claim-by-claim, and are the natural next seams:
   was dispatched for this seam, ran past its 40-tool-call bound without
   returning, and was stopped. The seam is open (tasklist #8 in
   audit/PROJECT-AUDIT-2026-10-19-V2.md).
+
+## Docs review pass — 2026-10-19 (v0.39.40, branch main)
+
+A review of the project's own documentation: every shipped `.md` file read
+against the code that implements it. One code defect, six doc defects and one
+doc-hygiene defect were fixed, each with a red-proven regression and a
+neutralized control. Five candidate findings were closed as NOT a defect with
+reasons, so a later pass does not re-raise them. Full report:
+`audit/DOCS-REVIEW-2026-10-19.md`.
+
+- [x] FIX: MEDIUM: `mainModelSameModelRetries` was missing from `SETTINGS_KEYS` — it is a real global-only setting (declared at extensions/goal-settings.ts:133, listed in GLOBAL_ONLY_KEYS at :376, defaulted at :417, validated at :724, and given its own /glla main-agent row at extensions/settings-menu.ts:346-350) but was absent from the provenance registry at extensions/goal-settings.ts:953, so the menu row showed the built-in default (10) with the source "default" even when the global settings file set a different number (docs/SETTINGS.md:103 documents the key). Fixed by registering the key. Regression: tests/settings-same-model-retries-provenance.test.ts (3 tests — membership, configured value+source, default fallback). Neutralized control (dropping the array element by AST, because the bare literal also occurs in GLOBAL_ONLY_KEYS) fails exactly the provenance-value and membership assertions.
+- [x] FIX: MEDIUM: LIST-PHILOSOPHY.md:63-68 claimed the Reviewer "fires a regression-scan audit on clean completions" unconditionally, but the default cascade at extensions/reviewer.ts:43 omits `fire-audit-on-clean` and extensions/reviewer.ts:474 gates the step on that membership — the reflexive step was removed from the default in v0.29.0 (CHANGELOG.md under `## [0.29.0]`), is documented as opt-in in docs/DESIGN.md:85, and is pinned by tests/loop-forever.test.ts:742-748. The code was right; the doc was stale for two releases. The doc now states the opt-in. Regression: tests/doc-parity.test.ts "LIST-PHILOSOPHY.md matches the reviewer's default cascade" is bidirectional — it reads DEFAULT_REVIEWER_CONFIG.cascade and demands the matching wording either way. Neutralized control (restoring the old paragraph) fails exactly that assertion.
+- [x] FIX: MEDIUM: docs/INDEX.md did not link two CURRENT shipped docs (docs/DESIGN-work-lifecycle.md, docs/UI-STATUS.md) nor the shipped PLAN.md — the index is the only map a reader of the published package has, and nothing caught it because the index was prose. All three are linked now (UI-STATUS under "Understand the boundaries"; DESIGN-work-lifecycle and PLAN.md under "Contribute", PLAN.md labelled as the historical scaffold plan it self-describes as). Regression: tests/doc-index.test.ts (3 tests — index completeness, relative-link resolution, index links nothing missing). Neutralized control (removing the three entries) fails exactly the completeness assertion and names docs/UI-STATUS.md, docs/DESIGN-work-lifecycle.md, PLAN.md.
+- [x] FIX: LOW: docs/INDEX.md:36-37 said the CHANGELOG "records the release history from v0.35.14–v0.39.39", but CHANGELOG.md holds 196 release headings running from `## [0.1.0-alpha.1] — 2026-07-19` through `## 0.39.39` — the index understated the range it described. The index now states the real endpoints. Regression: tests/doc-parity.test.ts "docs/INDEX.md names the oldest and newest release the CHANGELOG records" parses the headings and requires both endpoints to be named, so the claim cannot be narrowed again. Neutralized control (restoring "v0.35.14–v0.39.39") fails exactly that assertion.
+- [x] FIX: LOW: prompts/goal-loop-continuation.md:91 and the shipped auditor prompt at extensions/goal-loop-auditor.ts:203 named `stop_reason="length"` — a field that exists in neither Pi (`stopReason: StopReason`, with "length" a member, at node_modules/@earendil-works/pi-ai/dist/types.d.ts:311,386) nor GLLA (which uses `kind: "length"`, extensions/goal-continuation.ts:1864). The mechanism is real, but the prose handed an operator a handle that exists nowhere. Both now name `stopReason: "length"`. Regression: tests/doc-parity.test.ts "the chunking hint names Pi's real stop-reason field". Three existing suites pinned the old spelling (tests/postaudit-surface.test.ts, tests/auditor-chunk-hint.test.ts, tests/long-running-modes-parked.test.ts) and were updated to the corrected one.
+- [x] FIX: LOW: docs/COMPATIBILITY.md:11-12 called the pi-subagents development entry "a versionless manifest entry", but package.json carries `"pi-subagents": ">=0.74.0 <1.0.0"` — changed from the exact pin on 2026-10-17 (commit 27f4c55a), two days before this review. The lockfile half of the claim still holds (package-lock.json resolves 0.74.0). The doc now says "an unpinned-range manifest entry".
+- [x] FIX: LOW: the README's `/glla` "Common actions" table (README.md:299-318) never mentioned `/glla reviewer`, which still opens the same post-completion audit menu as `/glla postaudit` (extensions/goal-commands.ts:3524, documented at :2325) and is deliberately absent from the completion list (extensions/loops/goal-activation.ts:1228-1250) — so it was undiscoverable from both the docs and tab-completion. The README now names the alias on the postaudit row.
+- [x] FIX: LOW: note.md read like a document of record — 62 source citations across 22 files with nothing saying what the file was, while the citations point at content since consumed into the shipped code (the durable load-hold rationale is docs/DESIGN.md:632, the recovery contract is docs/RECOVERY.md). A header now states that it is a transient scratchpad, that its citations point at consumed content, and where the durable rationale lives.
+- [?] NOT A DEFECT: LIST-PHILOSOPHY.md:43 names `docs/per-screen-weak-points.md`, which does not exist. The path sits inside a blockquote quoting a 2026-07-24 incident — an illustrative seed, not a claim that the file ships. The behaviour it illustrates is pinned by tests/list-philosophy.test.ts "contract 8+11".
+- [?] NOT A DEFECT: docs/DESIGN.md:535 names `extensions/loops/forever.ts` and :542 names `prompts/goal-loop-auditor.md`. Both are rows of a table whose status column reads "planned", and the same cell says where each actually lives ("shipped as extensions/goal-loop-forever.ts", "never shipped; the prompt is built in extensions/goal-loop-auditor.ts"). The doc disambiguates deliberately.
+- [?] NOT A DEFECT: AGENTS.md references `dracon-utilities/docs/design/*.md`. Those are paths into the sibling repository, not this one, and all three resolve in /home/dracon/Dev/dracon-utilities.
+- [?] NOT A DEFECT: prompts/goal-loop-continuation.md:202 mentions `/goal drop`, which does not exist. It is a negative vocabulary rule — "there is **no `/goal drop`** and **no command takes a goal id**" — telling the model not to use it.
+- [?] NOT A DEFECT: CHANGELOG.md cites paths that no longer exist (audit/LONG-RUNNING-MODES.md, extensions/loops/goal-runtime.ts, .pi-glla/pitfalls.md, …). A changelog records what was true at the time, and it also cites runtime state paths, which are never repo files.
+
+### Coverage and honesty notes for this pass
+
+Mechanical checks over the whole shipped documentation surface, all clean:
+0 broken relative links; 350 path-like tokens swept for dead paths (32
+unresolved, all triaged above or as changelog history); 55 distinct
+command+verb pairs mentioned across the shipped docs, every one resolving to a
+real handler; all 18 `/glla` verbs in the README table and all 20 mentioned
+anywhere in the shipped docs have handlers. docs/SETTINGS.md's Global-only
+list and Keys table diff clean against GLOBAL_ONLY_KEYS and SETTINGS_KEYS (0
+mismatches) and the release-gate test that file claims for itself exists
+(tests/settings-editors.test.ts:651). docs/COMPATIBILITY.md's peer ranges,
+TypeBox bound, Node engine and dev pins match package.json exactly.
+docs/UI-STATUS.md's 11-file surface map, named symbols and fleet safety
+ceilings (16 roots, depth 4, 2000 dirs, 100 projects, 2000 ms, 512 KiB,
+8 MiB) match the code exactly. Every command docs/WORKFLOWS.md names exists,
+and its `measure=none max=10 cadence=900` example is explicitly supported
+(extensions/goal-loop-forever.ts:500).
+
+scripts/verify-test-pin-controls.mjs was extended with the scratch copy the
+doc guards need, and five new neutralized controls were registered (same-model
+retries provenance membership lost; doc index entry removed; reviewer cascade
+claim stale; changelog range stale; stop-reason field name stale). All 25
+registered mutations pass.
+
+Honest correction: the FIRST attempt at the SETTINGS_KEYS control matched the
+first occurrence of the key literal (in GLOBAL_ONLY_KEYS) rather than the one
+in SETTINGS_KEYS, so it neutralized the wrong site and the guard stayed green.
+The file was restored from a pre-control copy, the control was re-applied with
+an AST-based edit, and only then did the guard go red on exactly the
+discriminating assertion. No history was rewritten; the daemon's intermediate
+commits are expected.
+
+Not covered: audit/ (evidence, not documentation); CHANGELOG.md prose (674 KB,
+196 releases — read for endpoint claims and cited-path triage only); the
+line-by-line prose of docs/DESIGN.md (825 lines), docs/RECOVERY.md (530
+lines), docs/OWNERSHIP-AND-SETTLEMENT.md, docs/RELIABILITY-AND-MEASUREMENT.md,
+docs/PROMOTION-CONTRACT.md, docs/VISION-ASSIST.md and the docs/DESIGN-*.md
+files. The read-only scout for that seam overran its tool-call bound without
+returning and was stopped, so it remains the natural next seam. scripts/ and
+.github/workflows/ are still NOT AUDITED (unchanged from the 2026-10-19
+project-audit pass; tasklist #8 in audit/PROJECT-AUDIT-2026-10-19-V2.md).
