@@ -5224,3 +5224,39 @@ tests/dispatch-start-ack-persist.test.ts:
 (pass) v0.39.38 a start ack that cannot be persisted fails closed and re-acks after storage recovers [1978.13ms]
 
 tests/loop-write-signal.test.ts:
+(pass) item 3: write/edit/multi_edit/write_file are the write-signal tools [305.53ms]
+(pass) item 3: the tool_result handler bumps fileWrites via isLoopWriteTool [0.64ms]
+(pass) item 2: the stuck dispatch calls isActuallyStuck (not detectLoopStuck directly) [0.24ms]
+(pass) item 4: git commits are counted once per iteration from HEAD advance [0.12ms]
+(pass) item 6: spec_item_progress events are counted from the ledger since iteration start [0.09ms]
+
+tests/mechanical-inconclusive.test.ts:
+(pass) DEFAULT_MECHANICAL_CHECK_TIMEOUT_MS covers this repo's honest gates [0.58ms]
+(pass) loadScaledTimeoutMs: 1× at or under cpu count [0.12ms]
+(pass) loadScaledTimeoutMs: linear past cpu count, capped at 2× [0.08ms]
+(pass) loadScaledTimeoutMs: unusable inputs degrade to base, never unbounded [0.10ms]
+(pass) scaledMechanicalTimeoutMs: live-load wrapper stays within [base, 2×base] [0.66ms]
+(pass) containmentReason: maps flags in timeout-first order [0.17ms]
+(pass) mechanicalPreAuditVerdict: fail keeps the historical fast-fail shape [0.25ms]
+(pass) mechanicalPreAuditVerdict: inconclusive becomes infra error, never disapproval [0.07ms]
+[run-tests] progress: 2580s elapsed · 0s since last output · 391 KiB of suite output
+(pass) mechanical run: green command passes [417.88ms]
+(pass) mechanical run: red command fails (not inconclusive) [1165.23ms]
+(pass) mechanical run: unsafe syntax fails (not inconclusive) [0.63ms]
+(pass) mechanical run: killed gate is inconclusive with reason [642.72ms]
+(pass) mechanical run: empty command list passes [468.06ms]
+
+tests/glla-status-ux.test.ts:
+(pass) v0.35.15: auditing footer carries a distinct phase glyph AND an activity meter element for every auditor phase [10.25ms]
+(pass) v0.35.15: activity meter drains as worker silence grows (full at fresh, empty past the quiet threshold) [0.25ms]
+(pass) v0.35.15: ⏸ supervisor chip leads the footer in every lifecycle branch when paused [0.57ms]
+(pass) v0.35.15: a recently ended quiet stretch shows 'silent Xm then resumed' in the widget; stale stretches stay hidden [4.48ms]
+(pass) v0.35.15: quiet watcher notifies EXACTLY ONCE on entering the quiet phase, records the stretch on resume [525.56ms]
+(pass) v0.35.15: quiet watcher stays silent while the supervisor is paused (it IS automatic machinery) [7.39ms]
+(pass) v0.35.15: every automatic dispatch point gates on supervisorPaused [1729.76ms]
+(pass) v0.35.15: /glla pause persists a durable flag, leaves the active goal untouched, and survives a disk reload [3629.96ms]
+(pass) v0.35.15: /glla resume clears the freeze, reports the frozen duration, and never lies 'Nothing to resume' [1928.30ms]
+(pass) v0.38.104: the working-card tool argument is cut cell-aware, never mid-surrogate [6.61ms]
+
+tests/owner-file-protocol.test.ts:
+(pass) Windows replacement retries a sharing violation without unlinking the previous owner [2.54ms]
