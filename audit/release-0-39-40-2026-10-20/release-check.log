@@ -4621,3 +4621,181 @@ tests/adaptive-wait.test.mjs:
 (pass) smoke wait_for uses adaptive polling (check-if-done, 250->1000) [221.41ms]
 
 tests/ui-polish.test.ts:
+(pass) v0.38.89: unknownStatsArg strips the known stats tokens [143.08ms]
+(pass) v0.38.89: stats header and unknown-arg usage share the /glla prefix [5.06ms]
+(pass) v0.38.91: tool descriptions enumerate plan/audit/verify/add [51.57ms]
+(pass) v0.38.89: /goal status card points at /goal timeline [102.12ms]
+
+tests/list-parallel.test.ts:
+(pass) extractParallelFlag: truthy values mark the item parallel-safe [216.91ms]
+(pass) extractParallelFlag: falsy values explicitly opt out [0.12ms]
+(pass) extractParallelFlag: no marker → undefined (unknown, not false) [0.08ms]
+(pass) extractParallelFlag: inline marker mid-line, case-insensitive [0.10ms]
+(pass) parseListItemDeclaration: marker stripped BEFORE the contract split [0.48ms]
+(pass) parseListItemDeclaration: a parallel marker after Done when: still strips cleanly [0.14ms]
+(pass) parseListItemDeclaration: parallel marker inside a multi-line objective is consumed [0.06ms]
+(pass) queue sidecar round-trips the parallelSafe flag [3.93ms]
+(pass) list_add parses the declaration into the queue state + disk + status [753.27ms]
+(pass) a declared item activating into a goal carries the CLEAN objective (no marker leak) [2046.10ms]
+
+tests/stale-continuation-integration.test.ts:
+(pass) integration: stale goal continuation is sanitized at message_end and ledgered, raw source dropped [385.60ms]
+(pass) integration: a GLLA pause abort becomes an actionable assistant message [11.23ms]
+(pass) integration: a marked pause without suggestedAction still replaces generic abort text [94.85ms]
+(pass) integration: starting a later turn invalidates an unconsumed pause marker [92.33ms]
+(pass) integration: a stale pause marker cannot rewrite a later unrelated abort [100.16ms]
+(pass) integration: a later same-owner abort after a silent prior marker is not rewritten [100.04ms]
+(pass) integration: an unrelated owner abort is not rewritten [99.86ms]
+(pass) integration: a foreign assistant abort is not rewritten [297.08ms]
+(pass) integration: fresh continuation for active goal is NOT sanitized [298.09ms]
+(pass) integration: foreign ctx never sanitizes (subagent isolation) [899.94ms]
+
+tests/auditor-stalled-display.test.ts:
+(pass) stalled: silence past the death bound escalates quiet to stalled, before it stays quiet [218.01ms]
+(pass) stalled: an in-budget tool exempts a long silent run from both quiet and stalled [0.09ms]
+(pass) stalled: card names the death, drops the live-worker claim, offers the retry [4.87ms]
+(pass) stalled: the compact glance card matches the detailed card (production surface) [1.23ms]
+(pass) stalled: compact 15d shape stays consistent [0.41ms]
+(pass) stalled: the seo shape reads in days and never claims a worker [0.44ms]
+(pass) stalled: watcher fires its own one-shot stall notice past the death bound [93.05ms]
+
+tests/audit-no-progress-detection.test.ts:
+(pass) v0.38.101 the no-progress stop is DEAD in production — this pins the defect [195.63ms]
+(pass) v0.38.101 the obvious fix was measured and REJECTED — do not re-add it blind [0.49ms]
+(pass) v0.38.101 the tokenizer is a useful diagnostic even though it cannot decide [0.12ms]
+(pass) v0.38.101 the exact-text fingerprint is unchanged [0.04ms]
+(pass) v0.38.105 deterministic mechanical pre-audit rows are transparent to the no-progress stop [0.20ms]
+
+tests/last-outcome-retention.test.ts:
+(pass) v0.35.72: a legacy approved lastOutcome never repaints a completed row [221.58ms]
+(pass) v0.35.72: a legacy aborted lastOutcome also stays hidden [0.03ms]
+(pass) v0.35.72: a live goal remains the only rendered surface [1.42ms]
+(pass) v0.35.72: source pins — slot close clears lastOutcome; wipe remains a clean slate [3.04ms]
+(pass) v0.35.34: lastOutcome round-trips through persistStateLine → readState (durable across restarts) [1.38ms]
+(pass) v0.35.34: corrupt lastOutcome lines degrade to absent, never throw [1.58ms]
+
+tests/model-selector.test.ts:
+(pass) chainFor returns the configured chain for a scope [224.53ms]
+(pass) selectNext walks the chain in order and skips current + attempted [0.25ms]
+(pass) selectNextValid returns the first registered, non-forbidden ref in chain order [0.24ms]
+(pass) selectNextValid skips refs already in the attempted list [0.18ms]
+(pass) selectNextValid also skips current when it would otherwise be a candidate [0.07ms]
+(pass) selectNextValid does not mutate the caller's attempted list [0.12ms]
+(pass) selectNextValid skips forbidden refs and records each rejection [0.21ms]
+(pass) selectNextValid records forbidden rejections until a valid ref is found [0.09ms]
+(pass) selectNextValid skips refs missing from the resolver and records each rejection [0.09ms]
+(pass) selectNextValid records forbidden before unregistered when both fail [0.20ms]
+(pass) selectNextValid returns reason=exhausted when the chain runs out [0.06ms]
+(pass) selectNextValid returns exhausted when every ref is forbidden [0.05ms]
+(pass) selectNextValid returns exhausted on an empty chain [0.03ms]
+(pass) selectNextValid records one event per ref visited plus a final outcome [0.07ms]
+(pass) selectNextValid tags subagent scope on every recorded event [0.05ms]
+(pass) selectNextValid does not throw when no recorder is supplied [0.08ms]
+(pass) canUseRef is true only when a ref is not forbidden and resolves [0.07ms]
+(pass) classifyFailure is scope-agnostic — same input returns same output for any scope [0.74ms]
+(pass) retryDelayMs returns the same value as mainModelFailureDelayMs (default base) [0.27ms]
+(pass) audit 2026-09-06: retryDelayMs honors the injected retry base minutes [0.07ms]
+(pass) selectNextValid composes nextUntriedModelRef — manual loop yields the same answer [0.09ms]
+
+tests/audit-history-copy.test.ts:
+(pass) A9 premise: appendAuditVerdict mutates the passed history in place (array + entries) [214.83ms]
+(pass) A9 (pin): both apply paths copy auditHistory before appendAuditVerdict can touch it [0.43ms]
+
+tests/action-reminder.test.ts:
+(pass) legacy blocker does not pretend resume solves the requirement (undefined) [3.21ms]
+(pass) legacy blocker does not pretend resume solves the requirement (/list resume) [0.36ms]
+(pass) legacy blocker does not pretend resume solves the requirement (Run '/list resume'.) [0.27ms]
+(pass) legacy blocker does not pretend resume solves the requirement (`/glla resume`) [0.30ms]
+(pass) concrete action and conditional retry survive both reminder surfaces [0.45ms]
+(pass) legacy renderer rebuilds copy without changing the saved reason or action [0.30ms]
+(pass) decision preserves the picker handoff (undefined) [0.55ms]
+(pass) decision preserves the picker handoff (Choose one in the decision card.) [0.15ms]
+(pass) redirect remains a handoff to work now, not a stopped turn [0.47ms]
+(pass) diagnostics are expandable supporting detail, not a competing primary message [0.71ms]
+(pass) standby explains the automatic background handoff with its active-session condition [0.71ms]
+(pass) timed wait names the next progress check without claiming completion or a live wake [57.05ms]
+(pass) abort notice points to the canonical card instead of duplicating its reason and action [0.79ms]
+(pass) reminders fit narrow widths and strip unsafe terminal sequences [7.27ms]
+(pass) tweak proposals remain questions and retain the exact command for consent [0.96ms]
+
+tests/wait-overdue-backstop.test.ts:
+(pass) v0.35.28 #16: a wait 30min past its pauseResumeAt is resumed by the heartbeat backstop [1683.98ms]
+(pass) v0.35.28 #16: not-yet-due and already-fired waits do not double-dispatch [1010.17ms]
+(pass) v0.35.28 #16: under the load hold (stock consent-less boot) an overdue wait stays frozen [1624.54ms]
+(pass) v0.35.28 #16: manual /goal resume clears the recovery stamp (user-driven, no notice needed) [7.79ms]
+(pass) v0.35.28 #16: the pause_goal wait copy is now backed by machinery (source pin) [1.74ms]
+(pass) v0.35.28 #16: once consent exists on reload, the overdue wait resumes through the backstop [1919.82ms]
+(pass) v0.35.48: the backstop stays parked during a session handoff window [1393.40ms]
+(pass) v0.35.48: an agent-authored wait stays parked while main-model recovery is active [1115.92ms]
+(pass) v0.35.48: the backstop's dispatch-surface gates sit before the one-shot latch [2.40ms]
+
+tests/list-draft-handoff.test.ts:
+[run-tests] progress: 2340s elapsed · 3s since last output · 352 KiB of suite output
+(pass) 125335: fresh commentary-only draft end delivers exactly one bounded correction [9621.11ms]
+(pass) stated next dependent question is a legal drafting end: no correction [2980.52ms]
+(pass) short ack without a question is not commentary: no correction [2930.46ms]
+(pass) tool-unavailable fallback: the correction directs prose asking [0.99ms]
+(pass) confirmation gate untouched: correction never earns a proposal [2996.57ms]
+
+tests/ui-status-projection.test.ts:
+(pass) scheduled external assessment requires current-owner heartbeat registration [306.47ms]
+(pass) unconfirmed saved checks keep a human time in compact and detailed cards [74.11ms]
+(pass) background activity is attributed to the owned dependency, not parent chat [0.44ms]
+(pass) saved active or auditing state never proves execution [0.11ms]
+(pass) saved deadline differs from attributed armed timer [0.13ms]
+(pass) replaced owner, generation, stale or future snapshots do not establish liveness [0.11ms]
+(pass) manual decision and supervisor holds outrank provider timers [0.12ms]
+(pass) silence does not prove death; independently observed closure does [0.08ms]
+(pass) in-budget tool is a wait and queued is not running [0.08ms]
+(pass) hourly-only timer does not advertise a regular saved deadline [0.06ms]
+(pass) terminal state outranks old observations; workflow issue survives independently [0.04ms]
+
+tests/glla-update-check.test.ts:
+(pass) compareVersions orders semver-ish strings and shrugs at garbage [270.69ms]
+(pass) staleUpdateNudge fires only when the cache proves the registry is ahead [0.13ms]
+(pass) buildVersionTail always names the running version, nudges only when stale [0.10ms]
+(pass) readUpdateCheck returns null for missing, malformed, and future-dated caches [2.60ms]
+(pass) refreshUpdateCheck skips spawn while the cache is within TTL [0.88ms]
+(pass) refreshUpdateCheck shells npm view when stale and caches the latest [3.02ms]
+(pass) refreshUpdateCheck never throws and never writes on registry failure [2.28ms]
+(pass) async spawn error is swallowed, never crashes, never writes [0.31ms]
+(pass) non-version npm stdout never poisons the sidecar [0.86ms]
+(pass) future-dated cache suppresses the spawn instead of causing one per contact [0.37ms]
+
+tests/pause-author-and-widget-bounds.test.ts:
+(pass) pause attribution is explicit and unknown legacy sources are never blamed on the user [228.24ms]
+(pass) actual pause entrypoints persist episode authors and resume clears the prior author [1972.71ms]
+(pass) actual TUI refresh registers a responsive factory whose budget follows terminal rows [1303.65ms]
+(pass) narrow bounded manual cards retain prerequisite-first resume semantics and mark omitted prose [308.18ms]
+(pass) responsive production card obeys both dimensions on each resize and preserves inspection path [87.89ms]
+
+tests/audit-latest-action.test.ts:
+(pass) legacy un-stamped progress without tool completions renders no action and a clear inspect path ({}) [214.86ms]
+(pass) legacy un-stamped progress without tool completions renders no action and a clear inspect path ({"toolCalls":[]}) [0.95ms]
+(pass) production adapter/card/footer retain actual completion action and age, not parent activity [63.30ms]
+(pass) stale completion remains historical action and never becomes live through a parent poll [1.26ms]
+(pass) replaced progress is rejected at production renderer boundaries ({"attemptId":"replaced"}) [0.98ms]
+(pass) replaced progress is rejected at production renderer boundaries ({"ownerKey":"goal:other"}) [0.97ms]
+(pass) replaced progress is rejected at production renderer boundaries ({"generation":1}) [0.81ms]
+(pass) missing/future completion timestamps and arbitrary commands cannot invent action evidence [0.30ms]
+(pass) current bounded tool retains elapsed/budget alongside last completed action; holds win [3.43ms]
+
+tests/zombie-retry-fallback.test.ts:
+[run-tests] progress: 2370s elapsed · 3s since last output · 355 KiB of suite output
+(pass) v0.39.x: zero-stream abort auto-retries a loop owner, preserves iteration+builder, and re-enables claim/audit [2819.50ms]
+(pass) v0.39.x: a recurrence-proven wedge routes the next retry via fallback instead of replaying the route [2698.78ms]
+(pass) v0.39.x: fallback attempt failure degrades to the same-route retry [2907.40ms]
+(pass) v0.39.x: exhausted budget reports cause + next action on the park and refuses submission tools while held [2102.74ms]
+(pass) v0.39.x: explicit /loop resume after exhaustion grants a fresh budget [2208.11ms]
+(pass) v0.39.x: supervisor freeze during the waystation keeps the park standing [1972.06ms]
+(pass) v0.39.x: an explicit user stop superseding the abort wins over the pending retry [2210.64ms]
+(pass) v0.39.x: auto-retry preserves a refinement-parked builder without overriding the pending scope decision [1676.68ms]
+(pass) v0.39.x: a fresh episode after a fallback episode reports same-route (no stale routing flag) [3032.43ms]
+(pass) v0.39.x: a missing-permission park never arms the automatic retry and keeps its reason [1391.08ms]
+(pass) v0.39.x: an explicit /goal pause superseding the abort wins over the pending retry [1408.77ms]
+(pass) v0.39.x: goal-owner recurrence routes via fallback and reactivates [1089.45ms]
+
+tests/state-ownership-guard.test.ts:
+(pass) no wholesale state reassignment outside goal-state.ts [490.48ms]
+
+tests/goal-schema-parity.test.ts:
