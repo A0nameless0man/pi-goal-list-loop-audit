@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Compact blocked cards prioritize a two-line action and short reason preview,
+  use a one-line conditional resume, and move judgment/compaction diagnostics
+  to detailed status. Cap GLLA's shared status segment at 96 cells and render
+  successful pauses as short receipts pointing to the action card.
+
 ## 0.39.38 — clearer waiting UI and resilient stats (2026-10-18)
 
 - Includes the human-facing waiting/completion changes and publishing repair
