@@ -232,7 +232,8 @@ Ordered by expected value. Every item names the evidence that would close it.
 | 7 | **Verify `docs/DESIGN.md` (825 lines) and `docs/RECOVERY.md` (530 lines) claim-by-claim.** | The docs scout read headings and two sections; the prose claims behind them were not verified, and DESIGN.md is the file the recovery design lives in. | A two-scout pass with a strict "quote both sides" rule. |
 | 8 | **Re-check the packaging/CI scout's seams** (see `audit/` for its entry) and re-run it after any release-plumbing change. | The release path is the least-exercised code in the repo. | The scout's own report. |
 | 9 | **Add a "refused action must not consume a consent gate" invariant test.** This pass found one instance in the tool path; the *shape* of the bug (a refusal that spends a gate) is generic. | A generic invariant would have caught the tool path and would catch the next instance. | A test that asserts no refusal path mutates a gate, across the resume/pause/unblock surfaces. |
-| 10 | **Keep the drift between the `leftOut` schema and the runtime from recurring via the release doc.** | The release doc for `v0.39.40` should name the contract change. | Release doc content. |
+| 10 | **Make the test runner distinguish a broken environment from broken code.** A concurrent `npm ci` emptied `node_modules` mid-run and produced 134 `ENOENT` failures with **zero** assertion failures — indistinguishable from a real regression at a glance. | A 17-minute silent run that ends in 134 confusing failures costs a full triage cycle and can be mistaken for a real break. | A preflight that asserts the dependency tree resolves, an early abort when it does not, and incremental per-file progress in the runner output. |
+| 11 | **Pin the release doc's contract note.** The `leftOut` schema change alters the package's published contract. | A consumer validating a goal file against the shipped schema should know why the type changed. | Release doc content (tasklist #10's release step). |
 
 ---
 
@@ -243,8 +244,29 @@ Ordered by expected value. Every item names the evidence that would close it.
 | `npm run check` (tsc --noEmit) | clean |
 | `npm run check:inventory` | clean after regeneration |
 | Focused suites (11 files: stale-resume, load-hold, schema, handoff, doc-parity, resume-admission, neighbour resume/loop suites) | 75 + 14 + 16 + 5 + 19 pass, 0 fail |
-| `npm run test:fast` (full fast set) | see the release note below |
+| Invariant suites (state-ownership, release-contract, runtime-globals) | 30 pass, 0 fail |
+| `npm run test:fast` (full fast set) | see the incident note below |
 | Neutralized controls | 6 controls applied and reverted; each failed exactly its discriminating assertion |
+
+**Incident note — the first full-suite run was invalid, and why.** The first
+`npm run test:fast` reported **134 failures across 439 files**. Every failure
+in the captured diagnostics was an `ENOENT` for a path under
+`node_modules/@earendil-works/…`; not one was an assertion failure. The cause
+was **external**: the repository's `node_modules` tree was emptied at 15:02:18,
+two minutes before the run started — a concurrent `npm ci` from another
+session on this machine (the box runs several Pi coding-agent sessions in
+parallel). Nothing in this repository deletes `node_modules`: the only
+candidate, `scripts/verify-test-pin-controls.mjs:75`, symlinks the tree into
+a scratch directory and `rmSync`s the **link**, which was verified
+empirically to leave the target intact, and that script is not invoked by the
+suite. `npm ci` restored the tree (253 packages) and the suite was re-run
+clean.
+
+Two things are worth acting on, and they are recorded in the tasklist below:
+a mid-run environment change currently produces 134 confusing failures rather
+than one clear diagnosis, and the fast set emits no incremental output for
+~17 minutes, so there is no way to tell a broken environment from broken code
+until the very end.
 
 **Note on the daemon.** The repo is watched by the dracon-sync daemon, which
 auto-commits within seconds. This pass therefore produced a sequence of
