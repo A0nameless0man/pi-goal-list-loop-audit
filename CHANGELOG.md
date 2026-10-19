@@ -2,15 +2,25 @@
 
 ## Unreleased
 
+## 0.39.39 — actionable audit rejections and compact cards (2026-10-19)
+
+### Audit rejection handoff
+
 - Audit rejection notices now assign concise required corrections to the agent
   instead of dumping a report tail. Compact cards distinguish observed rework
   from an unconfirmed restart and give an explicit idle-session recovery action;
   full reports, executor feedback and recovery/consent fences remain intact.
+- The projection reads the final unquoted Required-fixes section, ignores
+  headings quoted inside evidence or fenced output, keeps provider redaction and
+  never invents objections from arbitrary logs.
+
+### Compact card and status presentation
 
 - Compact blocked cards prioritize a two-line action and short reason preview,
   use a one-line conditional resume, and move judgment/compaction diagnostics
   to detailed status. Cap GLLA's shared status segment at 96 cells and render
   successful pauses as short receipts pointing to the action card.
+- An unconfirmed saved workflow is presented as work saved rather than working.
 
 ## 0.39.38 — clearer waiting UI and resilient stats (2026-10-18)
 
