@@ -2402,7 +2402,7 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
       if (max === 1) lines = [lines[0]!];
       else {
         const priority = [0];
-        for (const label of ['next:', 'why:', 'resume:', 'workflow:', 'retry:', 'fallback:', 'candidate:']) {
+        for (const label of ['next:', 'you:', 'why:', 'resume:', 'agent:', 'workflow:', 'retry:', 'fallback:', 'candidate:']) {
           const at = lines.findIndex(line => sanitizeDisplayText(line).startsWith(`├─ ${label}`));
           if (at >= 0) priority.push(at);
         }

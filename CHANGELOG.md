@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Audit rejection notices now assign concise required corrections to the agent
+  instead of dumping a report tail. Compact cards distinguish observed rework
+  from an unconfirmed restart and give an explicit idle-session recovery action;
+  full reports, executor feedback and recovery/consent fences remain intact.
+
 - Compact blocked cards prioritize a two-line action and short reason preview,
   use a one-line conditional resume, and move judgment/compaction diagnostics
   to detailed status. Cap GLLA's shared status segment at 96 cells and render

@@ -21,7 +21,7 @@ export function auditReworkOverview(report: string): { count: number; items: str
     }
     const marker = /^\s{0,3}(`{3,}|~{3,})/.exec(line)?.[1];
     if (fence) {
-      if (marker?.[0] === fence[0] && marker.length >= fence.length && /^\s*(?:`+|~+)\s*$/.test(line)) fence = undefined;
+      if (marker && marker[0] === fence[0] && marker.length >= fence.length && /^\s*(?:`+|~+)\s*$/.test(line)) fence = undefined;
       continue;
     }
     if (/<evidence\b/i.test(line)) { evidence = !/<\/evidence\s*>/i.test(line); continue; }

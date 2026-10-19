@@ -1,0 +1,26 @@
+
+## accepted-tests.log
+(pass) auditorWorkerLiveForAttempt: only a matching live worker counts [3.47ms]
+(pass) unreadable saved transcript returns null but ledgers the reason [1.40ms]
+(pass) workerProcessMatches darwin branch reads identity via ps [266.88ms]
+(pass) auditing claim stuck in starting with no worker parks for recovery via heartbeat [272.89ms]
+(pass) S7: stranded recovery measures real activity, not the heartbeat's own refire notes [269.27ms]
+(pass) workerless park drops the dead attempt's auditor cursor so recovery re-walks (clean-web field) [262.10ms]
+(pass) reconcile names its rejecting gate in the ledger [6.62ms]
+
+ 409 pass
+ 0 fail
+Ran 409 tests across 10 files. [99.62s]
+[run-tests] finished in 100s (exit 0)
+
+## final-check.log
+
+> pi-goal-list-loop-audit@0.39.38 check
+> tsc --noEmit
+
+
+## final-inventory.log
+
+> pi-goal-list-loop-audit@0.39.38 check:inventory
+> node scripts/generate-inventory.mjs --check
+

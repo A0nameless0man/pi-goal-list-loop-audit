@@ -1,0 +1,49 @@
+Representative production-renderer fixture; not a live-session or loaded-package receipt. ANSI stripped.
+
+## Notification
+Completion review: changes requested.
+Agent: address 3 required corrections, then resubmit.
+• Prove the parallel scout run with inspectable artifacts; rerun the survey if no record exists.
+• Correct FIX versus DECIDE classifications before resubmitting.
+• Explain which staged edits belong to this pass, separately from pre-existing work.
+You: no approval requested. If work stays idle, send "continue" in this session.
+Full report: /list show
+
+## Unconfirmed card 40
+● EXECUTION UNCONFIRMED · list item w…
+│  Collect audit findings without cha…
+├─ review: changes requested · 3 corr…
+├─ agent: Prove the parallel scout run
+│  with inspectable artifacts; rerun…
+├─ you: send "continue" here
+└─ details: /glla status
+Footer: glla: Send "continue" here · EXECUTION …
+
+## Unconfirmed card 120
+● list item · work saved · EXECUTION UNCONFIRMED · age 7h 00m · 146k tok
+│  Collect audit findings without changing code
+├─ review: changes requested · 3 corrections
+├─ agent: Prove the parallel scout run with inspectable artifacts; rerun the survey if no record exists. · Correct FIX
+│  versus DECIDE classifications before resubmitting. · Explain which staged edits belong to this pass, separately…
+├─ you: send "continue" here
+└─ details: /glla status
+Footer: glla: EXECUTION UNCONFIRMED · list item work saved · Send "continue" here
+
+## Unconfirmed card 240
+● list item · work saved · EXECUTION UNCONFIRMED · age 7h 00m · 146k tok
+│  Collect audit findings without changing code
+├─ review: changes requested · 3 corrections
+├─ agent: Prove the parallel scout run with inspectable artifacts; rerun the survey if no record exists. · Correct FIX versus DECIDE classifications before resubmitting. · Explain which staged edits belong to this pass, separately from
+│  pre-existing work.
+├─ you: send "continue" here
+└─ details: /glla status
+Footer: glla: EXECUTION UNCONFIRMED · list item work saved · Send "continue" here
+
+## Fresh observed work 120
+● list item · working · RUNNING · age 7h 00m · 146k tok
+│  Collect audit findings without changing code
+├─ review: changes requested · 3 corrections
+├─ agent: Prove the parallel scout run with inspectable artifacts; rerun the survey if no record exists. · Correct FIX
+│  versus DECIDE classifications before resubmitting. · Explain which staged edits belong to this pass, separately…
+├─ you: no action needed; agent owns rework
+└─ details: /glla status

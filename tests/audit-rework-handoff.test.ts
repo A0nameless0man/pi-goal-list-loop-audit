@@ -96,6 +96,16 @@ test('compact rejection card offers recovery when start is unconfirmed, not a ra
   }
 });
 
+test('short terminal budgets retain the person\'s recovery action before report/task detail', () => {
+  for (const maxWidgetLines of [4, 6]) {
+    const text = buildWidgetLines(fixture(), undefined, NOW, undefined, 120, { uiStatusContext: { now: NOW }, maxWidgetLines })!.join('\n');
+    assert.ok(text.split('\n').length <= maxWidgetLines);
+    assert.match(text, /you:.*continue/i);
+    assert.match(text, /agent:/i);
+    assert.match(text, /\/glla status/);
+  }
+});
+
 test('observed work and manual holds retain honest ownership rather than always requesting a restart', () => {
   const state = fixture();
   const live = { now: NOW, generation: 1, evidence: { ownerKey: 'goal:rework-owner', generation: 1, observedAt: NOW, session: 'open' as const, turnActive: true } };

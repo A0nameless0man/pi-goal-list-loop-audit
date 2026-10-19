@@ -172,6 +172,16 @@ terminals because other extensions share that bar; successful pause tools
 render a short receipt pointing to the card, while expanded/partial/error
 results keep their full content.
 
+A completion rejection is agent-owned rework, not a raw report handed to the
+user. The default notice previews the final Required-fixes section, excludes
+quoted evidence/command blocks, and links to the full report. Compact cards
+name the agent's task and the person's action separately: observed work needs
+no intervention; an unconfirmed restart offers `continue` in the same session.
+A saved workflow is not rendered as working when execution is unconfirmed.
+Detailed/interrupted renderers retain their feedback and precise recovery
+commands; scheduler, permission, persistence and cold-restore consent fences
+are not weakened to make the card look active.
+
 A wait names the condition, a readable UTC progress-check time and whether
 human action is needed. A check is not a promise of completion, and a saved
 deadline is not evidence of a registered wake. Current-owner, generation and
