@@ -1,4 +1,5 @@
 import { effectiveToolTimeoutMs } from "../goal-loop-auditor-process.js";
+import { auditReworkNotice } from "../audit-rework-handoff.js";
 import { archiveCurrentGoal, refuseUnfinishedCompletion } from "./goal-orchestrator.js";
 /**
  * pi-goal-list-loop-audit — v0.1.0
@@ -2507,7 +2508,7 @@ function applyCompletedCompletionAudit(args: {
   }, liveCtx);
   liveCtx.ui.notify(
     result.disapproved
-      ? `Auditor (${origin}) DISAPPROVED — resuming; the report is in ${activeGoalStatusCommand()}.`
+      ? auditReworkNotice(result.output, activeGoalStatusCommand())
       : result.impossible
         ? `Auditor (${origin}): goal IMPOSSIBLE — ${(result.impossibleReason ?? "").slice(0, 100)}. Resuming; consider ${activeGoalSurfaceCommand("tweak")}.`
         : `Auditor (${origin}) hit an infrastructure error — resuming; re-call complete_goal when ready.`,

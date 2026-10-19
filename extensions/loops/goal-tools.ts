@@ -307,6 +307,7 @@ import { selectQuotaWaitReroute } from "../quota-retry.js";
 import { buildFinalRepoStateLines, buildTerminalApprovalRender, clipSummaryValue, compactCompletionSummary, compactTerminalCompletionSummary, completionSummaryDensityNote } from "../completion-summary.js";
 import { persistApprovalRender, replayUndeliveredApprovalRenders } from "../approval-render-store.js";
 import { HUMAN_HANDOFF_GUIDANCE, humanCheckTime } from "../human-handoff.js";
+import { auditReworkNotice } from "../audit-rework-handoff.js";
 import { Text } from "@earendil-works/pi-tui";
 import { resolveAuditorThinkingLevel } from "../auditor-thinking.js";
 import {
@@ -2406,15 +2407,10 @@ function registerAgentTools(pi: any): void {
         pauseReason: "auditor disapproved",
         pauseSuggestedAction: "Inspect auditor feedback and fix the actual gap before calling complete_goal again",
       }, ctx);
-      // The returned tool text reaches the executor only if a continuation
-      // turn starts. Surface a bounded report directly as well, so a missing
-      // turn-start acknowledgement cannot turn a real disapproval into an
-      // apparently empty red card.
-      const userFeedback = auditFeedbackExcerpt(safeAuditOutput, 1200)
-        .replace(/<\/?(?:approved|disapproved|impossible)\s*\/?>/gi, "")
-        .trim()
-        || "(no actionable feedback returned; use /glla audits full to inspect the raw report)";
-      ctx.ui.notify(`Auditor disapproved. Report excerpt:\n${userFeedback}`, "warning");
+      // The executor still receives the full bounded brief below. The
+      // person needs ownership, objections and an idle-session recovery
+      // action — never an arbitrary tail of timestamps and command output.
+      ctx.ui.notify(auditReworkNotice(safeAuditOutput, activeGoalStatusCommand()), "warning");
       scheduleContinuation(ctx, true);
       return {
         content: [{

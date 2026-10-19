@@ -21,7 +21,7 @@ import {
   type AuditLogEntry,
 } from "../extensions/goal-loop-core.ts";
 import { buildWidgetLines } from "../extensions/goal-loop-display.ts";
-import { readGoalRuntimeSource } from "./harness/goal-source.js";
+import { auditReworkNotice } from "../extensions/audit-rework-handoff.js";
 
 test("stripThinkBlocks removes think bodies, fragments, and artifacts", () => {
   // Wild-caught shape (pully hsq4xq, 2026-07-25): leading think body:
@@ -131,11 +131,13 @@ test("audit feedback excerpts redact provider payloads before executor output", 
   assert.match(excerpt, /provider diagnostic redacted/);
 });
 
-test("disapproval feedback is surfaced even when the continuation turn never starts", () => {
-  const src = readGoalRuntimeSource();
-  assert.match(src, /returned tool text reaches the executor only if a continuation/);
-  assert.match(src, /ctx\.ui\.notify\(`Auditor disapproved\. Report excerpt:/);
-  assert.match(src, /no actionable feedback returned; use \/glla audits full/);
+test("disapproval handoff distinguishes requesting work from proving a continuation started", () => {
+  const notice = auditReworkNotice('## Required fixes\n- Add the missing restoration evidence.\n<disapproved/>', '/list status');
+  assert.match(notice, /Agent:.*correction/);
+  assert.match(notice, /missing restoration evidence/);
+  assert.match(notice, /idle.*continue/);
+  assert.match(notice, /\/list status/);
+  assert.doesNotMatch(notice, /agent is working|resuming;|Report excerpt|<disapproved/);
 });
 
 test("infra errors are transparent to the disapproval streak (not breakers)", () => {

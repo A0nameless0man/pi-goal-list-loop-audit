@@ -641,7 +641,7 @@ function latestAuditFeedback(g: Goal): LatestAuditFeedback | undefined {
   const rework = verdict.disapproved ? auditReworkOverview(safeReport) : undefined;
   return {
     label: verdict.disapproved ? "completion review disapproved" : "regression shield",
-    text: rework ? rework.items.join(" · ") || "Read the saved auditor report before resubmitting." : truncate(report, 320),
+    text: rework ? rework.items.join(" · ") || `Read the saved auditor report before resubmitting.${rework.redacted ? ' Provider diagnostic redacted.' : ''}` : truncate(report, 320),
     rework,
   };
 }
@@ -1667,7 +1667,7 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
     const rework = attention.rework;
     rows.push(row('├─ ', `review: changes requested${rework.count ? ` · ${rework.count} corrections` : ''}`, 'warning'));
     const budget = Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3);
-    const task = rework.items[0] ?? 'Read the saved report before resubmitting';
+    const task = rework.items[0] ?? `Read the saved report before resubmitting${rework.redacted ? ' (provider diagnostic redacted)' : ''}`;
     wrap(`agent: ${task}`, budget, 2).forEach((line, i) => rows.push(row(i ? '│  ' : '├─ ', line, 'dim', true)));
     const action = status.execution === 'unconfirmed' ? 'send "continue" here' : 'no action needed; agent owns rework';
     wrap(`you: ${action}`, budget, 2).forEach((line, i) => rows.push(row(i ? '│  ' : '├─ ', line, 'dim', true)));

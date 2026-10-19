@@ -9,7 +9,7 @@ const NOW = Date.parse('2026-10-19T10:52:00Z');
 const report = `Prior review approved the findings.\n<approved/>\n--- challenge ---\n## Required fixes\n1. [HIGH] Prove the parallel scout run with inspectable artifacts.\n2. [HIGH] Correct FIX versus DECIDE classifications before resubmitting.\n3. [HIGH] Explain which staged edits belong to this pass.\n\n<evidence>\nOutput:\n\`\`\`\nFile: /some/project/.git/modules/fixture/index\nAccess: 2026-10-19\n15994 findings.md\n\`\`\`\n</evidence>\n<disapproved/>`;
 function fixture(): State {
   return { goal: { id: 'rework-owner', objective: 'Collect audit findings without changing code', status: 'active', policy: 'list',
-    autoContinue: true, createdAt: new Date(NOW - 7 * 3600000).toISOString(), updatedAt: new Date(NOW).toISOString(),
+    autoContinue: true, usage: { tokensUsed: 0, tokensLimit: 1000000 }, createdAt: new Date(NOW - 7 * 3600000).toISOString(), updatedAt: new Date(NOW).toISOString(),
     pauseReason: 'auditor disapproved', auditHistory: [{ at: new Date(NOW).toISOString(), model: 'fixture', approved: false, disapproved: true, report }] }, list: [] };
 }
 

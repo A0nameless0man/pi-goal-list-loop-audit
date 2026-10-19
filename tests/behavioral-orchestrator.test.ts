@@ -4281,8 +4281,9 @@ test("v0.34.22: detached disapproval resumes the goal with a durable report", as
     assert.doesNotMatch(userFacing, /403|429|Token Plan|secret-request|secret-account|rate limit/);
     assert.match(userFacing, /provider diagnostic redacted/);
     assert.ok(
-      ctx.ui.matching("Report excerpt").some((n) => n.message.includes("provider diagnostic redacted")),
-      "the sanitized disapproval report is notified directly, not only returned to a continuation turn",
+      ctx.ui.matching("Completion review: changes requested").some((n) => /provider diagnostic redacted/i.test(n.message)
+        && /Agent:/.test(n.message) && /idle.*continue/.test(n.message) && !/Report excerpt|<evidence>|Output:/.test(n.message)),
+      "a sanitized, actionable handoff is notified directly, not a raw evidence tail or only executor text",
     );
     await pi.fire("session_shutdown", { reason: "quit" }, ctx);
   } finally {
