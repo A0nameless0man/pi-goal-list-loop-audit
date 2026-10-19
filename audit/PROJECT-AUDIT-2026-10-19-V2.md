@@ -20,7 +20,7 @@ through the 2026-10-19 UI-rework release `v0.39.39`.
    a **neutralized control** (the guard reverted in place) that fails exactly
    the discriminating assertion.
 
-**Result.** 5 defects fixed, 1 previously-open finding closed with evidence,
+**Result.** 6 defects fixed, 1 previously-open finding closed with evidence,
 2 open design questions recorded, and a tasklist of deferred work below.
 
 This is a **bounded survey, not an exhaustive clean bill.** The surfaces the
@@ -166,7 +166,34 @@ marked with `…`.
 that is *derived from the code*, so the class cannot drift silently again.
 **Control.** Reverting the four doc fixes fails all five parity tests.
 
-### 1.6 MEDIUM — the documented release gate was failing
+### 1.6 MEDIUM — the schema/runtime type parity was only checked for one field
+
+**Where.** `schemas/goal.schema.json` vs the runtime interfaces in
+`extensions/goal-loop-core.ts`, `extensions/work-lifecycle.ts`,
+`extensions/quota-retry.ts` and `extensions/durable-solution.ts`.
+
+**What.** Finding 1.2 was a *type* contradiction, and the repo's parity test
+covered exactly one field. The schema is permissive (`additionalProperties` is
+unset), so a runtime field the schema does not mention is legal — but a field
+the schema **does** describe with the wrong type is a published contract that
+no real goal file can satisfy. Nothing checked the other 151 property pairs.
+
+**Fix.** `tests/goal-schema-parity.test.ts` generalises the check: for every
+schema definition with a runtime counterpart, each shared property's schema
+type must be compatible with the runtime's type. The extraction is mechanical
+(read the TypeScript, read the JSON), so it cannot drift from either side,
+and the test also asserts that **every** mapping still resolves and that the
+sweep keeps its coverage — so a runtime type that moves fails loudly instead
+of quietly narrowing the sweep.
+
+**Result.** 152 property pairs across 12 definitions: **0 mismatches** beyond
+the `leftOut` one already fixed.
+
+**Control.** Reverting the schema to the array shape fails exactly the
+`pendingCompletion.leftOut` assertion, naming the field, the schema type and
+the runtime type.
+
+### 1.7 MEDIUM — the documented release gate was failing
 
 `docs/RUNTIME-INVENTORY.md` was stale on every count it published, so
 `npm run release:check` — the gate `README.md:355` and `docs/RELEASING.md:32`
@@ -226,7 +253,7 @@ Ordered by expected value. Every item names the evidence that would close it.
 
 | # | Item | Why it matters | Evidence to close |
 |---|---|---|---|
-| 1 | **Field-by-field schema/runtime parity for the whole goal schema.** The `leftOut` defect was one field; `backgroundWait`, `objectiveRepair`, `objectiveProvenance`, `solutionJudgment`, `subagentQuotaEvidence` and `pauseContractAmendment` were never diffed against the runtime. | The published schema is the package's external contract, and one wrong field type was enough to make real goal files invalid. | Generate the runtime field set per definition and assert each against the schema, in `tests/goal.schema.test.ts`. |
+| ~~1~~ | **DONE — field-by-field schema/runtime parity.** Closed in this pass: `tests/goal-schema-parity.test.ts` sweeps 152 property pairs across 12 definitions, 0 further mismatches. The sweep self-checks its own coverage, so it cannot silently narrow. | The published schema is the package's external contract, and one wrong field type was enough to make real goal files invalid. | — |
 | 2 | **Derive every doc number from the code, not by hand.** `doc-parity.test.ts` now covers the settings sections, the slow-file count and the ledger event-type count; the same treatment is missing for the `~70%`/percentage/timeout figures quoted across `docs/`. | Four doc claims were already stale; each was a number a human typed once. | Extend `tests/doc-parity.test.ts` per document; prefer a generated table over prose. |
 | 3 | **Assert the version and the CHANGELOG against the source in CI, not at release time.** `tests/release-contract.test.ts` catches a version/changelog mismatch, but only if a release is attempted. | `npm run release:check` — the documented gate — was failing on a stale generated doc, and the failure only surfaces at release time. | A cheap CI step that runs `check:inventory` and the doc-parity tests on every push. |
 | 4 | **Sweep the remaining `goal-ui.ts` dispatch/timer/refresh logic** (1411 lines, sampled but not read). | The compact card and the consent gates are the newest surfaces; the dispatch layer around them is the least-audited. | A bounded scout pass over `extensions/loops/goal-ui.ts` with the same both-sides evidence rule. |
@@ -257,8 +284,10 @@ To cut the release:
    (`tests/release-contract.test.ts`).
 3. `docs/INDEX.md` — the active-focus trail must reach the new version
    (`v0.35.14–v0.39.40`).
-4. `docs/RUNTIME-INVENTORY.md` — regenerate with
-   `node scripts/generate-inventory.mjs` (the gate fails on drift).
+4. `docs/RUNTIME-INVENTORY.md` — already current as of this report; it
+   counts `extensions/` and `scripts/` lines and the top-level test files, so
+   it only needs regenerating if the release touches those. The gate fails on
+   drift either way (`node scripts/generate-inventory.mjs`).
 5. Add `audit/RELEASE-0-39-40-2026-10-19.md`, naming the `leftOut` schema
    contract change.
 6. `npm run release:check`, then tag and publish via
@@ -274,6 +303,7 @@ To cut the release:
 | `npm run check:inventory` | clean after regeneration |
 | Focused suites (11 files: stale-resume, load-hold, schema, handoff, doc-parity, resume-admission, neighbour resume/loop suites) | 75 + 14 + 16 + 5 + 19 pass, 0 fail |
 | Invariant suites (state-ownership, release-contract, runtime-globals) | 30 pass, 0 fail |
+| `tests/goal-schema-parity.test.ts` (new) | 1 pass, 0 fail; 152 property pairs, 0 mismatches |
 | `npm run test:fast` (full fast set) | **3838 pass, 1 skip (env-gated), 0 fail** across 439 files, 816s |
 | Neutralized controls | 6 controls applied and reverted; each failed exactly its discriminating assertion |
 
@@ -313,7 +343,9 @@ descriptive messages live in this report and in
 - `extensions/loops/goal-ui.ts` beyond the two regions the compact-card pass
   touched.
 - The detailed and interrupted renderers in `extensions/goal-loop-display.ts`.
-- The remaining `schemas/goal.schema.json` definitions (see tasklist #1).
+- The remaining `schemas/goal.schema.json` definitions are now swept for
+  TYPE parity (tasklist #1, closed), but their *required* lists, `enum`
+  values and numeric bounds were not compared against the runtime.
 - `extensions/goal-continuation.ts` outside the auditor-surface reads.
 - The `tests/` tree as an audit surface in its own right — it was read only as
   corroboration.

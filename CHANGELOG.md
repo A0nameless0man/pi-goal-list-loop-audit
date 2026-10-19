@@ -29,6 +29,11 @@
   `leftOut` was invalid under the schema shipped in the npm package. The
   parity fixture now uses the runtime shape, and a regression pins the schema
   to the runtime.
+- A new schema-parity regression sweeps every schema definition that has a
+  runtime counterpart — 152 property pairs across 12 definitions — and fails
+  on any type the two sides disagree about. The remaining pairs agree; the
+  sweep also self-checks its own coverage so a moved runtime type fails
+  loudly instead of quietly narrowing the check.
 
 ### Audit rework handoff
 
