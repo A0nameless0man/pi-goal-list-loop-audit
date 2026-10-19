@@ -158,7 +158,7 @@ isGoalRevisionCurrent,
   normalizeDurableDeferRecommendationInput,
   sanitizeFindingGroups,
   sanitizeGateRows,
-  clearLoadHold,
+  releaseLoadHoldDurably,
   isProviderRecoveryArmed,
   extractSuggestedCommand,
   suggestionAcceptancePromotion,
@@ -3205,10 +3205,19 @@ function registerAgentTools(pi: any): void {
       if (typeof state.supervisorPausedAt === "number") {
         return { content: [{ type: "text", text: `Automation is frozen by /glla pause — ask the user to run ${activeGoalSurfaceCommand("resume")} (or lift the freeze) instead of resuming from the tool.` }], details: {} };
       }
-      if (clearLoadHold(state)) {
-        appendLedger(ctx.cwd, "load_hold_released", { via: "agent-resume" });
-        ctx.ui.notify("Load hold released — automation is live again.", "info");
+      // v0.39.40 (audit 2026-10-19): the cold-load hold is the CONSENT gate
+      // for automatic machinery, and only an ADMITTED resume may spend it.
+      // The stale probe and its refusal therefore run BEFORE the release, so
+      // a refused resume leaves the gate, the durable projection and the
+      // journal untouched — a refusal must not consume a consent decision.
+      const staleResume = warnIfStaleAtEntry(ctx, "agent resume");
+      if (staleResume) {
+        return { content: [{ type: "text", text: `Resume refused in this stale session — ask the user to run ${activeGoalSurfaceCommand("resume")}.` }], details: {} };
       }
+      // The release is durable BEFORE it is announced: a RAM-only release let
+      // the live state and the durable projection disagree, and the journal
+      // could claim a release the durable state still held.
+      releaseLoadHoldDurably(state, ctx, "agent-resume");
       // v0.38.63 (audit-stuck batch, field 124544): a pending main-model
       // recovery no longer bounces the turn to a user-typed command — the
       // tool runs the same recovery branches as cmdResume (/goal resume)
@@ -3216,9 +3225,8 @@ function registerAgentTools(pi: any): void {
       // generation-fenced and in-flight guarded, so firing it here is the
       // same call the user command makes. The stale probe runs first and is
       // reused below (it notifies, so it must fire exactly once).
-      const staleResume = warnIfStaleAtEntry(ctx, "agent resume");
       const rec = state.mainModelRecovery;
-      if (!staleResume && rec && (rec.manualResumeRequired || rec.retryAt || rec.pendingModelSwitch || rec.primaryProbeAt || rec.primaryProbeInFlight)) {
+      if (rec && (rec.manualResumeRequired || rec.retryAt || rec.pendingModelSwitch || rec.primaryProbeAt || rec.primaryProbeInFlight)) {
         if (manuallyResumeMainModelRecovery(ctx)) {
           // That call already clears the hold, re-arms the window, notifies,
           // and fires the probe — ledger only the agent-resume provenance.
@@ -3232,11 +3240,6 @@ function registerAgentTools(pi: any): void {
           void probeMainModelRecovery(ctx);
           appendLedger(ctx.cwd, "main_model_probe_retriggered", { via: "agent-resume" });
         }
-      }
-      // A resume inside a stale session is theater — refuse and name the
-      // user command instead of flipping lifecycle state that cannot land.
-      if (staleResume) {
-        return { content: [{ type: "text", text: `Resume refused in this stale session — ask the user to run ${activeGoalSurfaceCommand("resume")}.` }], details: {} };
       }
       // Mirror the /goal resume paused branch: refresh the token cap from
       // current settings, clear every pause/interrupt marker, reactivate.

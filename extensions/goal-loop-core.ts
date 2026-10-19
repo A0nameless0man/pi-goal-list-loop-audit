@@ -3193,6 +3193,49 @@ export function clearLoadHold(state: State): boolean {
   return true;
 }
 
+/** The outcome of a cold-load hold release. Only "released" licenses a
+ * caller to announce the gate as open. */
+export type LoadHoldReleaseOutcome = "not-held" | "released" | "failed";
+
+/**
+ * Release the cold-load consent gate so automatic machinery can run again.
+ *
+ * v0.39.40 (audit 2026-10-19): the release used to be a RAM-only delete that
+ * was journaled and announced as if it had landed. A refused resume therefore
+ * spent the gate, the journal claimed a release the durable projection still
+ * held, and the live state drifted from the durable one — the exact drift
+ * AGENTS.md forbids ("never let live state drift from its durable
+ * projection"). The release is now durable BEFORE it is claimed: when the
+ * snapshot cannot land, the gate is restored and nothing is claimed.
+ *
+ * "not-held" — there was no gate; nothing done, nothing claimed.
+ * "released" — the gate was held and its release landed durably.
+ * "failed"   — the gate was held but the release could not land; the gate
+ *              stays held, so automation keeps waiting for a decision.
+ */
+export function releaseLoadHoldDurably(
+  state: State,
+  ctx: { cwd: string; ui: { notify: (message: string, type?: "info" | "warning" | "error") => void } },
+  via: string,
+): LoadHoldReleaseOutcome {
+  const heldAt = state?.loadHoldAt;
+  if (typeof heldAt !== "number") return "not-held";
+  clearLoadHold(state);
+  // The ambient persistState is the orchestrator's durable state writer; it
+  // is registered by extensions/loops/goal-orchestrator.ts at load time.
+  if (persistState(ctx) === true) {
+    appendLedger(ctx.cwd, "load_hold_released", { via });
+    ctx.ui.notify("Load hold released — automation is live again.", "info");
+    return "released";
+  }
+  // The snapshot did not land: keep the gate held so the live state and the
+  // durable projection still agree, and so no caller can announce a release
+  // the durable state does not carry.
+  (state as { loadHoldAt?: number }).loadHoldAt = heldAt;
+  ctx.ui.notify("The load hold could not be released durably — automation stays held. Fix .pi-glla storage and retry.", "warning");
+  return "failed";
+}
+
 /** True while `/glla pause` has frozen the supervisor's automatic side-
  * effects. A single source of truth for every dispatch-point gate so a
  * future automatic path cannot forget the check.

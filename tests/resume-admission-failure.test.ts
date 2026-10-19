@@ -27,7 +27,7 @@ for (const policy of ['goal', 'list']) for (const storedClaim of [false, true]) 
     const execute = vm.runInNewContext(script, {
       state, foreignToolGuard: () => undefined, currentToolContext: () => ctx,
       goalNoun: () => policy === 'list' ? 'list item' : 'goal', isLoopActive: () => false,
-      clearLoadHold: () => false, warnIfStaleAtEntry: () => false,
+      releaseLoadHoldDurably: () => 'not-held', warnIfStaleAtEntry: () => false,
       loadSettings: () => ({}), DEFAULT_TOKEN_LIMIT: 0,
       updateGoal: (patch: object) => {
         events.push('update');

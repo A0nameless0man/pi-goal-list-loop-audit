@@ -26,7 +26,7 @@ import {
   appendLedger,
   archivedGoalPath,
   appendLoopProgressReceipt,
-  clearLoadHold,
+  releaseLoadHoldDurably,
   formatMainModelRecoveryStatus,
   sanitizeDisplayText,
   isStaleApiError,
@@ -1284,10 +1284,7 @@ async function startLoopFromConfig(ctx: ExtensionContext, cfg: LoopConfig): Prom
   releaseInitialSessionLoadBarrier();
   // v0.35.23 (note.md Next #2): explicitly starting a loop is the decision
   // a load hold waits for — release it or the first tick would be frozen.
-  if (clearLoadHold(state)) {
-    persistState(ctx);
-    appendLedger(ctx.cwd, "load_hold_released", { via: "loop-start" });
-  }
+  releaseLoadHoldDurably(state, ctx, "loop-start");
   if (!(await resolveLoopStartConflict(ctx, cfg.target))) return false;
   const conflictIdsAtStart = liveObjectives(state).map((item) => item.id).sort().join(",");
   // branch=1 mode: scratch branch ONLY. Refuse on non-git or dirty tree —
@@ -1452,7 +1449,7 @@ async function cmdLoop(args: string, ctx: ExtensionContext): Promise<void> {
   }
   if (sub === "recheck") {
     releaseInitialSessionLoadBarrier();
-    if (clearLoadHold(state)) { persistState(ctx); appendLedger(ctx.cwd, "load_hold_released", { via: "loop-recheck" }); }
+    releaseLoadHoldDurably(state, ctx, "loop-recheck");
     recheckProjectBlockers(ctx); return;
   }
   if (["pause", "stop", "cancel"].includes(sub) && state.loop?.builder) cancelRespecBuilderAudit(ctx.cwd, state.loop.startedAt);
@@ -1463,10 +1460,7 @@ async function cmdLoop(args: string, ctx: ExtensionContext): Promise<void> {
     // below, but at entry — the recovery branches return before it, and a
     // manual-resume probe fired under a load hold dies silently on the
     // supervisorPaused gate (hold consumed, loop still held, nothing armed).
-    if (clearLoadHold(state)) {
-      persistState(ctx);
-      appendLedger(ctx.cwd, "load_hold_released", { via: "loop-resume" });
-    }
+    releaseLoadHoldDurably(state, ctx, "loop-resume");
     if (state.mainModelRecovery?.manualResumeRequired && state.mainModelRecovery.kind === "loop") {
       manuallyResumeMainModelRecovery(ctx);
       return;
@@ -1584,10 +1578,7 @@ async function cmdLoop(args: string, ctx: ExtensionContext): Promise<void> {
       // v0.35.23 (note.md Next #2): an explicit resume is exactly the
       // decision a load hold waits for — release it or the tick below
       // would be frozen.
-      if (clearLoadHold(state)) {
-        persistState(ctx);
-        appendLedger(ctx.cwd, "load_hold_released", { via: "loop-resume" });
-      }
+      releaseLoadHoldDurably(state, ctx, "loop-resume");
       releaseContinuationDispatchStandDown();
       releaseAuditorSurfaceForGoal(state.goal?.id, ctx.sessionManager);
       scheduleLoopTickUrgent(ctx);

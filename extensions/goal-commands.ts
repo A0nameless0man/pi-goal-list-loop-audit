@@ -19,7 +19,7 @@ import {
   assignQueueOrder, compareQueueItems, readAuditLog, readQueueFromDisk, routeGoalArgs, routeListText, sanitizeDisplayText, sanitizeProviderAuditReport, statusLabel, waitingStatusLabel,
   visibleListPosition, visibleListPositions,
   writeQueueItemFile, type ModeCommand, type State, type AuditVerdict, type LedgerRecord, LIST_MUTATING_SUBCOMMANDS, SETTINGS_MUTATING_ACTIONS,
-  clearLoadHold, stateRootPending, readGoalStateTransaction, isPersistenceDegraded, isForbiddenModel, recheckPersistenceAfterRepair,
+  releaseLoadHoldDurably, stateRootPending, readGoalStateTransaction, isPersistenceDegraded, isForbiddenModel, recheckPersistenceAfterRepair,
 } from "./goal-loop-core.js";
 // v0.38.99: the status surfaces name the durable audit lifecycle from the one
 // projection the widget uses.
@@ -605,11 +605,7 @@ async function cmdResume(ctx: ExtensionContext): Promise<void> {
   // v0.35.23 (note.md Next #2): an explicit resume is exactly the decision
   // the load hold waits for — release it before re-arming automation, or
   // the scheduleContinuation below would be a frozen no-op.
-  if (clearLoadHold(state)) {
-    persistState(ctx);
-    appendLedger(ctx.cwd, "load_hold_released", { via: "goal-resume" });
-    ctx.ui.notify("Load hold released — automation is live again.", "info");
-  }
+  releaseLoadHoldDurably(state, ctx, "goal-resume");
   const resumeCommand = activeGoalCommand("resume");
   // Main-model recovery returns before the normal paused-goal admission path.
   // Probe the same stale/foreign boundary first so an admitted recovery resume
@@ -2895,11 +2891,7 @@ async function cmdGllaResume(ctx: ExtensionContext): Promise<void> {
   // hold too — otherwise manuallyResumeMainModelRecovery consumes the manual
   // hold and its probe dies silently on the supervisorPaused gate (which
   // includes loadHoldAt): no probe, no timer, goal still parked.
-  if (clearLoadHold(state)) {
-    persistState(ctx);
-    appendLedger(ctx.cwd, "load_hold_released", { via: "glla-resume" });
-    ctx.ui.notify("Load hold released — automation is live again.", "info");
-  }
+  releaseLoadHoldDurably(state, ctx, "glla-resume");
   if (manuallyResumeMainModelRecovery(ctx)) return;
   if (state.mainModelRecovery?.retryAt || state.mainModelRecovery?.pendingModelSwitch) {
     clearMainModelRecoveryTimer();
