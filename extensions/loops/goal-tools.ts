@@ -3252,7 +3252,7 @@ function registerAgentTools(pi: any): void {
       const resumedId = state.goal.id;
       const resumedPolicy = state.goal.policy;
       const resumedObjective = state.goal.objective;
-      updateGoal({
+      const resumeLanded = updateGoal({
         status: "active",
         pauseReason: undefined,
         pauseSuggestedAction: undefined,
@@ -3266,6 +3266,11 @@ function registerAgentTools(pi: any): void {
         autoResumedEvent: undefined,
         ...(usage ? { usage } : {}),
       }, ctx);
+      if (!resumeLanded) {
+        // The transaction may have landed even when a projection failed;
+        // do not invent a rollback or admit work from a partial resume.
+        return { isError: true, content: [{ type: "text", text: "Resume could not be saved completely — continuation was not admitted. Fix .pi-glla storage and retry to reconcile the durable state before working or retrying the stored claim." }], details: {} };
+      }
       releaseAuditorSurfaceForGoal(state.goal?.id, ctx.sessionManager);
       appendLedger(ctx.cwd, "goal_resumed", { via: "resume_goal", goalId: resumedId, reason: clipSummaryValue(p.reason ?? "", 200) }); // 2026-09-26 cap audit: ledger excerpt kept at 200 (abuse guard on the resumed line) with clause-aware clip — over-long reasons still resume.
       // A stored completion claim is a direct-audit resume, not an agent
