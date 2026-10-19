@@ -328,6 +328,13 @@ Mechanical checks over the whole shipped surface.
   example `measure=none max=10 cadence=900` is explicitly supported
   (`extensions/goal-loop-forever.ts:500`, and `measure`/`max`/`cadence` are
   all known keys with valid values at `:458`).
+- **Identifiers named in the `docs/` set** — every backticked identifier in
+  `docs/DESIGN.md`, `docs/RECOVERY.md`, `docs/OWNERSHIP-AND-SETTLEMENT.md`,
+  `docs/RELIABILITY-AND-MEASUREMENT.md`, `docs/PROMOTION-CONTRACT.md`,
+  `docs/VISION-ASSIST.md`, `docs/ARCHITECTURE.md`, `docs/RELEASING.md` and the
+  `docs/DESIGN-*.md` files was resolved against `extensions/` and `schemas/`.
+  Every one exists except the three that are findings 9–11 and the two
+  `pi-subagents` companion names the companion owns.
 
 ---
 
@@ -385,14 +392,16 @@ exactly the discriminating assertion.
 - `audit/` — evidence, not documentation; not audited as prose.
 - `CHANGELOG.md` prose — read for endpoint claims and cited-path triage, not
   audited line by line. It is 674 KB and records 196 releases.
-- The `docs/` set was verified by mechanical sweep (links, paths, command
-  verbs, settings registries, dependency ranges, named symbols, numeric
-  ceilings) rather than by reading every prose claim in `docs/DESIGN.md` (825
-  lines), `docs/RECOVERY.md` (530 lines), `docs/OWNERSHIP-AND-SETTLEMENT.md`,
-  `docs/RELIABILITY-AND-MEASUREMENT.md`, `docs/PROMOTION-CONTRACT.md`,
-  `docs/VISION-ASSIST.md` and the `docs/DESIGN-*.md` files line by line. The
-  read-only scout for that seam overran its tool-call bound without returning
-  and was stopped, so it remains the natural next seam.
+- `docs/DESIGN.md` (825 lines), `docs/RECOVERY.md` (530 lines),
+  `docs/OWNERSHIP-AND-SETTLEMENT.md`, `docs/RELIABILITY-AND-MEASUREMENT.md`,
+  `docs/PROMOTION-CONTRACT.md`, `docs/VISION-ASSIST.md` and the
+  `docs/DESIGN-*.md` files were checked by mechanical sweep (links, paths,
+  command verbs, settings registries, dependency ranges, named symbols,
+  numeric ceilings, and every backticked identifier against the code) rather
+  than by reading every prose claim line by line. The read-only scout for that
+  seam overran its tool-call bound without returning and was stopped, so it
+  remains the natural next seam — and the mechanical sweep found three real
+  defects in `docs/DESIGN.md` that a line-by-line read might have missed.
 - `scripts/` and `.github/workflows/` — still **not audited** (unchanged from
   the 2026-10-19 project-audit pass; tasklist #8 in
   `audit/PROJECT-AUDIT-2026-10-19-V2.md`).
