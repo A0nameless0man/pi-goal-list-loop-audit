@@ -4279,7 +4279,7 @@ test("v0.34.22: detached disapproval resumes the goal with a durable report", as
       ...(((ctx.ui.widgets["pi-glla"] as string[] | undefined) ?? [])),
     ].join("\n");
     assert.doesNotMatch(userFacing, /403|429|Token Plan|secret-request|secret-account|rate limit/);
-    assert.match(userFacing, /provider diagnostic redacted/);
+    assert.match(userFacing, /provider diagnostic\s+redacted/i);
     assert.ok(
       ctx.ui.matching("Completion review: changes requested").some((n) => /provider diagnostic redacted/i.test(n.message)
         && /Agent:/.test(n.message) && /idle.*continue/.test(n.message) && !/Report excerpt|<evidence>|Output:/.test(n.message)),

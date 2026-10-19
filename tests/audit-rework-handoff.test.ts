@@ -26,6 +26,23 @@ test('notice selects actionable objections, assigns them to the agent, and leave
   assert.ok(notice.length < 850);
 });
 
+test('only final required corrections count, never quoted evidence bullets or an earlier verdict', () => {
+  const mixed = '## Required fixes\n- Superseded first-round objection\n## Earlier verdict\n<approved/>\n## Required fixes\n- Correct the final objection\n<evidence>\n- Ignore this quoted old finding\n</evidence>';
+  const overview = auditReworkOverview(mixed);
+  assert.equal(overview.count, 1);
+  assert.match(overview.items[0]!, /final objection/);
+  assert.doesNotMatch(auditReworkNotice(mixed, '/list status'), /Superseded|quoted old finding/);
+});
+
+test('legacy escaped-line reports preserve objections without rewriting the stored input', () => {
+  const legacy = '## Required fixes\\n- fix the pinned gap\\n- rerun the regression check\\n<disapproved/>';
+  const notice = auditReworkNotice(legacy, '/goal status');
+  assert.match(notice, /fix the pinned gap/);
+  assert.match(notice, /rerun the regression check/);
+  assert.doesNotMatch(notice, /<disapproved|\\\\n/);
+  assert.ok(legacy.includes('\\n'), 'projection never changes the stored input');
+});
+
 test('unknown reports are not summarized from arbitrary evidence or invented objections', () => {
   const notice = auditReworkNotice('<evidence>\nOutput:\n0 fail\n</evidence>\n<disapproved/>', '/goal status');
   assert.match(notice, /read.*report/i);
