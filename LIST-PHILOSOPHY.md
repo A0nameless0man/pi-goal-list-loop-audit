@@ -64,7 +64,8 @@ Since v0.26.0 the **Reviewer** is the post-completion glue layer across
 all three modes' terminal states: it converts completion findings into
 `/list` items (bug/refactor, no Confirm), proposes architectural work as
 `/goal` (Confirm), fires a regression-scan audit on clean completions,
-and notifies + idles otherwise. See `INSTALL.md` "Reviewer".
+and notifies + idles otherwise. See `docs/DESIGN.md` ("Reviewer =
+strategist, not verifier").
 
 ## Audit Cadence: Why Every `/list` Task is Audited
 

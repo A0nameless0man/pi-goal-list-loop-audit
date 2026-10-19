@@ -266,7 +266,7 @@ with:
 
 ### What the settings table controls
 
-Bare `/glla` opens a tabbed table: switch between the eight sections with
+Bare `/glla` opens a tabbed table: switch between the nine sections with
 left/right and edit a row with up/down. Each row shows **KEY · VALUE · SOURCE**,
 so an unset key visibly reports the value the runtime actually uses instead of a
 different default. Sections:
@@ -278,6 +278,7 @@ different default. Sections:
 | Drafter | drafting model used to interview an objective before it activates |
 | Compactor | compaction token target, compactor agent and its fallback models |
 | Auditor | auditor model and fallbacks, silent mode, progress signals, tool timeout, stall threshold, audit job retention, spot-check rate, audit caps |
+| Designer | read-only Designer enablement, model and thinking, ordered fallback models, effective resolution |
 | Subagents | model strategy, per-agent models and thinking, per-agent fallback chains |
 | Stall brakes | wedge alert minutes, stuck-intervention cap, escalation refires, zombie retry cap |
 | Other | state root, notify command, token limit, tool overrides, post-audit policy, context checkpoint projection |

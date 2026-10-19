@@ -24,7 +24,14 @@ export function auditReworkOverview(report: string): { count: number; items: str
       if (marker && marker[0] === fence[0] && marker.length >= fence.length && /^\s*(?:`+|~+)\s*$/.test(line)) fence = undefined;
       continue;
     }
-    if (/<evidence\b/i.test(line)) { evidence = !/<\/evidence\s*>/i.test(line); continue; }
+    // An evidence block is a TAG, not a mention. Only a line that IS the
+    // tag opens one, and a line that carries a complete open/close pair is
+    // dropped on its own. A prose mention ("the run log is in the <evidence>
+    // block below") must NOT silence the rest of the report: matching the
+    // substring anywhere made one sentence erase the Required-fixes section
+    // and report zero objections for a report that had them.
+    if (/<evidence\b/i.test(line) && /<\/evidence\s*>/i.test(line)) continue;
+    if (/^\s*<evidence\b/i.test(line)) { evidence = true; continue; }
     if (marker) { fence = marker; continue; }
     visible.push(line);
   }
