@@ -29,8 +29,10 @@ function configuredGlobalSettingsPath(): string {
 /** Live session's top-level directory. The lifecycle slice registers this
  * after host admission; tests and worker processes may use PI_SESSION_FILE. */
 let runtimeSessionDir: string | undefined;
+let runtimeSessionRevision = 0;
 
 export function setRuntimeSessionDir(dir: string | undefined): void {
+  runtimeSessionRevision++;
   runtimeSessionDir = typeof dir === "string" && dir.trim() ? path.resolve(dir) : undefined;
 }
 
@@ -120,6 +122,14 @@ export function configuredStateRoot(): GllaStateRoot {
 export function stateRootPending(): boolean {
   const selected = selection();
   return selected.unresolved || (selected.root === "sessionDir" && !selected.sessionDir);
+}
+
+/** Fence asynchronous side effects to the admitted selector and host binding.
+ * A rebind to the same directory still invalidates work from the old session.
+ * Call under withStateRootSnapshot when also resolving a destination. */
+export function stateRootWriteIdentity(cwd: string): string | undefined {
+  if (stateRootPending()) return undefined;
+  return JSON.stringify([globalSettingsPath(), configuredStateRoot(), resolveGllaStateDir(cwd), runtimeSessionRevision]);
 }
 
 /** Known roots remain readable during selector failure. A cold unknown root

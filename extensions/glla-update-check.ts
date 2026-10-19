@@ -1,7 +1,8 @@
 import { spawn } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { stateRootPending } from "./glla-state-root.js";
+import { stateRootWriteIdentity, withStateRootSnapshot } from "./glla-state-root.js";
+import { publishOwnerRecord } from "./owner-file-protocol.js";
 import {
   compareVersions,
   GLLA_PACKAGE_NAME,
@@ -30,18 +31,20 @@ export type { UpdateCheckCache };
 
 export const UPDATE_CHECK_TTL_MS = 24 * 60 * 60 * 1_000;
 export const UPDATE_CHECK_TIMEOUT_MS = 15_000;
+export const UPDATE_CHECK_RETRY_MS = 60_000;
 
 export interface SpawnedRefreshChild {
   on(event: "close", listener: (code: number | null) => void): void;
   on(event: "error", listener: (err: unknown) => void): void;
   unref?: () => void;
+  kill?: (signal: NodeJS.Signals) => unknown;
   stdout: { on(event: "data", listener: (chunk: Buffer) => void): void };
 }
 
 export type SpawnFn = (
   command: string,
   args: string[],
-  options: { timeout: number; stdio?: Array<"ignore" | "pipe"> },
+  options: { timeout: number; killSignal?: NodeJS.Signals; stdio?: Array<"ignore" | "pipe"> },
 ) => SpawnedRefreshChild;
 
 /**
@@ -61,44 +64,72 @@ export function refreshUpdateCheck(
   now = Date.now(),
   spawnFn: SpawnFn = spawn as unknown as SpawnFn,
 ): void {
-  // v0.38.49 audit: while sessionDir resolution is pending there is no
-  // session root yet — skip the refresh (and its cache write) instead of
-  // creating a <cwd>/.pi-glla fallback tree.
-  if (stateRootPending()) return;
-  try {
-    const cached = readUpdateCheckRaw(cwd);
-    if (cached && now - cached.checkedAt < UPDATE_CHECK_TTL_MS) return;
-    const child = spawnFn("npm", ["view", GLLA_PACKAGE_NAME, "version"], {
-      timeout: UPDATE_CHECK_TIMEOUT_MS,
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-    // A missing/broken npm emits async `error`, not a sync throw and
-    // not a nonzero close — without this listener the host crashes.
-    child.on("error", () => {
-      // Fail-silent by design: keep rendering without a nudge.
-    });
-    if (typeof child.unref === "function") child.unref();
-    let out = "";
-    child.stdout.on("data", (chunk) => {
-      out += chunk.toString();
-      if (out.length > 256) out = out.slice(-256);
-    });
-    child.on("close", (code) => {
-      try {
-        if (code !== 0) return;
-        const latest = out.trim().split(/\s+/).pop() ?? "";
-        if (!isVersionLike(latest)) return;
-        const dir = path.dirname(updateCheckPath(cwd));
-        fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(updateCheckPath(cwd), JSON.stringify({ latest: latest.trim(), checkedAt: Date.now() }));
-      } catch {
-        // Cache write failure is invisible by design.
-      }
-    });
-  } catch {
-    // Spawn failure (no npm, no shell) is invisible by design.
-  }
+  defaultUpdateChecker(cwd, now, spawnFn);
 }
+
+/** Each checker owns a bounded set of root-specific refresh obligations.
+ * Configurable windows let embedding callers and tests use the same lifecycle. */
+export function createUpdateChecker({ timeoutMs = UPDATE_CHECK_TIMEOUT_MS, retryMs = UPDATE_CHECK_RETRY_MS } = {}) {
+  const attempts = new Map<string, { pending: boolean; retryAt: number }>();
+  return (cwd: string, now = Date.now(), spawnFn: SpawnFn = spawn as unknown as SpawnFn): void => {
+    try {
+      const admitted = withStateRootSnapshot(() => {
+        const identity = stateRootWriteIdentity(cwd);
+        return identity ? { identity, file: updateCheckPath(cwd), cached: readUpdateCheckRaw(cwd) } : undefined;
+      });
+      if (!admitted) return;
+      if (admitted.cached && now - admitted.cached.checkedAt < UPDATE_CHECK_TTL_MS) return;
+      for (const [key, attempt] of attempts) {
+        if (!attempt.pending && attempt.retryAt <= now) attempts.delete(key);
+      }
+      if (attempts.has(admitted.identity) || attempts.size >= 128) return;
+      const attempt = { pending: true, retryAt: 0 };
+      attempts.set(admitted.identity, attempt);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      let settled = false;
+      const finish = (success = false) => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        attempt.pending = false;
+        attempt.retryAt = Math.max(now, Date.now()) + retryMs;
+        if (success) attempts.delete(admitted.identity);
+      };
+      try {
+        const child = spawnFn("npm", ["view", GLLA_PACKAGE_NAME, "version"], {
+          timeout: timeoutMs, killSignal: "SIGKILL", stdio: ["ignore", "pipe", "ignore"],
+        });
+        child.on("error", () => finish());
+        let out = "";
+        child.stdout.on("data", chunk => { out = (out + chunk.toString()).slice(-256); });
+        child.on("close", code => {
+          if (settled) return;
+          let wrote = false;
+          try {
+            const latest = out.trim().split(/\s+/).pop() ?? "";
+            if (code === 0 && isVersionLike(latest)) withStateRootSnapshot(() => {
+              if (stateRootWriteIdentity(cwd) !== admitted.identity) return;
+              fs.mkdirSync(path.dirname(admitted.file), { recursive: true });
+              publishOwnerRecord(admitted.file, { latest, checkedAt: Date.now() });
+              wrote = true;
+            });
+          } catch { /* Keep the old cache on write failure. */ }
+          finish(wrote);
+        });
+        // Retire even a child that never emits close. A late callback must
+        // never publish over a newer attempt after its deadline or error.
+        timer = setTimeout(() => {
+          finish();
+          try { child.kill?.("SIGKILL"); } catch { /* Already exited. */ }
+        }, timeoutMs);
+        timer.unref();
+        child.unref?.();
+      } catch { finish(); }
+    } catch { /* Unresolved root or broken cache must not disrupt the host. */ }
+  };
+}
+
+const defaultUpdateChecker = createUpdateChecker();
 
 /**
  * The status-tail segment: `· v<running>` always (so the running
