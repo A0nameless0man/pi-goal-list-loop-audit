@@ -968,3 +968,32 @@ surfaces, and release/packaging/CI plumbing) ran in parallel over surfaces the
 2026-10-19 pass did not cover; their findings and the deferred items are
 recorded in audit/PROJECT-AUDIT-2026-10-19-V2.md. Survey is bounded, not an
 exhaustive clean bill.
+
+## Scout findings from the 2026-10-19 pass
+
+Three bounded read-only scouts ran in parallel over surfaces the 2026-10-19
+pass had not covered. Their verified findings, and what was done with each:
+
+- [x] FIX: HIGH: the published goal schema declared `pendingCompletion.leftOut` as an ARRAY while the runtime writes a STRING (extensions/goal-loop-core.ts `PendingCompletion.leftOut?: string`, written by the `complete_goal` tool) — any goal the runtime persisted with a non-empty leftOut was invalid under the schema shipped in the npm package, and the parity fixture used the array shape so CI could not see the contradiction. Fixed in schemas/goal.schema.json; the fixture in tests/audit-followup-contract.test.ts used the runtime shape; tests/goal.schema.test.ts now pins the schema to the runtime shape (the string form validates, the array form does not). Neutralized control (reverting the schema to the array shape) fails exactly that test.
+- [x] FIX: HIGH: the audit-rework projection discarded the whole Required-fixes section when any line merely MENTIONED the `<evidence` tag — the filter matched the substring anywhere, so one prose sentence ("the run log is in the <evidence> block below") put the reader into evidence mode for the rest of the report and reported zero objections for a report that had them. An evidence block is a TAG: only a line that IS the tag opens one. Fixed in extensions/audit-rework-handoff.ts; regressions in tests/audit-rework-handoff.test.ts cover the prose mention, a required fix that asks for an evidence block, and a real evidence block still being removed. Neutralized control (the substring-anywhere trigger) fails exactly the two new cases and leaves the pre-existing evidence-block case green.
+- [x] FIX: MEDIUM: the compact rejection card's `agent:` field lost its wrapped continuation silently under a truncated widget height — the omission marker covered next/why/resume/candidate but not the field that carries the required corrections, so a 6-line budget showed "…classifications before" with no marker while the header still said "3 corrections", and the third objection never appeared. Fixed in extensions/goal-loop-display.ts; regression in tests/audit-rework-handoff.test.ts. Neutralized control (dropping agent/you from the marker) fails exactly that test.
+- [x] FIX: MEDIUM: the shipped docs contradicted the code in four places — the README settings table listed eight sections where the menu ships nine (Designer missing), docs/ARCHITECTURE.md said "12 slowest" where the slow-file list holds 13 and "~340 event types" where the runtime emits ~410, and LIST-PHILOSOPHY.md pointed at an INSTALL.md "Reviewer" section that does not exist. Fixed in README.md, docs/ARCHITECTURE.md and LIST-PHILOSOPHY.md; tests/doc-parity.test.ts now pins every count that is DERIVED from the code, so the class cannot drift silently again. Neutralized control (reverting the four doc fixes) fails all five parity tests.
+- [x] FIX: MEDIUM: docs/RUNTIME-INVENTORY.md was stale on every count it published, so the documented release gate `npm run release:check` failed at the inventory step. Regenerated with `node scripts/generate-inventory.mjs`; the gate step now passes.
+- [?] DECIDE: LOW: the compact card labels a goal whose turn is QUEUED but not yet started as "working", while its `you:` line claims "no action needed; agent owns rework". The rework's rule is that an unconfirmed workflow reads as "work saved", never "working", and the head already carries a QUEUED execution token, so the "working" token may be redundant rather than false. The wording of the `you:` line for a queued turn is a design call (the current branches cover unconfirmed and observed, not queued) and is left open rather than guessed. Surfaces: extensions/goal-loop-display.ts:1554 (workflowLabel), :1674 (the `you:` line), extensions/ui-status.ts:206 (the queued execution).
+- [?] DECIDE: LOW: the `leftOut` schema correction changes the published contract for a field the runtime has always written as a string. Consumers that validated `leftOut` against the shipped schema as an array would now fail — but the runtime never wrote that shape, so the array contract was never satisfiable. Recorded so a downstream consumer reading the schema is not surprised by the change.
+
+### Not covered by this pass (deferred)
+
+The scouts bounded their own reach; these surfaces were sampled, not audited
+claim-by-claim, and are the natural next seams:
+
+- docs/DESIGN.md (825 lines) and docs/RECOVERY.md (530 lines) — prose claims
+  were not verified individually; only path references and two sections were.
+- extensions/loops/goal-ui.ts (1411 lines) — dispatch/timer/refresh logic.
+- extensions/goal-loop-display.ts — the detailed and interrupted renderers.
+- schemas/goal.schema.json — the `backgroundWait`, `objectiveRepair`,
+  `objectiveProvenance`, `solutionJudgment`, `subagentQuotaEvidence` and
+  `pauseContractAmendment` definitions were not diffed field-by-field against
+  the runtime. The `leftOut` finding above shows this seam is fertile.
+- scripts/ and .github/workflows/ — see the separate scout entry in
+  audit/PROJECT-AUDIT-2026-10-19-V2.md.

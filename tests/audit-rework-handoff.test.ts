@@ -44,6 +44,52 @@ test('required-fixes headings inside evidence or fenced quotes cannot replace th
   }
 });
 
+// v0.39.40 (audit 2026-10-19): the evidence-block filter matched the
+// substring "<evidence" ANYWHERE on a line, so one prose sentence that
+// mentioned the tag ("the run log is in the <evidence> block below") put the
+// reader into evidence mode for the rest of the report and silently
+// discarded the Required-fixes section. The projection then reported zero
+// objections for a report that had them, and told the user to go read the
+// saved report instead.
+//
+// An evidence block is a TAG: only a line that IS the tag opens one.
+test('a prose mention of the evidence tag cannot erase the required-fixes section', () => {
+  const mentioned = auditReworkOverview([
+    'The scout run log is in the <evidence> block below.',
+    '## Required fixes',
+    '1. [HIGH] Prove the parallel scout run with inspectable artifacts.',
+    '2. [HIGH] Correct FIX versus DECIDE classifications.',
+  ].join('\n'));
+  assert.equal(mentioned.count, 2, 'a prose mention must not hide the objections');
+  assert.match(mentioned.items[0]!, /Prove the parallel scout run/);
+  assert.match(mentioned.items[1]!, /FIX versus DECIDE/);
+});
+
+test('a required fix that asks for an evidence block is still projected', () => {
+  const asks = auditReworkOverview([
+    '## Required fixes',
+    '1. [HIGH] Attach an <evidence> block with the scout run log.',
+    '2. [HIGH] Correct FIX versus DECIDE classifications.',
+  ].join('\n'));
+  assert.equal(asks.count, 2, 'the objection that mentions the tag is still an objection');
+  assert.match(asks.items[0]!, /Attach an/);
+  assert.match(asks.items[1]!, /FIX versus DECIDE/);
+});
+
+test('a real evidence block is still removed from the projection', () => {
+  const blocked = auditReworkOverview([
+    '## Required fixes',
+    '1. [HIGH] Prove the parallel scout run with inspectable artifacts.',
+    '<evidence>',
+    '## Required fixes',
+    '- Quoted stale objection',
+    '</evidence>',
+  ].join('\n'));
+  assert.equal(blocked.count, 1);
+  assert.match(blocked.items[0]!, /Prove the parallel scout run/);
+  assert.doesNotMatch(blocked.items.join(' '), /stale objection/);
+});
+
 test('cold-restore consent still hides audit objections on the new compact path', () => {
   const state = fixture();
   suppressAuditorSurfaceAfterColdRestore(state.goal!.id);
@@ -104,6 +150,34 @@ test('short terminal budgets retain the person\'s recovery action before report/
     assert.match(text, /agent:/i);
     assert.match(text, /\/glla status/);
   }
+});
+
+// v0.39.40 (audit 2026-10-19): the truncation marker covered next/why/resume/
+// candidate but not the compact card's "agent:" field, which carries the
+// required corrections. When the wrapped field lost its continuation the
+// user saw a mid-sentence fragment — "…classifications before" — with no
+// marker, and read it as the complete list of objections while the header
+// still said "3 corrections".
+test('a truncated objections field says it is truncated instead of reading as complete', () => {
+  // The "agent:" field is a start line plus its "│  " continuations.
+  const objectionsField = (rows: string[]): string => {
+    const start = rows.findIndex(row => row.includes('agent:'));
+    assert.ok(start >= 0, 'the reserved objections field must survive the budget');
+    let end = start + 1;
+    while (end < rows.length && rows[end]!.trimStart().startsWith('│')) end++;
+    return rows.slice(start, end).join('\n');
+  };
+  for (const maxWidgetLines of [4, 5, 6]) {
+    const rows = buildWidgetLines(fixture(), undefined, NOW, undefined, 120, { uiStatusContext: { now: NOW }, maxWidgetLines })!;
+    const field = objectionsField(rows);
+    assert.doesNotMatch(field, /Explain which staged edits/, 'this budget drops the last objection');
+    assert.match(field, /…/, 'a dropped continuation must be marked, not presented as the whole field');
+  }
+  // A budget that fits the whole field must NOT claim a truncation.
+  const complete = buildWidgetLines(fixture(), undefined, NOW, undefined, 120, { uiStatusContext: { now: NOW }, maxWidgetLines: 7 })!;
+  const completeField = objectionsField(complete);
+  assert.match(completeField, /Explain which staged edits/);
+  assert.doesNotMatch(completeField, /…/, 'a field that fits completely must not be marked as truncated');
 });
 
 test('observed work and manual holds retain honest ownership rather than always requesting a restart', () => {

@@ -2416,7 +2416,11 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
         const kept = new Set(selected);
         const omitted = new Set<number>();
         for (let start = 0; start < lines.length - 1; start++) {
-          if (!/^├─ (?:next|why|resume|candidate):/.test(sanitizeDisplayText(lines[start]!))) continue;
+          // A reserved field that lost its wrapped continuation must SAY so.
+          // The compact card's "agent:" field carries the required
+          // corrections, so a silently dropped continuation presented a
+          // mid-sentence fragment as the complete list of objections.
+          if (!/^├─ (?:next|why|resume|candidate|agent|you):/.test(sanitizeDisplayText(lines[start]!))) continue;
           let end = start + 1;
           while (end < lines.length - 1 && sanitizeDisplayText(lines[end]!).startsWith('│  ')) end++;
           const range = selected.filter(index => index >= start && index < end);
