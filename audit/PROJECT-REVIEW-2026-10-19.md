@@ -65,6 +65,10 @@ absent from the tarball:
 The release contract's five-document allowlist omits all three source pages.
 Package observation: 195 files, 5,270,777 unpacked bytes, 1,718,831 compressed
 bytes. No recommendation to add the entire historical audit tree to npm.
+The [saved observation](project-review-2026-10-19/package-links.json) can be
+regenerated with `node audit/project-review-2026-10-19/scan-package-links.mjs`.
+That survey covers inline links outside code in all shipped Markdown files;
+it is not a complete CommonMark/reference-link or anchor validator.
 
 **R4: audit navigation is stale (low).** The audit index's “Current release”
 entry is October 1 / 0.38.106, while the current local manifest is 0.39.39 and
@@ -82,6 +86,9 @@ There is no evidence here supporting a wholesale runtime rewrite.
 ## Verification
 
 The production-function reproduction passed all assertions, confirming R1/R2.
+Its [saved output](project-review-2026-10-19/update-check-output.txt) records
+the three observed outcomes. All eight selected source digests match both the
+baseline commit and current worktree; all report artifact links resolve.
 The npm dry-run file comparison confirmed R3 without installing or publishing.
 Full local `npm run release:check` is being observed; its terminal result and
 selected output will be added before this review is finalized.
