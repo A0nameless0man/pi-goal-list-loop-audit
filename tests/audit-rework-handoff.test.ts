@@ -4,6 +4,7 @@ import { visibleWidth } from '@earendil-works/pi-tui';
 import { auditReworkOverview, auditReworkNotice } from '../extensions/audit-rework-handoff.js';
 import { buildStatusText, buildWidgetLines } from '../extensions/goal-loop-display.js';
 import type { State } from '../extensions/goal-loop-core.js';
+import { suppressAuditorSurfaceAfterColdRestore, releaseAuditorSurface } from '../extensions/loops/goal-auditor-surface.js';
 
 const NOW = Date.parse('2026-10-19T10:52:00Z');
 const report = `Prior review approved the findings.\n<approved/>\n--- challenge ---\n## Required fixes\n1. [HIGH] Prove the parallel scout run with inspectable artifacts.\n2. [HIGH] Correct FIX versus DECIDE classifications before resubmitting.\n3. [HIGH] Explain which staged edits belong to this pass.\n\n<evidence>\nOutput:\n\`\`\`\nFile: /some/project/.git/modules/fixture/index\nAccess: 2026-10-19\n15994 findings.md\n\`\`\`\n</evidence>\n<disapproved/>`;
@@ -32,6 +33,26 @@ test('only final required corrections count, never quoted evidence bullets or an
   assert.equal(overview.count, 1);
   assert.match(overview.items[0]!, /final objection/);
   assert.doesNotMatch(auditReworkNotice(mixed, '/list status'), /Superseded|quoted old finding/);
+});
+
+test('required-fixes headings inside evidence or fenced quotes cannot replace the actual objections', () => {
+  for (const quote of ['<evidence>\n## Required fixes\n- Quoted stale objection\n</evidence>', '```markdown\n## Required fixes\n- Quoted stale objection\n```', '~~~~markdown\n## Required fixes\n- Quoted stale objection\n~~~~']) {
+    const overview = auditReworkOverview(`## Required fixes\n- Correct the real objection\n${quote}`);
+    assert.equal(overview.count, 1);
+    assert.match(overview.items[0]!, /real objection/);
+    assert.doesNotMatch(overview.items.join(' '), /stale objection/);
+  }
+});
+
+test('cold-restore consent still hides audit objections on the new compact path', () => {
+  const state = fixture();
+  suppressAuditorSurfaceAfterColdRestore(state.goal!.id);
+  try {
+    const text = buildWidgetLines(state, undefined, NOW, undefined, 120, { uiStatusContext: { now: NOW } })!.join('\n');
+    assert.doesNotMatch(text, /Prove the parallel scout run|Correct FIX versus DECIDE|Explain which staged edits|you:.*continue/i);
+  } finally {
+    releaseAuditorSurface(state.goal!.id);
+  }
 });
 
 test('legacy escaped-line reports preserve objections without rewriting the stored input', () => {

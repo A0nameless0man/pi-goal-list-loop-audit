@@ -9,11 +9,29 @@ export function auditReworkOverview(report: string): { count: number; items: str
   // only that single-line report shape for presentation, never its archive.
   const readable = !safe.includes('\n') && /##\s+Required fixes\\n/i.test(safe)
     ? safe.replaceAll('\\n', '\n') : safe;
-  // A falsification round may follow an earlier verdict. Use its final
-  // Required-fixes section, and stop before evidence/fenced command output:
-  // bullets quoted inside those blocks are not new objections.
-  const lastHeading = [...readable.matchAll(/^##\s+Required fixes\s*$/gim)].at(-1);
-  const section = lastHeading ? readable.slice(lastHeading.index).split(/^\s*(?:<evidence\b|```|~~~)/im)[0]! : '';
+  // Remove supporting blocks *before* choosing a heading: an evidence
+  // quote can itself contain "## Required fixes" from an older report.
+  const visible: string[] = [];
+  let fence: string | undefined;
+  let evidence = false;
+  for (const line of readable.split('\n')) {
+    if (evidence) {
+      if (/<\/evidence\s*>/i.test(line)) evidence = false;
+      continue;
+    }
+    const marker = /^\s{0,3}(`{3,}|~{3,})/.exec(line)?.[1];
+    if (fence) {
+      if (marker?.[0] === fence[0] && marker.length >= fence.length && /^\s*(?:`+|~+)\s*$/.test(line)) fence = undefined;
+      continue;
+    }
+    if (/<evidence\b/i.test(line)) { evidence = !/<\/evidence\s*>/i.test(line); continue; }
+    if (marker) { fence = marker; continue; }
+    visible.push(line);
+  }
+  // A falsification round can supersede an earlier verdict's objections.
+  const prose = visible.join('\n');
+  const lastHeading = [...prose.matchAll(/^##\s+Required fixes\s*$/gim)].at(-1);
+  const section = lastHeading ? prose.slice(lastHeading.index) : '';
   const required = extractRequiredFixSeverities(section);
   return {
     count: required.length,
