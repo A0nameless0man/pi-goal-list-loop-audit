@@ -80,6 +80,14 @@ unconditional wording if the step is ever re-added, and the opt-in wording if
 it is not. Neutralized control (restoring the old paragraph) fails exactly
 that assertion.
 
+Both directions were exercised. Re-adding `fire-audit-on-clean` to the
+default cascade in a scratch copy made the guard fail with *"the default
+cascade fires the clean-completion audit, so LIST-PHILOSOPHY.md must say so"*,
+and restoring the stale paragraph in the live tree made it fail with *"the
+default cascade does NOT fire the clean-completion audit, but LIST-PHILOSOPHY.md
+still claims it does"*. The guard tracks the code in both directions rather
+than freezing today's wording.
+
 ### 3. MEDIUM (doc hygiene) — the documentation index was not an index
 
 `docs/INDEX.md` is the only map a reader of the published package has. Two
@@ -123,6 +131,19 @@ Regression: `tests/doc-parity.test.ts` — "docs/INDEX.md names the oldest and
 newest release the CHANGELOG records" — parses the changelog headings and
 requires the index to name both endpoints, so the claim cannot be narrowed
 again. Neutralized control (restoring "v0.35.14–v0.39.39") fails exactly that
+assertion.
+
+**A release-gate test was pinning the same stale claim.**
+`tests/release-contract.test.ts:102` asserted that `docs/INDEX.md` contains
+the literal `v0.35.14–v<version>` — the *start* of the trail frozen into the
+test, not the contract it declared. Its own message says what it means ("the
+active-focus trail must reach the current package version"), and the
+`v0.35.14–` prefix was incidental: it was there from the test's first
+revision, in commit `0ded98d6`. Correcting the index made the release gate go
+red, so the test was corrected to assert the contract it actually declares —
+the index must name the current package version. The trail's endpoints are now
+pinned against `CHANGELOG.md` itself, which is stronger than a frozen literal.
+Neutralized control (removing `v0.39.39` from the index) fails exactly that
 assertion.
 
 ### 5. LOW (doc) — a model-facing prompt named a field that does not exist
@@ -250,6 +271,7 @@ Mechanical checks over the whole shipped surface.
 | `tests/doc-index.test.ts` (new) | 3 | Index completeness; relative-link resolution; index links nothing missing |
 | `tests/settings-same-model-retries-provenance.test.ts` (new) | 3 | Key is provenance-tracked; the row shows the configured value and source; the default fallback still works |
 | `tests/doc-parity.test.ts` (+3) | 8 | Reviewer cascade ↔ `DEFAULT_REVIEWER_CONFIG`; changelog range ↔ CHANGELOG headings; stop-reason field name ↔ Pi's `stopReason` |
+| `tests/release-contract.test.ts` (corrected) | 15 | The index names the current package version — the contract the test always declared, minus the frozen trail start |
 
 The repo's repeatable mutation-evidence harness
 (`scripts/verify-test-pin-controls.mjs`) was extended with the scratch copy
@@ -271,8 +293,9 @@ All **25** registered mutations pass (20 pre-existing + 5 new).
 
 - `npm run check` — clean (`tsc --noEmit`, exit 0).
 - `npm run check:inventory` — clean after regenerating
-  `docs/RUNTIME-INVENTORY.md` (the extension line count moved 72930 → 72936
-  and the top-level test-file count 453 → 455 with the two new test files).
+  `docs/RUNTIME-INVENTORY.md` (the extension/script line count moved
+  72930 → 72963 and the top-level test-file count 453 → 455 with the two new
+  test files).
 - Focused suites — 65 pass / 0 fail across 8 files.
 - `node scripts/verify-test-pin-controls.mjs` — 25/25 mutations rejected as
   expected.
