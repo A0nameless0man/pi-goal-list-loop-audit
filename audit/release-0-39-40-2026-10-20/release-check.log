@@ -3452,3 +3452,129 @@ tests/run-to-done.test.ts:
 (pass) run-to-done: the status line names the mode [0.88ms]
 
 tests/durable-wait.test.mjs:
+(pass) durable wait succeeds before its deadline and reports elapsed polling [197.92ms]
+(pass) durable wait returns a real timeout instead of treating elapsed time as success [1.00ms]
+(pass) a late done observation after the deadline is a timeout, not success [0.16ms]
+(pass) archive-count waits use the same durable deadline and return the observed count [199.80ms]
+(pass) a restarted waiter observes the same durable file without an old timer [1.36ms]
+(pass) provider recovery is a terminal reason, never a false approval or timeout [197.03ms]
+(pass) smoke harness uses the durable wait CLI for durable outcomes [0.88ms]
+
+tests/blocked-resolution.test.ts:
+(pass) contract amendment extraction names item 8 and the safe proposed command [105.33ms]
+(pass) contract amendment promotion builds Accept/Decline options on a safe proposal [0.30ms]
+(pass) contract amendment extraction is a no-op when no item number is named [0.08ms]
+(pass) contract amendment extraction flags an unsafe quoted proposal as kind=unsafe [0.13ms]
+(pass) 'This operation was aborted' is classified as non-recoverable user-abort [0.11ms]
+(pass) 'operation was aborted' (without 'this') is also classified as non-recoverable [0.04ms]
+(pass) the existing 'user abort' / 'cancelled by user' regex still works [0.07ms]
+(pass) a transient 503 still classifies as transient (regression pin) [0.09ms]
+(pass) isSafeMechanicalCommand: the screenshot's unsafe quoted form → false [0.05ms]
+(pass) isSafeMechanicalCommand: the screenshot's safe quoteless proposal → true
+(pass) isSafeMechanicalCommand: a rejected pipeline injection → false
+(pass) isSafeMechanicalCommand: a rejected semicolon injection → false [0.01ms]
+(pass) isSafeMechanicalCommand: a rejected backtick injection → false
+(pass) isSafeMechanicalCommand: a tail-filter pipeline head is still safe → true
+(pass) isSafeMechanicalCommand: a tail-filter with grep is still safe → true
+(pass) isSafeMechanicalCommand: a numbered safe command with path is still safe → true
+(pass) isSafeMechanicalCommand: a cd-prefixed path is still safe → true
+(pass) a screenshot-shaped /goal tweak suggestion still extracts to /goal tweak [0.20ms]
+(pass) a /goal resume suggestion still does NOT promote (resume is a decline path) [0.07ms]
+(pass) the unsafe proposal is recorded with its reason for the audit trail [0.08ms]
+
+tests/autoresume-default.test.ts:
+(pass) /glla settings persists explicit auto-resume off (tri-state, not undefined) [105.02ms]
+(pass) settings table shows the tri-state honestly [0.80ms]
+(pass) hold-on-load text offers the explicit resume + the on opt-in [0.42ms]
+
+tests/interrupt-didnt-continue.test.ts:
+[run-tests] progress: 1710s elapsed · 0s since last output · 262 KiB of suite output
+(pass) FIX A: a never-set revision (undefined) + captured 0 is CURRENT, not stale [100.51ms]
+(pass) FIX A: captured 0 against a genuinely bumped goal is still refused [0.05ms]
+(pass) FIX A: equal non-zero revisions stay current; bumps refuse [0.04ms]
+(pass) FIX A pin: the refusal guard uses isGoalRevisionCurrent, not raw !== on undefined [10.38ms]
+(pass) FIX B pin: the refusal branch restores status active so the loop continues [7.56ms]
+(pass) behavior preserved: a GENUINE orphaned audit still parks with the same message [10.19ms]
+
+tests/objection-pinning.test.ts:
+(pass) v0.38.21 two disapproval rounds: R1 retired with its objections attached, prompt argues R2 only [6501.29ms]
+(pass) v0.38.21 appendAuditVerdict: clean approval clears the pin, shield-clear counts, errors never touch flags [0.52ms]
+
+tests/completion-density-lint.test.ts:
+(pass) density lint: evidence tokens in the summary pass [0.51ms]
+(pass) density lint: tokens inside finding groups count [0.10ms]
+(pass) density lint: gate rows count as density without tokens [0.06ms]
+(pass) density lint: zero tokens and zero gates is annotated [0.26ms]
+
+tests/stuck-audit-latch.test.ts:
+(pass) Fix A: the apply gate defers + parks instead of silently dropping a completed verdict [121.24ms]
+(pass) Fix B: the stale-latch stranded park runs BEFORE the extensionApiStale early return [59.64ms]
+(pass) Fix B: the park requires the stuck signature (auditing, claim, 90s silence; in-flight only when workerless) [1.24ms]
+(pass) audit 2026-09-25: stranded_audit_recovered is ledgered only after the park lands [0.19ms]
+(pass) S9 (continuation route): the overdue backstop latches only after the park-clear lands [0.04ms]
+(pass) S9 (probe route): the overdue backstop releases the latch at settle when the wait is still parked [0.03ms]
+
+tests/glla-ui-command-audit.test.ts:
+(pass) settings table reopens the tab and row that were edited [282.44ms]
+(pass) forbidden substring patterns cannot disable configured fallback chains [86.73ms]
+(pass) drafterModel refuses a forbidden primary pin [91.04ms]
+(pass) compactorModel refuses a forbidden primary pin [5.03ms]
+(pass) subagentModelOverrides.scout refuses a forbidden primary pin [194.21ms]
+(pass) editing a role fallback preserves other roles saved while its picker was open [199.68ms]
+(pass) audit health stays available but cleanup is refused on a stale host [201.23ms]
+(pass) tool visibility commands replace conflicting overrides [302.68ms]
+(pass) tool config accepts spaced JSON and refuses empty keys [296.03ms]
+(pass) postaudit refuses a save after the host became stale in its dialog [103.17ms]
+(pass) wipe revalidates its host after the confirmation dialog [800.21ms]
+(pass) tool metadata editor preserves concurrent updates and names its execution limit [399.38ms]
+(pass) compactor picker labels its clear choice as registry plan B [400.79ms]
+(pass) /goal pause preserves a complete goal [497.61ms]
+(pass) /goal verify preserves a complete goal [401.64ms]
+(pass) /goal cancel preserves a complete goal [900.17ms]
+(pass) /goal pause preserves a aborted goal [601.33ms]
+(pass) /goal verify preserves a aborted goal [395.22ms]
+(pass) /goal cancel preserves a aborted goal [605.06ms]
+(pass) /goal verify refuses to write a new claim through a stale host [495.25ms]
+(pass) /review refuses a stale host before producing follow-up artifacts [198.97ms]
+(pass) /list resume admits an auditing head to the existing audit recovery path [602.66ms]
+(pass) a decision picker cannot cancel a replacement goal [995.36ms]
+(pass) a decision stays paused after stale during selection [600.18ms]
+(pass) a decision stays paused after delivery-error during selection [704.47ms]
+(pass) the list-cancel decision executes cancellation instead of resuming work [1695.37ms]
+(pass) /goal pause does not announce or dispatch an unpersisted transition [399.89ms]
+(pass) /goal resume does not announce or dispatch an unpersisted transition [1099.85ms]
+(pass) /goal verify does not announce or dispatch an unpersisted transition [702.06ms]
+
+tests/regression-shield.test.ts:
+(pass) contractItems: strips the 'Done when:' marker line [106.63ms]
+(pass) contractItems: handles inline single-line contracts [0.06ms]
+(pass) contractItems: strips bullets and numbering [0.03ms]
+(pass) contractItems: drops empty lines [0.02ms]
+(pass) contractItems: skips wrapped prose preamble in list-shaped contracts [0.09ms]
+(pass) contractItems: shapeless contracts keep every-line behavior [0.02ms]
+(pass) contractItems: a Done-when criterion survives alongside bullets [0.03ms]
+(pass) passes: preamble fragments are not required in evidence [0.34ms]
+(pass) passes: evidence block present, all items referenced [0.07ms]
+(pass) rejects: approval without an evidence block [0.06ms]
+(pass) rejects: evidence block but an item is not addressed [0.08ms]
+(pass) rejects: bamboozle-style empty evidence block [0.03ms]
+(pass) rejects: contract prose outside evidence cannot satisfy the shield [0.06ms]
+(pass) distinctive-token matching: references the item by a filename [0.05ms]
+(pass) case-insensitive matching [0.03ms]
+(pass) contractItems: excludes 'Out of scope' boundary lines [0.04ms]
+(pass) compound tokens match via segments (left-cropped → left + cropped) [0.05ms]
+(pass) prose punctuation glued to tokens does not break matching (file/element.) [0.06ms]
+(pass) top-3 candidate matching tolerates contract-only vocabulary [0.05ms]
+(pass) still rejects: bamboozle report that never touches the item's vocabulary [0.05ms]
+(pass) CJK: a verbatim-quoted Chinese item passes (token is one CJK word, not delimiters) [1.83ms]
+(pass) CJK: a quote that drops the trailing full-width colon still matches [0.04ms]
+(pass) CJK: a Chinese line with no ASCII letters is one candidate token [0.02ms]
+(pass) CJK: an English-only paraphrase of a Chinese item is still rejected (strict shield) [0.16ms]
+(pass) CJK: mixed item matches on its ASCII token even when CJK words are not quoted [0.04ms]
+(pass) ASCII behavior is unchanged: distinctive-token + compound matching still work [0.06ms]
+(pass) contractItems: 'Done when ALL of the following are true:' preamble is dropped [0.07ms]
+(pass) contractItems: preamble without trailing colon is also dropped [0.02ms]
+(pass) shield passes a genuine approval that a preamble-only false positive used to block [0.05ms]
+(pass) extractMechanicalCheckCommands: extracts backticked and raw shell commands [715.08ms]
+(pass) extractMechanicalCheckCommands: skips commands under negation [158.14ms]
+(pass) extractMechanicalCheckCommands: rejects never-exiting server commands [0.28ms]
