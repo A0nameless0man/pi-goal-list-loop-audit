@@ -42,11 +42,11 @@ import { continuationPrompt } from "../extensions/goal-continuation.js";
 import { buildWidgetLines } from "../extensions/goal-loop-display.js";
 import { readState, type Goal, type State } from "../extensions/goal-loop-core.js";
 import {
-  invalidateHostSession,
   makeMockCtx,
   MockPi,
   seedGoal,
   seedState,
+  staleError,
   tick,
   tmpCwd,
   type MockCtx,
@@ -103,6 +103,20 @@ async function boot(pi: MockPi, cwd: string): Promise<MockCtx> {
   return ctx;
 }
 
+/**
+ * The API-stale shape: the captured ExtensionAPI is dead (pi replaced the
+ * session) while the invocation context still answers. This is the shape
+ * `warnIfStaleAtEntry` exists for — `foreignToolGuard` cannot see it,
+ * because the context and the owner identity are both still healthy.
+ *
+ * `invalidateHostSession` is deliberately NOT used here: it also poisons
+ * ctx.isIdle/ctx.hasPendingMessages, which trips the EARLIER foreign-tool
+ * guard and would hide the resume path under test.
+ */
+function invalidateExtensionApiOnly(pi: MockPi): void {
+  pi.sessionNameError = staleError();
+}
+
 afterEach(() => {
   __testOnlyResetAuditorSurface();
   __testOnlyResetStaleFlag();
@@ -121,7 +135,7 @@ test("stale resume_goal leaves the cold-restore auditor gate closed", async () =
     const goalId = readState(cwd).goal!.id;
     assert.equal(auditorSurfaceSuppressed(goalId), true, "precondition: the cold restore closed the gate");
 
-    invalidateHostSession(pi, ctx);
+    invalidateExtensionApiOnly(pi);
     const result = await pi.runTool("resume_goal", { reason: "user said go" }, ctx) as {
       content: Array<{ text: string }>;
     };
@@ -151,7 +165,7 @@ test("stale resume_goal with an armed main-model recovery still leaves the gate 
     const goalId = readState(cwd).goal!.id;
     assert.equal(auditorSurfaceSuppressed(goalId), true, "precondition: the cold restore closed the gate");
 
-    invalidateHostSession(pi, ctx);
+    invalidateExtensionApiOnly(pi);
     const result = await pi.runTool("resume_goal", { reason: "user said go" }, ctx) as {
       content: Array<{ text: string }>;
     };
