@@ -2605,6 +2605,9 @@ function registerAgentTools(pi: any): void {
         const at = typeof details.resumeAt === "string" ? ` · ${humanCheckTime(details.resumeAt)}` : "";
         return new Text(theme.fg("accent", `Wait saved${at}. See the Waiting card.`), 0, 0);
       }
+      if (!options.expanded && !options.isPartial && context?.isError === false && details?.pauseState === "paused") {
+        return new Text(theme.fg("accent", "Paused. See the action card."), 0, 0);
+      }
       const text = result.content.filter(c => c.type === "text").map(c => c.text).join("\n");
       return new Text(theme.fg(context?.isError ? "error" : "toolOutput", sanitizeDisplayText(text)), 0, 0);
     },
