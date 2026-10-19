@@ -64,6 +64,9 @@
   source from — so the row showed the built-in default with the source
   "default" even when the global settings file set a different number. A
   regression now pins the configured value and source.
+- The same setting is now also reported by the headless `/glla` display,
+  which enumerates the effective value of every provenance-tracked key. It
+  was invisible there, so a headless operator had no way to check the budget.
 
 ### Documentation review
 

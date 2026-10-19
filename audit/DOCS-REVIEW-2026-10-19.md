@@ -53,6 +53,22 @@ Neutralized control (removing the array element by AST) fails exactly the
 provenance-value and membership assertions and leaves the unconfigured-fallback
 test green.
 
+**The repo's own completeness gate caught a second half of the same defect.**
+`tests/settings-editors.test.ts:729` — "headless `/glla` fallback covers every
+`SETTINGS_KEYS` entry" — failed on the first full-suite run with
+`headless drift: mainModelSameModelRetries`: the headless (no-UI) `/glla`
+display enumerates the effective values of every provenance-tracked key, and
+the new key was not in that list. A headless operator would have had no way
+to see or verify the budget. The row was added to the headless fallback
+(`extensions/goal-commands.ts`, next to its `mainModelRetryMinutes` sibling),
+and the pre-existing gate now passes. The guard is exactly the kind that
+should fire on a change like this — it was written for a different key
+(`auditorMirrorSessionExtensions`) in 2026-09 and still caught this one.
+
+The two halves are linked: `SETTINGS_KEYS` is the registry, the headless
+fallback is the display, and a key that is in one but not the other is
+invisible. Both are now covered.
+
 ### 2. MEDIUM (doc) — LIST-PHILOSOPHY.md claimed a behaviour the code removed
 
 - **Doc side**: `LIST-PHILOSOPHY.md:63-68` — "the **Reviewer** is the
