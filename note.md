@@ -20,6 +20,10 @@ written down, that rule belongs in `docs/DESIGN.md`, not here.
 
 # Next
 
+## suspicious goal
+/home/dracon/Pictures/Screenshots/Screenshot_20261019_203231.png
+
+
 ##
 
 ##
