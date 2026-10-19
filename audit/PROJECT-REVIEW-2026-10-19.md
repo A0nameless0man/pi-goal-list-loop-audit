@@ -1,0 +1,92 @@
+# Project review and improvement backlog — 19 October 2026
+
+## Scope
+
+Requested outcome: audit this project and produce an improvement task list.
+The deliverable is [TASKLIST.md](../TASKLIST.md), containing six scoped tasks
+with priorities and observable acceptance criteria. This is a bounded code,
+test, packaging and documentation review, not an exhaustive correctness or
+security certification. No product source, dependencies, external plugins,
+operating-system configuration or GLLA runtime journals were changed.
+
+Baseline inspected: `28c9fb1a53ba6d0ac3047cb394052a87acdda96b`, manifest
+`0.39.39`. The sync daemon may commit review artifacts as they are written.
+Selected source digests are retained in
+[provenance.json](project-review-2026-10-19/provenance.json).
+
+Read the repository rules, README, architecture, compatibility, release and
+measurement guidance, generated inventory, current release/compatibility
+workflows, prior October 19 audit, state-root selection, update-cache logic,
+owner publication, terminal delivery, runner, package smoke and relevant tests.
+The prior [project audit](PROJECT-AUDIT-2026-10-19.md) already records the
+carryover and resume fixes. They are not counted as new defects here.
+
+## Findings
+
+**R2: late refresh success bypasses root readiness (medium).** The readiness
+guard runs only before spawn. The close callback resolves the destination from
+mutable current settings/session state. A sessionDir refresh completed after
+`setRuntimeSessionDir(undefined)` writes into cwd's fallback `.pi-glla` tree.
+This conflicts with the state-root module's explicit deferred-write contract.
+Impact demonstrated: misplaced update cache and unwanted fallback directory;
+no corruption of goal-state authority is claimed.
+
+**R1: refresh throttling does not cover pending or failed attempts (medium).**
+The 24-hour cache TTL does not limit contacts before the first successful
+refresh, or after offline/error outcomes. The production contact gate calls
+`refreshUpdateCheck(ctx.cwd)` in `goal-activation.ts:1132`. A deterministic
+fake-child reproduction observed five children for five immediate calls, and
+an immediate sixth after failure. Actual fleet load and network cost were not
+measured. This is a missing bound, not a demonstrated host outage.
+
+Both findings execute the production function through its existing spawn seam:
+
+```sh
+bun audit/project-review-2026-10-19/reproduce-update-check.ts
+```
+
+The [reproduction](project-review-2026-10-19/reproduce-update-check.ts) uses
+temporary settings/directories and EventEmitter children, restores its process
+environment and removes its files. It makes no network/provider calls. Its
+assertions describe the observed defects; they are not desired-behavior tests.
+After fixes, replace them with regression assertions for the acceptance criteria.
+
+**R3: packaged documentation has four unresolved evidence links (low).** A
+dry-run file-list comparison found these repository-existing destinations are
+absent from the tarball:
+
+| Shipped document | Missing destination |
+| --- | --- |
+| `docs/COMPATIBILITY.md` | `audit/improvement-evidence-2026-09-30/` |
+| `docs/DESIGN-long-running-supervision.md` | `audit/human-handoff-2026-10-18/README.md` |
+| `docs/DESIGN-long-running-supervision.md` | `audit/blocked-ui-2026-10-19/README.md` |
+| `docs/RELIABILITY-AND-MEASUREMENT.md` | `audit/improvement-evidence-2026-09-30/runtime-performance.json` |
+
+The release contract's five-document allowlist omits all three source pages.
+Package observation: 195 files, 5,270,777 unpacked bytes, 1,718,831 compressed
+bytes. No recommendation to add the entire historical audit tree to npm.
+
+**R4: audit navigation is stale (low).** The audit index's “Current release”
+entry is October 1 / 0.38.106, while the current local manifest is 0.39.39 and
+October 19 reports exist. The product docs index is substantially more current.
+This finding concerns local navigation; registry/latest publication was not
+queried and is not inferred from a checkout version.
+
+**R5–R6 are proposals, not reproduced bugs.** Extracted-method durability tests
+are useful but stub transaction contracts; one registered-runtime persistence
+failure/reload test would strengthen confidence. The explicit global registry
+and strict TypeScript configuration are valuable existing controls; replacing
+one group of the 179 ambient slots with typed dependencies would improve them.
+There is no evidence here supporting a wholesale runtime rewrite.
+
+## Verification
+
+The production-function reproduction passed all assertions, confirming R1/R2.
+The npm dry-run file comparison confirmed R3 without installing or publishing.
+Full local `npm run release:check` is being observed; its terminal result and
+selected output will be added before this review is finalized.
+
+No paid live-provider canary, hosted CI rerun, registry advisory analysis,
+remote-history repair, publication or changes to external projects were part
+of this review. Existing compatibility/dependency reports describe historical
+evidence and boundaries, not newly verified external state.
