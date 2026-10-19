@@ -1,0 +1,55 @@
+Blocked-card production renderer fixture; not a live project capture. ANSI stripped.
+
+## Card 40
+
+● BLOCKED · list item paused by agent…
+│  Qualify live OVH upload and fresh …
+├─ next: Keep ordinary sync running.
+│  When ready to continue bucket…
+├─ why: Automatic committing stays…
+├─ resume: /list resume; fix first
+└─ details: /glla status
+
+Footer: glla: Keep ordinary sync running. When …
+
+## Card 120
+
+● list item · paused by agent · BLOCKED · 1/3 ▰▰▱▱▱ tasks · age 1d 00h · 517k tok
+│  Qualify live OVH upload and fresh restoration on the watched bridge-fixture repository using existing scoped uploa…
+├─ next: Keep ordinary sync running. When ready to continue bucket qualification, run the v8 command in
+│  dracon-sync/evidence/bucket-live-qual-2026-10-18/administrator-handoff.md and return the complete output.
+├─ why: Automatic committing stays RUNNING: user daemon active, no sync freeze markers…
+├─ resume: /list resume; fix first
+└─ details: /glla status
+
+Footer: glla: Keep ordinary sync running. When ready to continue … · BLOCKED · list item paused by agent
+
+## Card 240
+
+● list item · paused by agent · BLOCKED · 1/3 ▰▰▱▱▱ tasks · age 1d 00h · 517k tok
+│  Qualify live OVH upload and fresh restoration on the watched bridge-fixture repository using existing scoped uploader/consumer files
+├─ next: Keep ordinary sync running. When ready to continue bucket qualification, run the v8 command in dracon-sync/evidence/bucket-live-qual-2026-10-18/administrator-handoff.md and return the complete output.
+├─ why: Automatic committing stays RUNNING: user daemon active, no sync freeze markers, recent commits and pushes verified. Only this bucket-qualification task is parked because installing v8 still requires interactive administrator
+│  execution. Pausing this task does NOT pause the daemon.
+├─ resume: /list resume; fix first
+└─ details: /glla status
+
+Footer: glla: Keep ordinary sync running. When ready to continue … · BLOCKED · list item paused by agent
+
+## Detailed 120
+
+● list item · paused by agent · BLOCKED · 1/3 ▰▰▱▱▱ tasks · age 1d 00h · 517k tok
+│  Qualify live OVH upload and fresh restoration on the watched bridge-fixture repository using existing scoped uploa…
+├─ judgment: 1 prior defer recommendation · durable action evaluated first
+├─ 1. Durable fix — Keep install operator service as the follow-up; it is blocked for this turn, so use only a reve…
+├─ 2. Defer / workaround — Use only when the durable action is unsafe, impossible, or blocked, and… ◂ recommended
+├─ selected: deferred (reversible workaround)
+├─ next: Keep ordinary sync running. When ready to continue bucket qualification, run the v8 command in
+│  dracon-sync/evidence/bucket-live-qual-2026-10-18/administrator-handoff.md and return the complete output.
+├─ why: Automatic committing stays RUNNING: user daemon active, no sync freeze markers, recent commits and pushes
+│  verified. Only this bucket-qualification task is parked because installing v8 still requires interactive
+│  administrator execution. Pausing this task does NOT pause the daemon.
+├─ resume: After completing the required action, use /list resume to continue
+├─ compaction: deferred while held · 212109 / 200000 token target
+├─ provenance: saved
+└─ details: /glla status

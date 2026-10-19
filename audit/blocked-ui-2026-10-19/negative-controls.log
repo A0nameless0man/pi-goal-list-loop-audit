@@ -1,0 +1,57 @@
+bun test v1.3.14 (0d9b296a)
+
+tests/ui-status-surfaces.test.ts:
+102 |     const lines = buildWidgetLines(state, undefined, NOW, undefined, width, { ...extras, compactAuditCard: true })!;
+103 |     const text = lines.join('\n');
+104 |     assert.ok(lines.length <= 8, `${width} compact rows: ${lines.length}\n${text}`);
+105 |     assert.ok(lines.every(line => visibleWidth(line) <= width));
+106 |     assert.ok(text.indexOf('next:') < text.indexOf('why:'), text);
+107 |     assert.match(text, /resume: \/goal resume; fix first/);
+                 ^
+AssertionError: The input did not match the regular expression /resume: \/goal resume; fix first/. Input:
+
+'● GOAL · paused (source unknown) · BLOCKED · age 0s\n' +
+  '│  Qualify live upload and fresh restoration on the watched fixture repository\n' +
+  '├─ next: Keep ordinary sync running. When ready, run the prepared command in the administrator handoff and return its\n' +
+  '│  complete output. UNIQUE-ACTION-TAIL\n' +
+  '├─ why: Normal sync remains running and recent commits verified. Only this qualification is parked because installing\n' +
+  '│  the prepared service still requires interactive administrator execution. Pausing it does not pause the…\n' +
+  '├─ resume: After completing the required action, use /goal resume to continue\n' +
+  '└─ more: /glla status'
+
+ generatedMessage: true,
+     actual: "● GOAL · paused (source unknown) · BLOCKED · age 0s\n│  Qualify live upload and fresh restoration on the watched fixture repository\n├─ next: Keep ordinary sync running. When ready, run the prepared command in the administrator handoff and return its\n│  complete output. UNIQUE-ACTION-TAIL\n├─ why: Normal sync remains running and recent commits verified. Only this qualification is parked because installing\n│  the prepared service still requires interactive administrator execution. Pausing it does not pause the…\n├─ resume: After completing the required action, use /goal resume to continue\n└─ more: /glla status",
+   expected: /resume: \/goal resume; fix first/,
+   operator: "match",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-blocked-controls-yW9Me1/tests/ui-status-surfaces.test.ts:107:12
+      at fn (node:test:215:18)
+(fail) screenshot-shaped blocked glance keeps action first and diagnostics in detailed status [13.97ms]
+
+tests/pause-wait-ui.test.ts:
+103 |   assert.match(text(tool.renderResult(result, { expanded: false, isPartial: true }, theme, { ...context, isPartial: true })), /Do NOT continue/);
+104 |   assert.match(text(tool.renderCall(args, theme, { ...context, expanded: true })), /backup rotation/);
+105 |   assert.match(text(Reflect.apply(tool.renderResult, undefined, [result, { expanded: false, isPartial: false }, theme])), /Do NOT continue/, 'older hosts without error context keep the full result');
+106 |   const blockedResult = { details: { pauseState: 'paused' }, content: [{ type: 'text' as const, text: 'Goal paused. The turn ends here — do NOT continue working. /goal resume to continue.' }] };
+107 |   const blocked = text(tool.renderResult(blockedResult, { expanded: false, isPartial: false }, theme, context));
+108 |   assert.match(blocked, /Paused\. See the action card\./);
+               ^
+AssertionError: The input did not match the regular expression /Paused\. See the action card\./. Input:
+
+'Goal paused. The turn ends here — do NOT continue working. /goal resume to continue.                '
+
+ generatedMessage: true,
+     actual: "Goal paused. The turn ends here — do NOT continue working. /goal resume to continue.                ",
+   expected: /Paused\. See the action card\./,
+   operator: "match",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-blocked-controls-yW9Me1/tests/pause-wait-ui.test.ts:108:10
+      at processTicksAndRejections (native:7:39)
+(fail) pause tool renders one short wait receipt; expanded, partial and error results retain their content [74.59ms]
+
+ 0 pass
+ 14 filtered out
+ 2 fail
+Ran 2 tests across 2 files. [859.00ms]
