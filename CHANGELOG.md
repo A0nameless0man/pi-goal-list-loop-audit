@@ -98,8 +98,14 @@ as not-a-defect with reasons.
 - `note.md` opens with a header marking it a transient scratchpad whose
   citations point at consumed content, so it stops reading like a document of
   record.
+- `docs/DESIGN.md` no longer names identifiers that do not exist: the auditor
+  entry point it cited was removed in v0.34.108 (the current one is
+  `runDetachedGoalCompletionAuditor`), the token-guard setting was
+  misspelled as `tokenlimit` (it is `tokenLimit`), and a drafting widget that
+  never shipped was described as if it had. A new guard resolves every
+  identifier the design reference names against the code.
 - Five new neutralized controls were registered in the mutation-evidence
-  harness (`scripts/verify-test-pin-controls.mjs`), which now passes all 25
+  harness (`scripts/verify-test-pin-controls.mjs`), which now passes all 26
   of its registered mutations.
 
 ## 0.39.39 — actionable audit rejections and compact cards (2026-10-19)

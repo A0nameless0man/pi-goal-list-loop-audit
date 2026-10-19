@@ -17,7 +17,7 @@ tool-call bound without returning and was stopped, so the `docs/` set was
 verified directly instead. Every candidate below was checked against source
 before it was called a finding, and the two sides are quoted for each one.
 
-**8 defects fixed** (1 code, 6 doc, 1 doc-hygiene). **5 candidate findings
+**11 defects fixed** (1 code, 8 doc, 2 doc-hygiene). **5 candidate findings
 closed as not-a-defect** with reasons, so a later pass does not re-raise them.
 
 ---
@@ -230,6 +230,57 @@ resolvable paths.
 that its citations point at consumed content, and that the durable rationale
 lives in `docs/DESIGN.md` and `docs/RECOVERY.md`.
 
+### 9. LOW (doc) — the design reference named a function that was removed
+
+- **Doc side**: `docs/DESIGN.md:511` — "The auditor pattern is sound and
+  small (one function: `runGoalCompletionAuditor`)."
+- **Code side**: `runGoalCompletionAuditor` was **superseded and removed** —
+  `audit/GUIDANCE-LITERALS-AND-DEAD-CODE-2026-08-08.md:49` records
+  "`runGoalCompletionAuditor` (goal-loop-auditor.ts, ~280) — superseded by
+  `runDetachedGoalCompletionAuditor`; removed with its private machinery".
+  The current entry point is `runDetachedGoalCompletionAuditor`
+  (`extensions/goal-loop-auditor-process.ts:2694`).
+
+The doc now names the function that exists. It is the only name in a
+"Decision" section, and the document already has a convention for marking
+superseded decisions ("Decision 3: Hard 5-minute backoff cap (SUPERSEDED
+v0.35.4)", "Decision 7: Per-loop file split (superseded)").
+
+### 10. LOW (doc) — a settings key was misspelled
+
+- **Doc side**: `docs/DESIGN.md:417` — "Crossing `tokenlimit` (opt-in; off by
+  default since v0.12.0) pauses the goal with a clear reason."
+- **Code side**: the setting is `tokenLimit`
+  (`extensions/goal-settings.ts:231`, validated at `:705-706`). A reader who
+  typed `tokenlimit` into the settings file would have the key dropped on
+  load, with no error — the setting simply never took effect.
+
+The doc now spells the key as the code spells it.
+
+### 11. LOW (doc) — a drafting widget was named that never shipped
+
+- **Doc side**: `docs/DESIGN.md:493` — "v0.2.0 adds the drafting protocol with
+  structured `goal_questionnaire` widget."
+- **Code side**: no `goal_questionnaire` exists anywhere in `extensions/` or
+  `schemas/`. The canned questionnaire it describes was replaced in v0.14.0
+  ("v0.14.0: the LLM grills (its strength — v0.13.0's canned questionnaire
+  accepted non-answers)", `extensions/loops/goal-list-queue.ts:923-925`); the
+  drafting code that shipped is `extensions/drafting-interview.ts`, and the
+  drafting prompt says a numbered prose questionnaire must not be substituted
+  for `ask_user_question` (`extensions/goal-loop-core.ts:1493`).
+
+The doc now says what shipped — an LLM-driven interview — and drops the name
+of the widget that never existed.
+
+**These three are one class**: the design reference names identifiers that
+have moved or been mis-typed, and a reader following the pointer finds
+nothing. A new guard in `tests/doc-parity.test.ts` — "docs/DESIGN.md names
+only identifiers that still exist in the code" — resolves every backticked
+identifier in `docs/DESIGN.md` against `extensions/` and `schemas/`, with a
+two-entry allowlist for the `pi-subagents` companion's own vocabulary
+(`modelScope`, `outputSchema`). Neutralized control (restoring `tokenlimit`
+and `runGoalCompletionAuditor`) fails exactly that assertion.
+
 ---
 
 ## Candidates closed as NOT a defect
@@ -286,7 +337,7 @@ Mechanical checks over the whole shipped surface.
 |---|---|---|
 | `tests/doc-index.test.ts` (new) | 3 | Index completeness; relative-link resolution; index links nothing missing |
 | `tests/settings-same-model-retries-provenance.test.ts` (new) | 3 | Key is provenance-tracked; the row shows the configured value and source; the default fallback still works |
-| `tests/doc-parity.test.ts` (+3) | 8 | Reviewer cascade ↔ `DEFAULT_REVIEWER_CONFIG`; changelog range ↔ CHANGELOG headings; stop-reason field name ↔ Pi's `stopReason` |
+| `tests/doc-parity.test.ts` (+4) | 9 | Reviewer cascade ↔ `DEFAULT_REVIEWER_CONFIG`; changelog range ↔ CHANGELOG headings; stop-reason field name ↔ Pi's `stopReason`; every identifier `docs/DESIGN.md` names ↔ the code |
 | `tests/release-contract.test.ts` (corrected) | 15 | The index names the current package version — the contract the test always declared, minus the frozen trail start |
 
 The repo's repeatable mutation-evidence harness
@@ -300,8 +351,9 @@ the doc guards need, and **five new neutralized controls** were registered:
 | reviewer cascade claim stale | restore the unconditional reviewer wording | regression rejected |
 | changelog range stale | restore "v0.35.14–v0.39.39" | regression rejected |
 | stop-reason field name stale | restore `stop_reason="length"` | regression rejected |
+| design doc names a removed identifier | restore `tokenlimit` | regression rejected |
 
-All **25** registered mutations pass (20 pre-existing + 5 new).
+All **26** registered mutations pass (20 pre-existing + 6 new).
 
 ---
 

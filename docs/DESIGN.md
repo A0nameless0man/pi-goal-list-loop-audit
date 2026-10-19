@@ -414,7 +414,7 @@ ownership fences remain authoritative throughout.
   the shield is orchestrator-side, so compaction can only weaken the
   auditor's evidence → disapproval, never a false approval.
 - **Token guard**: real accumulation from assistant-message `usage.totalTokens`
-  (deduped across replayed `agent_end` history). Crossing `tokenlimit`
+  (deduped across replayed `agent_end` history). Crossing `tokenLimit`
   (opt-in; off by default since v0.12.0) pauses the goal with a clear reason.
 - **Loop 3 `branch=1`**: scratch branch `pi-glla-loop/<ts>-<slug>`; commit per
   improvement, `git reset --hard` per regression — scratch branch only.
@@ -490,7 +490,7 @@ v0.1.0 shipped a hard 5-minute cap. After 5 minutes of consecutive backoff:
 
 The user identified vague-correction as a key strength of pi-goal-x. But shipping it in v0.1.0 doubles the scope and we won't get the auditor right if we split focus.
 
-v0.1.0 ships `/goal "<objective>"` only — same UX as pi-goal-x's `/goal-set`. v0.2.0 adds the drafting protocol with structured `goal_questionnaire` widget.
+v0.1.0 ships `/goal "<objective>"` only — same UX as pi-goal-x's `/goal-set`. v0.2.0 adds the drafting protocol. The canned structured widget it was originally planned around was replaced in v0.14.0 by an LLM-driven interview (`extensions/drafting-interview.ts`); the plugin enforces the floor by blocking `propose_goal_draft` until the user has replied at least once.
 
 This is a deliberate trade-off. If the user wants drafting in v0.1.0, say so and I'll prioritise.
 
@@ -508,7 +508,7 @@ We choose **one package with subcommands**. Reasoning:
 ### Decision 6: Forks pi-goal-x rather than reimplements
 
 Why not write from scratch?
-- The auditor pattern is sound and small (one function: `runGoalCompletionAuditor`).
+- The auditor pattern is sound and small (one function: `runDetachedGoalCompletionAuditor`).
 - The drafting phase logic is sound and small.
 - The continuation loop is sound and small.
 - The compaction discipline is battle-tested.

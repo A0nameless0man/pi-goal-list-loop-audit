@@ -196,3 +196,38 @@ test("the chunking hint names Pi's real stop-reason field", () => {
   assert.match(auditor, /stopReason: \\"length\\"/, "the auditor prompt names Pi's stopReason field");
   assert.doesNotMatch(auditor, /stop_reason/, "the auditor prompt names a field that does not exist");
 });
+
+test("docs/DESIGN.md names only identifiers that still exist in the code", () => {
+  // A design doc that names a removed function, or a misspelled settings key,
+  // sends a reader looking for something that is not there. The companion
+  // (pi-subagents) owns the two external names below; every other identifier
+  // the doc names must still resolve in extensions/ or schemas/.
+  //
+  // This class bit twice: `runGoalCompletionAuditor` (superseded by
+  // runDetachedGoalCompletionAuditor in v0.34.108) and `tokenlimit` (the
+  // setting is `tokenLimit`).
+  const EXTERNAL = new Set(["modelScope", "outputSchema"]);
+
+  let corpus = "";
+  for (const dir of ["extensions", "schemas"]) {
+    for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+      const full = path.join(ROOT, dir, entry.name);
+      if (entry.isDirectory()) {
+        for (const nested of fs.readdirSync(full)) {
+          if (nested.endsWith(".ts") || nested.endsWith(".json")) corpus += read(`${dir}/${entry.name}/${nested}`);
+        }
+      } else if (entry.name.endsWith(".ts") || entry.name.endsWith(".json")) {
+        corpus += read(`${dir}/${entry.name}`);
+      }
+    }
+  }
+
+  const design = read("docs/DESIGN.md");
+  const tokens = [...design.matchAll(/`([A-Za-z][A-Za-z0-9_]*)`/g)].map((m) => m[1]!);
+  const missing = [...new Set(tokens)].filter((t) => !EXTERNAL.has(t) && !corpus.includes(t));
+  assert.deepEqual(
+    missing,
+    [],
+    `docs/DESIGN.md names identifiers that do not exist in the code: ${missing.join(", ")}`,
+  );
+});
