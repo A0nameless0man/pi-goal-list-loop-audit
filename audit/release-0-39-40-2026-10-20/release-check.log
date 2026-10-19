@@ -3827,3 +3827,797 @@ tests/stale-settling-retry.test.ts:
 (pass) live retry-waiting claim is unaffected by the fence (origin=provider-retry) [46727.57ms]
 [run-tests] progress: 1860s elapsed · 4s since last output · 288 KiB of suite output
 [run-tests] progress: 1890s elapsed · 34s since last output · 288 KiB of suite output
+(pass) live retry-waiting claim is unaffected by the fence (origin=session-retry) [49680.21ms]
+(pass) session_start with a settling claim completes the settlement driver when approved history is present [188.03ms]
+(pass) session_start with a settling claim without approved history parks the claim durably [12.69ms]
+(pass) settling claim whose goalId no longer matches the live goal is not silently re-audited [86.92ms]
+(pass) duplicate retry of a settling claim does not advance the attemptId [99.68ms]
+(pass) settling-but-parked footer names the durable state, not the auditor [3.09ms]
+
+tests/stale-continuation.test.ts:
+(pass) helper: goal checkpoint with no active goal is stale [1937.99ms]
+(pass) helper: goal checkpoint with matching active goal is not stale [1.42ms]
+(pass) helper: goal checkpoint with mismatched id is stale [2.33ms]
+(pass) helper: goal checkpoint with paused goal is stale [1.66ms]
+(pass) helper: goal checkpoint with already archived file is stale even if state still active [0.45ms]
+(pass) helper: loop iteration with no active loop is stale [0.16ms]
+(pass) helper: loop iteration with active loop is not stale [0.31ms]
+(pass) helper: stall warning with no active goal is stale [0.12ms]
+(pass) helper: stall warning with active goal is not stale [0.18ms]
+(pass) helper: length continue delivers with live supervision, stale without (audit 2026-09-07) [0.16ms]
+(pass) helper: generic goal-event with no supervision is stale [0.11ms]
+(pass) helper: generic goal-event with active goal is not stale [0.09ms]
+(pass) helper: raw continuation source is correctly identified as stale when archived [0.25ms]
+
+tests/mechanical-pipeline.test.ts:
+(pass) parseMechanicalPipeline: accepts the narrow pipeline shape [166.06ms]
+(pass) parseMechanicalPipeline: rejects everything outside the shape [0.21ms]
+(pass) extraction delivers the field pipeline string to the runner [6.33ms]
+(pass) pipeline runs shell-free: green head passes, evidence truncated [400.54ms]
+(pass) pipeline exit follows the head, never the filter [831.07ms]
+(pass) unsafe pipeline stages never execute: 126 with no side effects [0.93ms]
+(pass) grep filter reads stdin only: no file operand, no leak [567.02ms]
+
+tests/paused-overdue-display.test.ts:
+(pass) v0.38.31: overdue wait names the recovery timer, never resuming now [226.51ms]
+(pass) v0.38.31: overdue wait status bar reads retry overdue [1.20ms]
+(pass) v0.38.31: in-grace wait keeps resuming now [0.53ms]
+(pass) v0.38.31: future wait keeps the countdown [0.44ms]
+(pass) v0.38.31: wait card drops the generic tail and closes the tree [0.31ms]
+(pass) v0.38.31: error pause keeps suggested action and saved tail [1.12ms]
+
+tests/ui-command-view-audit.test.ts:
+(pass) held loop status preserves its meaning and names the actual resume command [848.95ms]
+(pass) compact settling status reports archive debt instead of worker silence [22.99ms]
+(pass) paused goal status includes its saved next action without inventing one [189.00ms]
+
+tests/goal-loop-dispatch.test.ts:
+(pass) dispatch starts prepared and only accepted records can time out [185.36ms]
+(pass) start proof is generation/owner-bound and prompt matching is exact to the attempt marker [0.26ms]
+(pass) dispatch sidecar is atomic and recoverable across a session boundary [1.13ms]
+(pass) corrupt or unknown sidecar records are ignored [0.17ms]
+
+tests/drafting-questionnaire.test.ts:
+[run-tests] progress: 1920s elapsed · 0s since last output · 291 KiB of suite output
+(pass) seeded drafting requires tool-first choices and a concrete next handoff [200.33ms]
+(pass) goal-loop-draft.md: carries the roadmap-then-stages rule [0.98ms]
+(pass) goal-loop-draft.md: carries the rich-option standard [0.20ms]
+(pass) goal-loop-draft.md: invites the Esc correction explicitly [0.17ms]
+(pass) goal-loop-forever-draft.md: carries the roadmap-then-stages rule [0.31ms]
+(pass) goal-loop-forever-draft.md: carries the rich-option standard [0.14ms]
+(pass) goal-loop-forever-draft.md: invites the Esc correction explicitly [0.04ms]
+(pass) goal-loop-plan.md: carries the roadmap-then-stages rule [0.15ms]
+(pass) goal-loop-plan.md: carries the rich-option standard [0.07ms]
+(pass) goal-loop-plan.md: invites the Esc correction explicitly [0.02ms]
+(pass) goal-loop-draft.md: pasted list-like seeds use supplied wording without an exactness choice [0.33ms]
+(pass) goal-loop-plan.md: pasted list-like seeds use supplied wording without an exactness choice [0.06ms]
+
+tests/completion-summary-quality.test.ts:
+(pass) completion summary quality: validator requires six labels [119.61ms]
+(pass) completion summary quality: generic prose and missing labels ledger and NOTE [196.33ms]
+(pass) completion summary quality: valid six-label recap passes without missing-label ledger [84.47ms]
+(pass) v0.36.0: every terminal outcome gets a six-label recorded-facts fallback [0.67ms]
+(pass) v0.36.0: validation annotations cannot satisfy recap-label validation [0.27ms]
+(pass) v0.36.0: valid recap is preserved while generic prose is replaced [0.13ms]
+(pass) gate and projectors share last-occurrence segmentation on stolen labels [0.35ms]
+(pass) v0.36.0: compact recap projection keeps the five human labels and bounds each value [0.31ms]
+(pass) v0.36.0: terminal notification projection resolves generic claims from durable facts [0.36ms]
+(pass) v0.36.0: fallback never invents changed files or test results [0.17ms]
+(pass) v0.36.0: archive boundary replaces a validator annotation with recorded facts [21.12ms]
+(pass) v0.36.0: archiveCurrentGoal writes a recap for complete and abort-derived terminal paths [9.93ms]
+(pass) completion summary audit doc exists and inventories archives [0.74ms]
+(pass) v0.38.104: the recorded-facts archive summary never emits a lone surrogate [0.62ms]
+
+tests/auditor-polish.test.ts:
+(pass) stripThinkBlocks removes think bodies, fragments, and artifacts [1.09ms]
+(pass) audit log: append + read round-trip, malformed lines skipped [143.02ms]
+(pass) audit log bounded tail scans large records from the end [1.06ms]
+(pass) formatAuditLog: one line per verdict with glyph, goal, model, first report line [0.80ms]
+(pass) tail-aware excerpt: capped output keeps the Required-fixes tail [54.71ms]
+(pass) audit feedback excerpts redact provider payloads before executor output [0.57ms]
+(pass) disapproval handoff distinguishes requesting work from proving a continuation started [0.83ms]
+(pass) infra errors are transparent to the disapproval streak (not breakers) [0.13ms]
+(pass) widget flags auditor-quiet stalls after 3 minutes [1.71ms]
+(pass) auditor prompt requires the Required-fixes tail + no think blocks [0.12ms]
+(pass) isRetriableInfraError: aborts and missing-model are NOT retried [0.35ms]
+(pass) runWithInfraRetry: retriable infra failure retried exactly once [0.35ms]
+(pass) runWithInfraRetry: provider Retry-After does not suppress the uniform backoff [0.13ms]
+(pass) runWithInfraRetry: lifecycle guard prevents a second attempt [0.14ms]
+(pass) formatGoalAuditHistory: one line per verdict with elapsed [0.35ms]
+
+tests/continuation-durability-notify.test.ts:
+(pass) unacknowledged park with broken storage warns instead of claiming safety [10407.91ms]
+
+tests/stale-event-context.test.ts:
+[run-tests] progress: 1950s elapsed · 6s since last output · 295 KiB of suite output
+(pass) late agent_settled events with stale contexts are ignored safely [1905.27ms]
+
+tests/durable-choice-ledger.test.ts:
+(pass) durable-vs-defer judgment is an explicit bounded ledger choice [1407.22ms]
+(pass) durable-choice payload compacts model-authored rationale [0.12ms]
+
+tests/load-hold-release.test.ts:
+(pass) no hold means nothing is released and nothing is claimed [180.49ms]
+(pass) a hold that lands durably is released, journalled and announced [0.59ms]
+(pass) a hold whose release cannot land stays held and is not claimed [0.18ms]
+
+tests/fleet-health.test.ts:
+(pass) configured roots remain read-only and saved audits never prove running or death [392.53ms]
+(pass) fleet output never exposes saved prerequisites or private workflow text [1.04ms]
+(pass) only explicit closure after the state observation establishes dormant [2.00ms]
+(pass) malformed, missing and invalid journals cannot make a healthy report [2.00ms]
+(pass) permission-denied journals report unreadable rather than healthy [0.60ms]
+(pass) a malformed newest record cannot advertise an earlier terminal snapshot [0.66ms]
+(pass) depth, directory, project, total-byte and time budgets report incompleteness [1.85ms]
+(pass) bounded journal tails keep current workflow but disclose skipped history [1.35ms]
+(pass) symlinks, nonregular artifacts and unavailable roots are explicit skipped/unreadable observations [0.98ms]
+(pass) /glla fleet command does not dispatch work or change sibling artifacts [589.56ms]
+(pass) a saved retry is not an armed timer in fleet output [1095.95ms]
+(pass) bounds raised above the safety ceiling are clamped and reported, never silently ignored [1.18ms]
+
+tests/session-identity-refusal.test.ts:
+[run-tests] progress: 1980s elapsed · 1s since last output · 296 KiB of suite output
+(pass) 195237: same session id on a new manager object is the owner, not a subagent [1181.31ms]
+(pass) v0.38.92: a dethroned main is told about the lost root, never called a subagent [1217.39ms]
+(pass) 195237: a genuinely different session is still refused [1085.73ms]
+
+tests/recovery-ownership-runtime.test.ts:
+(pass) completed restore reconciles recovery ownership: absent-legacy [374.64ms]
+(pass) completed restore reconciles recovery ownership: terminal [11.35ms]
+(pass) completed restore reconciles recovery ownership: replaced [181.97ms]
+(pass) completed restore reconciles recovery ownership: retained [100.77ms]
+(pass) completed restore reconciles recovery ownership: chat [104.72ms]
+(pass) failed retirement persistence retains the marker and holds dispatch [199.61ms]
+(pass) blank startup retains orphan marker until restore positively completes [195.40ms]
+
+tests/pause-wait-ui.test.ts:
+(pass) expected pause cancellation renders as a normal wait, including host aborted stops [307.08ms]
+(pass) expected pause cancellation renders as a normal wait, including host error stops [84.25ms]
+(pass) real errors, unmarked cancellations and changed pauses are never relabeled as waiting [94.39ms]
+(pass) waiting card leads with status and next check, not investigation or failure styling [104.25ms]
+(pass) pause tool renders one short wait receipt; expanded, partial and error results retain their content [201.97ms]
+
+tests/loop-error-exemption.test.ts:
+(pass) v0.29.19: provider-error turns are NOT iterations — paced recovery preserves measure, stall and stuck state [2201.08ms]
+(pass) v0.35.x: repeated in-band provider tool output parks recovery without loop stuck accounting [2906.12ms]
+(pass) explicit in-band prompt-policy refusal stops a loop on its first pane [973.51ms]
+(pass) v0.29.19: a real recovery probe after errors retires recovery and measures normally [2027.71ms]
+(pass) v0.35.x: recoverable provider failures use the same durable recovery envelope [0.22ms]
+(pass) v0.34.31: extended quota errors enter durable main-model recovery [2701.04ms]
+(pass) v0.34.26: loop output-token exhaustion persists and notifies the compact recap [3000.11ms]
+(pass) v0.29.19: 3 consecutive user aborts stop the loop — user aborts mean STOP [1275.68ms]
+(pass) v0.29.19: audit plateau with OPEN findings stands down (reprieve), then stops honestly when reprieves run out [4903.75ms]
+[run-tests] progress: 2010s elapsed · 1s since last output · 299 KiB of suite output
+(pass) v0.29.20: a plain plateau stop is resumable (pre-gate false plateaus recover) [1636.16ms]
+(pass) v0.29.19: audit plateau with ZERO open findings stops normally — the well is dry [541.61ms]
+
+tests/list-subtasks.test.ts:
+(pass) v0.35.72: visible hierarchical positions map to flat queue indexes [196.49ms]
+(pass) v0.34.81: SUBTASK_MARKER is line-start + case-insensitive [0.29ms]
+(pass) v0.34.81: extractSubtaskParent — no marker → undefined parent [0.23ms]
+(pass) v0.34.81: extractSubtaskParent — em-dash splits parent/child [0.24ms]
+(pass) v0.34.81: extractSubtaskParent — en-dash and hyphen-separator both work [0.12ms]
+(pass) v0.34.81: extractSubtaskParent — hyphen WITHOUT spaces does NOT split [0.09ms]
+(pass) v0.34.81: extractSubtaskParent — no separator captures parent only, empty child [0.08ms]
+(pass) v0.34.81: extractSubtaskParent — multi-line child objective survives marker strip [0.07ms]
+(pass) v0.34.81: parseListItemDeclaration — child objective keeps its own Parallel + Done when [0.85ms]
+(pass) v0.34.81: parseListItemDeclaration — no marker means parentObjective is undefined [0.17ms]
+(pass) v0.34.81: parentId round-trips through writeQueueItemFile → readQueueFromDisk [2.11ms]
+(pass) v0.34.81: readQueueFromDisk ignores malformed parentId (non-string) [0.45ms]
+(pass) v0.34.81: wiring — parse in core, resolve/refuse/cascade in goal.ts [71.34ms]
+(pass) v0.34.81 (behavioral): list_add with a subtask binds parentId to the matching queue item [1402.73ms]
+(pass) v0.34.81 (behavioral): unresolved parent refuses that child, other items still land [903.82ms]
+(pass) v0.34.81 (behavioral): explicit pick on a group refuses loudly (no silent jump) [2294.00ms]
+(pass) v0.34.81 (behavioral): auto-advance skips a head group and lands on its first open child [910.49ms]
+(pass) audit-2026-09-06: auto-advance head-group skip is ledgered, not silent [1097.77ms]
+(pass) v0.38.104: list_activate accepts the dotted child label the queue prints [291.08ms]
+(pass) v0.38.104 (schema pin): list_activate's `n` accepts the child-label string form [10.37ms]
+(pass) C4 (behavioral): /list remove on a group cascades to its queued children [1601.96ms]
+(pass) C4 (behavioral): /list remove on a group with a live child is refused [1701.10ms]
+
+tests/recovery-ownership.test.ts:
+(pass) goal/list ownership retains active work and fences replacements [0.52ms]
+(pass) goal/list ownership retains paused work and fences replacements [0.04ms]
+(pass) goal/list ownership retains auditing work and fences replacements [0.01ms]
+(pass) terminal complete goal cannot retain supervised recovery [0.03ms]
+(pass) terminal aborted goal cannot retain supervised recovery
+(pass) loop ownership retains active history and fences replacements [0.05ms]
+(pass) loop ownership retains held history and fences replacements
+(pass) incomplete restore never proves absence or terminal state [0.09ms]
+(pass) ordinary chat ownership is explicit and never inferred from a legacy orphan [0.07ms]
+(pass) untrusted ownership tags cannot manufacture a target [0.25ms]
+
+tests/repair-source-consume-durability.test.ts:
+(pass) failed repair-source deletion restores the durable repair link [1109.48ms]
+
+tests/compaction-hold-resume.test.ts:
+(pass) goal resume reactivates compaction-held work before optional primary probe [1318.24ms]
+(pass) list resume reactivates compaction-held work before optional primary probe [588.80ms]
+(pass) old compaction hold renders actionable instructions and a short action-first footer [3.29ms]
+
+tests/respec-builder-ui.test.ts:
+(pass) live telemetry is claim-fenced and missing telemetry never implies a running worker [211.81ms]
+(pass) live telemetry is scoped to its own root so a copied project identity cannot read or erase another root's worker [1.09ms]
+(pass) stale-attempt and missing-telemetry projections stay honest across roots [0.16ms]
+(pass) completion summary requires proof and includes acceptance, shipped capability and evidence [0.95ms]
+(pass) actual project summaries render semantic headings, bold and no italics in both themes [369.50ms]
+(pass) large project summaries stay within the shared receipt transport and disclose omissions [303.90ms]
+
+tests/loop-refine-transaction.test.ts:
+(pass) failed spec refinement leaves loop state unchanged [102.59ms]
+
+tests/auditor-ladder-discipline.test.ts:
+(pass) v0.38.103 nothing configured: session model, and NO ladder to exhaust [198.91ms]
+(pass) v0.38.103 an explicit auditor is tried FIRST and the session model is the last resort [1.83ms]
+(pass) v0.38.103 a configured auditor with no fallbacks still keeps the session model reachable [0.40ms]
+(pass) v0.38.103 an unavailable primary escalates immediately and still ends at the session model [0.62ms]
+(pass) v0.38.103 same-session-swap does not change the ordering contract [0.83ms]
+(pass) v0.38.103 an auditor pinned to the session model is the session model, with no invented ladder [0.36ms]
+(pass) v0.38.103 with no session model and nothing configured, the error stays actionable [0.36ms]
+(pass) v0.38.103 a mechanical fast-fail verdict is not an auditor round [0.44ms]
+(pass) v0.38.103 the streak passes THROUGH a mechanical gate rather than stopping [0.05ms]
+(pass) v0.38.103 an approval still ends the comparable streak [0.03ms]
+(pass) v0.38.103 infrastructure entries stay transparent [0.07ms]
+(pass) v0.38.103 a grader fallback RE-BASELINES the streak instead of pinning [0.16ms]
+(pass) v0.38.103 the challenge-round limit is a small, finite number [0.11ms]
+(pass) v0.38.103 streak counting is what the challenge gate reads [0.07ms]
+(pass) ladder tests never write to the repo ledger: no ctx cwd points at process.cwd() [0.18ms]
+
+tests/mid-objective-park-refusal.test.ts:
+(pass) 200751-shape: blocked self-park while the brake retry is armed is refused, goal stays active [1489.31ms]
+[run-tests] progress: 2040s elapsed · 1s since last output · 304 KiB of suite output
+(pass) kind error and kind-unset parks are refused while armed [2284.72ms]
+(pass) decision picker while armed is still allowed (user deliberating) [307.65ms]
+(pass) time-gated wait while armed is still allowed (bounded by the clamp) [992.52ms]
+(pass) blocked park with no armed recovery is still allowed (genuine blocker) [999.22ms]
+
+tests/goal-route.test.ts:
+(pass) empty args → draft [0.45ms]
+(pass) exact subcommands route [0.07ms]
+(pass) subcommands are case-insensitive [0.03ms]
+(pass) tweak takes args [0.03ms]
+(pass) archive routes with or without args [0.02ms]
+(pass) CRITICAL: objective starting with 'pause' is a goal, not a subcommand [0.04ms]
+(pass) CRITICAL: objective starting with 'status' is a goal [0.04ms]
+(pass) objective starting with 'cancel' is a goal [0.02ms]
+(pass) plain objectives set [0.02ms]
+(pass) quoted objectives set (quote stripping happens downstream) [0.02ms]
+(pass) goalArgsNeedDrafting: vague objective needs drafting [0.62ms]
+(pass) goalArgsNeedDrafting: explicit contract activates instantly [0.03ms]
+(pass) goalArgsNeedDrafting: empty is the no-args drafting path [0.02ms]
+(pass) buildSeedGrillMessage: seed + tool + gate notice + grilling protocol [0.47ms]
+(pass) draftProposalBlock: 0 replies → block with instructions, ≥1 → null [2.23ms]
+(pass) draftProposalBlock: escape hatch after 3 blocked proposals (v0.15.1) [0.12ms]
+(pass) askUserQuestionAnswered: answered dialog counts, cancel/esc does not (v0.15.1) [0.14ms]
+(pass) /goal start routes as a subcommand with the objective as rest (v0.16.0) [0.05ms]
+(pass) normalizeDraftContract: drops bare 'Done when:' introducer lines [2.61ms]
+(pass) normalizeDraftContract: drops 'Done when ALL of the following are true:' preamble [0.10ms]
+(pass) normalizeDraftContract: strips glued 'Done when: ' prefix on content line [0.05ms]
+(pass) normalizeDraftContract: renumbers mixed bullets and existing numbers sequentially [0.11ms]
+(pass) normalizeDraftContract: prose lines pass through untouched [0.04ms]
+(pass) draftContractItemCount counts numbered items only [0.14ms]
+(pass) classifySessionCtx: no owner yet → claim [0.03ms]
+(pass) classifySessionCtx: owner stale → claim (session replaced via /new) [0.02ms]
+(pass) classifySessionCtx: same sessionManager → refresh (main session event) [0.03ms]
+(pass) classifySessionCtx: different sessionManager → foreign (subagent session) [0.04ms]
+
+tests/session-rpc-rebind.test.ts:
+(pass) S6: a claim-raised session generation re-binds the subagent RPC host [1767.29ms]
+
+tests/completed-audit-recovery.test.ts:
+(pass) legacy parked claim without phase consumes saved approved on the first restore [1382.52ms]
+(pass) legacy parked claim without phase consumes saved disapproved on the first restore [1303.34ms]
+[run-tests] progress: 2070s elapsed · 1s since last output · 307 KiB of suite output
+(pass) healthy host heartbeat reconciles an unarmed orphan: approved [1801.62ms]
+(pass) healthy host heartbeat reconciles an unarmed orphan: disapproved [1624.91ms]
+(pass) healthy host heartbeat reconciles an unarmed orphan: missing [1479.33ms]
+(pass) heartbeat orphan recovery respects in-flight [1314.22ms]
+(pass) heartbeat orphan recovery respects recent [1411.62ms]
+(pass) heartbeat orphan recovery respects frozen [1564.99ms]
+(pass) heartbeat orphan recovery respects cold-held [1294.82ms]
+(pass) finished real worker, lost parent: restart applies approved exactly once without re-auditing [3698.47ms]
+(pass) finished real worker, lost parent: restart applies disapproved exactly once without re-auditing [4822.80ms]
+(pass) manual resume consumes a completed parked claim instead of launching another auditor [1282.50ms]
+(pass) agent resume consumes a completed parked claim instead of launching another auditor [1500.74ms]
+(pass) silent file-backed successor applies a finished verdict from the dead generation [1817.01ms]
+(pass) legacy completed jobs bind the original goal, contract, and claim without new metadata [2.56ms]
+(pass) newer unfinished candidate prevents replay of an older completed result [1.44ms]
+(pass) saved result refuses unsafe recovery: revision [1.18ms]
+(pass) saved result refuses unsafe recovery: claim [0.81ms]
+(pass) saved result refuses unsafe recovery: structured-claim [0.83ms]
+(pass) saved result refuses unsafe recovery: hash [0.93ms]
+(pass) saved result refuses unsafe recovery: result-identity [1.12ms]
+(pass) saved result refuses unsafe recovery: cancelled-tool [1.55ms]
+(pass) saved result refuses unsafe recovery: strict-challenge [1.31ms]
+(pass) saved result refuses unsafe recovery: unsupported-tool [1.14ms]
+(pass) corrupt final progress identity refuses recovery without consuming the claim [1.14ms]
+(pass) saved approval still enforces the audit-tool floor and regression shield [1.90ms]
+(pass) second audit pass remains visible through thinking, tools, and report generation [58.91ms]
+(pass) days-old auditing orphan with a saved verdict recovers via heartbeat (SEO field case) [1134.21ms]
+(pass) workerless in-flight claim with a saved verdict reconciles without launching [1382.73ms]
+(pass) S5: workerless in-flight claim parks under the stale latch via stale-latch-workerless [1409.04ms]
+(pass) workerless in-flight claim without a verdict parks via workerless-in-flight [1296.53ms]
+(pass) auditorWorkerLiveForAttempt: only a matching live worker counts [598.82ms]
+(pass) unreadable saved transcript returns null but ledgers the reason [2.79ms]
+(pass) workerProcessMatches darwin branch reads identity via ps [610.20ms]
+(pass) auditing claim stuck in starting with no worker parks for recovery via heartbeat [1066.69ms]
+[run-tests] progress: 2100s elapsed · 0s since last output · 310 KiB of suite output
+(pass) S7: stranded recovery measures real activity, not the heartbeat's own refire notes [1021.88ms]
+(pass) workerless park drops the dead attempt's auditor cursor so recovery re-walks (clean-web field) [1000.41ms]
+(pass) reconcile names its rejecting gate in the ledger [1.63ms]
+
+tests/gettick-tool-visibility.test.ts:
+(pass) v0.35.60: glla tools are reactivated at the pre-turn boundary [491.98ms]
+
+tests/list-stall-reproduction.test.ts:
+(pass) completed standalone goal automatically hands off to the waiting list [1912.65ms]
+(pass) /glla resume starts a waiting-only list instead of reporting nothing [978.57ms]
+(pass) list-sourced completion promotes the successor and records the settle transition [1407.63ms]
+
+tests/goal-state.test.ts:
+(pass) goal-state.ts owns the state singleton (single source of truth) [124.90ms]
+(pass) wholesale state replacement goes through replaceState() only [66.46ms]
+(pass) the persistence core lives in goal-state.ts (persistStateLine) [0.37ms]
+(pass) replaceState is used at the moved wholesale sites [0.40ms]
+
+tests/compaction-status.test.ts:
+(pass) compaction projection names each safe-boundary admission reason [123.97ms]
+(pass) metadata inspection is bounded, read-only and distinguishes spent budgets from other work [1.80ms]
+(pass) only fresh current-owner host observations establish compaction eligibility [0.32ms]
+(pass) production adapter selects an active loop instead of an unrelated paused goal [184.06ms]
+(pass) fresh host admission can explain audit deferral without claiming stale worker liveness [0.31ms]
+(pass) existing compact, detailed and footer surfaces share the same over-target deferral [4.32ms]
+
+tests/list-audit-state-root.test.ts:
+(pass) list-audit fan-out reads findings from the configured sessionDir root [369.97ms]
+
+tests/list-stale-context.test.ts:
+(pass) v0.34.51: /list add on a stale handle is refused — honest recovery result, zero state mutation [1565.99ms]
+(pass) v0.34.51: /list remove, clear, cancel, next, tweak, pause, resume are all refused on a stale handle [927.07ms]
+(pass) v0.34.51: the natural-language dump fallthrough is refused on a stale handle — drafting never starts [1073.42ms]
+(pass) v0.34.51: /list show and /list depth stay usable on a stale handle (inspect, don't mutate) [1102.16ms]
+(pass) v0.34.51: the honest recovery result — the refreshed session owns the command and the add lands [1913.88ms]
+(pass) v0.34.51: list_add and list_activate tools return the stale-context recovery result without mutating [817.32ms]
+(pass) v0.34.51: source — cmdList captures the entry probe and gates every mutating path [88.01ms]
+
+tests/verification-value-policy.test.ts:
+(pass) goal: rendered continuation and independent review receive canonical instructions [201.39ms]
+(pass) list: rendered continuation and independent review receive canonical instructions [1.17ms]
+(pass) loop metricless: rendered execution receives canonical instructions [0.99ms]
+(pass) loop metric: rendered execution receives canonical instructions [0.48ms]
+(pass) project increment execution and its normal auditor receive canonical instructions [2.37ms]
+(pass) draft instructions deliver the policy before the contract is confirmed [0.19ms]
+(pass) structural branch inspection tolerates comments and detects wrong routing [33.97ms]
+
+tests/terminal-completion-notice.test.ts:
+(pass) v0.38.18 terminal notice: the done brief lands in the conversation exactly once [285.14ms]
+(pass) v0.38.18 source: the detached-approval branch closes the transcript [0.50ms]
+(pass) audit-2026-09-06: a stale-generation notice never fires into the successor session [81.92ms]
+
+tests/aggressive-mode.test.ts:
+[run-tests] progress: 2130s elapsed · 1s since last output · 313 KiB of suite output
+(pass) aggressiveMode persists through the settings file (item 8) [195.94ms]
+(pass) effective settings: aggressiveMode ON flips the defaults (items 5+7) [0.09ms]
+(pass) effective settings: missing aggressiveMode uses the production keep-going default [0.03ms]
+(pass) effective settings: explicit OFF keeps base defaults; auditCap base is 5 [0.02ms]
+(pass) explicit per-key settings WIN over aggressiveMode (advisor semantics) [0.03ms]
+(pass) autoResume is global-only in the effective settings and provenance [2.28ms]
+(pass) obsolete quota policy files cannot change the generic retry settings [0.24ms]
+(pass) v0.39.38: editor title never lists autoResume as an aggressive default [0.27ms]
+
+tests/settings-invalid-report.test.ts:
+(pass) C10: dropped junk values report once per distinct value; undefined defaults stay silent [129.87ms]
+(pass) C10: loadSettings ledgers dead hand-edited values as settings_invalid_ignored [102.79ms]
+
+tests/task-list.test.ts:
+(pass) accepts a reasonable breakdown [0.58ms]
+(pass) rejects empty list [0.17ms]
+(pass) rejects too many top-level tasks [0.07ms]
+(pass) rejects too many subtasks (the anti-drift cap) [0.11ms]
+(pass) accepts exactly at the cap [0.06ms]
+(pass) rejects empty titles [0.03ms]
+(pass) v0.39.38: non-string titles fail validation instead of throwing [0.08ms]
+(pass) assigns hierarchical ids and pending statuses [220.02ms]
+(pass) trims titles [0.15ms]
+
+tests/objective-loss-state-root.test.ts:
+(pass) workingDir default: cwd switch makes old objective invisible from new cwd (expected) [3.11ms]
+(pass) sessionDir opt-in: same cwd switch keeps objective visible via shared sessionDir [0.94ms]
+(pass) evidence: no destructive migration and pending defers writes — Wez crash / version switch does not delete old root [0.72ms]
+
+tests/hintless-token-plan-retry.test.ts:
+(pass) field Token Plan 2062 error retries eagerly without inventing a quota reset [120.59ms]
+
+tests/resume-goal-tool.test.ts:
+(pass) resume_goal reactivates a paused goal and clears every pause marker [900.89ms]
+(pass) resume_goal on an already-active goal answers instead of churning state [1591.96ms]
+(pass) resume_goal with no goal answers instead of swallowing the verb [1281.93ms]
+(pass) a held-on-restore loop does not block resume_goal (only a LIVE loop does) [415.83ms]
+(pass) resume_goal refuses while the supervisor is frozen [2021.78ms]
+(pass) resume_goal probes pending main-model recovery inline instead of bouncing (124544) [1386.81ms]
+(pass) resume_goal refuses a terminal goal with the real recovery path [1003.93ms]
+(pass) resume_goal keeps its live-loop refusal (source-pinned defense-in-depth) [1.58ms]
+(pass) paused → resume_goal → complete_goal flows without a manual resume [5988.67ms]
+(pass) resume_goal re-fires a stored completion claim through the agent origin [6205.68ms]
+
+tests/hegemon-queue-unblock-evidence.test.ts:
+[run-tests] progress: 2160s elapsed · 1s since last output · 316 KiB of suite output
+(pass) REAL SHAPE: 12 empty head items block list activation exactly as in the hegemon ledger [1610.76ms]
+(pass) REAL SHAPE: the clean 31-item queue (empties removed) activates main-menu without any blocked event [1275.80ms]
+
+tests/settings-stale-save.test.ts:
+(pass) C9: stale-probe refusal fails the save loudly — no false saved claim [870.90ms]
+(pass) C9 control: healthy probe saves and reports normally [1326.43ms]
+(pass) settings save validates its own session after an overlapping editor [772.26ms]
+(pass) similarity editor empty input restores the default; explicit zero stays zero [1397.95ms]
+(pass) auditor picker offers thinking for provider refs containing nested model ids [710.06ms]
+
+tests/quota-horizon-exemption.test.ts:
+(pass) quota wait survives the horizon instead of parking [205.50ms]
+(pass) billing and non-quota failures retain paced retries beyond legacy expiry without granting purchases [1.88ms]
+(pass) deterministic classifier: 400 markers hold, everything else passes through [0.10ms]
+(pass) deterministic 400 holds even aggressive and fresh — identical retries cannot succeed [0.42ms]
+(pass) deterministic hold names the fix directions [1.06ms]
+(pass) transient wall still schedules under aggressive (control) [0.62ms]
+
+tests/reviewer.test.ts:
+(pass) fires on goal-complete + list-complete; NOT on aborted/paused [269.68ms]
+(pass) leverage: bug/TODO findings enqueue to /list WITHOUT any Confirm (no proposeGoal) [1.66ms]
+(pass) architectural findings are proposed as /goal (Confirm path) [0.73ms]
+(pass) classification order: strategic > architectural > bug > refactor [0.08ms]
+(pass) clean completion fires the audit step; strategic-only notifies [0.98ms]
+(pass) runaway prevention: a reviewer fire in the last 5 minutes suppresses re-firing [0.37ms]
+(pass) per-day cap: the 21st fire is suppressed with a ledger entry [0.34ms]
+(pass) manual /review bypasses the trigger gates [0.34ms]
+(pass) review report written to .pi-glla/reviews/<goal-id>-<timestamp>.md [0.50ms]
+(pass) menu options reflect the config [0.26ms]
+(pass) no /loop triggering: the loop stop path never calls runReviewer [11.76ms]
+(pass) config block: partial project settings merge over defaults [0.28ms]
+(pass) v0.28.16 duplicate-scan dedupe: completing a regression scan does NOT propose another scan (report-only) [0.90ms]
+
+tests/list-settings-route.test.ts:
+(pass) v0.34.53: /list settings redirects to /glla explicitly — no drafting, no state mutation [1683.29ms]
+(pass) v0.34.53: /list settings is read-only — it still redirects on a stale extension handle [1382.34ms]
+(pass) v0.34.53: /list add settings… still adds a literal item — the explicit verb is the only way in [1203.11ms]
+(pass) v0.34.53: source — /list help documents /glla as the settings command and the branch precedes the dump fallthrough [14.31ms]
+(pass) C5: /list add of a just-finished objective is skipped, not resurrected [1506.84ms]
+
+tests/compaction-target-settings.test.ts:
+(pass) /glla token-target editor persists shorthand, cancellation, validation, and reset [245.24ms]
+(pass) global-only target, defaults, provenance and menu describe the effective policy [51.63ms]
+(pass) configured target reaches the actual trigger, idle guard, and hysteresis [338.27ms]
+(pass) hand-edited invalid targets safely fall back at runtime [389.05ms]
+(pass) headless /glla exposes the chosen token target and source [77.03ms]
+
+tests/audit-lifecycle-surfaces.test.ts:
+[run-tests] progress: 2190s elapsed · 8s since last output · 320 KiB of suite output
+(pass) durable: an ordinary complete_goal records phase running + lastActivityAt before the verdict [10621.22ms]
+(pass) durable phase beats a worker-complete snapshot on the widget card and the status line [3.75ms]
+(pass) a live worker still refines a running claim (the HUD stays the richer truth) [0.33ms]
+(pass) durable phase with no live worker says so, and names the durable age [0.27ms]
+(pass) the durable projection is the single source for all three surfaces [0.32ms]
+(pass) a paused goal that still owes a settlement names it on card and status line [0.66ms]
+(pass) a paused parked claim names recovery-needed on card and status line [0.28ms]
+(pass) a list item names its own resume command, never /goal resume [0.13ms]
+
+tests/fresh-session-auto-recovery.test.ts:
+(pass) attemptFreshSessionRecovery: helper checks the actual context capability, not ExtensionAPI [186.64ms]
+(pass) attemptFreshSessionRecovery: returns false when the event context lacks newSession [0.13ms]
+(pass) runtime: current event-shaped context skips because pi does not expose newSession there [0.69ms]
+(pass) runtime: a future command-capable host context is actually invoked and ledgered [0.45ms]
+(pass) runtime: rejected or callback-free async recovery fails closed [1.50ms]
+(pass) every stale-ctx send site routes through attemptFreshSessionRecovery before falling back to goStaleTerminal [0.36ms]
+(pass) stale display guidance names /new, not /reload, for the actual cached-ctx wedge [1.84ms]
+
+tests/resume-rekick.test.ts:
+(pass) v0.34.3: /glla resume re-kicks an ACTIVE-but-idle goal instead of 'Nothing to resume' [183.88ms]
+(pass) v0.34.3: /glla resume re-kicks an ACTIVE loop too [0.13ms]
+(pass) v0.34.3: /goal resume (/list resume) re-kicks instead of silently returning [0.15ms]
+(pass) v0.34.3: re-kicks are ledger-visible (resume_rekick) [0.07ms]
+
+tests/recovery-legacy-hold.test.ts:
+(pass) goal: confirmed consented reload rearms only the legacy elapsed-time hold [590.47ms]
+(pass) list: confirmed consented reload rearms only the legacy elapsed-time hold [999.96ms]
+(pass) loop: confirmed consented reload rearms only the legacy elapsed-time hold [2404.76ms]
+(pass) legacy horizon-looking text never releases a decision, audit, explicit manual or deterministic hold [1306.80ms]
+
+tests/persistence-hardening.test.ts:
+(pass) readState: a truncated trailing active.jsonl line loads cleanly (mid-write kill) [185.93ms]
+(pass) large JSONL records do not break forward or reverse ledger scans [1.34ms]
+(pass) readState normalizes and bounds the detached-auditor recovery cursor [0.65ms]
+(pass) readState recovers a transaction when the first state ledger line was never written [0.22ms]
+(pass) goal transaction snapshot repairs a markdown-before-ledger crash [0.54ms]
+(pass) a committed state line wins over an orphaned older transaction [0.33ms]
+(pass) same-millisecond transaction recovery uses the base-state fingerprint [0.55ms]
+(pass) a newer transaction with a stale base fingerprint cannot roll back a later state line [0.30ms]
+(pass) invalid pending-audit phases are dropped to legacy recovery semantics [0.33ms]
+(pass) persisted ids are validated before state or filesystem use [0.44ms]
+(pass) E1: disk failure latches the degraded flag, never throws; a landing write self-heals [0.70ms]
+(pass) E1: all four persistence entry points run through runPersistStep [0.37ms]
+(pass) E1: archive removes the active md ONLY when the archive landed [0.67ms]
+(pass) E1: archive destination is exclusive and cannot clobber a winner [0.97ms]
+(pass) E1: loud first-failure notify + recovery notify at the persistState choke point [0.34ms]
+(pass) E1: TUI persistence-degraded flag (first widget line, until a write lands) [0.17ms]
+(pass) T6: schema does not drift from the Goal interface [0.87ms]
+
+tests/host-session-lost.test.ts:
+(pass) classifySessionHandleInvalidation: each mechanism maps to its reason [0.53ms]
+(pass) host loss without any lifecycle shutdown classifies silent_handle_death [1180.22ms]
+(pass) fresh session_start consumes the stale arm and re-arms the goal continuation [1996.99ms]
+(pass) completed idle state does not probe a disposed session handle [613.38ms]
+(pass) paused idle state does not probe a disposed session handle [1586.20ms]
+(pass) held loop does not probe a disposed session handle [420.46ms]
+(pass) ended subagent probes do not keep idle state probing a disposed handle [1599.50ms]
+(pass) stale-recovery debt still probes for same-process self-heal [886.40ms]
+(pass) parked completion-audit recovery debt does not become an unprobed idle plane [909.67ms]
+(pass) a normal fresh session does not fabricate stale continuation debt [1095.46ms]
+(pass) an explicit reload boundary is durable and does not masquerade as host loss [1105.81ms]
+(pass) a replacement window absorbs a handle swap before invalidation [1096.27ms]
+(pass) a lifecycle shutdown suppresses the terminal entirely — no loss event [788.43ms]
+[run-tests] progress: 2220s elapsed · 0s since last output · 324 KiB of suite output
+(pass) source pin: the emission classifies the reason instead of hardcoding unknown [5.98ms]
+(pass) source pin: the classifier and its enum are exported [5.36ms]
+(pass) note.md screenshot repro — live update_task_status self-heals a stale park and clears host session lost banner [1091.57ms]
+(pass) live session_compact event self-heals a stale park in place [1529.98ms]
+
+tests/quota-recovery-standdown.test.ts:
+(pass) recheck on a healthy store is a no-op that reports clear [274.22ms]
+(pass) recheck against a broken store keeps the stand-down [1.11ms]
+(pass) recheck against a repaired store self-heals [0.55ms]
+(pass) waitingStatusLabel names a storage hold instead of a live wait [0.16ms]
+(pass) probe after a storage repair re-heals and resumes instead of refusing [1810.43ms]
+(pass) probe with storage still broken stands down without dispatch [1027.40ms]
+
+tests/answered-question-dispatch.test.ts:
+(pass) v0.38.19 answered ask_user_question dispatches a continuation turn from a phantom-busy session [1912.24ms]
+(pass) v0.38.19 fresh stream keeps the wait path: no bypass into live thinking [587.34ms]
+(pass) v0.38.19 a loaded followUp queue keeps the wait path even when silent [1800.55ms]
+
+tests/future-sidecar-freshness.test.ts:
+(pass) freshness markers reject future timestamps while accepting recent past timestamps [0.50ms]
+(pass) recovery-resume consumes but refuses a future-dated sidecar [444.26ms]
+(pass) all restart sidecar validators use the non-negative-age freshness gate [2.88ms]
+
+tests/doc-index.test.ts:
+(pass) every shipped doc is reachable from the documentation index [259.91ms]
+(pass) every relative markdown link in the shipped docs resolves [13.27ms]
+(pass) the index does not link a document that does not exist [0.36ms]
+
+tests/loop-forever.test.ts:
+(pass) isLifecycleHeldLoopReason separates recoverable lifecycle holds from deliberate/safety stops [217.56ms]
+(pass) parseMetric: plain integer [0.26ms]
+(pass) parseMetric: number inside text [0.05ms]
+(pass) parseMetric: negative + scientific [0.03ms]
+(pass) parseMetric: no number → null (broken measure is a stall, not a crash) [0.02ms]
+(pass) parseMetric: takes the FIRST number [0.02ms]
+(pass) isImprovement: first value is always baseline [0.08ms]
+(pass) isImprovement: min direction [0.05ms]
+(pass) isImprovement: max direction [0.03ms]
+(pass) v0.29.10 — applyMeasurement: null best (deferred audit baseline) seeds on first real measurement [0.65ms]
+(pass) v0.35.31 exemption pin — audit flats count toward plateau from the start; non-audit pre-movement flats stay free [0.55ms]
+(pass) v0.35.31 exemption pin — an audit loop never gets the 'metric never moved' stop [2.22ms]
+(pass) v0.29.10 — audit loop source pins: deferred baseline, true-regression note, live-loop reseed migration [55.52ms]
+(pass) applyMeasurement: improvement resets stall, records best [0.27ms]
+(pass) applyMeasurement: non-improvement increments stall [0.08ms]
+(pass) applyMeasurement: broken measure (null) is NOT a stall — tracked separately (E5) [0.22ms]
+(pass) applyMeasurement: a numeric value resets the null streak (E5) [0.08ms]
+(pass) applyMeasurement: plateauWindow consecutive nulls stop with 'measure command broken', NOT plateau (E5) [0.24ms]
+(pass) applyMeasurement: an interleaved null does not move the real stall count (E5) [0.12ms]
+(pass) applyMeasurement: plateau stops the loop [0.06ms]
+(pass) v0.35.31 — a never-moved zero baseline does not false-plateau a working min loop [0.39ms]
+(pass) v0.35.31 — the never-moved grace is bounded by a loud distinct stop [0.13ms]
+(pass) v0.35.31 — a resumed run whose best differs from its first reading still plateaus honestly [0.05ms]
+(pass) applyMeasurement: max iterations stops the loop [0.12ms]
+(pass) applyMeasurement: plateau wins over cap when both hit [0.03ms]
+(pass) applyMeasurement: history is capped at 200 [0.46ms]
+(pass) parseLoopStartArgs: full form [0.61ms]
+(pass) parseLoopStartArgs: defaults for window and max [0.08ms]
+(pass) parseLoopStartArgs: unquoted target works [0.05ms]
+(pass) parseLoopStartArgs: bare start (no measure=) is the infinite metricless form (v0.23.6) [0.06ms]
+(pass) parseLoopStartArgs: direction= without a measure throws [0.52ms]
+(pass) parseLoopStartArgs: missing direction throws [0.10ms]
+(pass) parseLoopStartArgs: missing target throws [0.12ms]
+(pass) parseLoopStartArgs: measure with pipes/quotes survives [0.07ms]
+(pass) parseLoopStartArgs: branch flag off by default [0.05ms]
+(pass) parseLoopStartArgs: branch=1 / branch=true enable branch mode [0.16ms]
+(pass) applyMeasurement: time bound stops when elapsed hours exceeded [0.18ms]
+(pass) applyMeasurement: time bound does not stop before the limit [0.07ms]
+(pass) applyMeasurement: token budget stops when exhausted [1.54ms]
+(pass) applyMeasurement: no bound = process never 'completes' (v0.15.0) [0.07ms]
+(pass) parseLoopStartArgs: done= throws a teaching error (v0.15.0) [0.19ms]
+(pass) parseLoopStartArgs: time=, tokens=, and cadence= parse as bounded controls [0.17ms]
+(pass) parseLoopStartArgs: force flag off by default, on with 1/true [0.12ms]
+(pass) loopBranchName: format is pi-glla-loop/<timestamp>-<slug> [0.18ms]
+(pass) loopBranchName: empty slug falls back to 'loop' [0.04ms]
+(pass) loopBranchName: slug is capped at 30 chars [0.13ms]
+(pass) applyRefinement: target-only change keeps baseline and stall state [0.12ms]
+(pass) applyRefinement: measure change re-baselines and resets stall [0.05ms]
+(pass) parseLoopStartArgs: measure=none yields a metricless config [0.05ms]
+(pass) parseLoopStartArgs: measure=NONE is case-insensitive [0.04ms]
+(pass) parseLoopStartArgs: direction with measure=none throws [0.15ms]
+(pass) parseLoopStartArgs: explicit max= caps even a metricless loop [0.05ms]
+(pass) parseLoopStartArgs: max=0 = truly unbounded; absent max = 50 [0.03ms]
+(pass) applyMetriclessTick: iterates without plateau and never improves [0.23ms]
+(pass) applyMetriclessTick: max iterations still stops the loop [0.06ms]
+(pass) applyMetriclessTick: time and token bounds still stop the loop [0.19ms]
+(pass) v0.35.72: all loop measure entry points are bounded and reject failed numeric output [0.46ms]
+(pass) applyMeasurement: max=0 = no iteration cap for measured loops either [0.09ms]
+(pass) resolveSpecFile: finds SPEC.md in root, prefers it over spec.md [1.11ms]
+(pass) resolveSpecFile: spec.md fallback; null when absent; root only (no subdir crawl) [0.36ms]
+(pass) respecTarget: names the spec, Rules binding, rest follows code, rotates implement/audit [0.40ms]
+(pass) respecTarget bootstrapping: big draft first, then reconcile [0.11ms]
+(pass) resolveSpecFiles: returns all root specs in priority order (v0.24.4) [0.30ms]
+(pass) parseLoopStartArgs: toolsamerepeat=N parses; 0 disables the legacy check [0.18ms]
+(pass) v0.29.0: /loop audit — metric loop over open findings; plateau = the well is dry [8.84ms]
+(pass) v0.35.4: auditMeasureCmd counts closed FIX findings only (DECIDED/DEFERRED excluded) [19.19ms]
+(pass) v0.35.4: countOpenAuditFindings/topOpenAuditFinding tolerate aligned open boxes [0.94ms]
+(pass) v0.38.33: indented boxes count and queue identically across all four readers [47.99ms]
+(pass) v0.38.33: topOpenAuditFinding strips the indent, never the text [0.60ms]
+(pass) L7: countCheckedSpecItems counts indented boxes like its siblings [0.54ms]
+(pass) L6 (pin): a fired loop timer clears its handle before any early return [0.25ms]
+(pass) L5 (pin): the loop-turn send and retry payload share one prompt build [0.33ms]
+(pass) v0.35.4: parseLoopStartArgs keeps =-bearing text inside quotes and restores unknown keys [0.21ms]
+(pass) v0.35.42 — the flat-reading grace applies in a NEW measure era despite old-era improvements [0.47ms]
+(pass) v0.35.42 — a dead NEW metric still earns its never-moved stop after a refine [0.15ms]
+
+tests/heartbeat.test.ts:
+(pass) fires: supervising + idle + no timer + quiet long enough [0.24ms]
+(pass) does not fire when not supervising [0.04ms]
+(pass) does not fire when session is busy [0.03ms]
+(pass) does not fire when a continuation is already scheduled [0.03ms]
+(pass) does not fire before the stall threshold [0.03ms]
+(pass) custom stall threshold is honored [0.06ms]
+(pass) shouldWedgeAlert: fires when supervising + busy + silent past threshold [0.11ms]
+(pass) shouldWedgeAlert: silent below threshold does not fire [0.04ms]
+(pass) shouldWedgeAlert: idle session is the heartbeat's job, not ours [0.06ms]
+(pass) shouldWedgeAlert: not supervising never fires [0.03ms]
+(pass) shouldWedgeAlert: throttled to once per threshold interval [0.06ms]
+(pass) shouldWedgeAlert: threshold 0 disables [0.06ms]
+(pass) timing defaults: wedge 30m, measure 10m, auditor inactivity 10m, no process wall [0.16ms]
+(pass) auditor watchdog: confirmed inactivity aborts only without a tool [0.14ms]
+(pass) v0.28.25: stall refires space exponentially — 1m, 2m, 4m, 8m cap (junk-runner 5-in-4-minutes fix) [0.14ms]
+
+tests/repair-promotion-durability.test.ts:
+(pass) a new repair item is durable at the head with target metadata in its first write [804.47ms]
+(pass) list_activate hydrates a disk-only queue before resolving the requested position [22.73ms]
+(pass) an equivalent repair already in the queue is promoted to the durable head [3.73ms]
+
+tests/auditor-chunk-hint.test.ts:
+(pass) auditor prompt carries the chunk-near-context-full hint (item 7) [220.20ms]
+(pass) reviewer.ts has no inline prompt to add the hint to (post-audit surfaces only review reports, not prompts) [0.10ms]
+
+tests/same-model-retry-before-fallback.test.ts:
+(pass) normalizeMainModelSameModelRetries clamps to the documented range [220.06ms]
+(pass) sameModelRetriesRemain: 0 budget = legacy rotation; positive budget = N retries [0.07ms]
+(pass) source: orchestrator gates the immediate rotation on the same-model budget [0.41ms]
+(pass) source: probe path emits a same-model-retry branch before the selector walk [0.11ms]
+(pass) integration: fresh recovery retries the current model instead of rotating [12.36ms]
+(pass) integration: budget exhausted walks the configured chain (existing contract preserved) [66.54ms]
+(pass) integration: legacy 0 budget preserves the immediate-rotation contract [3.81ms]
+(pass) integration: failure parking preserves the retry counter; rotation resets it [2.76ms]
+(pass) sanitize: sameModelRetries round-trips with the documented bounds [0.24ms]
+(pass) format: status surfaces the live counter so the operator can see how close rotation is [1.31ms]
+
+tests/unsupervised-error-retry.test.ts:
+(pass) empty provider response with no goal schedules and dispatches a retry [1989.47ms]
+(pass) consecutive errors advance the streak; a clean turn clears it [1928.26ms]
+[run-tests] progress: 2250s elapsed · 0s since last output · 335 KiB of suite output
+(pass) composite isolation clears a poisoned unsupervised retry streak, timer, and override [68.47ms]
+(pass) user aborts never retry [895.60ms]
+(pass) a goal paused with kind=blocked refuses the unsupervised retry (incident 111955) [1905.55ms]
+(pass) 'This operation was aborted' on a blocked-paused goal never reaches the retry path [1301.91ms]
+(pass) 'This operation was aborted' on a wait-paused goal records pause context and does not retry [1002.84ms]
+(pass) 'This operation was aborted' on an ACTIVE (unpaused) goal does not reach the unsupervised-error-retry path [1193.55ms]
+(pass) policy refusals, auth, billing, and deterministic 400s refuse with a reason [997.80ms]
+(pass) context overflow compacts instead of retrying [1195.90ms]
+(pass) hinted quota sleeps until the provider reset; hintless quota retries eagerly [10.72ms]
+(pass) an active goal owns error turns — the unsupervised lane stays silent [1800.68ms]
+(pass) a load-held session refuses instead of promising a retry it cannot send [1211.33ms]
+(pass) a fresh turn stands down the pending retry [1191.17ms]
+(pass) a busy session at fire time stands down instead of double-driving [1105.05ms]
+(pass) default same-model budget retains the ordinary request and schedules a paced retry before rotation [1380.50ms]
+(pass) fallback continues an interrupted ordinary task after settlement with the original request [95.41ms]
+(pass) fallback handoff waits for idle and does not override a user abort [109.91ms]
+(pass) a successful core retry consumes fallback recovery without a duplicate handoff [192.55ms]
+(pass) fallback send failure preserves the pending handoff and retries the same request on fresh settlement [102.76ms]
+(pass) long interrupted requests use a bounded handoff without growing nested retry prompts [294.95ms]
+(pass) exhausted ordinary fallback chain uses backoff instead of another immediate switch handoff [4212.90ms]
+(pass) ordinary exhaustion retry respects a supervisor pause introduced while waiting [889.67ms]
+(pass) authentication failure after ordinary chain exhaustion does not become a blind handoff [1105.05ms]
+
+tests/background-wait-runtime.test.ts:
+(pass) goal: owned wait persists without pausing; exact completion wakes once [320.99ms]
+(pass) list: owned wait persists without pausing; exact completion wakes once [1.31ms]
+(pass) supervisor pause freezes wake but retains dependency evidence for resume [0.84ms]
+(pass) load pause freezes wake but retains dependency evidence for resume [0.93ms]
+(pass) goal pause freezes wake but retains dependency evidence for resume [0.65ms]
+(pass) reload reconciles complete artifact without losing work [1.14ms]
+(pass) reload reconciles failed artifact without losing work [0.68ms]
+(pass) reload reconciles missing artifact without losing work [0.76ms]
+(pass) reload reconciles mismatched artifact without losing work [0.69ms]
+(pass) UI activity uses matching worker timestamps, never artifact existence or fresh host polls [0.64ms]
+(pass) legacy standby reconciles through assessment, not invented worker ownership [0.56ms]
+(pass) storage failure retains the wait and refuses premature dispatch [0.58ms]
+(pass) replacement, cancellation and pending audit cannot be woken by an old dependency [0.46ms]
+(pass) admission rejects guessed ids; foreign sessions cannot settle an owned wait [0.41ms]
+(pass) multiple dependencies require all results; completion before admission is retained [0.70ms]
+(pass) running artifact cannot retain waiting indefinitely (deadline) [0.57ms]
+(pass) running artifact cannot retain waiting indefinitely (no deadline) [0.47ms]
+(pass) busy parent consumes settlement without an extra main-thread send [0.56ms]
+
+tests/zombie-user-input-standdown.test.ts:
+(pass) user-input wait set covers glla dialogs and structured-question tools [200.23ms]
+(pass) execution/reads/subagent tools are NOT user-input waits [0.06ms]
+(pass) zombie branch stands down on human-input waits with its own ledger event [0.30ms]
+(pass) stand-down ledger is latched per silent episode, not per tick [0.26ms]
+(pass) the abort path is untouched when NO human-input tool is in flight [0.12ms]
+
+tests/false-repair-card.test.ts:
+(pass) parser: the field 'Verify the shipped ...' item keeps its intent in the OBJECTIVE [213.31ms]
+(pass) parser: short-marker forms still parse as contract-only declarations [0.20ms]
+(pass) derivation: the field contract yields its leading imperative sentence; junk yields null [0.40ms]
+(pass) behavioral: a legacy empty-objective item with a clean contract activates with the derived objective [1673.32ms]
+[run-tests] progress: 2280s elapsed · 1s since last output · 339 KiB of suite output
+(pass) behavioral: a legacy empty-objective item with NO contract still takes the true repair path [1624.79ms]
+(pass) behavioral: a fresh batch item written from the field text activates directly — the writer fix end-to-end [1287.69ms]
+
+tests/subagent-session-ledger.test.ts:
+(pass) guard: a spawn observed before any session binds writes nothing [1703.87ms]
+(pass) Agent-tool spawn appends subagent_session (id + summary) to the ledger [1619.54ms]
+(pass) the reference survives a restart: the ledger entry persists across a /reload [3089.86ms]
+(pass) every spawn appends — re-observation of an id (resume/re-run) adds fresh evidence [1524.99ms]
+(pass) malformed payloads are dropped, not crashy [1798.53ms]
+
+tests/approved-audit-settles.test.ts:
+(pass) an approved stored claim settles and never falls into the residual-failure tail [5510.89ms]
+(pass) v0.38.104: the approval branch terminates after the settlement driver [1.96ms]
+
+tests/empty-provider-response.test.ts:
+(pass) v0.38.104 the field error is recognised as an empty response [0.60ms]
+(pass) v0.38.104 a message that merely CONTAINS 'empty' is not a provider glitch [0.05ms]
+(pass) v0.38.104 an empty response is neither a quota wall nor a deterministic client error [0.20ms]
+(pass) v0.38.104 an empty response retries EAGERLY, not on the 15-minute ladder [228.74ms]
+(pass) v0.38.104 the eager window is bounded, then the normal ladder takes over [0.66ms]
+(pass) v0.38.104 other failures keep the historical ladder untouched [0.30ms]
+(pass) v0.38.104 a quota wall still wins over the eager empty-response path [0.11ms]
+(pass) v0.38.104 the FIRST attempt honours the upstream reset hint too (no 5s probe of a named wall) [0.23ms]
+
+tests/structured-summary.test.ts:
+(pass) renderer removes empty evidence parentheses without losing the finding [200.28ms]
+(pass) headline echo uses the Outcome lead paragraph, never flattened headers [2.14ms]
+(pass) detector: two ##/### headers earn the structured path, one does not [0.07ms]
+(pass) extractor preserves newlines and tables, segments other labels [0.18ms]
+(pass) extractor: last line-anchored restatement wins [0.07ms]
+(pass) card: structured Outcome renders a full ### Summary section, headline stays short [0.70ms]
+(pass) card: unstructured summaries keep today's shape — no Summary section [1.00ms]
+(pass) card: one-action Next survives the structured body [0.62ms]
+(pass) card: machine paths stay archive-only inside structured lines [0.71ms]
+(pass) guard: pathological structured values end with an honest pointer [5.88ms]
+(pass) doctrine: horizon lives in Summary, Next names only the immediate move [0.74ms]
+(pass) archive human layer carries the same Summary section [0.70ms]
+
+tests/pause-informativeness.test.ts:
+(pass) wrap: short text stays one line; long text wraps at width; cap ellipsizes [200.97ms]
+(pass) paused card wraps the reason over multiple lines instead of truncating at 60 [1.37ms]
+(pass) paused card answers 'did I lose the work?' with a saved line [0.97ms]
+(pass) paused card wraps the suggested action and closes the branch on its last line [0.51ms]
+(pass) pause handoff preserves the full reason while presenting the concrete action separately [1.16ms]
+(pass) pause_goal tool: structured kind/options/recommended/resumeAt persist to the goal (v0.28.22) [4.22ms]
+(pass) pause_goal description: teaches the real command surface + no-id vocabulary (v0.28.24) [1.35ms]
+(pass) late pause calls cannot overwrite a paused or auditing lifecycle [0.34ms]
+(pass) v0.28.30: pause/abort notifies name the policy (List item vs Goal) via goalNoun [67.91ms]
+(pass) v0.34.98: long-wait pause (> 6h) surfaces a tweak-prompt notification + ledger entry [10.72ms]
+(pass) v0.34.98: short-wait pause (≤ 6h) does NOT trigger the tweak offer [7.01ms]
+
+tests/loop-oneshot-consume.test.ts:
+(pass) v0.39.38 a sent loop turn consumes its one-shot directives on disk [1565.15ms]
+(pass) v0.39.38 an unpersistable consume re-arms RAM and notifies instead of diverging silently [1205.64ms]
+
+tests/adaptive-wait.test.mjs:
+(pass) estimateDurationFromHistory uses median with headroom and fallback bounds [238.00ms]
+(pass) nextPollMs doubles each attempt capped at 1s [0.14ms]
+(pass) waitForDurableEvent works with adaptive poll intervals [55.50ms]
+[run-tests] progress: 2310s elapsed · 0s since last output · 343 KiB of suite output
+(pass) smoke wait_for uses adaptive polling (check-if-done, 250->1000) [221.41ms]
+
+tests/ui-polish.test.ts:
