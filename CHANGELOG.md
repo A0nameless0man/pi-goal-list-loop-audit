@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.39.40 — durable update checks, consent gates and shipped-doc guards (2026-10-20)
+
 ### Project review follow-ups
 
 - Update refreshes share one in-flight check per state-root binding, back off
