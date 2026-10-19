@@ -3823,3 +3823,4 @@ tests/stale-settling-retry.test.ts:
 (pass) stale retry refuses to re-audit a settling claim (origin=provider-retry) [393.25ms]
 (pass) stale retry refuses to re-audit a settling claim (origin=session-retry) [87.93ms]
 (pass) stale retry refuses to re-audit a settling claim (origin=auto-resume) [6.69ms]
+[run-tests] progress: 1830s elapsed · 20s since last output · 288 KiB of suite output
