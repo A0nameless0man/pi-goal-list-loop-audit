@@ -1481,6 +1481,10 @@ function resolveCarryover(ctx: ExtensionContext, trigger: "goal" | "loop" | "lis
   } else if (snap.pausedGoal) {
     waiting.push(`paused goal "${displaySlice(snap.pausedGoal, 60)}" (${workCommand(snap.pausedGoalPolicy, "resume")})`);
   }
+  // Archives above are independently committed. Roll back only the queue /
+  // held-loop proposal below if its final snapshot cannot land, never an
+  // already archived predecessor.
+  const beforeResolution = { ...state, loop: state.loop ? { ...state.loop } : state.loop };
   if (snap.listCount > 0 || policy === "clear") {
     if (policy === "clear") {
       // Carryover clear must remove the durable union, not only RAM. The
@@ -1506,12 +1510,18 @@ function resolveCarryover(ctx: ExtensionContext, trigger: "goal" | "loop" | "lis
       waiting.push(`held loop "${displaySlice(snap.heldLoop, 60)}" (/loop to resume)`);
     }
   }
-  // Do not consume the snapshot until every terminal archive above has
-  // succeeded. A failed archive leaves the paused objective and this
-  // carryover decision retryable on the next activation attempt.
+  // Sidecar removal alone does not commit the empty queue: readState also
+  // replays the journal list. Keep this decision retryable until the state
+  // snapshot lands, and do not admit replacement work on a refused write.
+  if (!persistState(ctx)) {
+    replaceState(beforeResolution);
+    refreshUI(ctx, true);
+    appendLedger(ctx.cwd, "carryover_resolution_persist_failed", { policy, trigger });
+    ctx.ui.notify("Carryover resolution could not be saved — the queue and held loop remain recoverable. Fix .pi-glla storage and retry; no replacement was started.", "warning");
+    return false;
+  }
   carryoverResolved = true;
   carryoverSnapshot = null;
-  persistState(ctx);
   appendLedger(ctx.cwd, "carryover_resolved", { policy, trigger, cleared: done.length, waiting: waiting.length });
   const summary = [...done.map((d) => `✂ ${d}`), ...waiting.map((w) => `⏸ ${w}`)].join(" · ");
   if (!summary) return true;
