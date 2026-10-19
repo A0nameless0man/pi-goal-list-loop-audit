@@ -1,5 +1,6 @@
 import { safeDiagnostic } from "./safe-diagnostic.js";
 import { humanCheckTime, humanTextPreview } from "./human-handoff.js";
+import { auditReworkOverview } from "./audit-rework-handoff.js";
 import { respecAuditObservation, respecAuditStatus, respecBlockerHeadline, type RespecAuditLiveScope } from "./respec-builder-ui.js";
 /**
  * pi-goal-list-loop-audit — v0.9.0
@@ -611,11 +612,13 @@ interface ActiveAttention {
   detail: string;
   /** A concise, durable excerpt survives when the continuation turn never starts. */
   feedback?: string;
+  rework?: ReturnType<typeof auditReworkOverview>;
 }
 
 interface LatestAuditFeedback {
   label: "completion review disapproved" | "regression shield";
   text: string;
+  rework?: ReturnType<typeof auditReworkOverview>;
 }
 
 function latestAuditFeedback(g: Goal): LatestAuditFeedback | undefined {
@@ -635,9 +638,11 @@ function latestAuditFeedback(g: Goal): LatestAuditFeedback | undefined {
     .replace(/<\/?(?:approved|disapproved|impossible)(?:\s[^>]*)?\s*\/?>(?:\s*)/gi, "")
     .trim();
   if (!report) return undefined;
+  const rework = verdict.disapproved ? auditReworkOverview(safeReport) : undefined;
   return {
     label: verdict.disapproved ? "completion review disapproved" : "regression shield",
-    text: truncate(report, 320),
+    text: rework ? rework.items.join(" · ") || "Read the saved auditor report before resubmitting." : truncate(report, 320),
+    rework,
   };
 }
 
@@ -745,11 +750,13 @@ function activeAttention(g: Goal): ActiveAttention | undefined {
     };
   }
   if (/auditor disapproved/i.test(g.pauseReason)) {
+    const feedback = latestAuditFeedback(g);
     return {
       label: "completion review disapproved — fix the gap",
       color: "error",
       detail: "completion review: disapproved",
-      feedback: latestAuditFeedback(g)?.text,
+      feedback: feedback?.text,
+      rework: feedback?.rework,
     };
   }
   if (/auditor|completion audit/i.test(g.pauseReason)) {
@@ -1505,6 +1512,13 @@ function projectDisplayStatus(state: State, audit: AuditDisplayProgress | null |
       actionability: !observed.live && !observed.toolWait && observed.phase !== 'queued' ? 'inspect' : 'automatic',
       nextAction: '/loop status for audit activity and recovery details' };
   }
+  if ((status.mode === 'goal' || status.mode === 'list') && goal?.status === 'active'
+    && /auditor disapproved/i.test(goal.pauseReason ?? '') && !auditorSurfaceSuppressed(goal.id)
+    && status.execution === 'unconfirmed') {
+    // A saved retry is not a running repair. Give the person a concrete
+    // re-engagement action, without asking them to perform the agent's fixes.
+    return { ...status, actionability: 'user', nextAction: 'Send "continue" here' };
+  }
   if (status.mode !== 'goal' && status.mode !== 'list' || goal?.status !== 'auditing') return status;
   if (!audit || auditRecoveryPending(goal) || durablePhaseOverride(goal.pendingCompletion, audit, context.now)) {
     const savedActivity = Date.parse(goal.pendingCompletion?.lastActivityAt ?? '');
@@ -1535,6 +1549,7 @@ function uiSafeText(value: string, prose = false): string {
 function workflowLabel(status: UiStatus): string {
   if (status.checkAt) return 'scheduled wait';
   if (status.wakeOwner && status.workflow === 'working') return 'background wait';
+  if (status.workflow === 'working' && status.execution === 'unconfirmed') return 'work saved';
   if (status.workflow !== 'paused') return status.workflow;
   return status.pauseSource === 'agent' ? 'paused by agent'
     : status.pauseSource === 'user' ? 'paused by you'
@@ -1648,6 +1663,17 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   // durable-feedback rows on the glance card — the user must not rely on a
   // turn that may never start to see the required fixes.
   const attention = g && g.status === 'active' ? activeAttention(g) : undefined;
+  if (compact && attention?.rework && status.execution !== 'blocked' && status.execution !== 'dormant') {
+    const rework = attention.rework;
+    rows.push(row('├─ ', `review: changes requested${rework.count ? ` · ${rework.count} corrections` : ''}`, 'warning'));
+    const budget = Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3);
+    const task = rework.items[0] ?? 'Read the saved report before resubmitting';
+    wrap(`agent: ${task}`, budget, 2).forEach((line, i) => rows.push(row(i ? '│  ' : '├─ ', line, 'dim', true)));
+    const action = status.execution === 'unconfirmed' ? 'send "continue" here' : 'no action needed; agent owns rework';
+    wrap(`you: ${action}`, budget, 2).forEach((line, i) => rows.push(row(i ? '│  ' : '├─ ', line, 'dim', true)));
+    rows.push(row('└─ ', 'details: /glla status'));
+    return rows;
+  }
   if (attention) {
     const budget = budgetFor(width, 3, 60);
     rows.push(row('├─ ', attention.detail, attention.color));
