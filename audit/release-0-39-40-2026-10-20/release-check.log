@@ -2829,3 +2829,215 @@ Switched to branch 'main'
 (pass) v0.35.x: stale terminal keeps a recovery probe and self-heals without reload [895.10ms]
 (pass) v0.34.48: host-session loss without replacement session_start parks durably and rejects late callbacks [2811.76ms]
 (pass) v0.35.x: host loss keeps durable auditor disapproval feedback visible [686.11ms]
+(pass) v0.35.x: full auditor reports and required-fixes tails survive lifecycle boundaries [17618.22ms]
+(pass) S3: a mid-session absorb publishes the owner file, so the shutdown handoff still validates [1881.84ms]
+(pass) v0.34.25: silent swap — live file-backed successor is absorbed via a tool call and the work auto-resumes [2011.30ms]
+[run-tests] progress: 1020s elapsed · 0s since last output · 213 KiB of suite output
+(pass) v0.34.25: silent swap — in-memory (subagent) ctx is still refused and the park stays honest [992.19ms]
+(pass) v0.34.25: the field ordering — stale before compaction, then the successor's compact event absorbs in place [1333.36ms]
+(pass) v0.34.25: dead owner + ephemeral ctx cannot claim the plane (subagent lockout fix) [470.39ms]
+(pass) S4: a transient lastCtx probe glitch fails one tool call closed without dropping the context [89.30ms]
+(pass) v0.34.27: stale host recovery absorbs the first replacement contact across lifecycle and stream boundaries [8830.82ms]
+(pass) v0.34.27: plain startup from a dead file-backed successor is not rejected as a subagent [1177.19ms]
+(pass) v0.38.68 reviewer P1: compact-defer settles without kicking a turn into the hot window [2510.82ms]
+(pass) manual pause+resume between exhaustion episodes restarts the relentless cycle [2997.60ms]
+(pass) v0.34.26: repeated output-token truncation pauses the goal durably with re-scope guidance and a fresh resume budget [2844.86ms]
+(pass) v0.34.26: output-token-limit provider errors pause with the named wall, not generic provider-error text [1540.23ms]
+(pass) goal draft rejects whitespace-only objectives before Confirm or activation [8.93ms]
+(pass) task-list Confirm discloses milestone verification commands [1392.46ms]
+(pass) T1a: stale Confirm in propose_goal_draft → NOT-a-rejection guidance, no goal created [13.39ms]
+(pass) T1b: stale /goal start → goal persisted to .pi-glla with honest notify [87.37ms]
+(pass) drafting state is not left behind by a stale seed, and old confirmations cannot mutate a replacement session [2605.18ms]
+(pass) auto-accept escape hatch: ALWAYS choice persists project autoAcceptDrafts and accepts the draft [409.63ms]
+(pass) escape hatch: a later draft skips the dialog entirely once autoAcceptDrafts landed [184.35ms]
+(pass) source pin: all five draft-class dialogs route through confirmDraft with the 3-choice ALWAYS option [196.52ms]
+[run-tests] progress: 1050s elapsed · 2s since last output · 215 KiB of suite output
+(pass) quota error turns enter durable main-model recovery instead of a resend storm [4312.82ms]
+(pass) main-model recovery external notices are deduplicated per provider episode [1420.88ms]
+(pass) request-rate prose uses the generic fallback chain [863.09ms]
+(pass) explicit 429-shaped errors use the generic fallback chain [1007.57ms]
+(pass) a successful core retry clears generic provider recovery and resumes the parked goal [2205.30ms]
+(pass) v0.35.x: a successful main-model recovery gives a parked audit its one automatic retry [4424.35ms]
+(pass) a user-aborted agent_end does not falsely clear main-model recovery [1405.27ms]
+(pass) recoverable error turns enter generic recovery before stall accounting [869.11ms]
+(pass) explicit prompt-policy rejection pauses the owning goal without retrying [1314.16ms]
+(pass) carryover pause (default): new goal over stale paused goal+list+held loop → ONE summary, goal archived, list+loop kept [580.74ms]
+(pass) carryover=clear: new goal drops the queue, dismisses the held loop, archives the paused goal [811.42ms]
+(pass) v0.35.4: a recovered sidecar is hydrated before list mutations [1189.55ms]
+(pass) /loop cancel: first-class alias stops the loop (stopReason recorded) [609.12ms]
+(pass) /loop finish persists and notifies the complete six-label recap [1083.99ms]
+(pass) one-active-thing tool guards: list_activate + propose_loop_draft + propose_goal_draft refuse over the wrong active kind [12.22ms]
+(pass) one-active-thing: /goal resume guard remains; the load-time combo is auto-arbitrated (v0.29.6) [1386.63ms]
+(pass) v0.29.6: stacked state at load is AUTO-ARBITRATED — most recent activity keeps the slot, loser archived (supersedes the 0.28.21 picker) [2711.73ms]
+(pass) carryover via /list next (pause): summary fires BEFORE the stale item activates; paused goal archived, held loop kept [904.69ms]
+(pass) carryover via /list next (clear): the stale queue is dropped BEFORE activation — nothing activates [987.04ms]
+(pass) carryover=resume: legacy silent stacking — no summary, queue + held loop untouched [1002.51ms]
+(pass) /list audit: queues a collect-only audit item with the restart-safe marker [701.20ms]
+(pass) /goal decide: content pick → decision sent to the agent + goal resumes [2221.58ms]
+[run-tests] progress: 1080s elapsed · 0s since last output · 217 KiB of suite output
+(pass) /goal decide: Escape (undefined) → goal stays paused, nothing sent [981.66ms]
+(pass) /goal decide: command option (/goal cancel) runs the command, not a message [998.45ms]
+(pass) /goal decide: no pending decision → notify, no picker [600.17ms]
+(pass) /goal status + /goal pause: no goal id in user-facing text (v0.28.24) [894.81ms]
+(pass) goal-start notify has no (id: …) suffix (v0.28.24 source pin) [105.04ms]
+(pass) v0.34.21 lifecycle: completion audit from a replaced generation leaves the stored claim intact [1196.70ms]
+(pass) v0.34.119: impossible completion counts reach the durable auditor claim before the worker starts [4904.74ms]
+(pass) v0.34.22: complete_goal returns while a detached auditor finishes and archives approval [6521.24ms]
+(pass) v0.35.x: provider-wall diagnostics stay durable while completion surfaces remain sanitized and deduplicated [12570.68ms]
+(pass) v0.35.x: /glla audits full sanitizes active and global reports [14.31ms]
+[run-tests] progress: 1110s elapsed · 2s since last output · 218 KiB of suite output
+(pass) v0.35.x: bare 403 main recovery sanitizes live surfaces while retaining diagnostics [1688.76ms]
+(pass) v0.35.x: bare 403 completion diagnostics stay durable while completion surfaces remain sanitized [13215.48ms]
+(pass) v0.34.119: auditor-approved list completion archives the item and activates exactly the next queue item [2984.53ms]
+(pass) v0.36.2: approved standalone completion automatically activates a pre-queued list head [3936.30ms]
+(pass) v0.34.91: detached approval notify carries the agent's completion recap, not process boilerplate [3262.62ms]
+(pass) v0.34.87: complete_goal on a paused item names the pause + resume verb, not a flat 'No active goal' [506.87ms]
+(pass) v0.34.22: detached disapproval resumes the goal with a durable report [3896.42ms]
+[run-tests] progress: 1140s elapsed · 2s since last output · 219 KiB of suite output
+(pass) v0.35.x: a detached approval blocked by the regression shield is not relabeled [3433.01ms]
+(pass) v0.34.22: an old detached result cannot archive after session replacement [1970.93ms]
+(pass) v0.34.21 lifecycle: cold startup holds a recovered claim until explicit resume [898.76ms]
+(pass) v0.35.x: validated session handoff auto-retries a parked completion audit [4221.11ms]
+(pass) v0.35.x: explicit Auto-resume retries a parked claim on cold startup [3276.12ms]
+(pass) v0.35.x: manual /list resume retries a parked list completion claim directly [4626.83ms]
+(pass) v0.35.x: one automatic parked-audit retry is durable across repeated lifecycle events [566.70ms]
+(pass) v0.35.x: stale host replacement session_start auto-recovers the parked audit [6116.05ms]
+(pass) v0.35.x: healthy same-session heartbeat recovers a parked completion audit without manual resume [4092.11ms]
+[run-tests] progress: 1170s elapsed · 3s since last output · 220 KiB of suite output
+(pass) v0.36.0: exhausted no-verdict auditor chain enters the shared ladder with an automatic retry timer [9023.82ms]
+(pass) bounded recovery: initial aggressive completion preserves its horizon and exhausted chain [9607.55ms]
+(pass) v0.35.x: stale host loss releases an in-flight completion audit without a verdict [11488.67ms]
+(pass) v0.34.29: audit fan-out honors autoAcceptDrafts without opening confirmation [77.15ms]
+(pass) v0.34.129: fan-out dedupe does not drop a finding whose prefix appears inside another queue item [192.49ms]
+(pass) v0.34.129: fan-out reports cap-deferred findings separately from true queue dedupes [122.13ms]
+(pass) v0.34.20 lifecycle: fan-out confirmation from the old generation cannot queue into its replacement [286.91ms]
+(pass) v0.34.20 lifecycle: loop measurement abandons the old generation after replacement [1891.85ms]
+[run-tests] progress: 1200s elapsed · 0s since last output · 221 KiB of suite output
+(pass) v0.34.25: a resolved auditor model failure advances to the session fallback without a verdict [1008.72ms]
+(pass) v0.35.x: zero-stream zombie auto-aborts and parks a list item without a retry storm [2702.22ms]
+(pass) v0.35.x: zero-stream loop termination preserves and notifies its recap [8.59ms]
+(pass) v0.35.4: zombie watchdog stands down while a subagent wait is in flight [97.69ms]
+(pass) v0.35.64: a stale subagent probe no longer shields unrelated parent cleanup [86.58ms]
+(pass) v0.35.4: context-starved warning is one-shot per refusal episode [102.70ms]
+(pass) audit-2026-09-06: measure test-run dialogs disclose the pre-confirm exec [98.02ms]
+(pass) tweak carries its revision bump inside the durable patch (no phantom revision) [2998.77ms]
+(pass) resetContinuationDispatchState clears the in-memory pending ref (S2 audit) [1.06ms]
+
+tests/state-root-owner.test.ts:
+(pass) normalizeOwnerAt tolerates number and ISO, rejects garbage [204.05ms]
+(pass) looksLikePi admits pi hosts, refuses sleep, abstains on unknown [102.42ms]
+(pass) classifyOwner covers the full matrix [102.37ms]
+(pass) describeOwner returns null for self, shape for foreign [99.03ms]
+(pass) takeover with no record claims silently [272.45ms]
+(pass) takeover of a dead owner reclaims without signaling [111.80ms]
+(pass) takeover of self reclaims (same-process sessions always win) [97.81ms]
+(pass) live owner without confirm returns needs-confirm and touches nothing [287.97ms]
+(pass) confirmed takeover of a non-pi process is refused, survivor unclaimed [220.56ms]
+(pass) persistent signal permission failure refuses after one attempt without reclaim [95.96ms]
+(pass) failed signal reclaims only after the owner is proven dead [104.10ms]
+(pass) confirmed takeover SIGTERMs a pi-shaped owner, verifies exit, claims [883.35ms]
+(pass) owner surviving SIGTERM is never claimed [815.27ms]
+(pass) recycled pid is unlinked without signaling the innocent occupant [325.10ms]
+(pass) heartbeat refresh is throttled and owner-scoped [399.19ms]
+(pass) /glla owner reports unclaimed / self / live holder [682.64ms]
+(pass) /glla takeover end to end reclaims a dead root via command [108.29ms]
+(pass) /glla takeover aborts on dismissed confirm without signaling [386.52ms]
+(pass) source pins the new escape hatches on both read-only warnings [107.71ms]
+(pass) audit-2026-09-06: takeover re-verifies the occupant at signal time [322.75ms]
+
+tests/auditing-standstill.test.ts:
+(pass) agent turns during a pending audit stay silent instead of escalating [2899.97ms]
+
+tests/repair-card-loop-block.test.ts:
+(pass) v0.35.22: activating a queued item under a LIVE loop refuses LOUDLY — warning names the queued item and the way out [2494.43ms]
+(pass) v0.35.22: when the loop ends, the blocked item becomes startable — /loop stop advances the queue [1393.86ms]
+(pass) v0.35.41: the stuck-ladder stop also announces queued-list resumption [897.98ms]
+(pass) v0.35.41: explicit user interrupt cap stop announces queued-list resumption [1593.55ms]
+(pass) provider outages retain loop supervision and queue until explicit user stop [685.89ms]
+
+tests/summary-readability.test.ts:
+(pass) chat removes repeated Remaining narration but retains the distinct next action and archive text [109.35ms]
+(pass) exact redundant next sentence adds no second copy; differing qualifiers stay intact [0.27ms]
+(pass) abbreviations cannot delete a distinct provider prohibition [0.16ms]
+(pass) ambiguous abbreviation endings and partial repeated clauses are retained [0.34ms]
+(pass) partial repeats retain the full instruction instead of inferring sentence boundaries [0.12ms]
+(pass) case-sensitive evidence is never treated as a verbatim repetition [0.09ms]
+(pass) similar same-label heads cannot erase distinct trailing facts or negations [0.11ms]
+(pass) plain finding prose and bold area hierarchy preserve complete claims and archive styling [1.32ms]
+
+tests/zombie-subagent-tool-name.test.ts:
+(pass) v0.35.26 #13: an in-flight 'subagent' call stands down the zombie abort until it settles [369.99ms]
+(pass) v0.35.26 #13: the blocking 'subagent_wait' tool gets the same stand-down [15.25ms]
+(pass) v0.35.26 #13: both watchdog sites consume the shared isSubagentWaitCall name set [0.62ms]
+
+tests/recovery-terminal-runtime.test.ts:
+[run-tests] progress: 1230s elapsed · 1s since last output · 225 KiB of suite output
+(pass) goal: explicit cancellation removes its recovery and cancels both timers immediately [599.58ms]
+(pass) list: explicit cancellation removes its recovery and cancels both timers immediately [793.90ms]
+(pass) loop: explicit cancellation removes its recovery and cancels both timers immediately [711.53ms]
+(pass) terminal archive does not adopt or delete explicitly unrelated ordinary-chat recovery [885.17ms]
+
+tests/tool-overrides.test.ts:
+(pass) Settings type accepts toolOverrides (allow / hide / perToolConfig) [130.17ms]
+(pass) SETTINGS_KEYS includes toolOverrides for provenance tracking [0.17ms]
+(pass) goal.ts ensureAgentToolsActive applies toolOverrides.allow and .hide [29.30ms]
+(pass) /glla tooloverride keyword routes to cmdToolOverride [6.00ms]
+(pass) cmdToolOverride supports allow / hide / unallow / unhide / set / unset / list [0.53ms]
+(pass) parseToolOverrideValue coerces booleans, numbers, JSON; else string [0.58ms]
+(pass) reviewer 4-mode set (off | on | auto | aggressive) is the contract surface [4.28ms]
+(pass) legacy 'default' and 'report' modes auto-migrate to 'on' in resolveReviewerConfig [0.14ms]
+(pass) paused widget renders `awaiting first turn` for zero-telemetry (literal contract) [5.46ms]
+(pass) auditor prompt (extensions/goal-loop-auditor.ts) carries the chunk-near-context-full hint [3.13ms]
+
+tests/respec-builder-wiring.test.ts:
+(pass) actual respec command and tools persist intended scope, batch and audit claim [1180.67ms]
+(pass) declining intended scope leaves the project drafting with no adopted requirements [18.77ms]
+(pass) registered blocker and refinement tools preserve work and require consent to change scope [90.55ms]
+(pass) project blockers automatically show generic actions after journaling, without dispatch or implicit resolution [392.74ms]
+(pass) work obstacles keep building and mistaken blocker-only holds release without verifying scope [497.85ms]
+(pass) held blocker reviews receive the durable project contract without silently releasing dependencies [203.50ms]
+
+tests/subagent-host-boundary.test.ts:
+(pass) v0.35.62: a worker cannot be the first claimant, while host telemetry still records Explore [366.92ms]
+(pass) v0.35.62: foreign slash commands cannot mutate the host list [11.06ms]
+(pass) v0.35.62: persistent workers cannot masquerade as silent host successors [96.62ms]
+(pass) v0.35.72: state-root read-only denial hints at sessionDir via the MAIN-owner refusal [97.01ms]
+
+tests/mechanical-pipeline-lifecycle.test.ts:
+(pass) Node callers survive noisy early-closing filters and retain head failure/cancellation [2366.73ms]
+
+tests/heartbeat-suppression-rework.test.ts:
+(pass) lastShippedAtMs ignores the state-file mtime (the self-sustaining term) [126.58ms]
+(pass) lastShippedAtMs source has no active.jsonl mtime term [0.22ms]
+(pass) heartbeat never calls the suppression check; audit-in-flight flag guards the only real window [0.81ms]
+(pass) the deprecated pure fn remains exported (API compat) but marked deprecated [0.11ms]
+(pass) no heartbeat_suppressed ledger writes remain in the heartbeat path [0.49ms]
+(pass) project auditor dispatch is protected before counting failed main-session continuations [0.13ms]
+
+tests/prompt-subagent-retry-guidance.test.ts:
+(pass) continuation prompt treats provider wording as generic retryable failure (item 38) [0.36ms]
+(pass) continuation prompt resumes or retries a failed subagent without a reset wait [0.11ms]
+
+tests/supervised-provider-exhaustion-runtime.test.ts:
+[provider-exhaustion] goal: 1/2101 durable failure/probe cycles verified
+[provider-exhaustion] goal: 250/2101 durable failure/probe cycles verified
+[run-tests] progress: 1260s elapsed · 7s since last output · 228 KiB of suite output
+[provider-exhaustion] goal: 500/2101 durable failure/probe cycles verified
+[run-tests] progress: 1290s elapsed · 5s since last output · 228 KiB of suite output
+[provider-exhaustion] goal: 750/2101 durable failure/probe cycles verified
+[provider-exhaustion] goal: 1000/2101 durable failure/probe cycles verified
+[provider-exhaustion] goal: 1250/2101 durable failure/probe cycles verified
+[run-tests] progress: 1320s elapsed · 0s since last output · 229 KiB of suite output
+[provider-exhaustion] goal: 1500/2101 durable failure/probe cycles verified
+[provider-exhaustion] goal: 1750/2101 durable failure/probe cycles verified
+[provider-exhaustion] goal: 2000/2101 durable failure/probe cycles verified
+[provider-exhaustion] goal: 2101/2101 durable failure/probe cycles verified
+(pass) goal: 2101 provider exhaustion failures preserve work then continue [83965.35ms]
+[provider-exhaustion] list: 1/2101 durable failure/probe cycles verified
+[provider-exhaustion] list: 250/2101 durable failure/probe cycles verified
+[run-tests] progress: 1350s elapsed · 2s since last output · 229 KiB of suite output
+[provider-exhaustion] list: 500/2101 durable failure/probe cycles verified
+[provider-exhaustion] list: 750/2101 durable failure/probe cycles verified
+[run-tests] progress: 1380s elapsed · 5s since last output · 229 KiB of suite output
+[provider-exhaustion] list: 1000/2101 durable failure/probe cycles verified
+[provider-exhaustion] list: 1250/2101 durable failure/probe cycles verified
