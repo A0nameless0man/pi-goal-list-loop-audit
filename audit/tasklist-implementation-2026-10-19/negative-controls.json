@@ -1,0 +1,39 @@
+[
+  {
+    "control": "refresh-coalescing",
+    "exit": 1,
+    "failures": [
+      "(fail) contacts share one refresh per root, while independent roots can refresh [1.87ms]",
+      "(fail) refresh throw preserves old cache and imposes retry backoff [0.61ms]",
+      "(fail) refresh error preserves old cache and imposes retry backoff [0.34ms]",
+      "(fail) refresh nonzero preserves old cache and imposes retry backoff [0.37ms]",
+      "(fail) refresh timeout preserves old cache and imposes retry backoff [139.30ms]"
+    ]
+  },
+  {
+    "control": "refresh-root-fence",
+    "exit": 1,
+    "failures": [
+      "(fail) late cache write is refused after unresolved [1.04ms]",
+      "(fail) late cache write is refused after rebind [0.27ms]",
+      "(fail) late cache write is refused after same-directory-rebind [0.26ms]",
+      "(fail) late cache write is refused after selector [0.28ms]",
+      "(fail) late cache write is refused after unreadable [0.33ms]"
+    ]
+  },
+  {
+    "control": "clear-imperative",
+    "exit": 1,
+    "failures": [
+      "(fail) clear-repos imperative with failure counts is actionable; explicit report tails remain guarded [9.45ms]",
+      "(fail) interviewed auto-accepted clear-repos draft activates without synthetic repair work [150.41ms]"
+    ]
+  },
+  {
+    "control": "package-links",
+    "exit": 1,
+    "failures": [
+      "(fail) release contract: published documentation links are covered by the npm tarball [821.17ms]"
+    ]
+  }
+]

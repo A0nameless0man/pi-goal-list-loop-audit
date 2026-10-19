@@ -1,0 +1,28 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=180s heartbeat=30s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/inventory-globals.test.ts:
+(pass) v0.39.38: the globals list extracts by marker, not by position [0.45ms]
+(pass) v0.39.38: a renamed marker fails with a named error, not a bare TypeError [0.70ms]
+(pass) v0.39.38: baseline drift reports both numbers; match stays silent [0.21ms]
+(pass) v0.39.38: the live bridge set still matches its audit baseline [0.72ms]
+
+tests/list-invisible-restart.test.ts:
+(pass) v0.35.21: session_start converges a disk-sidecar queue the state ledger lost, and the widget renders it [201.67ms]
+(pass) v0.35.61: a waiting-only queue is visible and startable without a reload [163.38ms]
+(pass) v0.35.61: silent host replacement rehydrates a sidecar-only waiting queue before repaint [158.18ms]
+(pass) v0.35.72: a newer known sidecar reconciles the in-memory queue item [158.17ms]
+(pass) v0.35.72: activation refuses when the durable sidecar cannot be removed [156.99ms]
+(pass) v0.35.21: convergence is idempotent — an item present in BOTH state and sidecar is not duplicated [158.02ms]
+
+tests/session-rpc-rebind.test.ts:
+(pass) S6: a claim-raised session generation re-binds the subagent RPC host [154.04ms]
+
+tests/runtime-globals-contract.test.ts:
+(pass) runtime global bridge has one typed declaration for every registration [5.88ms]
+(pass) audit-2026-09-06: runtime globals register exactly once per process [0.37ms]
+
+ 13 pass
+ 0 fail
+Ran 13 tests across 4 files. [2.02s]
+[run-tests] finished in 2s (exit 0)

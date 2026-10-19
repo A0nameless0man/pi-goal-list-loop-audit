@@ -1,0 +1,16 @@
+[
+  {
+    "control": "resume-admission",
+    "exit": 1,
+    "failures": [
+      "(fail) registered resume refuses a real transaction write failure and reloads for retry (stored claim=false) [106.31ms]"
+    ]
+  },
+  {
+    "control": "carryover-admission",
+    "exit": 1,
+    "failures": [
+      "(fail) registered carryover refuses final journal failure after predecessor archival, then reloads and retries [124.00ms]"
+    ]
+  }
+]

@@ -1,0 +1,122 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=180s heartbeat=30s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/durable-admission-runtime.test.ts:
+(pass) registered resume refuses a real transaction write failure and reloads for retry (stored claim=false) [90.21ms]
+(pass) registered resume refuses a real transaction write failure and reloads for retry (stored claim=true) [21.63ms]
+(pass) registered carryover refuses final journal failure after predecessor archival, then reloads and retries [80.76ms]
+
+tests/faulty-objective-recovery.test.ts:
+(pass) detects archive-derived and verification-fragment objectives [0.51ms]
+(pass) detects reviewer prose, headings, numbered audit text, and dangling fragments [0.12ms]
+(pass) valid imperative objectives are not flagged [0.06ms]
+(pass) Get test-suite objectives are actionable while explicit report tails stay guarded [0.10ms]
+(pass) valid imperative objectives may mention auditor and verification machinery [0.06ms]
+(pass) imperative implementation requests mentioning audit, verification, or regression stay valid [0.12ms]
+(pass) adverb-qualified recovery objectives are actionable, not verification fragments [0.12ms]
+(pass) queue items that merely name the auditor role are not verification-fragments (2026-08-16 field regression) [0.09ms]
+(pass) auditor/reviewer verdict-shaped text is still a verification-fragment [0.08ms]
+(pass) explicit reviewer and evidence fragments are rejected [0.10ms]
+(pass) the screenshot reviewer fragment records the exact saved-intent repair [0.98ms]
+(pass) recover is a valid imperative for the exact queued detached-auditor item [0.05ms]
+(pass) normalization is an automatic provenance repair [0.12ms]
+(pass) durable original provenance wins over reviewer prose and supplies the saved contract [0.21ms]
+(pass) unverified completion prose is never promoted [0.07ms]
+(pass) approved completion context from an older revision cannot resurrect saved intent [0.09ms]
+(pass) audit history contributes only an actionable required-fix line [0.12ms]
+(pass) all direct continuation and stored-audit paths retain the final gate [0.56ms]
+(pass) durable pending task is preferred when the objective cannot be normalized [0.09ms]
+(pass) irrecoverable suspicious objectives produce a non-suspicious queued repair task [0.14ms]
+(pass) session_start auto-resume blocks a suspicious active objective and queues repair [142.09ms]
+(pass) restored Get test-suite goal is not parked or replaced by a repair task [95.21ms]
+(pass) manual resume retains an adverb-qualified recovery goal without requeueing repair [177.52ms]
+(pass) manual resume blocks a suspicious paused objective before dispatch [184.01ms]
+(pass) list activation blocks a suspicious queued objective and leaves its repair task actionable [302.37ms]
+(pass) repair cards require a concrete replan objective and clear the latch only after confirmation [99.63ms]
+(pass) exact queued detached-auditor objective activates without a repair task [179.81ms]
+(pass) provenance-backed repair auto-applies before dispatch [87.35ms]
+(pass) direct continuation dispatch rechecks the suspicious objective [174.79ms]
+(pass) a canceled goal and stale continuation attempt are hard fences [129.69ms]
+(pass) an archived goal id is a hard fence against stale resurrection [86.37ms]
+(pass) an active goal with an interrupted terminal stopReason is not dispatched [0.95ms]
+(pass) an explicit /goal start objective is dispatched even when the heuristic flags it [0.85ms]
+(pass) v0.35.35: seed trust survives a Done when: clause and @role in the raw seed (createGoal stores raw vs cleaned) [0.90ms]
+(pass) v0.35.35: normalization does not widen trust to agent-authored seeds [4.77ms]
+(pass) agent-authored suspicious objectives still pause — the trust is user-seed only [88.14ms]
+(pass) replan confirmation consumes the source queue fragment and its sidecar [89.05ms]
+(pass) audit-2026-09-06: archivedPath outside the archive dir is an anomaly, not a goal-nulling probe [87.47ms]
+(pass) audit-2026-09-06: archivedPath inside the archive dir still fences [91.86ms]
+(pass) v0.38.101 a title-like heading is an objective, not a pasted report [0.57ms]
+(pass) v0.38.101 a pasted report still trips the heading heuristic [0.09ms]
+
+tests/inventory-globals.test.ts:
+(pass) v0.39.38: the globals list extracts by marker, not by position [0.28ms]
+(pass) v0.39.38: a renamed marker fails with a named error, not a bare TypeError [5.72ms]
+(pass) v0.39.38: baseline drift reports both numbers; match stays silent [0.30ms]
+(pass) v0.39.38: the live bridge set still matches its audit baseline [0.32ms]
+
+tests/update-check-lifecycle.test.ts:
+(pass) contacts share one refresh per root, while independent roots can refresh [13.87ms]
+(pass) refresh throw preserves old cache and imposes retry backoff [0.97ms]
+(pass) refresh error preserves old cache and imposes retry backoff [0.66ms]
+(pass) refresh nonzero preserves old cache and imposes retry backoff [0.46ms]
+(pass) refresh timeout preserves old cache and imposes retry backoff [31.15ms]
+(pass) late cache write is refused after unresolved [0.47ms]
+(pass) late cache write is refused after rebind [0.13ms]
+(pass) late cache write is refused after same-directory-rebind [0.15ms]
+(pass) late cache write is refused after selector [0.13ms]
+(pass) late cache write is refused after unreadable [0.18ms]
+(pass) a stable session root receives its cache beside session state [0.33ms]
+
+tests/suspicious-clear-goal.test.ts:
+(pass) clear-repos imperative with failure counts is actionable; explicit report tails remain guarded [0.76ms]
+(pass) interviewed auto-accepted clear-repos draft activates without synthetic repair work [131.69ms]
+
+tests/release-contract.test.ts:
+(pass) release contract: published documentation links are covered by the npm tarball [761.36ms]
+(pass) release contract: the release gate exercises the packed artifact [0.41ms]
+(pass) release contract: packed prompts, schema, and workers ship in the dry-run list [680.10ms]
+(pass) release contract: changed tests ride the hardened runner [701.81ms]
+(pass) release contract: glla-delegate skill loads without diagnostics (source-tree fast tier) [9.17ms]
+(pass) release contract: docs index tracks the package version [0.11ms]
+(pass) release contract: package is discoverable as a Pi extension and skill [707.17ms]
+(pass) release contract: README package contents claim matches the files allowlist [802.56ms]
+(pass) release contract: first-use README guidance matches current behavior [0.29ms]
+(pass) release contract: smoke waits use durable or literal transition markers [0.72ms]
+(pass) release workflow scopes trusted-publishing OIDC to the publish job [0.32ms]
+(pass) v0.38.32: release runs never share the push-churn concurrency group [1.23ms]
+(pass) release contract: changelog has one heading for the current package version [15.79ms]
+(pass) release contract: untagged source work has an Unreleased changelog section to promote [23.42ms]
+(pass) v0.39.38: every release-check lane uploads its $TMPDIR failure diagnostics [0.52ms]
+
+tests/packaged-markdown-links.test.ts:
+(pass) new shipped pages are checked automatically, including reference links [0.56ms]
+(pass) links support directories, fragments, external targets and code examples [0.15ms]
+
+tests/glla-update-check.test.ts:
+(pass) compareVersions orders semver-ish strings and shrugs at garbage [0.33ms]
+(pass) staleUpdateNudge fires only when the cache proves the registry is ahead [0.08ms]
+(pass) buildVersionTail always names the running version, nudges only when stale [0.04ms]
+(pass) readUpdateCheck returns null for missing, malformed, and future-dated caches [0.66ms]
+(pass) refreshUpdateCheck skips spawn while the cache is within TTL [0.19ms]
+(pass) refreshUpdateCheck shells npm view when stale and caches the latest [0.53ms]
+(pass) refreshUpdateCheck never throws and never writes on registry failure [0.33ms]
+(pass) async spawn error is swallowed, never crashes, never writes [0.19ms]
+(pass) non-version npm stdout never poisons the sidecar [0.19ms]
+(pass) future-dated cache suppresses the spawn instead of causing one per contact [0.17ms]
+
+tests/state-root-consumers.test.ts:
+(pass) resolved consumers follow the selected root — dispatch, stats, audit findings [3.94ms]
+(pass) pending sessionDir defers dispatch, reviewer, and audit writes — no cwd fallback tree [1.54ms]
+(pass) workingDir fallback and PI_SESSION_FILE fallback behave correctly [0.98ms]
+(pass) source pins: raw cwd/.pi-glla hardcodings are gone from consumers [0.89ms]
+
+tests/runtime-globals-contract.test.ts:
+(pass) list handoff uses a typed boundary instead of ambient callable slots [14.09ms]
+(pass) runtime global bridge has one typed declaration for every registration [7.77ms]
+(pass) audit-2026-09-06: runtime globals register exactly once per process [0.44ms]
+
+ 95 pass
+ 0 fail
+Ran 95 tests across 10 files. [9.01s]
+[run-tests] finished in 9s (exit 0)

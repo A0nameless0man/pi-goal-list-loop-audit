@@ -46,10 +46,12 @@ replay; the production archive function and filesystem writers remain real.
   fails five cases, root-fence removal fails five cases, `Clear` removal fails
   both classifier and draft activation, and restored unshipped links fail the
   actual release contract. These mutations never touched live source.
+- Two further admission controls bypass only the resume or carryover durability
+  check. Each makes its registered-runtime filesystem-refusal test fail.
 - Full `npm run release:check`: running; final result will replace this entry.
 
-Evidence will be retained under `tasklist-implementation-2026-10-19/` after the
-full gate settles. The source/test/document hash snapshot taken before that gate
+Evidence is retained under [tasklist-implementation-2026-10-19/](tasklist-implementation-2026-10-19/).
+The source/test/document hash snapshot taken before the full gate
 allows detecting intervening changes; tracked audit evidence and task status
 are separate from ignored machine-local GLLA runtime state. No release,
 dependency upgrade or history rewrite is part of this work.
