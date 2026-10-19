@@ -995,5 +995,7 @@ claim-by-claim, and are the natural next seams:
   `objectiveProvenance`, `solutionJudgment`, `subagentQuotaEvidence` and
   `pauseContractAmendment` definitions were not diffed field-by-field against
   the runtime. The `leftOut` finding above shows this seam is fertile.
-- scripts/ and .github/workflows/ — see the separate scout entry in
-  audit/PROJECT-AUDIT-2026-10-19-V2.md.
+- scripts/ and .github/workflows/ — NOT AUDITED. A bounded read-only scout
+  was dispatched for this seam, ran past its 40-tool-call bound without
+  returning, and was stopped. The seam is open (tasklist #8 in
+  audit/PROJECT-AUDIT-2026-10-19-V2.md).

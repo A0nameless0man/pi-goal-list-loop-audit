@@ -21,6 +21,36 @@
   not-held / released / failed outcomes. Both new guards are red-proven
   against neutralized controls.
 
+### Published contract
+
+- The goal schema now declares `pendingCompletion.leftOut` as a **string**,
+  which is what the runtime has always written. The schema previously
+  declared an array, so any goal the runtime persisted with a non-empty
+  `leftOut` was invalid under the schema shipped in the npm package. The
+  parity fixture now uses the runtime shape, and a regression pins the schema
+  to the runtime.
+
+### Audit rework handoff
+
+- A prose mention of the `<evidence>` tag no longer erases the required-fixes
+  section. The evidence filter matched the substring anywhere, so one sentence
+  such as "the run log is in the `<evidence>` block below" discarded every
+  objection and reported zero corrections for a report that had them. An
+  evidence block is a tag: only a line that *is* the tag opens one.
+- The compact card's `agent:` field now marks a dropped wrapped continuation
+  with `…` instead of presenting a mid-sentence fragment as the complete list
+  of required corrections.
+
+### Documentation
+
+- The README settings table lists all nine sections the menu ships (Designer
+  was missing), `docs/ARCHITECTURE.md` quotes the current slow-file count
+  (13) and ledger event-type count (~410), and `LIST-PHILOSOPHY.md` points at
+  the reviewer design note that exists. A new doc-parity test pins every
+  count that is derived from the code, so the class cannot drift silently.
+- The generated runtime inventory is current again, so the documented release
+  gate `npm run release:check` passes its inventory step.
+
 ## 0.39.39 — actionable audit rejections and compact cards (2026-10-19)
 
 ### Audit rejection handoff

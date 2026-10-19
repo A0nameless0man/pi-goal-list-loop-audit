@@ -12,6 +12,9 @@ through the 2026-10-19 UI-rework release `v0.39.39`.
    not covered — docs-vs-code drift, the new audit-rework UI surfaces, and
    release/packaging/CI plumbing — each with an exclusive file brief, a
    40-tool-call bound and a "quote both sides or drop it" evidence rule.
+   Two returned; the packaging/CI scout **overran its bound without
+   returning** and was stopped, so that seam is explicitly un-audited
+   (tasklist #8).
 3. Every candidate finding was re-verified against the source by the parent
    before it was accepted, and every fix carries a red-proven regression plus
    a **neutralized control** (the guard reverted in place) that fails exactly
@@ -230,10 +233,36 @@ Ordered by expected value. Every item names the evidence that would close it.
 | 5 | **Audit the detailed and interrupted renderers** in `goal-loop-display.ts` (≈lines 1780–2290, 2440–3495), which the compact-card pass did not read. | The compact card is now pinned by regressions; the older renderers are not, and the truncation logic just changed under them. | Same evidence rule; reuse the card fixture. |
 | 6 | **Decide the `you:`-line wording for a queued turn** (open question above). | The card currently asks the user for no action on a turn that has not started. | A maintainer decision, then a pinned case in `tests/audit-rework-handoff.test.ts`. |
 | 7 | **Verify `docs/DESIGN.md` (825 lines) and `docs/RECOVERY.md` (530 lines) claim-by-claim.** | The docs scout read headings and two sections; the prose claims behind them were not verified, and DESIGN.md is the file the recovery design lives in. | A two-scout pass with a strict "quote both sides" rule. |
-| 8 | **Re-check the packaging/CI scout's seams** (see `audit/` for its entry) and re-run it after any release-plumbing change. | The release path is the least-exercised code in the repo. | The scout's own report. |
+| 8 | **Audit the release/packaging/CI plumbing** (`scripts/`, `.github/workflows/`). A scout was dispatched for this seam but **did not return within its bound** and was stopped, so the seam is **un-audited** in this pass. | The release path is the least-exercised code in the repo, and the one place a defect publishes to npm. | Re-dispatch the same bounded brief; it never produced a report. |
 | 9 | **Add a "refused action must not consume a consent gate" invariant test.** This pass found one instance in the tool path; the *shape* of the bug (a refusal that spends a gate) is generic. | A generic invariant would have caught the tool path and would catch the next instance. | A test that asserts no refusal path mutates a gate, across the resume/pause/unblock surfaces. |
 | 10 | **Make the test runner distinguish a broken environment from broken code.** A concurrent `npm ci` emptied `node_modules` mid-run and produced 134 `ENOENT` failures with **zero** assertion failures — indistinguishable from a real regression at a glance. | A 17-minute silent run that ends in 134 confusing failures costs a full triage cycle and can be mistaken for a real break. | A preflight that asserts the dependency tree resolves, an early abort when it does not, and incremental per-file progress in the runner output. |
 | 11 | **Pin the release doc's contract note.** The `leftOut` schema change alters the package's published contract. | A consumer validating a goal file against the shipped schema should know why the type changed. | Release doc content (tasklist #10's release step). |
+
+---
+
+## 4a. Recommended next step — release
+
+The fix set is complete and the CHANGELOG carries it under `## Unreleased`.
+This pass deliberately did **not** bump the version, tag, or publish: tagging
+and publishing are externally visible, irreversible actions, and the repo's
+release contract is the maintainer's to run.
+
+To cut the release:
+
+1. `package.json` + `package-lock.json` → `0.39.40`.
+2. `CHANGELOG.md` — rename the `## Unreleased` heading to
+   `## 0.39.40 — <title> (2026-10-19)` and add a fresh empty `## Unreleased`
+   above it. The release contract requires **exactly one** `## Unreleased`
+   section *and* exactly one `## <version> ` heading
+   (`tests/release-contract.test.ts`).
+3. `docs/INDEX.md` — the active-focus trail must reach the new version
+   (`v0.35.14–v0.39.40`).
+4. `docs/RUNTIME-INVENTORY.md` — regenerate with
+   `node scripts/generate-inventory.mjs` (the gate fails on drift).
+5. Add `audit/RELEASE-0-39-40-2026-10-19.md`, naming the `leftOut` schema
+   contract change.
+6. `npm run release:check`, then tag and publish via
+   `.github/workflows/publish.yml`.
 
 ---
 
@@ -288,5 +317,6 @@ descriptive messages live in this report and in
 - `extensions/goal-continuation.ts` outside the auditor-surface reads.
 - The `tests/` tree as an audit surface in its own right — it was read only as
   corroboration.
-- `scripts/` and `.github/workflows/` — see the separate scout entry in
-  `audit/` for its coverage.
+- `scripts/` and `.github/workflows/` — **not audited**. A bounded read-only
+  scout was dispatched for this seam, ran past its 40-tool-call bound without
+  returning, and was stopped. The seam is still open (tasklist #8).
