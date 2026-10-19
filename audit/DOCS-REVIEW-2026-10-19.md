@@ -379,8 +379,8 @@ All **26** registered mutations pass (20 pre-existing + 6 new).
   reviewer-cascade changes.
 - `node scripts/verify-test-pin-controls.mjs` — **26/26** registered mutations
   rejected as expected (20 pre-existing + 6 new), exit 0.
-- Full fast suite — **3848 pass / 1 skip (env-gated) / 0 fail / 0 errors**
-  across 442 files, exit 0.
+- Full fast suite on the final tree — **3849 pass / 1 skip (env-gated) /
+  0 fail / 0 errors** across 442 files, exit 0.
 
 **One earlier run reported 6 failures, and the distinction matters.** Three
 of them were real: the headless-`/glla` completeness gate caught the missing
@@ -396,6 +396,15 @@ quietly dropped, because "it failed once" and "it never failed" are different
 claims. The runner cannot currently distinguish a slow box from a broken
 build — that gap was already recorded as a follow-up in the 2026-10-19
 project-audit pass and is unchanged.
+
+One further transient, recorded for the same reason: a focused re-run of the
+five touched test files reported "30 pass / 1 fail / 2 errors" and aborted
+before loading two of the five files. The retained diagnostics show the
+cause was not an assertion — `error: EEXIST: file already exists, epoll_ctl`,
+a Bun runtime internal, followed by "Cannot call test() after the test run
+has completed" — because the focused run overlapped the full suite and the
+sync daemon on this loaded box. The identical invocation re-run alone is
+74 pass / 0 fail.
 
 **Neutralized controls were also run in place** on the live tree, not only in
 the disposable harness: each guard was reverted in the working tree, the

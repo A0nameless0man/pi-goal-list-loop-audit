@@ -1066,8 +1066,9 @@ Verification for this pass: `npm run check` clean (exit 0); `npm run
 check:inventory` clean after regenerating docs/RUNTIME-INVENTORY.md;
 focused suites 74 pass / 0 fail across the 5 files this review touched and 65
 pass / 0 fail across the 8 covering the prompt-string and reviewer-cascade
-changes; the mutation harness 26/26 (exit 0); the full fast set 3848 pass /
-1 skip (env-gated) / 0 fail / 0 errors across 442 files, exit 0.
+changes; the mutation harness 26/26 (exit 0); the full fast set on the final
+tree 3849 pass / 1 skip (env-gated) / 0 fail / 0 errors across 442 files,
+exit 0.
 
 One earlier run reported 6 failures and the distinction matters. Three were
 real — the headless-/glla completeness gate caught the missing
