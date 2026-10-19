@@ -125,8 +125,11 @@ test("refreshUpdateCheck never throws and never writes on registry failure", () 
   );
   assert.equal(readUpdateCheck(cwd), null);
   const box: { close: ((code: number | null) => void) | null } = { close: null };
+  // A failed spawn now backs off on its own root. Exercise nonzero exit
+  // independently rather than bypassing that protection on the same root.
+  const otherCwd = tmpRoot();
   refreshUpdateCheck(
-    cwd,
+    otherCwd,
     Date.now(),
     ((..._args: unknown[]) => ({
       on: (_e: string, l: (arg: never) => void) => {
@@ -137,7 +140,7 @@ test("refreshUpdateCheck never throws and never writes on registry failure", () 
     })) as never,
   );
   (box.close as (code: number | null) => void)(1);
-  assert.equal(readUpdateCheck(cwd), null);
+  assert.equal(readUpdateCheck(otherCwd), null);
 });
 
 test("async spawn error is swallowed, never crashes, never writes", () => {

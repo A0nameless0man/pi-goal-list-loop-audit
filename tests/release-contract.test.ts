@@ -5,6 +5,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { loadSkills } from "@earendil-works/pi-coding-agent";
 import { packReportFiles } from "../scripts/npm-pack-report.mjs";
+import { missingPackagedMarkdownLinks } from "../scripts/packaged-markdown-links.mjs";
 
 function dryRunFiles(): Set<string> {
   const raw = execFileSync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
@@ -22,19 +23,8 @@ test("release contract: published documentation links are covered by the npm tar
   for (const required of ["README.md", "INSTALL.md", "PLAN.md", "LIST-PHILOSOPHY.md", "CHANGELOG.md", "docs/INDEX.md", "docs/SETTINGS.md", "media/glla2.png", "examples/example-objective.md", "scripts/release-pack-smoke.mjs", "skills/glla-delegate/SKILL.md"]) {
     assert.ok(files.has(required), `${required} must be shipped`);
   }
-  // Check actual shipped targets rather than banning historical filenames:
-  // PLAN and LIST-PHILOSOPHY now ship and are valid navigation destinations.
-  for (const document of ["README.md", "INSTALL.md", "docs/INDEX.md", "docs/WORKFLOWS.md", "docs/RECOVERY.md"]) {
-    assert.ok(files.has(document), `${document} must ship`);
-    const source = fs.readFileSync(document, "utf-8");
-    for (const match of source.matchAll(/\]\(([^\s)]+)\)/g)) {
-      const target = match[1];
-      if (!target || /^(?:[a-z][a-z0-9+.-]*:|#)/i.test(target)) continue;
-      const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(document), target.split("#")[0] ?? target));
-      const shipped = files.has(resolved) || (resolved.endsWith("/") && [...files].some((file) => file.startsWith(resolved)));
-      assert.ok(shipped, `${document}: ${target} must resolve inside the tarball`);
-    }
-  }
+  assert.deepEqual(missingPackagedMarkdownLinks(files, document => fs.readFileSync(document, "utf8")), [],
+    "every shipped Markdown page must navigate to packaged files or explicit external evidence");
 });
 
 test("release contract: the release gate exercises the packed artifact", () => {

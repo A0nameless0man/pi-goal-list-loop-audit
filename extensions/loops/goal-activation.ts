@@ -252,7 +252,7 @@ import {
   type ProjectRollup,
 } from "../goal-loop-stats.js";
 import { auditorSurfaceKey, releaseAuditorSurface, suppressAuditorSurfaceAfterColdRestore } from "./goal-auditor-surface.js";
-import { shouldSkipApprovalRenderReplay, claimProcessOwner as defaultClaimProcessOwner, writeOwnerFile as defaultWriteOwnerFile } from "./goal-session.js";
+import { pendingListOperations, type PendingListOperationsBoundary, shouldSkipApprovalRenderReplay, claimProcessOwner as defaultClaimProcessOwner, writeOwnerFile as defaultWriteOwnerFile } from "./goal-session.js";
 import {
   cancelDetachedGoalCompletionAuditor,
   cleanupDeadAuditJobs,
@@ -1143,7 +1143,7 @@ export interface ProcessOwnerBoundary {
 export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBoundary = {
   claimProcessOwner: defaultClaimProcessOwner,
   writeOwnerFile: defaultWriteOwnerFile,
-}): void {
+}, listOperations: PendingListOperationsBoundary = pendingListOperations): void {
   const { claimProcessOwner, writeOwnerFile } = ownership;
   let forbiddenModelRevertDepth = 0;
   bindBackgroundWaitRuntime({
@@ -2256,8 +2256,8 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
     const listOperationLifecycleResume = handoffResume
       || (!handoffMarkerPresent && nonQuitShutdownResume);
     const pendingListOperations = listOperationLifecycleResume
-      ? consumePendingListOperations(ctx.cwd, ownerClaim.previousGeneration, ownerClaim.previousOwnerSessionId)
-      : (discardPendingListOperations(ctx.cwd, handoffMarkerPresent ? "handoff-rejected" : "handoff-not-resumed"), [] as string[]);
+      ? listOperations.consume(ctx.cwd, ownerClaim.previousGeneration, ownerClaim.previousOwnerSessionId)
+      : (listOperations.discard(ctx.cwd, handoffMarkerPresent ? "handoff-rejected" : "handoff-not-resumed"), [] as string[]);
     const rebindResume = ownerClaim.rebind;
     if (rebindResume) appendLedger(ctx.cwd, "rebind_resume", { pid: process.pid });
     const explicitRecovery = handoffResume || recoveryResume || rebindResume;

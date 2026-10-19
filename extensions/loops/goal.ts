@@ -22,7 +22,7 @@ import { registerActionReminderRenderer } from "../action-reminder.js";
 import { registerSummaryRenderer } from "../summary-renderer.js";
 import { abortZombieRun, enqueueFaultRepairTask, registerGoalRuntime, resetLengthExhaustionEpisodes, resetZombieRetryStreak, __testOnlyResetLengthExhaustionEpisodes, __testOnlyResetZombieAutoRetry, __testOnlyResetUnsupervisedErrorRetry } from "./goal-activation.js";
 // v0.38.88: members of the __testOnlyResetProcessState composite.
-import { __testOnlyResetOwnerSession, __testOnlyResetStaleFlag, __testOnlyResetTerminalFlags, __testOnlyResetOwnershipRecheck } from "./goal-session.js";
+import { pendingListOperations, __testOnlyResetOwnerSession, __testOnlyResetStaleFlag, __testOnlyResetTerminalFlags, __testOnlyResetOwnershipRecheck } from "./goal-session.js";
 import { __testOnlyResetStarvationGate, __testOnlyResetToolActivity, __testOnlyResetAuditorQuietWatch, __testOnlyResetPostCompactDebt } from "./goal-ui.js";
 import { __testOnlyResetAuditorSurface } from "./goal-auditor-surface.js";
 import { __testOnlyResetAuditorRecoveryRuntime, resumeStoredCompletionOrSettlement, resumeCompletedCompletionAudit, resumeSettlingCompletionAudit } from "./goal-auditor-hooks.js";
@@ -177,7 +177,7 @@ const commandDeps: CommandDeps = {
   healGoalPolicy,
   startDrafting,
   warnIfStaleAtEntry,
-  queuePendingListOperation,
+  queuePendingListOperation: pendingListOperations.queue,
   freshCtx,
   freshCtxForGeneration,
   goStaleTerminal,
@@ -478,5 +478,5 @@ export default function (pi: ExtensionAPI): void {
   // the admitted host session_start below owns both lifecycle resources.
   registerActionReminderRenderer(pi);
   registerSummaryRenderer(pi);
-  registerGoalRuntime(pi);
+  registerGoalRuntime(pi, undefined, pendingListOperations);
 }

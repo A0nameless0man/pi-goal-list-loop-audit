@@ -53,7 +53,7 @@ coding-agent aggregate advisory entries. The full development audit still report
 one affected package, `brace-expansion` 5.0.9, pinned inside Pi's published
 shrinkwrap. A GLLA manifest override to 5.0.12 did not replace that bundled pin
 and was removed. Raw before/current/after audit responses are retained in
-[audit evidence](../audit/improvement-evidence-2026-09-30/).
+[audit evidence](https://github.com/DraconDev/pi-goal-list-loop-audit/tree/28c9fb1a53ba6d0ac3047cb394052a87acdda96b/audit/improvement-evidence-2026-09-30/).
 The production-only audit does not certify host-supplied Pi peers.
 
 This residual is an upstream dependency report, not a demonstrated GLLA exploit.

@@ -35,9 +35,6 @@ export const GOAL_RUNTIME_GLOBAL_NAMES = [
   "sessionHandoffPath",
   "writeSessionHandoff",
   "consumeSessionHandoff",
-  "queuePendingListOperation",
-  "consumePendingListOperations",
-  "discardPendingListOperations",
   "markSessionOwnerShutdown",
   "claimSessionOwnerAndDetectRebind",
   "emitIdInvalidation",
@@ -353,9 +350,6 @@ declare global {
   var sessionHandoffPath: GoalRuntimeGlobals["sessionHandoffPath"];
   var writeSessionHandoff: GoalRuntimeGlobals["writeSessionHandoff"];
   var consumeSessionHandoff: GoalRuntimeGlobals["consumeSessionHandoff"];
-  var queuePendingListOperation: GoalRuntimeGlobals["queuePendingListOperation"];
-  var consumePendingListOperations: GoalRuntimeGlobals["consumePendingListOperations"];
-  var discardPendingListOperations: GoalRuntimeGlobals["discardPendingListOperations"];
   var markSessionOwnerShutdown: GoalRuntimeGlobals["markSessionOwnerShutdown"];
   var claimSessionOwnerAndDetectRebind: GoalRuntimeGlobals["claimSessionOwnerAndDetectRebind"];
   var emitIdInvalidation: GoalRuntimeGlobals["emitIdInvalidation"];

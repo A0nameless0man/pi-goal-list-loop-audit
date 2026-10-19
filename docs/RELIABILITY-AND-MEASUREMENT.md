@@ -23,7 +23,7 @@ owner mutation, 8 MiB ledger rotation, and a roughly 3 MiB receipt outbox. It
 checks state preservation after rotation and deduplication after receipt replay.
 The unbound heartbeat fixture measures local bookkeeping, not a live host/model.
 Context usage is synthetic; neither measurement establishes paid token savings.
-The [saved baseline](../audit/improvement-evidence-2026-09-30/runtime-performance.json)
+The [saved baseline](https://github.com/DraconDev/pi-goal-list-loop-audit/blob/28c9fb1a53ba6d0ac3047cb394052a87acdda96b/audit/improvement-evidence-2026-09-30/runtime-performance.json)
 was recorded under heavy machine load; compare like-for-like environments.
 
 `node scripts/real-host-canary.mjs` emits an explicit skip by default. Opt in

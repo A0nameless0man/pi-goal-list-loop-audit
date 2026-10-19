@@ -4,16 +4,25 @@ Every shipped change carries an audit doc here (named `<TOPIC>-<date>.md`,
 plus a `v0.34.x-<TOPIC>.md` symlink for versioned docs). Older docs
 (≤ 2026-08-06) live in `audit/archive/`.
 
-## Current implementation and audits
+## Recent reviews
 
-**Current release (2026-10-01):**
+- [Project review and task list — 19 October 2026](PROJECT-REVIEW-2026-10-19.md): six prioritized follow-ups with reproduction evidence.
+- [Project audit — 19 October 2026](PROJECT-AUDIT-2026-10-19.md): carryover and resume durability corrections.
+- [Documentation review — 19 October 2026](DOCS-REVIEW-2026-10-19.md): documentation and provenance review.
+
+The checkout manifest identifies the local version; the npm registry is the
+publication authority. Reports below certify only their recorded snapshots.
+
+## Historical implementation and audits
+
+**Release snapshot (2026-10-01):**
 [RELEASE-0.38.106-2026-10-01.md](RELEASE-0.38.106-2026-10-01.md)
 records versionless companion guidance, the refreshed store icon and npm/GitHub
 publication. Local and GitHub full gates both passed 2,966 tests, one skip,
 zero failures; all 133 published files match the reviewed source. The Pi store's
 cached version/README is separately recorded as external indexing behavior.
 
-**Current follow-up implementation (2026-10-01):**
+**Follow-up implementation (2026-10-01):**
 [POST-FIX-IMPLEMENTATION-2026-10-01.md](POST-FIX-IMPLEMENTATION-2026-10-01.md)
 closes AF-1, AF-2 and AF-3: selector failures retain authority and defer writes,
 identity failures retain cleanup obligations, and replay merges acknowledgements
@@ -54,11 +63,11 @@ label does not match the manifest audited on September 30; its result is
 historical context and cannot certify the current tree. The report itself is
 preserved unchanged.
 
-**Most recent (2026-09-27):**
+**Historical (2026-09-27):**
 - `ENDLESS-AUDIT-CONVERGENCE-2026-09-27.md` — why goals never converged: hellhunter 8 reviews / 8 disapproved at 63h 39m, neonbreak 13/13, football 4/4 (load 112.26). Non-terminating, not slow. The brief scoped objections to the **repository** instead of the **change**, and the surface was self-feeding (each disapproval grew the 148KB findings ledger that the next round then audited — football's round-4 demand was "close L31, L32, L33, L117"). Fix: `CHANGE SCOPE` (blocking = defect in changed paths / unverified contract item / regression from this change; pre-existing debt advisory only; the auditor's own prior findings are inputs to re-check, not new targets), `WHAT APPROVED MEANS` (a reachable, checkable bar), `REWORK ROUND` (round N asks whether the PRIOR objections are closed; a new in-scope defect still blocks). Tier resolver deliberately left alone — the falsification round is where the real defects were caught. 167/167 across 12 auditor suites, `tsc` clean. Not yet proven against the field; no circuit breaker yet
 - `NON-DESTRUCTIVE-AUDIT-TOOL-TIMEOUT-2026-09-26.md` — why audits stopped landing: measured 612 attempts fleet-wide (median 102s; 22% failure in the last 48h), dominant class being a `bash` verification step blowing the 5m per-tool budget and the watchdog killing the **whole** attempt — one died at 23min holding 64 completed tool calls. Worker now cancels the over-budget tool, resumes with a brief carrying the completed calls, and the parent holds its hard kill for `TOOL_CANCEL_GRACE_MS`. Approval guard refuses an approving verdict from a verification-incomplete attempt as retryable infra (never a fake disapproval). Also fixed torn `progress.json` telemetry reads failing healthy audits (3/6 → 10/10 on the pinned flaky test); gate 2396 pass / 0 fail, `tsc` clean
 
-**Most recent (2026-09-13):**
+**Historical (2026-09-13):**
 - `GLLA-DELEGATE-AND-DRAFT-STAGING-2026-09-13.md` — v0.38.53: packaged consent-safe `glla-delegate` skill, supplied-list handling, verified draft staging, real packed-tarball Pi loader probe, and release gate evidence
 
 **2026-09-12:**
@@ -108,7 +117,7 @@ preserved unchanged.
 - `CACHE-CRITICAL-ADDENDUM-2026-09-03.md` — cache-critical addendum: why a naked ≤160-char followUp marker would break GLLA (no `before_agent_start` systemPrompt authority) vs pi-goal-x `system.cache_control` + marker (45 chars vs GLLA 21–40k); A2 downgraded to CONDITIONAL paired, measured gate
 - `ANTIGRAVITY-CODEX-CLAUDE-PI-GOAL-X-2026-09-03.md` — 4-harness keep-checking comparison vs GLLA ContinuousSupervisor 250ms→15s: Antigravity poll-only already ported, Codex smooth (compact prompt + 50ms idle gate, no heartbeat/auditor), Claude transcript + branch/plan lessons, pi-goal-x contender typed-revision/marker brevity — unified table + §6 borrow ranking (A8→A2→A1) — **errata: A2 now conditional per addendum**
 
-**Most recent (2026-09-02):**
+**Historical (2026-09-02):**
 - `AVO-DEEP-DIVE-2026-09-02.md` — full paper+blog read of NVIDIA AVO (2603.24517 + 2026-08-21 ARC-AGI-3): Vary(Pt)=Agent(Pt,K,f), 40 versions/500 dirs in 7d B200, supervisor = conditional trajectory review, MHA+3.5%/FA4+10.5% → GQA 30-min transfer, vs PR #22/#36 map
 - `v0.38.4` — `USER_INPUT_WAIT` zombie stand-down (PR #36 10-line slice): `pause_goal`/`propose_*`/`list_add`/`ask_user_question` stand down `BUSY+zero-stream` abort with own ledger `zombie_run_stood_down_user_input`; AVO+PRs closed
 

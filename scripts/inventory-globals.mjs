@@ -13,11 +13,12 @@ export const GLOBAL_NAMES_MARKER = "export const GOAL_RUNTIME_GLOBAL_NAMES = [";
 /** Closing line of that list. */
 export const GLOBAL_NAMES_TERMINATOR = "] as const";
 /**
- * Audit 2026-10-17: ambient bridge names stood at 179. Bump this with the
+ * Audit 2026-10-19: pending list handoff now uses a typed boundary;
+ * ambient bridge names fell from 179 to 176. Bump this with the
  * audit date (not silently) when the bridge set legitimately changes — the
  * generator fails closed on drift so the baseline text can never rot.
  */
-export const AUDIT_BASELINE_GLOBAL_NAMES = 179;
+export const AUDIT_BASELINE_GLOBAL_NAMES = 176;
 
 /** The quoted names inside the globals list; throws a named error when the shape moved. */
 export function extractGlobalNames(source, fileLabel = "<source>") {

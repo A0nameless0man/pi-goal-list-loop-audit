@@ -4,9 +4,27 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { GOAL_RUNTIME_GLOBAL_NAMES } from "../extensions/loops/goal-runtime-globals.ts";
+import { pendingListOperations, type PendingListOperationsBoundary } from "../extensions/loops/goal-session.js";
 
 const BRIDGE = fs.readFileSync("extensions/loops/goal-runtime-globals.ts", "utf8");
 const LOOP_DIR = "extensions/loops";
+
+test("list handoff uses a typed boundary instead of ambient callable slots", () => {
+  for (const name of ["queuePendingListOperation", "consumePendingListOperations", "discardPendingListOperations"]) {
+    assert.ok(!(GOAL_RUNTIME_GLOBAL_NAMES as readonly string[]).includes(name));
+  }
+  const boundary: PendingListOperationsBoundary = pendingListOperations;
+  assert.equal(typeof boundary.queue, "function");
+  assert.equal(typeof boundary.consume, "function");
+  if (false) {
+    // Compile-time negative controls: these would silently typecheck when
+    // routed through the old (...args: any[]) => any callable bridge.
+    // @ts-expect-error queue requires an admitted ExtensionContext
+    boundary.queue("cwd", "add item");
+    // @ts-expect-error generations are numeric, never a prose selector
+    boundary.consume("cwd", "old", null);
+  }
+});
 
 function namesFrom(pattern: RegExp, source: string): string[] {
   return [...source.matchAll(pattern)].map((match) => match[1]!).filter(Boolean);

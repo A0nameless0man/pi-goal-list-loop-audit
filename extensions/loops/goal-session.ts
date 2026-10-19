@@ -954,6 +954,19 @@ function discardPendingListOperations(cwd: string, reason: string): void {
   } catch { /* advisory cleanup */ }
 }
 
+/** Typed handoff boundary; callers no longer resolve these through ambient
+ * callable slots. The session module remains the sole owner of the journal. */
+export interface PendingListOperationsBoundary {
+  queue(ctx: ExtensionContext, args: string): boolean;
+  consume(cwd: string, generation: number | null, ownerSessionId: string | null): string[];
+  discard(cwd: string, reason: string): void;
+}
+export const pendingListOperations: PendingListOperationsBoundary = {
+  queue: queuePendingListOperation,
+  consume: consumePendingListOperations,
+  discard: discardPendingListOperations,
+};
+
 /** v0.34.14: /reload rebind detector. The extension runs INSIDE pi, so
  * process.pid IS pi's pid: an instance that boots and finds its OWN pid
  * already in the owner file is normally a same-process rebuild, not a cold
@@ -2016,9 +2029,6 @@ defineGoalRuntimeGlobal("consumeStaleContinuationRearm", { get: () => consumeSta
 defineGoalRuntimeGlobal("sessionHandoffPath", { get: () => sessionHandoffPath });
 defineGoalRuntimeGlobal("writeSessionHandoff", { get: () => writeSessionHandoff });
 defineGoalRuntimeGlobal("consumeSessionHandoff", { get: () => consumeSessionHandoff });
-defineGoalRuntimeGlobal("queuePendingListOperation", { get: () => queuePendingListOperation });
-defineGoalRuntimeGlobal("consumePendingListOperations", { get: () => consumePendingListOperations });
-defineGoalRuntimeGlobal("discardPendingListOperations", { get: () => discardPendingListOperations });
 defineGoalRuntimeGlobal("markSessionOwnerShutdown", { get: () => markSessionOwnerShutdown });
 defineGoalRuntimeGlobal("claimSessionOwnerAndDetectRebind", { get: () => claimSessionOwnerAndDetectRebind });
 defineGoalRuntimeGlobal("emitIdInvalidation", { get: () => emitIdInvalidation });

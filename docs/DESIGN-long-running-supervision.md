@@ -188,8 +188,8 @@ deadline is not evidence of a registered wake. Current-owner, generation and
 heartbeat evidence still determine whether automatic checking is live. These
 presentation rules do not alter pause, scheduler or independent-audit policy.
 
-See [the human-handoff implementation evidence](../audit/human-handoff-2026-10-18/README.md)
-and [the blocked-card compactness evidence](../audit/blocked-ui-2026-10-19/README.md)
+See [the human-handoff implementation evidence](https://github.com/DraconDev/pi-goal-list-loop-audit/blob/28c9fb1a53ba6d0ac3047cb394052a87acdda96b/audit/human-handoff-2026-10-18/README.md)
+and [the blocked-card compactness evidence](https://github.com/DraconDev/pi-goal-list-loop-audit/blob/28c9fb1a53ba6d0ac3047cb394052a87acdda96b/audit/blocked-ui-2026-10-19/README.md)
 for rendered examples, regression controls and verification boundaries.
 
 ## Future decision checklist
