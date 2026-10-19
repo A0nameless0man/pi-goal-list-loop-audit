@@ -1,4 +1,6 @@
 // Run from the repository: bun audit/project-review-2026-10-19/reproduce-update-check.ts
+// Now asserts the repaired behavior. The original red observations are
+// preserved in update-check-output.txt and PROJECT-REVIEW-2026-10-19.md.
 // Executes production code with fake children; no network or provider calls.
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
@@ -24,13 +26,12 @@ try {
   fs.writeFileSync(settings, JSON.stringify({ stateRoot: "workingDir" }));
   const cwd = path.join(root, "project");
   for (let i = 0; i < 5; i++) refreshUpdateCheck(cwd, Date.now(), spawn as never);
-  assert.equal(children.length, 5);
-  console.log("R1: five immediate contacts spawned five concurrent refresh children.");
+  assert.equal(children.length, 1);
+  console.log("R1: five immediate contacts share one refresh child.");
   for (const child of children) child.emit("close", 1);
   refreshUpdateCheck(cwd, Date.now(), spawn as never);
-  assert.equal(children.length, 6);
-  console.log("R1: next contact immediately spawned again after registry failures.");
-  children.at(-1)!.emit("close", 1);
+  assert.equal(children.length, 1);
+  console.log("R1: the next contact backs off after registry failure.");
 
   fs.writeFileSync(settings, JSON.stringify({ stateRoot: "sessionDir" }));
   const session = path.join(root, "session");
@@ -41,9 +42,9 @@ try {
   pending.stdout.emit("data", Buffer.from("99.0.0\n"));
   pending.emit("close", 0);
   const fallback = path.join(cwd, ".pi-glla", "update-check.json");
-  assert.equal(fs.existsSync(fallback), true);
+  assert.equal(fs.existsSync(fallback), false);
   assert.equal(fs.existsSync(path.join(session, "pi-glla", "update-check.json")), false);
-  console.log("R2: successful late callback created cwd/.pi-glla/update-check.json while sessionDir was unresolved.");
+  console.log("R2: successful late callback creates no cache while sessionDir is unresolved.");
 } finally {
   setRuntimeSessionDir(undefined);
   if (previousSettings === undefined) delete process.env.GLLA_GLOBAL_SETTINGS_PATH;

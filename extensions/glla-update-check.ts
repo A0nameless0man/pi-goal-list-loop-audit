@@ -118,11 +118,13 @@ export function createUpdateChecker({ timeoutMs = UPDATE_CHECK_TIMEOUT_MS, retry
         });
         // Retire even a child that never emits close. A late callback must
         // never publish over a newer attempt after its deadline or error.
-        timer = setTimeout(() => {
-          finish();
-          try { child.kill?.("SIGKILL"); } catch { /* Already exited. */ }
-        }, timeoutMs);
-        timer.unref();
+        if (!settled) {
+          timer = setTimeout(() => {
+            finish();
+            try { child.kill?.("SIGKILL"); } catch { /* Already exited. */ }
+          }, timeoutMs);
+          timer.unref();
+        }
         child.unref?.();
       } catch { finish(); }
     } catch { /* Unresolved root or broken cache must not disrupt the host. */ }

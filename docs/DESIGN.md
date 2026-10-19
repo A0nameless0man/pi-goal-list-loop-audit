@@ -823,3 +823,13 @@ shapes (details in CHANGELOG.md; each is pinned by tests):
 Historical audit notes are repository-only and are intentionally not part of
 the published package.
 
+
+
+## Suspicious-objective imperatives (2026-10-19)
+
+Failure counts can describe the starting state of legitimate work. “Clear the
+repos … push-stuck 5 failures” is an imperative, not a verification report.
+The fragment classifier recognizes `Clear` alongside other actionable verbs;
+explicit `Evidence:`, `Reviewer:` and test-result tails still trigger the
+report screen. Confirmed drafts and restored objectives use the same classifier;
+this does not grant agent-authored prose the verbatim-user-seed exemption.

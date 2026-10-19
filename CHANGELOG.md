@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Project review follow-ups
+
+- Update refreshes share one in-flight check per state-root binding, back off
+  after errors and timeouts, and publish cache files atomically only while
+  the admitted root and session remain current.
+- Repository-cleanup objectives beginning with “Clear” remain actionable when
+  they include failure counts. Explicit evidence and reviewer report tails
+  still trigger the suspicious-objective screen.
+- The package link gate covers every shipped Markdown page, including
+  reference links, and evidence links use pinned repository destinations.
+  The audit index distinguishes recent reviews from historical snapshots.
+- Resume/carryover tests drive registered handlers through real filesystem
+  refusals and reload/retry. The session handoff boundary replaces three
+  ambient callable slots with typed dependencies (179 → 176).
+
 ### Consent gates
 
 - A refused `resume_goal` no longer spends the cold-load consent gate. The
