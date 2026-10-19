@@ -4997,3 +4997,48 @@ tests/compaction-failed-recovery.test.ts:
 (pass) failed compaction without a usable fallback parks an active goal durably [1281.21ms]
 (pass) failed compaction parks a branch loop instead of leaving it active [798.84ms]
 (pass) a failed debt-discharge append keeps RAM debt instead of diverging from disk [1291.80ms]
+(pass) opportunistic output-cap failure keeps work active and resumes once (event first) [3924.52ms]
+(pass) opportunistic output-cap failure keeps work active and resumes once (callback first) [4296.70ms]
+(pass) optional compaction resumes a branch loop (event without callback) [4304.49ms]
+[run-tests] progress: 2520s elapsed · 2s since last output · 373 KiB of suite output
+(pass) optional compaction resumes a branch loop (synchronous callback) [3745.93ms]
+
+tests/resume-admission-failure.test.ts:
+(pass) resume goal admission=refused, stored claim=false [323.58ms]
+(pass) resume goal admission=partial, stored claim=false [0.72ms]
+(pass) resume goal admission=committed, stored claim=false [0.74ms]
+(pass) resume goal admission=refused, stored claim=true [0.92ms]
+(pass) resume goal admission=partial, stored claim=true [0.65ms]
+(pass) resume goal admission=committed, stored claim=true [0.67ms]
+(pass) resume list admission=refused, stored claim=false [0.39ms]
+(pass) resume list admission=partial, stored claim=false [0.41ms]
+(pass) resume list admission=committed, stored claim=false [0.45ms]
+(pass) resume list admission=refused, stored claim=true [0.42ms]
+(pass) resume list admission=partial, stored claim=true [0.44ms]
+(pass) resume list admission=committed, stored claim=true [0.68ms]
+
+tests/auditor-unmatched-telemetry.test.ts:
+(pass) v0.34.56: a serial id'd start+end pairs into toolCalls with zero unmatched facts [223.41ms]
+(pass) v0.34.56: an end with the WRONG id never pairs — it is an explicit unmatched fact and the open start stays open [0.05ms]
+(pass) v0.34.56: an end with an id can never close an ANONYMOUS start (missing-toolCallId shape) [0.04ms]
+(pass) v0.34.56: an ANONYMOUS end can never close an id'd start (the id would be present on a true end) [0.03ms]
+(pass) v0.34.56: a serial ANONYMOUS stream (both sides missing toolCallId) still pairs truthfully [0.03ms]
+(pass) v0.34.56: an anonymous end closes the CURRENT anonymous start; a replaced anonymous start stays an explicit unmatched fact [0.05ms]
+(pass) v0.34.56: a new start replacing an open start records the ORPHANED start explicitly (name, args, id preserved) [0.04ms]
+(pass) v0.39.38: duplicate same-id start records the FIRST start as unmatched instead of silently overwriting it [0.11ms]
+(pass) v0.34.56: an end with no open start is an unmatched end [0.04ms]
+(pass) v0.34.56/0.34.108: the detached path forwards pairing data untouched (no inline slot mutation) [0.24ms]
+(pass) v0.34.56: worker — anonymous ends pair only with the SOLE anonymous start; everything else is an explicit unmatched fact [0.14ms]
+(pass) v0.39.38: worker — duplicate same-id start records the orphaned first start, mirroring the shared truth rules [0.05ms]
+(pass) v0.34.56: worker — in-flight starts at session end become explicit unmatched starts (finish sweep) [0.08ms]
+(pass) v0.34.56: progress file + asProgress + HUD mapping + display all carry the unmatched facts [0.21ms]
+
+tests/settlement-boundary-faults.test.ts:
+(pass) typed settlement refuses success before its intent can be persisted [184.00ms]
+(pass) failed receipt transfer retains the terminal obligation across live-slot cleanup [16.81ms]
+(pass) unreadable old outbox retains new archive intent until both summaries can be queued [10.68ms]
+
+tests/background-wait-host.test.ts:
+(pass) host reload reconciles complete after consent without task loss [571.00ms]
+(pass) host reload reconciles failed after consent without task loss [102.82ms]
+(pass) host reload reconciles missing after consent without task loss [396.28ms]
