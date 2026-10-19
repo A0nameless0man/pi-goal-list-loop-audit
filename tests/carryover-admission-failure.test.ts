@@ -17,7 +17,7 @@ const script = ts.transpileModule(`${method.getText(source)}\nresolveCarryover;`
 for (const withPredecessor of [false, true]) test(`carryover journal refusal retains retryable queue and held loop (archived predecessor=${withPredecessor})`, () => {
   const cwd = tmpCwd();
   const events: string[] = [];
-  const item = { id: 'waiting-fixture', objective: 'preserve this queued objective', createdAt: new Date().toISOString() } as ListItem;
+  const item: ListItem = { id: 'waiting-fixture', objective: 'preserve this queued objective', addedAt: new Date().toISOString() };
   const heldReason = 'held-on-restore';
   seedState(cwd, { list: [item], loop: seedLoop({ active: false, stopReason: heldReason }),
     ...(withPredecessor ? { goal: seedGoal({ id: 'predecessor', status: 'paused' }) } : {}) });
@@ -44,9 +44,9 @@ for (const withPredecessor of [false, true]) test(`carryover journal refusal ret
   assert.equal(resolve(ctx, 'goal'), false, 'replacement activation must not be admitted');
   assert.equal(sandbox.carryoverResolved, false);
   assert.ok(sandbox.carryoverSnapshot, 'retry retains the carryover decision');
-  assert.equal((sandbox.state as State).list[0]?.id, item.id);
+  assert.equal((sandbox.state as State).list?.[0]?.id, item.id);
   assert.equal((sandbox.state as State).loop?.stopReason, heldReason);
-  assert.equal(readState(cwd).list[0]?.id, item.id, 'journal still recovers the queue even though sidecars were deleted');
+  assert.equal(readState(cwd).list?.[0]?.id, item.id, 'journal still recovers the queue even though sidecars were deleted');
   assert.equal(clearQueueItemFiles(cwd).removed, 0, 'sidecar deletion really happened before the failed snapshot');
   assert.ok(!events.includes('carryover_resolved'));
   assert.ok(!events.some(event => event.startsWith('notify:Carryover cleared')));
@@ -56,7 +56,7 @@ for (const withPredecessor of [false, true]) test(`carryover journal refusal ret
   assert.equal(resolve(ctx, 'goal'), true);
   assert.equal(sandbox.carryoverResolved, true);
   assert.equal(sandbox.carryoverSnapshot, null);
-  assert.equal(readState(cwd).list.length, 0, 'successful retry stays cleared across restart');
+  assert.equal(readState(cwd).list?.length, 0, 'successful retry stays cleared across restart');
   assert.equal(readState(cwd).loop?.stopReason, 'cleared: carryover');
   assert.equal(events.filter(event => event === 'carryover_resolved').length, 1);
   assert.equal(events.filter(event => event === 'archive').length, withPredecessor ? 1 : 0);
