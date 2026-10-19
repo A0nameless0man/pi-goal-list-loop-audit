@@ -48,7 +48,15 @@ replay; the production archive function and filesystem writers remain real.
   actual release contract. These mutations never touched live source.
 - Two further admission controls bypass only the resume or carryover durability
   check. Each makes its registered-runtime filesystem-refusal test fail.
-- Full `npm run release:check`: running; final result will replace this entry.
+- Initial full suite: **4,186 passed, one environment-gated skip, one failed
+  source assertion across 459 files**. The assertion in
+  `stale-api-terminal.test.ts` required the old literal `registerGoalRuntime(pi)`
+  call rather than the new explicit typed handoff argument. Its registration-only
+  and host-admission invariants remain unchanged. Updating that assertion is the
+  sole source/test/document delta since the first full run.
+- Fresh source-assertion, bridge and session-RPC checks: **20 passed, zero
+  failures across three files**. Remaining release stages and final full rerun
+  are being verified; terminal results will replace this status.
 
 Evidence is retained under [tasklist-implementation-2026-10-19/](tasklist-implementation-2026-10-19/).
 The source/test/document hash snapshot taken before the full gate
