@@ -1,0 +1,157 @@
+
+## carryover-red.log — bounded tail excerpt
+     actual: true,
+   expected: false,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/carryover-admission-failure.test.ts:44:10
+      at fn (node:test:215:18)
+(fail) carryover journal refusal retains retryable queue and held loop (archived predecessor=true) [1.60ms]
+
+ 0 pass
+ 2 fail
+Ran 2 tests across 1 file. [776.00ms]
+[run-tests] failure diagnostics retained at /tmp/glla-test-processes-V1ihzO/failure.json
+[run-tests] cleanup evidence retained at /tmp/glla-test-processes-V1ihzO
+[run-tests] finished in 1s (exit 1)
+
+## resume-red.log — bounded tail excerpt
+   expected: true,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/resume-admission-failure.test.ts:47:14
+      at processTicksAndRejections (native:7:39)
+(fail) resume list admission=partial, stored claim=true [0.29ms]
+(pass) resume list admission=committed, stored claim=true [0.23ms]
+
+ 4 pass
+ 8 fail
+Ran 12 tests across 1 file. [713.00ms]
+[run-tests] failure diagnostics retained at /tmp/glla-test-processes-d8Jfuq/failure.json
+[run-tests] cleanup evidence retained at /tmp/glla-test-processes-d8Jfuq
+[run-tests] finished in 1s (exit 1)
+
+## carryover-green.log — bounded tail excerpt
+[run-tests] mode=explicit slow_files=13 stall_timeout=180s heartbeat=30s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/carryover-admission-failure.test.ts:
+(pass) carryover journal refusal retains retryable queue and held loop (archived predecessor=false) [103.71ms]
+(pass) carryover journal refusal retains retryable queue and held loop (archived predecessor=true) [2.54ms]
+
+ 2 pass
+ 0 fail
+Ran 2 tests across 1 file. [884.00ms]
+[run-tests] finished in 1s (exit 0)
+
+## resume-green.log — bounded tail excerpt
+(pass) resume goal admission=committed, stored claim=false [0.29ms]
+(pass) resume goal admission=refused, stored claim=true [0.26ms]
+(pass) resume goal admission=partial, stored claim=true [0.27ms]
+(pass) resume goal admission=committed, stored claim=true [0.32ms]
+(pass) resume list admission=refused, stored claim=false [0.36ms]
+(pass) resume list admission=partial, stored claim=false [0.48ms]
+(pass) resume list admission=committed, stored claim=false [0.38ms]
+(pass) resume list admission=refused, stored claim=true [0.30ms]
+(pass) resume list admission=partial, stored claim=true [0.31ms]
+(pass) resume list admission=committed, stored claim=true [0.34ms]
+
+ 12 pass
+ 0 fail
+Ran 12 tests across 1 file. [703.00ms]
+[run-tests] finished in 1s (exit 0)
+
+## adjacent.log — bounded tail excerpt
+(pass) resume goal admission=committed, stored claim=false [0.38ms]
+(pass) resume goal admission=refused, stored claim=true [0.36ms]
+(pass) resume goal admission=partial, stored claim=true [0.67ms]
+(pass) resume goal admission=committed, stored claim=true [1.13ms]
+(pass) resume list admission=refused, stored claim=false [0.40ms]
+(pass) resume list admission=partial, stored claim=false [0.29ms]
+(pass) resume list admission=committed, stored claim=false [0.38ms]
+(pass) resume list admission=refused, stored claim=true [0.32ms]
+(pass) resume list admission=partial, stored claim=true [0.70ms]
+(pass) resume list admission=committed, stored claim=true [1.12ms]
+
+ 231 pass
+ 0 fail
+Ran 231 tests across 9 files. [92.57s]
+[run-tests] finished in 93s (exit 0)
+
+## fast-suite.log — bounded tail excerpt
+(pass) goal: late accepted selection cannot cross terminal boundary [346.94ms]
+(pass) goal: late rejected selection cannot cross terminal boundary [143.70ms]
+(pass) goal: late accepted selection cannot cross absent boundary [199.60ms]
+(pass) goal: late rejected selection cannot cross absent boundary [215.04ms]
+(pass) goal: late accepted selection cannot cross replaced boundary [190.13ms]
+(pass) goal: late rejected selection cannot cross replaced boundary [205.38ms]
+(pass) goal: late accepted selection cannot cross new-episode boundary [438.25ms]
+(pass) goal: late rejected selection cannot cross new-episode boundary [237.73ms]
+(pass) goal: late accepted selection cannot cross user-hold boundary [206.31ms]
+[run-tests] received SIGTERM — cleaning up the suite group
+[run-tests] received SIGTERM — cleaning up the suite group
+[run-tests] progress: 120s elapsed · 0s since last output · 109 KiB of suite output
+[run-tests] failure diagnostics retained at /tmp/glla-test-processes-odStmC/failure.json
+[run-tests] cleanup evidence retained at /tmp/glla-test-processes-odStmC
+[run-tests] finished in 121s (exit null, signal SIGTERM)
+
+## fast-suite-600.log — bounded tail excerpt
+(pass) v0.34.57: a compaction inside the watchdog window pauses the watchdog instead of firing the unacknowledged warning [641.94ms]
+(pass) v0.34.57: compaction rearm cap goes directly to unacknowledged without a retry [560.35ms]
+(pass) v0.34.124: a recovery resume inside the watchdog window pauses the watchdog instead of firing the unacknowledged warning [574.15ms]
+(pass) v0.34.124: recovery rearm counters clear when the dispatch watchdog settles [0.45ms]
+(pass) v0.34.124: a recovery resume OUTSIDE the grace window does not pause the watchdog [780.99ms]
+(pass) v0.34.57: a genuine stall (no compaction in the window) still fires the unacknowledged warning [963.27ms]
+
+1 tests skipped:
+(skip) commit survives the auto-committer daemon (item 32, env-gated watched repo)
+
+ 3811 pass
+ 1 skip
+ 0 fail
+Ran 3812 tests across 435 files. [460.54s]
+[run-tests] finished in 461s (exit 0)
+
+## harmless-control.log — bounded tail excerpt
+(pass) resume goal admission=partial, stored claim=false [0.51ms]
+(pass) resume goal admission=committed, stored claim=false [0.47ms]
+(pass) resume goal admission=refused, stored claim=true [0.75ms]
+(pass) resume goal admission=partial, stored claim=true [0.52ms]
+(pass) resume goal admission=committed, stored claim=true [0.43ms]
+(pass) resume list admission=refused, stored claim=false [0.37ms]
+(pass) resume list admission=partial, stored claim=false [0.58ms]
+(pass) resume list admission=committed, stored claim=false [0.35ms]
+(pass) resume list admission=refused, stored claim=true [0.31ms]
+(pass) resume list admission=partial, stored claim=true [0.30ms]
+(pass) resume list admission=committed, stored claim=true [0.31ms]
+
+ 14 pass
+ 0 fail
+Ran 14 tests across 2 files. [907.00ms]
+
+## check-final.log — bounded tail excerpt
+
+> pi-goal-list-loop-audit@0.39.38 check
+> tsc --noEmit
+
+
+## inventory-final.log — bounded tail excerpt
+
+> pi-goal-list-loop-audit@0.39.38 check:inventory
+> node scripts/generate-inventory.mjs --check
+
+
+## commit-evidence.txt — bounded tail excerpt
+e66f1ddda1b2c3d74cea86921aec5237df3389b1
+95ec04bcde95d9f761265fa68c11424b78a0b283 2 file(s) in audit [audit/blocked-ui-2026-10-19/README.md, CHANGELOG.md] DELTA:+41/-0 | EXT:md NEW:blocked-ui-2026-10-19/README.md DOCSONLY:blocked-ui-2026-10-19/README.md,CHANGELOG.md
+ancestor_exit=0
+a9a96ccf9be9dc075b02b569bf40c83d62010e39 2 file(s) in extensions,tests [tests/carryover-admission-failure.test.ts, extensions/loops/goal-session.ts] DELTA:+77/-4 | EXT:ts TEST:63 NEW:tests/carryover-admission-failure.test.ts
+ancestor_exit=0
+e4a7bf3894246d8454bcb29380e526a6c5fed3fe 1 file(s) in tests/carryover-admission-failure.test.ts DELTA:+4/-4 | EXT:ts TEST:8 TESTONLY:tests/carryover-admission-failure.test.ts
+ancestor_exit=0
+18edcfec1ba540bf00e5827453cca9388eba4410 1 file(s) in extensions/loops/goal-tools.ts DELTA:+6/-1 | EXT:ts
+ancestor_exit=0
+8006bb12f31e6f483d3cab5a85e31c1f147604e2 1 file(s) in tests/resume-admission-failure.test.ts DELTA:+66/-0 | EXT:ts TEST:66 NEW:tests/resume-admission-failure.test.ts TESTONLY:tests/resume-admission-failure.test.ts
+ancestor_exit=0
