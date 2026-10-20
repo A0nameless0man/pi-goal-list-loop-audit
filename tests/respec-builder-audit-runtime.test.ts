@@ -51,6 +51,19 @@ function fixture(env: Record<string, string> = {}) {
 
 
 
+
+/** The builder phase advances when the audit's verdict lands, which is after
+ * the dispatch returns. Wait for the phase instead of racing it: on a loaded
+ * host the worker needs longer to settle, and the assertion would then read
+ * a perfectly healthy "auditing". */
+async function waitForPhase(cwd: string, phase: string, timeoutMs = 20000): Promise<void> {
+  const deadline = untilMs(timeoutMs);
+  while (readState(cwd).loop?.builder?.phase !== phase) {
+    if (Date.now() > deadline) throw new Error(`builder phase never reached ${phase}: ${JSON.stringify(readState(cwd).loop?.builder?.phase)}`);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+}
+
 test("a stale audit wake does not resolve a model or launch a worker", async () => {
   const f = fixture();
   try {
@@ -481,6 +494,11 @@ test("project adapter survives 2105 paced infrastructure episodes then a real wo
     restore();
     const restoreClock = __testOnlyRespecAuditorRuntime({ auditNow: () => clock });
     try { await runRespecBuilderAudit(f.ctx); } finally { restoreClock(); }
+    // The phase advances when the audit's verdict lands, which is after the
+    // dispatch returns. Wait for it instead of racing it: on a loaded host the
+    // worker needs longer to settle, and the assertion would then read a
+    // perfectly healthy "auditing".
+    await waitForPhase(f.cwd, "complete");
     assert.equal(readState(f.cwd).loop!.builder!.phase, "complete");
     assert.equal(fs.readdirSync(path.join(f.cwd, ".pi-glla", "audit-jobs")).length, 1);
   } finally { restore(); replaceState(f.original); fs.rmSync(f.cwd, { recursive: true, force: true }); }
