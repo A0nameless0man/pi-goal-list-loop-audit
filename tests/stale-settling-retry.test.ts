@@ -195,6 +195,28 @@ for (const origin of ["provider-retry", "session-retry"] as const) {
     const pi = new MockPi();
     activate(pi.api);
     const ctx = makeMockCtx(cwd, { sessionManager: { name: `retry-waiting-live-${origin}-${Date.now()}` } });
+    // This checks the settlement fence, not a configured provider. Drive the
+    // real detached worker through a hermetic RPC peer instead of launching
+    // the installed Pi with the nonexistent anthropic/mock-model fixture.
+    const receipt = path.join(cwd, "audit-prompt-receipt.txt");
+    const fakePi = path.join(cwd, "retry-fence-pi.mjs");
+    fs.writeFileSync(fakePi, `#!/usr/bin/env node
+import { writeFileSync } from "node:fs";
+let input = "", handled = false;
+process.stdin.on("data", chunk => {
+  input += chunk;
+  if (handled || !input.includes("\\n")) return;
+  handled = true;
+  writeFileSync(${JSON.stringify(receipt)}, input);
+  const emit = event => process.stdout.write(JSON.stringify(event) + "\\n");
+  emit({ type: "tool_execution_start", toolCallId: "inspect", toolName: "read", args: { path: "artifact.txt" } });
+  emit({ type: "tool_execution_end", toolCallId: "inspect" });
+  emit({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "The parser still needs evidence.\\n<disapproved/>" } });
+  emit({ type: "agent_settled" });
+});
+`);
+    fs.chmodSync(fakePi, 0o700);
+    setEnv("GLLA_PI_BINARY", fakePi);
     seedState(cwd, { goal: null });
     await pi.fire("session_start", { reason: "startup" }, ctx);
     seedSettlingFixture(cwd, {
@@ -210,6 +232,9 @@ for (const origin of ["provider-retry", "session-retry"] as const) {
       const after = readState(cwd).goal;
       assert.ok(after, "the goal is still on disk after the retry");
       assert.ok(after?.auditHistory || after?.pendingCompletion, "the audit history or pending claim survives");
+      assert.ok(ledgerHas(cwd, "audit_started"), "the live claim actually dispatches an audit");
+      assert.ok(fs.existsSync(receipt), "the detached RPC peer received the audit prompt");
+      assert.equal(after.auditHistory?.at(-1)?.disapproved, true, "the worker's actual verdict reaches the live claim");
     } finally {
       await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
     }
