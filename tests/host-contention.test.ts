@@ -103,10 +103,15 @@ test("the runner passes a serial, load-sized timeout to bun", () => {
 
 test("no test file hand-rolls a wait deadline any more", () => {
   // A wait deadline is a `Date.now() + N` that is later compared against
-  // `Date.now()`. It must come from the shared helper, so the budget is
+  // `Date.now()`. The budget must come from the shared measurement, so it is
   // sized for the host and the rule cannot drift back into 40 files.
-  const DEADLINE = /\b(?:const|let)\s+(\w+)\s*=\s*Date\.now\(\)\s*\+\s*[^;]+;/;
+  // A deadline is compliant when its value goes through the shared helper
+  // (untilMs / hangDeadlineMs), through the shared module an embedded child
+  // script imports (scaledBudgetMs), or through the budget the parent hands
+  // that child (GLLA_TEST_WAIT_BUDGET_MS).
+  const DEADLINE = /\b(?:const|let)\s+(\w+)\s*=\s*Date\.now\(\)\s*\+\s*([^;]+);/;
   const CHECK = /Date\.now\(\)\s*[<>]=?\s*(\w+)/;
+  const SHARED = /untilMs\(|hangDeadlineMs\(|scaledBudgetMs\(|GLLA_TEST_WAIT_BUDGET_MS/;
   const offenders: string[] = [];
   for (const file of walk(path.join(ROOT, "tests"))) {
     if (!file.endsWith(".test.ts")) continue;
@@ -114,6 +119,7 @@ test("no test file hand-rolls a wait deadline any more", () => {
     for (let i = 0; i < lines.length; i++) {
       const made = lines[i].match(DEADLINE);
       if (!made) continue;
+      if (SHARED.test(made[2])) continue;
       const window = lines.slice(i + 1, i + 8).join("\n");
       const checked = window.match(CHECK);
       if (!checked || checked[1] !== made[1]) continue;
