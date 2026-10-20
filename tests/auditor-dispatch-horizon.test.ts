@@ -13,8 +13,9 @@ import * as fs from "node:fs";
 import activate, { __testOnlyLoadState, __testOnlyResetOwnerSession, __testOnlyResetStaleFlag, __testOnlyResetTerminalFlags } from "../extensions/loops/goal.js";
 import { readState } from "../extensions/goal-loop-core.js";
 import { MockPi, makeMockCtx, tmpCwd, seedGoal, seedState } from "./harness/mock-pi.js";
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
-test("expired stored horizon blocks automatic dispatch without a launch", { timeout: 30000 }, async () => {
+test("expired stored horizon blocks automatic dispatch without a launch", { timeout: scaledBudgetMs(30000) }, async () => {
   const cwd = tmpCwd();
   const pi = new MockPi();
   const binary = process.env.GLLA_PI_BINARY;
@@ -89,7 +90,7 @@ process.stdin.once('data', () => {
   }
 });
 
-test("expired dispatch preserves the exhausted-chain diagnostic", { timeout: 30000 }, async () => {
+test("expired dispatch preserves the exhausted-chain diagnostic", { timeout: scaledBudgetMs(30000) }, async () => {
   const cwd = tmpCwd();
   const pi = new MockPi();
   __testOnlyResetOwnerSession();

@@ -17,6 +17,7 @@ import { resetContinuationDispatchState } from "../extensions/goal-continuation.
 import { readState } from "../extensions/goal-loop-core.js";
 import { MockPi, makeMockCtx, tmpCwd } from "./harness/mock-pi.js";
 import { untilMs } from "./harness/host-budget.js";
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
 const pi = new MockPi(); activate(pi.api);
 let cleanup: (() => Promise<void>) | undefined;
@@ -50,7 +51,7 @@ emit({type:"agent_settled"});
   return binary;
 }
 
-test("repair re-claim renders the latest approved recap and archives the original verbatim", { timeout: 60000 }, async () => {
+test("repair re-claim renders the latest approved recap and archives the original verbatim", { timeout: scaledBudgetMs(60000) }, async () => {
   __testOnlyResetOwnerSession(); __testOnlyResetStaleFlag(); __testOnlyResetTerminalFlags();
   __testOnlyResetZombieAutoRetry(); __testOnlyResetZombieRunWatchdog();
   const cwd = tmpCwd(); resetContinuationDispatchState(cwd);

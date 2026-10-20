@@ -30,6 +30,7 @@ import * as fs from "node:fs";
 import * as http from "node:http";
 import * as os from "node:os";
 import * as path from "node:path";
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
 const PI = process.env.PI_BIN ?? "pi";
 const FIXTURE = path.resolve(import.meta.dirname, "fixtures", "auditor-tool-probe-extension.mjs");
@@ -134,7 +135,7 @@ function markers(dir: string): Set<string> {
   return new Set(fs.readdirSync(dir));
 }
 
-test("v0.39.38: allowed extension cannot expose a tool outside --tools (live pi)", { timeout: 150_000 }, async () => {
+test("v0.39.38: allowed extension cannot expose a tool outside --tools (live pi)", { timeout: scaledBudgetMs(150_000) }, async () => {
   const { declared, toolCallsServed, dir, exit } = await runProbe([
     "--no-extensions",
     "--extension", FIXTURE,
@@ -155,7 +156,7 @@ test("v0.39.38: allowed extension cannot expose a tool outside --tools (live pi)
   }
 });
 
-test("v0.39.38: unfiltered control exposes and executes the probe tool (rig validity)", { timeout: 150_000 }, async () => {
+test("v0.39.38: unfiltered control exposes and executes the probe tool (rig validity)", { timeout: scaledBudgetMs(150_000) }, async () => {
   const { declared, dir, exit } = await runProbe(["--no-extensions", "--extension", FIXTURE]);
   const ran = markers(dir);
   try {

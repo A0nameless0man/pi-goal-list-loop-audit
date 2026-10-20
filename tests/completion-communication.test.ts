@@ -10,6 +10,7 @@ import { readState, readArchiveIntent, archivedGoalPath, archiveIntentPath } fro
 import { approvalRenderStorePath } from "../extensions/approval-render-store.js";
 import { MockPi, makeMockCtx, tmpCwd } from "./harness/mock-pi.js";
 import { untilMs } from "./harness/host-budget.js";
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
 const pi = new MockPi(); activate(pi.api);
 let cleanup: (() => Promise<void>) | undefined;
@@ -155,7 +156,7 @@ test("archive write failure never emits a terminal success", async () => {
   assert.equal(fs.existsSync(approvalRenderStorePath(cwd)), false);
 });
 
-test("approval summary does not replace independent next-item continuation", { timeout: 60000 }, async () => {
+test("approval summary does not replace independent next-item continuation", { timeout: scaledBudgetMs(60000) }, async () => {
   const { cwd, ctx, entries } = await setup("approved");
   await pi.runTool("list_add", { items: ["first item — done when pinned", "second item — done when pinned"] }, ctx);
   await pi.runTool("complete_goal", { completionSummary: summary, verificationSummary: "pinned" }, ctx);

@@ -4,10 +4,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
 // Exercise the real runner and production wiring across files: a unit rig
 // replaces recovery dependencies, then a behavioral file activates GLLA.
-test('runner isolates recovery factory wiring per file and aggregates failures', { timeout: 60000 }, () => {
+test('runner isolates recovery factory wiring per file and aggregates failures', { timeout: scaledBudgetMs(60000) }, () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'glla-runner-isolation-'));
   const moduleUrl = (name: string) => JSON.stringify(new URL(`../${name}`, import.meta.url).href);
   try {

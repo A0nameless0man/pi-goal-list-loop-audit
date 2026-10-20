@@ -8,6 +8,7 @@ import { spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { publishOwnerRecord, withOwnerMutation } from "../extensions/owner-file-protocol.js";
 import { untilMs } from "./harness/host-budget.js";
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
 const load = `import fs from 'node:fs'; import {createJiti} from ${JSON.stringify(pathToFileURL(path.resolve("node_modules/jiti/lib/jiti.mjs")).href)};
   const {withOwnerMutation,publishOwnerRecord}=await createJiti(import.meta.url).import(${JSON.stringify(path.resolve("extensions/owner-file-protocol.ts"))});`;
@@ -48,7 +49,7 @@ test("Windows replacement retries a sharing violation without unlinking the prev
   } finally { fs.rmSync(cwd, { recursive: true, force: true }); }
 });
 
-test("competing Node processes serialize owner mutations and publish only complete records", { timeout: 30_000 }, async () => {
+test("competing Node processes serialize owner mutations and publish only complete records", { timeout: scaledBudgetMs(30_000) }, async () => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "glla-owner-contention-"));
   const file = path.join(cwd, "owner.json");
   const workers: ReturnType<typeof launch>[] = [];

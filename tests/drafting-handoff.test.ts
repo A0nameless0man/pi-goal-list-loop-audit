@@ -4,6 +4,7 @@ import activate, { __testOnlyResetOwnerSession, __testOnlyResetStaleFlag } from 
 import { MockPi, makeMockCtx, tmpCwd, seedState, tick, type MockCtx } from "./harness/mock-pi.js";
 import { readState } from "../extensions/goal-loop-core.js";
 import { DRAFT_HANDOFF_CORRECTION } from "../extensions/drafting-handoff.js";
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
 const pi = new MockPi();
 activate(pi.api);
@@ -49,7 +50,7 @@ test("draft-only handoff: a real question waits without an autonomous retry", as
   assert.equal(readState(ctx.cwd).goal, null, "draft does not activate work");
 });
 
-test("field screenshot: answered promise-only draft delivers exactly one corrective follow-up", { timeout: 15000 }, async () => {
+test("field screenshot: answered promise-only draft delivers exactly one corrective follow-up", { timeout: scaledBudgetMs(15000) }, async () => {
   const ctx = await draft();
   const sent = pi.userMessages.length;
   const custom = pi.sent.length;

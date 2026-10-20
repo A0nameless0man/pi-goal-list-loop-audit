@@ -15,6 +15,7 @@ import activate, {
 import { readState } from "../extensions/goal-loop-core.js";
 import { MockPi, makeMockCtx, seedLoop, seedState, tmpCwd, type MockCtx } from "./harness/mock-pi.js";
 import { untilMs } from "./harness/host-budget.js";
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
 const GLOBAL_SETTINGS_PATH = process.env.GLLA_GLOBAL_SETTINGS_PATH!;
 const pi = new MockPi();
@@ -311,7 +312,7 @@ test("/loop stop mid-tick still restores the original branch (no false branch-ch
   }
 });
 
-test("/loop stop mid-tick commits the in-flight iteration instead of resetting it away", { timeout: 30000 }, async () => {
+test("/loop stop mid-tick commits the in-flight iteration instead of resetting it away", { timeout: scaledBudgetMs(30000) }, async () => {
   // v0.38.104: `/loop stop` and `/loop finish` reach finishLoopGit WITHOUT
   // passing through runLoopTick, so a tick-local commit helper could not
   // protect them: the scratch branch's uncommitted diff was hard-reset away

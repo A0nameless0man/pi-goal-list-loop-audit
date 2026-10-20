@@ -19,6 +19,7 @@ import activate, {
   __testOnlyResetTerminalFlags,
 } from "../extensions/loops/goal.js";
 import { MockPi, makeMockCtx, tmpCwd, seedGoal, seedState, tick, type MockCtx } from "./harness/mock-pi.js";
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
 const pi = new MockPi();
 activate(pi.api);
@@ -28,7 +29,7 @@ function freshCtx(cwd: string): MockCtx {
   return makeMockCtx(cwd, { sessionManager: { name: "audit-standstill" } });
 }
 
-test("agent turns during a pending audit stay silent instead of escalating", { timeout: 60_000 }, async () => {
+test("agent turns during a pending audit stay silent instead of escalating", { timeout: scaledBudgetMs(60_000) }, async () => {
   __testOnlyResetStaleFlag();
   __testOnlyResetTerminalFlags();
   const cwd = tmpCwd();

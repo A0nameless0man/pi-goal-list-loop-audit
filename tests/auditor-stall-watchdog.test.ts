@@ -47,14 +47,13 @@ import { scaledBudgetMs } from "../scripts/host-contention.mjs";
  * is caught — while letting the absolute numbers fit the machine. On an idle
  * host the factor is 1.0 and every number is exactly what it was.
  */
-const budget = (ms: number): number => scaledBudgetMs(ms);
 
 /** Wait for an observable side effect. A signal is delivered to a process
  * that then runs its handler; the observer sees the EFFECT a moment after
  * the signal was sent, and on a loaded host that moment is not
  * instantaneous. */
 async function waitFor(predicate: () => boolean, message: string, timeoutMs = 10_000): Promise<void> {
-  const deadline = Date.now() + budget(timeoutMs);
+  const deadline = Date.now() + scaledBudgetMs(timeoutMs);
   while (!predicate()) {
     if (Date.now() >= deadline) throw new Error(`timed out waiting for: ${message}`);
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -79,7 +78,7 @@ async function cleanup(): Promise<void> {
   while (dirs.length) await rm(dirs.pop()!, { recursive: true, force: true });
 }
 
-test("stall: worker that never emits a first event is failed fast, not left for the wall", { timeout: budget(20_000) }, async () => {
+test("stall: worker that never emits a first event is failed fast, not left for the wall", { timeout: scaledBudgetMs(20_000) }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-first-event-stall-"));
   dirs.push(dir);
   const sigtermMarker = path.join(dir, "sigterm-marker");
@@ -107,14 +106,14 @@ setInterval(() => {}, 1_000);
       pollIntervalMs: 10,
       // Wall deliberately exceeds the silence window: the STALL must fire
       // first — that is the entire point of the watchdog.
-      wallTimeoutMs: budget(10_000),
+      wallTimeoutMs: scaledBudgetMs(10_000),
       // Give the detached Node child enough startup budget to install its
       // SIGTERM handler on the busy full-suite rig. The first-event watchdog
       // still fires well before the 10s wall; the delayed launcher already
       // consumes 1.5s before the child can install its handler.
-      firstEventTimeoutMs: budget(5_000),
-      heartbeatNoProgressMs: budget(20_000),
-      heartbeatFreshMs: budget(500),
+      firstEventTimeoutMs: scaledBudgetMs(5_000),
+      heartbeatNoProgressMs: scaledBudgetMs(20_000),
+      heartbeatFreshMs: scaledBudgetMs(500),
     },
   });
   assert.equal(result.approved, false, "a stalled worker is never a verdict");
@@ -124,9 +123,9 @@ setInterval(() => {}, 1_000);
   assert.equal(result.infrastructureClass, "timeout", "the stall classifies as retryable infra, feeding the eager ladder");
   assert.equal(stalled.length, 1, "the watchdog emits auditor_stalled exactly once");
   assert.equal(stalled[0]!.reason, "first-event-timeout");
-  assert.ok(stalled[0]!.noProgressMs >= budget(1_200), `silence reached the window: ${stalled[0]!.noProgressMs}ms`);
+  assert.ok(stalled[0]!.noProgressMs >= scaledBudgetMs(1_200), `silence reached the window: ${stalled[0]!.noProgressMs}ms`);
   assert.ok(
-    Date.now() - started < budget(9_000),
+    Date.now() - started < scaledBudgetMs(9_000),
     "the stall fired well before the 10s wall — the doomed attempt must not burn its full wall",
   );
   // The child installs its SIGTERM handler as its first statement, but the
@@ -142,7 +141,7 @@ setInterval(() => {}, 1_000);
   await cleanup();
 });
 
-test("stall: first-event budget starts after successful spawn, not pre-spawn setup", { timeout: budget(20_000) }, async () => {
+test("stall: first-event budget starts after successful spawn, not pre-spawn setup", { timeout: scaledBudgetMs(20_000) }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-first-event-clock-"));
   dirs.push(dir);
   const sigtermMarker = path.join(dir, "sigterm-marker");
@@ -174,10 +173,10 @@ setInterval(() => {}, 1_000);
       spawn: delayedSpawn,
       attemptId: () => "attempt-first-event-clock",
       pollIntervalMs: 10,
-      wallTimeoutMs: budget(10_000),
-      firstEventTimeoutMs: budget(5_000),
-      heartbeatNoProgressMs: budget(20_000),
-      heartbeatFreshMs: budget(500),
+      wallTimeoutMs: scaledBudgetMs(10_000),
+      firstEventTimeoutMs: scaledBudgetMs(5_000),
+      heartbeatNoProgressMs: scaledBudgetMs(20_000),
+      heartbeatFreshMs: scaledBudgetMs(500),
     },
   });
   assert.equal(result.infrastructureClass, "timeout", result.error ?? "no error");
@@ -193,7 +192,7 @@ setInterval(() => {}, 1_000);
   await cleanup();
 });
 
-test("stall: worker whose single boot heartbeat goes stale is failed fast, not left for the wall", { timeout: budget(20_000) }, async () => {
+test("stall: worker whose single boot heartbeat goes stale is failed fast, not left for the wall", { timeout: scaledBudgetMs(20_000) }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-stale-heartbeat-stall-"));
   dirs.push(dir);
   const sigtermMarker = path.join(dir, "sigterm-marker");
@@ -226,10 +225,10 @@ setInterval(() => {}, 1_000);
       workerPath: worker,
       attemptId: () => "attempt-stale-heartbeat-stall",
       pollIntervalMs: 10,
-      wallTimeoutMs: budget(10_000),
-      heartbeatNoProgressMs: budget(1_200),
-      firstEventTimeoutMs: budget(20_000),
-      heartbeatFreshMs: budget(500),
+      wallTimeoutMs: scaledBudgetMs(10_000),
+      heartbeatNoProgressMs: scaledBudgetMs(1_200),
+      firstEventTimeoutMs: scaledBudgetMs(20_000),
+      heartbeatFreshMs: scaledBudgetMs(500),
     },
   });
   assert.equal(result.approved, false, "a stalled worker is never a verdict");
@@ -238,16 +237,16 @@ setInterval(() => {}, 1_000);
   assert.equal(result.infrastructureClass, "timeout", "the stall classifies as retryable infra, feeding the eager ladder");
   assert.equal(stalled.length, 1, "the watchdog emits auditor_stalled exactly once");
   assert.equal(stalled[0]!.reason, "heartbeat-stale");
-  assert.ok(stalled[0]!.heartbeatAgeMs >= budget(1_200), `heartbeat was stale at detection: ${stalled[0]!.heartbeatAgeMs}ms`);
+  assert.ok(stalled[0]!.heartbeatAgeMs >= scaledBudgetMs(1_200), `heartbeat was stale at detection: ${stalled[0]!.heartbeatAgeMs}ms`);
   assert.ok(
-    Date.now() - started < budget(9_000),
+    Date.now() - started < scaledBudgetMs(9_000),
     "the stall fired well before the 10s wall — the doomed attempt must not burn its full wall",
   );
   assert.ok(existsSync(sigtermMarker), "the wedged worker was SIGTERMed — the detached job was cancelled");
   await cleanup();
 });
 
-test("progress: a live auditor outlives the legacy wall metadata and settles on its result", { timeout: 60_000 }, async () => {
+test("progress: a live auditor outlives the legacy wall metadata and settles on its result", { timeout: scaledBudgetMs(60_000) }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-live-progress-") );
   dirs.push(dir);
   const worker = path.join(dir, "progress-worker.mjs");
@@ -301,9 +300,9 @@ process.on("SIGTERM", () => { clearInterval(timer); process.exit(0); });
       // This deliberately expires before the worker's first result. It is
       // legacy metadata only; real progress and the result must win.
       wallTimeoutMs: 100,
-      firstEventTimeoutMs: budget(5_000),
-      heartbeatNoProgressMs: budget(2_000),
-      heartbeatFreshMs: budget(1_000),
+      firstEventTimeoutMs: scaledBudgetMs(5_000),
+      heartbeatNoProgressMs: scaledBudgetMs(2_000),
+      heartbeatFreshMs: scaledBudgetMs(1_000),
     },
   });
   assert.equal(result.approved, true, result.error ?? "live worker did not settle");
@@ -314,7 +313,7 @@ process.on("SIGTERM", () => { clearInterval(timer); process.exit(0); });
   await cleanup();
 });
 
-test("stall: a running auditor tool is exempt — the per-tool timeout owns that axis", { timeout: 20_000 }, async () => {
+test("stall: a running auditor tool is exempt — the per-tool timeout owns that axis", { timeout: scaledBudgetMs(20_000) }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-tool-exempt-"));
   dirs.push(dir);
   // Worker opens a tool (currentToolStartedAt set) and then emits nothing:
@@ -352,16 +351,16 @@ setInterval(() => {}, 1_000);
       pollIntervalMs: 10,
       // A legacy wall shorter than the open tool must be ignored; the
       // independent per-tool watchdog owns this axis.
-      wallTimeoutMs: budget(250),
+      wallTimeoutMs: scaledBudgetMs(250),
       toolTimeoutMs: 800,
       // v0.38.99: the parent now grants the worker a bounded window to cancel
       // the over-budget tool and resume before it falls back to the hard kill.
       // A zero grace keeps this test on the pre-grace semantics: the kill is
       // the only way the run can end.
       toolCancelGraceMs: 0,
-      heartbeatNoProgressMs: budget(1_200),
-      firstEventTimeoutMs: budget(20_000),
-      heartbeatFreshMs: budget(500),
+      heartbeatNoProgressMs: scaledBudgetMs(1_200),
+      firstEventTimeoutMs: scaledBudgetMs(20_000),
+      heartbeatFreshMs: scaledBudgetMs(500),
     },
   }).then((result) => {
     toolTimedOut = /tool bash exceeded its 1s timeout/.test(result.error ?? "");
@@ -375,7 +374,7 @@ setInterval(() => {}, 1_000);
   await cleanup();
 });
 
-test("stall: a silent-past-bound attempt fails fast WITH its cost record (controlled clock)", { timeout: 20_000 }, async () => {
+test("stall: a silent-past-bound attempt fails fast WITH its cost record (controlled clock)", { timeout: scaledBudgetMs(20_000) }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-stall-evidence-"));
   dirs.push(dir);
   // One heartbeat + two finished tool calls (one of them an image read, i.e.
@@ -420,10 +419,10 @@ setInterval(() => {}, 1_000);
       workerPath: worker,
       attemptId: () => "attempt-stall-evidence",
       pollIntervalMs: 10,
-      wallTimeoutMs: budget(20_000),
-      heartbeatNoProgressMs: budget(1_200),
-      firstEventTimeoutMs: budget(20_000),
-      heartbeatFreshMs: budget(500),
+      wallTimeoutMs: scaledBudgetMs(20_000),
+      heartbeatNoProgressMs: scaledBudgetMs(1_200),
+      firstEventTimeoutMs: scaledBudgetMs(20_000),
+      heartbeatFreshMs: scaledBudgetMs(500),
     },
   });
   assert.equal(result.infrastructureClass, "timeout", "silence past the bound is still retryable infra");
@@ -451,7 +450,7 @@ setInterval(() => {}, 1_000);
   await cleanup();
 });
 
-test("stall: a worker-reported brake is reclassified with the same evidence", { timeout: 20_000 }, async () => {
+test("stall: a worker-reported brake is reclassified with the same evidence", { timeout: scaledBudgetMs(20_000) }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-worker-brake-"));
   dirs.push(dir);
   // The worker wins the shared silence window: it publishes its own atomic
@@ -488,14 +487,14 @@ setInterval(() => {}, 1_000);
       workerPath: worker,
       attemptId: () => "attempt-worker-brake",
       pollIntervalMs: 10,
-      wallTimeoutMs: budget(250),
+      wallTimeoutMs: scaledBudgetMs(250),
       // The parent watchdogs are deliberately DISARMED here: this test pins
       // the result path (the worker winning the shared window), so the
       // result must be the first thing the parent sees. Both files are
       // published back-to-back, so the parent consumes them in one poll.
-      heartbeatNoProgressMs: budget(1_200),
-      firstEventTimeoutMs: budget(20_000),
-      heartbeatFreshMs: budget(500),
+      heartbeatNoProgressMs: scaledBudgetMs(1_200),
+      firstEventTimeoutMs: scaledBudgetMs(20_000),
+      heartbeatFreshMs: scaledBudgetMs(500),
     },
   });
   assert.equal(result.infrastructureClass, "timeout", "the worker's own brake stays retryable infra");
@@ -512,7 +511,7 @@ setInterval(() => {}, 1_000);
   await cleanup();
 });
 
-test("stall: an open in-budget tool is not silence — the no-progress bound spares it", { timeout: 20_000 }, async () => {
+test("stall: an open in-budget tool is not silence — the no-progress bound spares it", { timeout: scaledBudgetMs(20_000) }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-tool-silence-"));
   dirs.push(dir);
   // Fresh heartbeats, no progress signature change, an OPEN tool well inside
@@ -583,18 +582,18 @@ process.on("SIGTERM", () => { clearTimeout(next); process.exit(0); });
       workerPath: worker,
       attemptId: () => "attempt-tool-silence",
       pollIntervalMs: 10,
-      wallTimeoutMs: budget(30_000),
+      wallTimeoutMs: scaledBudgetMs(30_000),
       // Far smaller than the tool's own 60s grant: without the open-tool
       // exemption the no-progress watchdog cut a healthy audit in half.
-      heartbeatNoProgressMs: budget(300),
-      firstEventTimeoutMs: budget(30_000),
-      heartbeatFreshMs: budget(5_000),
-      toolTimeoutMs: budget(60_000),
+      heartbeatNoProgressMs: scaledBudgetMs(300),
+      firstEventTimeoutMs: scaledBudgetMs(30_000),
+      heartbeatFreshMs: scaledBudgetMs(5_000),
+      toolTimeoutMs: scaledBudgetMs(60_000),
     },
   });
   assert.deepEqual(stalled, [], "an in-budget open tool is exempt from the no-progress bound");
   assert.equal(result.approved, true, result.error ?? "the long-tool audit did not settle");
-  assert.ok(Date.now() - started < budget(10_000), "the audit outlived several no-progress windows without burning the wall");
+  assert.ok(Date.now() - started < scaledBudgetMs(10_000), "the audit outlived several no-progress windows without burning the wall");
   await cleanup();
 });
 
@@ -616,7 +615,7 @@ process.on("SIGTERM", () => { clearTimeout(next); process.exit(0); });
 // disapproval (the goal did not regress) and never an approval.
 // ---------------------------------------------------------------------------
 
-test("v0.38.99: an over-budget tool is NOT fatal — the worker cancels it, resumes, and its result still lands", { timeout: 25_000 }, async () => {
+test("v0.38.99: an over-budget tool is NOT fatal — the worker cancels it, resumes, and its result still lands", { timeout: scaledBudgetMs(25_000) }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-tool-cancel-continue-"));
   dirs.push(dir);
   // The worker opens a tool whose budget is already blown, then — instead of
@@ -672,9 +671,9 @@ setInterval(() => {}, 1_000);
       pollIntervalMs: 10,
       toolTimeoutMs: 800,
       toolCancelGraceMs: 10_000, // wide enough that only the worker can end this
-      heartbeatNoProgressMs: budget(1_200),
-      firstEventTimeoutMs: budget(20_000),
-      heartbeatFreshMs: budget(500),
+      heartbeatNoProgressMs: scaledBudgetMs(1_200),
+      firstEventTimeoutMs: scaledBudgetMs(20_000),
+      heartbeatFreshMs: scaledBudgetMs(500),
     },
   });
   assert.equal(stalled.length, 1, "the over-budget tool is recorded as one stall");
@@ -687,7 +686,7 @@ setInterval(() => {}, 1_000);
   await cleanup();
 });
 
-test("v0.38.99 approval guard: an approving verdict from a verification-incomplete attempt is refused, not applied", { timeout: 25_000 }, async () => {
+test("v0.38.99 approval guard: an approving verdict from a verification-incomplete attempt is refused, not applied", { timeout: scaledBudgetMs(25_000) }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-approval-guard-"));
   dirs.push(dir);
   // The auditor says <approved/> even though one tool call was cancelled and
@@ -734,9 +733,9 @@ setInterval(() => {}, 1_000);
       pollIntervalMs: 10,
       toolTimeoutMs: 800,
       toolCancelGraceMs: 10_000,
-      heartbeatNoProgressMs: budget(1_200),
-      firstEventTimeoutMs: budget(20_000),
-      heartbeatFreshMs: budget(500),
+      heartbeatNoProgressMs: scaledBudgetMs(1_200),
+      firstEventTimeoutMs: scaledBudgetMs(20_000),
+      heartbeatFreshMs: scaledBudgetMs(500),
     },
   });
   assert.equal(result.approved, false, "the approval is refused");
@@ -751,7 +750,7 @@ setInterval(() => {}, 1_000);
   await cleanup();
 });
 
-test("v0.38.99: a genuinely wedged tool still fails fast once the grace expires", { timeout: 25_000 }, async () => {
+test("v0.38.99: a genuinely wedged tool still fails fast once the grace expires", { timeout: scaledBudgetMs(25_000) }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-grace-expiry-"));
   dirs.push(dir);
   // A tool that never returns and a worker that never recovers: the grace
@@ -785,9 +784,9 @@ setInterval(() => {}, 1_000);
       pollIntervalMs: 10,
       toolTimeoutMs: 800,
       toolCancelGraceMs: 400,
-      heartbeatNoProgressMs: budget(1_200),
-      firstEventTimeoutMs: budget(20_000),
-      heartbeatFreshMs: budget(500),
+      heartbeatNoProgressMs: scaledBudgetMs(1_200),
+      firstEventTimeoutMs: scaledBudgetMs(20_000),
+      heartbeatFreshMs: scaledBudgetMs(500),
     },
   });
   assert.equal(stalled.length, 1, "one stall event, recorded at first expiry");

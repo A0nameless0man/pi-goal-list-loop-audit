@@ -42,6 +42,7 @@ import {
 } from "../extensions/goal-loop-auditor-process.ts";
 import { buildAuditorPiSpawnSpec, quoteWindowsCommandArgument, renameWithWindowsRetry } from "../scripts/goal-auditor-launch.mjs";
 import { untilMs } from "./harness/host-budget.js";
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
 function workerPathFor(dir: string): string {
   return path.join(dir, "auditor-fake-worker.mjs");
@@ -309,7 +310,7 @@ test("detached parent accepts an identity-checked result and applies regression_
   }
 });
 
-test("detached parent keeps a regression-shield block distinct from disapproval and infrastructure", { timeout: 40_000 }, async () => {
+test("detached parent keeps a regression-shield block distinct from disapproval and infrastructure", { timeout: scaledBudgetMs(40_000) }, async () => {
   const dir = await setup();
   try {
     const result = await run(dir, {
@@ -326,7 +327,7 @@ test("detached parent keeps a regression-shield block distinct from disapproval 
   }
 });
 
-test("detached parent forwards live worker telemetry to its progress callback", { timeout: 40_000 }, async () => {
+test("detached parent forwards live worker telemetry to its progress callback", { timeout: scaledBudgetMs(40_000) }, async () => {
   const dir = await setup();
   const reports: AuditorProgress[] = [];
   try {
@@ -352,7 +353,7 @@ test("detached parent forwards live worker telemetry to its progress callback", 
   }
 });
 
-test("v0.34.57: heartbeat-without-progress watchdog emits auditor_stalled and cancels the detached job", { timeout: 30_000 }, async () => {
+test("v0.34.57: heartbeat-without-progress watchdog emits auditor_stalled and cancels the detached job", { timeout: scaledBudgetMs(30_000) }, async () => {
   // steal-list #7 / bug #1.4: a worker that keeps refreshing its heartbeat
   // (fresh lastActivityAt) without delivering any NEW tool call or report
   // output is alive but wedged — the 1h50m "stuck but says LIVE" class. The
@@ -434,7 +435,7 @@ void heartbeat();
   }
 });
 
-test("parent abort escalates a detached TERM-ignoring worker and removes its job", { timeout: 40_000 }, async () => {
+test("parent abort escalates a detached TERM-ignoring worker and removes its job", { timeout: scaledBudgetMs(40_000) }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-parent-abort-"));
   const worker = path.join(dir, "term-ignoring-worker.mjs");
   const pidMarker = path.join(dir, "worker-pid");
@@ -486,7 +487,7 @@ setInterval(() => {}, 1_000);
   }
 });
 
-test("the real worker forwards ordered tool and report phases to the parent", { timeout: 40_000 }, async () => {
+test("the real worker forwards ordered tool and report phases to the parent", { timeout: scaledBudgetMs(40_000) }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-live-telemetry-"));
   const fakePi = path.join(dir, "phase-pi.mjs");
   const reports: AuditorProgress[] = [];
@@ -621,7 +622,7 @@ process.stdin.on("data", (chunk) => {
 });
 }
 
-test("real worker persists the auditor session when inspection is enabled (spawn spec + progress shape)", { timeout: 40_000 }, async () => {
+test("real worker persists the auditor session when inspection is enabled (spawn spec + progress shape)", { timeout: scaledBudgetMs(40_000) }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-inspection-on-"));
   const fakePi = path.join(dir, "inspection-pi.mjs");
   const argvDump = path.join(dir, "argv-dump.json");
@@ -695,7 +696,7 @@ test("detached auditor env keeps runtime necessities and selected provider auth,
   assert.equal(env.RANDOM_SETTING, undefined, "ordinary unrelated setting is not admitted");
 });
 
-test("real worker keeps the original --no-session spawn when inspection is unset (default unchanged)", { timeout: 40_000 }, async () => {
+test("real worker keeps the original --no-session spawn when inspection is unset (default unchanged)", { timeout: scaledBudgetMs(40_000) }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-inspection-off-"));
   const fakePi = path.join(dir, "inspection-off-pi.mjs");
   const argvDump = path.join(dir, "argv-dump.json");
@@ -1644,7 +1645,7 @@ process.stdin.on("end", () => { process.exitCode = 41; });
   }
 });
 
-test("v0.36.0: the process layer resolves raw specs to install paths before the worker sees them", { timeout: 20_000 }, async () => {
+test("v0.36.0: the process layer resolves raw specs to install paths before the worker sees them", { timeout: scaledBudgetMs(20_000) }, async () => {
   // Regression pin for the 2026-08-22 audit finding: the primary
   // complete_goal dispatch passed raw settings specs (npm:/relative) into
   // AuditorRequest.allowedExtensions, so the worker spawned `pi -e npm:pkg`
@@ -1900,7 +1901,7 @@ test("A2 (pin): the crash-safe pre-dispatch reap covers the rotated-away attempt
   assert.match(toolsSrc, /priorAttemptId: completionClaim\.priorAttemptId/, "tools dispatch forwards the durable lineage");
 });
 
-test("A5: an abandoned challenge preserves its prose beside the byte-exact round-1 output", { timeout: 60_000 }, async () => {
+test("A5: an abandoned challenge preserves its prose beside the byte-exact round-1 output", { timeout: scaledBudgetMs(60_000) }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-abandon-"));
   const fakePi = path.join(dir, "abandon-pi.mjs");
   const counterFile = path.join(dir, "invocations");

@@ -13,6 +13,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fence = await import(pathToFileURL(path.join(__dirname, "../scripts/auditor-child-env.mjs")).href);
@@ -87,7 +88,7 @@ async function stopTestProcess(child: ChildProcess | undefined): Promise<void> {
   try { child.kill("SIGKILL"); } catch {}
 }
 
-test("v0.39.38: live worker keeps an unlisted host secret out of the pi child", { timeout: 60_000 }, async () => {
+test("v0.39.38: live worker keeps an unlisted host secret out of the pi child", { timeout: scaledBudgetMs(60_000) }, async () => {
   const dir = await setupDir();
   try {
     // Fake pi mirrors the repo handshake (answer once the prompt line
@@ -129,7 +130,7 @@ process.stdin.on("end", () => { process.exitCode = 0; });
   }
 });
 
-test("v0.39.38: live worker rejects a redirected binary and a missing allowlist", { timeout: 90_000 }, async () => {
+test("v0.39.38: live worker rejects a redirected binary and a missing allowlist", { timeout: scaledBudgetMs(90_000) }, async () => {
   const dir = await setupDir();
   try {
     const fakePi = path.join(dir, "fake-pi.mjs");

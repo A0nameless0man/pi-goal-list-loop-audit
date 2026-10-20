@@ -4,6 +4,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
 test("real-host canary reports an explicit skip without opt-in or spawning Pi", () => {
   const result = spawnSync("node", ["scripts/real-host-canary.mjs"], {
@@ -44,7 +45,7 @@ test("opt-in canary installs its request guard and records bounded host evidence
 });
 
 for (const scenario of ['allowed', 'unknown-price', 'over-budget', 'unsupported-cap', 'oversized', 'second-request', 'receipt-write'] as const) {
-  test(`generated canary uses actual Pi dispatcher and ${scenario} transport behavior`, { timeout: 30_000 }, async () => {
+  test(`generated canary uses actual Pi dispatcher and ${scenario} transport behavior`, { timeout: scaledBudgetMs(30_000) }, async () => {
     const { buildCanaryExtensionSource } = await import('../scripts/canary-extension.mjs');
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'glla-canary-dispatch-'));
     try {

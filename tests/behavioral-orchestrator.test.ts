@@ -48,6 +48,7 @@ import { appendAuditLog, auditPhaseOwnsAttempt, queueItemSidecarCount, readState
 import { MockPi, invalidateHostSession, makeMockCtx, tmpCwd, seedState, seedGoal, seedLoop, staleError, tick, type MockCtx } from "./harness/mock-pi.js";
 import { readGoalRuntimeSource } from "./harness/goal-source.js";
 import { untilMs } from "./harness/host-budget.js";
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
 /**
  * v0.38.99: a LAUNCHED attempt owns its durable claim. The stored phase is
@@ -3918,7 +3919,7 @@ test("v0.34.22: complete_goal returns while a detached auditor finishes and arch
 
 // The inner detached-state wait is 30s: the runner must allow that wait
 // plus startup/cleanup, or it can abandon a live worker mid-fixture.
-test("v0.35.x: provider-wall diagnostics stay durable while completion surfaces remain sanitized and deduplicated", { timeout: 60_000 }, async () => {
+test("v0.35.x: provider-wall diagnostics stay durable while completion surfaces remain sanitized and deduplicated", { timeout: scaledBudgetMs(60_000) }, async () => {
   __testOnlyResetStaleFlag();
   const cwd = tmpCwd();
   const raw = '429 {"error":{"message":"Token Plan rate limit reached: upgrade your Token Plan"},"request_id":"abc123"}';
@@ -4050,7 +4051,7 @@ test("v0.35.x: bare 403 main recovery sanitizes live surfaces while retaining di
   await pi.fire("session_shutdown", { reason: "quit" }, ctx);
 });
 
-test("v0.35.x: bare 403 completion diagnostics stay durable while completion surfaces remain sanitized", { timeout: 30_000 }, async () => {
+test("v0.35.x: bare 403 completion diagnostics stay durable while completion surfaces remain sanitized", { timeout: scaledBudgetMs(30_000) }, async () => {
   __testOnlyResetStaleFlag();
   const cwd = tmpCwd();
   const raw = '403 {"error":{"message":"upstream denied this request"},"request_id":"auth-sensitive-id"}';
@@ -4125,7 +4126,7 @@ test("v0.34.119: auditor-approved list completion archives the item and activate
   }
 });
 
-test("v0.36.2: approved standalone completion automatically activates a pre-queued list head", { timeout: 30_000 }, async () => {
+test("v0.36.2: approved standalone completion automatically activates a pre-queued list head", { timeout: scaledBudgetMs(30_000) }, async () => {
   __testOnlyResetStaleFlag();
   const cwd = tmpCwd();
   const previous = process.env.GLLA_PI_BINARY;
@@ -4694,7 +4695,7 @@ test("v0.35.x: stale host replacement session_start auto-recovers the parked aud
   }
 });
 
-test("v0.35.x: healthy same-session heartbeat recovers a parked completion audit without manual resume", { timeout: 15_000 }, async () => {
+test("v0.35.x: healthy same-session heartbeat recovers a parked completion audit without manual resume", { timeout: scaledBudgetMs(15_000) }, async () => {
   __testOnlyResetStaleFlag();
   __testOnlyResetOwnerSession();
   __testOnlySetSessionReplacementUntil(0);
@@ -4756,7 +4757,7 @@ test("v0.35.x: healthy same-session heartbeat recovers a parked completion audit
   }
 });
 
-test("v0.36.0: exhausted no-verdict auditor chain enters the shared ladder with an automatic retry timer", { timeout: 60_000 }, async () => {
+test("v0.36.0: exhausted no-verdict auditor chain enters the shared ladder with an automatic retry timer", { timeout: scaledBudgetMs(60_000) }, async () => {
   __testOnlyResetStaleFlag();
   // Unified envelope: no one-shot delay override — exhaustion ladders with
   // the uniform eager-then-hourly schedule, same as the main model.
@@ -4798,7 +4799,7 @@ test("v0.36.0: exhausted no-verdict auditor chain enters the shared ladder with 
   }
 });
 
-test("bounded recovery: initial aggressive completion preserves its horizon and exhausted chain", { timeout: 60_000 }, async () => {
+test("bounded recovery: initial aggressive completion preserves its horizon and exhausted chain", { timeout: scaledBudgetMs(60_000) }, async () => {
   // v0.35.15: budget raised 30s→60s — this real-timer test observed 23s on
   // a busy machine (the auditor's own release:check ran concurrently with
   // an active session) and blew the per-test ceiling, fast-failing the
@@ -4898,7 +4899,7 @@ test("bounded recovery: initial aggressive completion preserves its horizon and 
   }
 });
 
-test("v0.35.x: stale host loss releases an in-flight completion audit without a verdict", { timeout: 30_000 }, async () => {
+test("v0.35.x: stale host loss releases an in-flight completion audit without a verdict", { timeout: scaledBudgetMs(30_000) }, async () => {
   __testOnlyResetStaleFlag();
   const cwd = tmpCwd();
   const fakePi = writeFakeAuditorError(cwd, "Auditor stalled — no progress", 100);

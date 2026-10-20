@@ -48,6 +48,7 @@ import {
 } from "../extensions/goal-loop-core.js";
 import { MockPi, makeMockCtx, seedGoal, seedState, tick, tmpCwd, type MockCtx } from "./harness/mock-pi.js";
 import { untilMs } from "./harness/host-budget.js";
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
 const GLOBAL_SETTINGS_PATH = process.env.GLLA_GLOBAL_SETTINGS_PATH!;
 
@@ -187,7 +188,7 @@ describe("regression shield — the branch the cap could not see", () => {
   // Behavioural proof: the goal is parked at the hard cap with a history full
   // of shield blocks. Against the pre-fix source this round is re-continued
   // (status active, no pause) because the cap only ever counted disapproved.
-  test("shield blocks pause at the hard cap instead of re-continuing forever", { timeout: 120_000 }, async () => {
+  test("shield blocks pause at the hard cap instead of re-continuing forever", { timeout: scaledBudgetMs(120_000) }, async () => {
     setSettings({ aggressiveMode: true, auditCap: 2, auditCapHard: 2, autoResume: true });
     const cwd = tmpCwd();
     const grader = "anthropic/mock-model";

@@ -6,6 +6,7 @@ import * as path from "node:path";
 import { loadSkills } from "@earendil-works/pi-coding-agent";
 import { packReportFiles } from "../scripts/npm-pack-report.mjs";
 import { missingPackagedMarkdownLinks } from "../scripts/packaged-markdown-links.mjs";
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
 function dryRunFiles(): Set<string> {
   const raw = execFileSync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
@@ -18,7 +19,7 @@ function dryRunFiles(): Set<string> {
   return new Set(packReportFiles(JSON.parse(raw) as unknown));
 }
 
-test("release contract: published documentation links are covered by the npm tarball", { timeout: 60_000 }, () => {
+test("release contract: published documentation links are covered by the npm tarball", { timeout: scaledBudgetMs(60_000) }, () => {
   const files = dryRunFiles();
   for (const required of ["README.md", "INSTALL.md", "PLAN.md", "LIST-PHILOSOPHY.md", "CHANGELOG.md", "docs/INDEX.md", "docs/SETTINGS.md", "media/glla2.png", "examples/example-objective.md", "scripts/release-pack-smoke.mjs", "skills/glla-delegate/SKILL.md"]) {
     assert.ok(files.has(required), `${required} must be shipped`);
@@ -46,7 +47,7 @@ test("release contract: the release gate exercises the packed artifact", () => {
   assert.match(smoke, /auditorEnvAllowlistFor/, "the probe request carries the fenced env allowlist built by the packed tree");
 });
 
-test("release contract: packed prompts, schema, and workers ship in the dry-run list", { timeout: 60_000 }, () => {
+test("release contract: packed prompts, schema, and workers ship in the dry-run list", { timeout: scaledBudgetMs(60_000) }, () => {
   const files = dryRunFiles();
   for (const required of [
     "scripts/goal-compactor-worker.mjs",
@@ -66,7 +67,7 @@ test("release contract: packed prompts, schema, and workers ship in the dry-run 
   }
 });
 
-test("release contract: changed tests ride the hardened runner", { timeout: 60_000 }, () => {
+test("release contract: changed tests ride the hardened runner", { timeout: scaledBudgetMs(60_000) }, () => {
   const manifest = JSON.parse(fs.readFileSync("package.json", "utf-8")) as { scripts?: Record<string, string> };
   const changed = manifest.scripts?.["test:changed"] ?? "";
   assert.match(changed, /scripts\/run-tests\.mjs/, "test:changed must route through the hardened runner");
@@ -107,7 +108,7 @@ test("release contract: docs index tracks the package version", () => {
   );
 });
 
-test("release contract: package is discoverable as a Pi extension and skill", { timeout: 60_000 }, () => {
+test("release contract: package is discoverable as a Pi extension and skill", { timeout: scaledBudgetMs(60_000) }, () => {
   const manifest = JSON.parse(fs.readFileSync("package.json", "utf-8")) as {
     keywords?: string[];
     pi?: { extensions?: string[]; skills?: string[]; image?: string };
@@ -130,7 +131,7 @@ test("release contract: package is discoverable as a Pi extension and skill", { 
   assert.ok(dryRunFiles().has(imagePath), `${imagePath} must ship in the npm tarball`);
 });
 
-test("release contract: README package contents claim matches the files allowlist", { timeout: 60_000 }, () => {
+test("release contract: README package contents claim matches the files allowlist", { timeout: scaledBudgetMs(60_000) }, () => {
   const readme = fs.readFileSync("README.md", "utf-8");
   assert.match(readme, /full test suite remains\s+repository material/);
   assert.doesNotMatch(readme, /and the full test suite\. `audit/);

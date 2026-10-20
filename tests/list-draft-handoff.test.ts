@@ -4,6 +4,7 @@ import activate, { __testOnlyResetOwnerSession, __testOnlyResetStaleFlag } from 
 import { MockPi, makeMockCtx, tmpCwd, seedState, tick, type MockCtx } from "./harness/mock-pi.js";
 import { readState } from "../extensions/goal-loop-core.js";
 import { DRAFT_HANDOFF_CORRECTION } from "../extensions/drafting-handoff.js";
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
 const pi = new MockPi();
 activate(pi.api);
@@ -51,7 +52,7 @@ const COMMENTARY_ALONE =
   "I also wouldn't add another storage item blindly — the existing title already covers it. " +
   "Requesting indexing before a change is deployed wouldn't verify anything.";
 
-test("125335: fresh commentary-only draft end delivers exactly one bounded correction", { timeout: 15000 }, async () => {
+test("125335: fresh commentary-only draft end delivers exactly one bounded correction", { timeout: scaledBudgetMs(15000) }, async () => {
   const ctx = await freshDraft();
   const sent = pi.userMessages.length;
   const custom = pi.sent.length;
@@ -94,7 +95,7 @@ test("tool-unavailable fallback: the correction directs prose asking", () => {
   assert.match(DRAFT_HANDOFF_CORRECTION, /ask the genuinely free-form question in conversation/i);
 });
 
-test("confirmation gate untouched: correction never earns a proposal", { timeout: 15000 }, async () => {
+test("confirmation gate untouched: correction never earns a proposal", { timeout: scaledBudgetMs(15000) }, async () => {
   const ctx = await freshDraft();
   await pi.fire("agent_end", ended(COMMENTARY_ALONE), ctx);
   await tick(2800);

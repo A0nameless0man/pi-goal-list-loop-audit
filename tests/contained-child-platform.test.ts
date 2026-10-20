@@ -6,6 +6,7 @@ import * as os from "node:os";
 import { spawn } from "node:child_process";
 import { terminateContainedChild } from "../scripts/contained-child.mjs";
 import { untilMs } from "./harness/host-budget.js";
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
 function executing(pid: number): boolean {
   if (process.platform === "linux") {
@@ -17,7 +18,7 @@ function executing(pid: number): boolean {
   try { process.kill(pid, 0); return true; } catch { return false; }
 }
 
-test(`real ${process.platform} cleanup stops a live owned Node tree and inherited pipes`, { timeout: 30_000 }, async () => {
+test(`real ${process.platform} cleanup stops a live owned Node tree and inherited pipes`, { timeout: scaledBudgetMs(30_000) }, async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "glla-platform-tree-"));
   const ready = path.join(dir, "ready");
   const grandchild = `require('node:fs').writeFileSync(${JSON.stringify(ready)},String(process.pid));process.on('SIGTERM',()=>{});setInterval(()=>{},1000);`;

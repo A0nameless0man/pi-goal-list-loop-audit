@@ -39,6 +39,7 @@ import { buildSettingsRows } from "../extensions/settings-menu.ts";
 import { handleSettingChoice } from "../extensions/loops/goal.js";
 import { makeMockCtx, tmpCwd } from "./harness/mock-pi.js";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
 const GLOBAL_FILE = globalSettingsPath();
 const ORIGINAL_GLOBAL = fs.existsSync(GLOBAL_FILE) ? fs.readFileSync(GLOBAL_FILE, "utf-8") : null;
@@ -164,7 +165,7 @@ test("v0.37.0: settings menu exposes both auditor timeout rows in the auditor se
   assert.match(stallRow!.valueText, /30m base · ×2 per retry · cap 4×/);
 });
 
-test("v0.37.0: dispatch env reaches the worker process so parent and worker budgets agree", { timeout: 30_000 }, async () => {
+test("v0.37.0: dispatch env reaches the worker process so parent and worker budgets agree", { timeout: scaledBudgetMs(30_000) }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-auditor-env-"));
   try {
     const worker = path.join(dir, "env-worker.mjs");
