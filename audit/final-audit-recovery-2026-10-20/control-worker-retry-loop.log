@@ -2,16 +2,10 @@ bun test v1.3.14 (0d9b296a)
 
 tests/auditor-process.test.ts:
 killed 1 dangling process
-(fail) real worker escapes a quota retry loop: error [5001.06ms]
-  ^ this test timed out after 5000ms, before its done callback was called. If a done callback was not intended, remove the last parameter from the test callback function
-killed 1 dangling process
-(fail) real worker escapes a quota retry loop: auto_retry_start [5000.47ms]
-  ^ this test timed out after 5000ms, before its done callback was called. If a done callback was not intended, remove the last parameter from the test callback function
-killed 1 dangling process
-(fail) real worker escapes a quota retry loop: message_end [5000.08ms]
-  ^ this test timed out after 5000ms, before its done callback was called. If a done callback was not intended, remove the last parameter from the test callback function
+(fail) real worker escapes a quota retry loop: auto_retry_start [20000.58ms]
+  ^ this test timed out after 20000ms, before its done callback was called. If a done callback was not intended, remove the last parameter from the test callback function
 
  0 pass
- 49 filtered out
- 3 fail
-Ran 3 tests across 1 file. [15.20s]
+ 51 filtered out
+ 1 fail
+Ran 1 test across 1 file. [21.30s]

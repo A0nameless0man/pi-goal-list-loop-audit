@@ -1,0 +1,21 @@
+
+> pi-goal-list-loop-audit@0.39.40 test
+> node scripts/run-tests.mjs tests/hourly-auditor-backstop.test.ts tests/behavioral-orchestrator.test.ts -t one dead backend|executable runtime regression|exhausted no-verdict auditor chain|initial aggressive completion
+
+[run-tests] mode=explicit slow_files=13 stall_timeout=180s heartbeat=30s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/hourly-auditor-backstop.test.ts:
+(pass) unified: one dead backend skips configured rungs while retaining the session last resort [3.87ms]
+(pass) unified: executable runtime regression covers arming, past-due fire, guards, and opt-out [1596.14ms]
+
+tests/behavioral-orchestrator.test.ts:
+[run-tests] progress: 30s elapsed · 26s since last output · 0 KiB of suite output
+(pass) v0.36.0: exhausted no-verdict auditor chain enters the shared ladder with an automatic retry timer [38665.44ms]
+(pass) bounded recovery: initial aggressive completion preserves its horizon and exhausted chain [12439.72ms]
+
+ 4 pass
+ 157 filtered out
+ 0 fail
+Ran 4 tests across 2 files. [57.26s]
+[run-tests] finished in 58s (exit 0)

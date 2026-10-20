@@ -1,0 +1,20 @@
+
+> pi-goal-list-loop-audit@0.39.40 test
+> node scripts/run-tests.mjs tests/behavioral-orchestrator.test.ts -t stale host loss releases|fan-out honors autoAcceptDrafts|fan-out dedupe does not drop|fan-out reports cap-deferred|fan-out confirmation from the old generation|loop measurement abandons
+
+[run-tests] mode=explicit slow_files=13 stall_timeout=180s heartbeat=30s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/behavioral-orchestrator.test.ts:
+(pass) v0.35.x: stale host loss releases an in-flight completion audit without a verdict [9103.09ms]
+(pass) v0.34.29: audit fan-out honors autoAcceptDrafts without opening confirmation [10.72ms]
+(pass) v0.34.129: fan-out dedupe does not drop a finding whose prefix appears inside another queue item [91.11ms]
+(pass) v0.34.129: fan-out reports cap-deferred findings separately from true queue dedupes [198.84ms]
+(pass) v0.34.20 lifecycle: fan-out confirmation from the old generation cannot queue into its replacement [298.10ms]
+(pass) v0.34.20 lifecycle: loop measurement abandons the old generation after replacement [598.48ms]
+
+ 6 pass
+ 150 filtered out
+ 0 fail
+Ran 6 tests across 1 file. [17.17s]
+[run-tests] finished in 18s (exit 0)

@@ -1,23 +1,25 @@
 bun test v1.3.14 (0d9b296a)
 
 tests/auditor-fallback-unification.test.ts:
-(pass) session remains reachable on the same provider after subscription quota exhausted; retry in 7 days [32.61ms]
-(pass) session remains reachable on the same provider after HTTP 429 Retry-After: 7200 [1.72ms]
-(pass) session remains reachable on the same provider after insufficient credits [0.81ms]
-(pass) session remains reachable on the same provider after 503 provider unavailable [2.58ms]
+(pass) session remains reachable on the same provider after subscription quota exhausted; retry in 7 days [8.27ms]
+(pass) session remains reachable on the same provider after HTTP 429 Retry-After: 7200 [93.10ms]
+(pass) session remains reachable on the same provider after insufficient credits [1.55ms]
+(pass) session remains reachable on the same provider after 503 provider unavailable [3.24ms]
+(pass) explicit session fallback remains reachable with same-session swap disabled: test/session [1.95ms]
+(pass) explicit session fallback remains reachable with same-session swap disabled: session [0.89ms]
 
 tests/auditor-process.test.ts:
-(pass) real worker escapes a quota retry loop: error [987.31ms]
-(pass) real worker escapes a quota retry loop: auto_retry_start [617.21ms]
-(pass) real worker escapes a quota retry loop: message_end [715.63ms]
+(pass) real worker escapes a quota retry loop: error [1200.95ms]
+(pass) real worker escapes a quota retry loop: auto_retry_start [796.74ms]
+(pass) real worker escapes a quota retry loop: message_end [802.42ms]
 
 tests/completed-audit-recovery.test.ts:
-(pass) durable fallback survives recovery: contextFree=false, retryStarted=false [727.09ms]
-(pass) durable fallback survives recovery: contextFree=false, retryStarted=true [485.58ms]
-(pass) durable fallback survives recovery: contextFree=true, retryStarted=false [623.13ms]
-(pass) durable fallback survives recovery: contextFree=true, retryStarted=true [389.14ms]
+(pass) durable fallback survives recovery: contextFree=false, retryStarted=false [699.83ms]
+(pass) durable fallback survives recovery: contextFree=false, retryStarted=true [300.99ms]
+(pass) durable fallback survives recovery: contextFree=true, retryStarted=false [296.89ms]
+(pass) durable fallback survives recovery: contextFree=true, retryStarted=true [306.44ms]
 
- 11 pass
+ 13 pass
  113 filtered out
  0 fail
-Ran 11 tests across 3 files. [6.62s]
+Ran 13 tests across 3 files. [10.68s]

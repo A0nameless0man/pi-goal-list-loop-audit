@@ -1,0 +1,22 @@
+bun test v1.3.14 (0d9b296a)
+
+tests/auditor-fallback-unification.test.ts:
+(pass) session remains reachable on the same provider after subscription quota exhausted; retry in 7 days [8.18ms]
+(pass) session remains reachable on the same provider after HTTP 429 Retry-After: 7200 [0.64ms]
+(pass) session remains reachable on the same provider after insufficient credits [1.80ms]
+(pass) session remains reachable on the same provider after 503 provider unavailable [88.20ms]
+(pass) explicit session fallback remains reachable with same-session swap disabled: test/session [2.02ms]
+(pass) explicit session fallback remains reachable with same-session swap disabled: session [1.73ms]
+
+tests/auditor-process.test.ts:
+(pass) real worker escapes a quota retry loop: error [2595.99ms]
+(pass) real worker escapes a quota retry loop: auto_retry_start [1114.12ms]
+(pass) real worker escapes a quota retry loop: message_end [1392.04ms]
+
+tests/hourly-auditor-backstop.test.ts:
+(pass) unified: one dead backend skips configured rungs while retaining the session last resort [3.95ms]
+
+ 10 pass
+ 79 filtered out
+ 0 fail
+Ran 10 tests across 3 files. [13.19s]

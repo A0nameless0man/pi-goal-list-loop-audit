@@ -1,0 +1,60 @@
+bun test v1.3.14 (0d9b296a)
+
+tests/auditor-fallback-unification.test.ts:
+685 |         calls.push(candidate.model.id);
+686 |         return candidate.model.id === "session"
+687 |           ? result({ approved: true, model: "test/session" })
+688 |           : result({ error: "subscription quota exhausted", model: "test/primary" });
+689 |       }, { sleep: async () => { assert.fail("account errors must advance promptly"); } });
+690 |       assert.deepEqual(calls, ["primary", "session"]);
+                   ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
+    'primary',
+-   'session'
+  ]
+
+ generatedMessage: true,
+     actual: [ "primary" ],
+   expected: [ "primary", "session" ],
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:690:14
+      at withFakeContext (/tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:126:2)
+      at /tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:680:11
+      at processTicksAndRejections (native:7:39)
+(fail) explicit session fallback remains reachable with same-session swap disabled: test/session [103.33ms]
+685 |         calls.push(candidate.model.id);
+686 |         return candidate.model.id === "session"
+687 |           ? result({ approved: true, model: "test/session" })
+688 |           : result({ error: "subscription quota exhausted", model: "test/primary" });
+689 |       }, { sleep: async () => { assert.fail("account errors must advance promptly"); } });
+690 |       assert.deepEqual(calls, ["primary", "session"]);
+                   ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
+    'primary',
+-   'session'
+  ]
+
+ generatedMessage: true,
+     actual: [ "primary" ],
+   expected: [ "primary", "session" ],
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:690:14
+      at withFakeContext (/tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:126:2)
+      at /tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:680:11
+      at processTicksAndRejections (native:7:39)
+(fail) explicit session fallback remains reachable with same-session swap disabled: session [3.00ms]
+
+ 0 pass
+ 30 filtered out
+ 2 fail
+Ran 2 tests across 1 file. [9.89s]

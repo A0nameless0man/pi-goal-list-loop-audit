@@ -1,0 +1,76 @@
+
+> pi-goal-list-loop-audit@0.39.40 test
+> node scripts/run-tests.mjs tests/auditor-fallback-unification.test.ts tests/auditor-ladder-discipline.test.ts tests/auditor-picker-parity.test.ts tests/hourly-auditor-backstop.test.ts
+
+[run-tests] mode=explicit slow_files=13 stall_timeout=180s heartbeat=30s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/auditor-fallback-unification.test.ts:
+(pass) forbidden session models never re-enter the auditor ladder as last resort [94.00ms]
+(pass) a forbidden session cannot resurrect an exhausted configured auditor chain [3.87ms]
+(pass) provider-qualified forbidden policy also rejects bare auditor aliases [1.60ms]
+(pass) auditor ordered fallback refs retain order and use the main normalizer [0.85ms]
+(pass) auditor keeps all ten fallback slots after a pinned primary [95.94ms]
+(pass) auditor forbidden refs are skipped silently and recorded [3.14ms]
+(pass) a forbidden auditor primary is skipped before the configured fallback and remains silent [3.03ms]
+(pass) auditor retries the same ref, then walks the next untried ref with bounded shared backoff [91.52ms]
+(pass) auditor forbidden and duplicate refs are skipped before retry ordering [1.39ms]
+(pass) an all-forbidden auditor chain does not launch a forbidden worker [0.21ms]
+(pass) non-recoverable auditor failures stop without retrying or advancing [0.17ms]
+(pass) auditor wall timeouts and watchdog stalls walk the fallback chain [1.70ms]
+(pass) a restarted retry cursor spends the second call once, then advances [1.39ms]
+(pass) a crash after launching the retry consumes that retry and advances without a third call [0.41ms]
+(pass) infrastructure errors cannot survive as semantic auditor verdicts [0.11ms]
+(pass) partial semantic flags cannot bypass fallback recovery [0.35ms]
+(pass) same-provider rungs collapse after a provider-class failure [1.44ms]
+(pass) cross-provider rungs still walk the full chain [0.76ms]
+(pass) account-throttle wording collapses same-provider rungs [94.72ms]
+(pass) ambiguous worker death still walks the chain [0.39ms]
+(pass) cursor persistence failure fails closed before a retry or fallback [0.25ms]
+(pass) auditor and drafter source paths name the shared policy primitives [2.83ms]
+(pass) A8: a host abort interrupts the ladder delay instead of stranding the claim in it [93.58ms]
+(pass) A7: a cursor-callback refusal while live stays a persistence failure [1.37ms]
+(pass) A7: a cursor-callback refusal after a generation handoff stops quietly on the in-hand result [0.17ms]
+(pass) session remains reachable on the same provider after subscription quota exhausted; retry in 7 days [1.27ms]
+(pass) session remains reachable on the same provider after HTTP 429 Retry-After: 7200 [0.63ms]
+(pass) session remains reachable on the same provider after insufficient credits [0.49ms]
+(pass) session remains reachable on the same provider after 503 provider unavailable [0.58ms]
+(pass) all unavailable auditors retain an infrastructure failure rather than a verdict [0.37ms]
+(pass) explicit session fallback remains reachable with same-session swap disabled: test/session [0.68ms]
+(pass) explicit session fallback remains reachable with same-session swap disabled: session [1.52ms]
+
+tests/hourly-auditor-backstop.test.ts:
+(pass) unified: the shared ticker arms for a parked auditor claim with no main recovery [0.30ms]
+(pass) unified: the backstop fires past-due auditor retries and never touches models [0.15ms]
+(pass) unified: the ladder arms the ticker as its backstop [0.33ms]
+(pass) unified: one dead backend skips configured rungs while retaining the session last resort [1.77ms]
+(pass) unified: executable runtime regression covers arming, past-due fire, guards, and opt-out [2001.50ms]
+
+tests/auditor-picker-parity.test.ts:
+(pass) v0.35.24: the auditor picker persists its selection where resolveAuditorModel reads it [210.37ms]
+(pass) v0.35.24: a typed forbidden ref is REFUSED by the auditor picker, never persisted [14.57ms]
+(pass) v0.36.0: the ordered auditor fallback picker applies the same filtering [72.86ms]
+(pass) v0.36.0: the ordered auditor fallback picker keeps the first ten refs in typed order [98.31ms]
+(pass) v0.35.24: buildModelPickItems excludes forbidden refs for the auditor slot (list-level filter) [102.90ms]
+
+tests/auditor-ladder-discipline.test.ts:
+(pass) v0.38.103 nothing configured: session model, and NO ladder to exhaust [94.16ms]
+(pass) v0.38.103 an explicit auditor is tried FIRST and the session model is the last resort [91.37ms]
+(pass) v0.38.103 a configured auditor with no fallbacks still keeps the session model reachable [1.49ms]
+(pass) v0.38.103 an unavailable primary escalates immediately and still ends at the session model [2.71ms]
+(pass) v0.38.103 same-session-swap does not change the ordering contract [2.16ms]
+(pass) v0.38.103 an auditor pinned to the session model is the session model, with no invented ladder [91.88ms]
+(pass) v0.38.103 with no session model and nothing configured, the error stays actionable [1.63ms]
+(pass) v0.38.103 a mechanical fast-fail verdict is not an auditor round [0.20ms]
+(pass) v0.38.103 the streak passes THROUGH a mechanical gate rather than stopping [0.10ms]
+(pass) v0.38.103 an approval still ends the comparable streak [0.03ms]
+(pass) v0.38.103 infrastructure entries stay transparent [0.03ms]
+(pass) v0.38.103 a grader fallback RE-BASELINES the streak instead of pinning [0.12ms]
+(pass) v0.38.103 the challenge-round limit is a small, finite number [0.94ms]
+(pass) v0.38.103 streak counting is what the challenge gate reads [0.08ms]
+(pass) ladder tests never write to the repo ledger: no ctx cwd points at process.cwd() [1.98ms]
+
+ 57 pass
+ 0 fail
+Ran 57 tests across 4 files. [23.50s]
+[run-tests] finished in 24s (exit 0)

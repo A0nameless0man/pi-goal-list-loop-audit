@@ -24,7 +24,7 @@ AssertionError: Expected values to be strictly deep-equal:
 
       at /tmp/glla-audit-controls-geieiimz/tests/completed-audit-recovery.test.ts:534:16
       at processTicksAndRejections (native:7:39)
-(fail) durable fallback survives recovery: contextFree=false, retryStarted=false [861.17ms]
+(fail) durable fallback survives recovery: contextFree=false, retryStarted=false [889.27ms]
 529 |       seedState(cwd, { goal: g }); __testOnlyLoadState(cwd);
 530 |       try {
 531 |         assert.equal(contextFree ? parkCompletionAuditRecovery(cwd, "reload") : markCompletionAuditRecoveryPending(ctx as unknown as ExtensionContext, "reload"), true);
@@ -48,7 +48,7 @@ AssertionError: Expected values to be strictly deep-equal:
 
       at /tmp/glla-audit-controls-geieiimz/tests/completed-audit-recovery.test.ts:534:16
       at processTicksAndRejections (native:7:39)
-(fail) durable fallback survives recovery: contextFree=false, retryStarted=true [393.30ms]
+(fail) durable fallback survives recovery: contextFree=false, retryStarted=true [204.04ms]
 529 |       seedState(cwd, { goal: g }); __testOnlyLoadState(cwd);
 530 |       try {
 531 |         assert.equal(contextFree ? parkCompletionAuditRecovery(cwd, "reload") : markCompletionAuditRecoveryPending(ctx as unknown as ExtensionContext, "reload"), true);
@@ -72,7 +72,7 @@ AssertionError: Expected values to be strictly deep-equal:
 
       at /tmp/glla-audit-controls-geieiimz/tests/completed-audit-recovery.test.ts:534:16
       at processTicksAndRejections (native:7:39)
-(fail) durable fallback survives recovery: contextFree=true, retryStarted=false [361.93ms]
+(fail) durable fallback survives recovery: contextFree=true, retryStarted=false [395.48ms]
 529 |       seedState(cwd, { goal: g }); __testOnlyLoadState(cwd);
 530 |       try {
 531 |         assert.equal(contextFree ? parkCompletionAuditRecovery(cwd, "reload") : markCompletionAuditRecoveryPending(ctx as unknown as ExtensionContext, "reload"), true);
@@ -96,9 +96,9 @@ AssertionError: Expected values to be strictly deep-equal:
 
       at /tmp/glla-audit-controls-geieiimz/tests/completed-audit-recovery.test.ts:534:16
       at processTicksAndRejections (native:7:39)
-(fail) durable fallback survives recovery: contextFree=true, retryStarted=true [149.58ms]
+(fail) durable fallback survives recovery: contextFree=true, retryStarted=true [300.07ms]
 
  0 pass
  38 filtered out
  4 fail
-Ran 4 tests across 1 file. [2.73s]
+Ran 4 tests across 1 file. [9.80s]

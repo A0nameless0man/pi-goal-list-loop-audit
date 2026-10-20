@@ -1,0 +1,23 @@
+
+> pi-goal-list-loop-audit@0.39.40 test
+> node scripts/run-tests.mjs tests/stale-settling-retry.test.ts
+
+[run-tests] mode=explicit slow_files=13 stall_timeout=180s heartbeat=30s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/stale-settling-retry.test.ts:
+(pass) stale retry refuses to re-audit a settling claim (origin=provider-retry) [493.30ms]
+(pass) stale retry refuses to re-audit a settling claim (origin=session-retry) [93.74ms]
+(pass) stale retry refuses to re-audit a settling claim (origin=auto-resume) [97.48ms]
+(pass) live retry-waiting claim is unaffected by the fence (origin=provider-retry) [5012.29ms]
+(pass) live retry-waiting claim is unaffected by the fence (origin=session-retry) [2714.01ms]
+(pass) session_start with a settling claim completes the settlement driver when approved history is present [407.24ms]
+(pass) session_start with a settling claim without approved history parks the claim durably [164.95ms]
+(pass) settling claim whose goalId no longer matches the live goal is not silently re-audited [28.45ms]
+(pass) duplicate retry of a settling claim does not advance the attemptId [445.06ms]
+(pass) settling-but-parked footer names the durable state, not the auditor [27.60ms]
+
+ 10 pass
+ 0 fail
+Ran 10 tests across 1 file. [16.40s]
+[run-tests] finished in 17s (exit 0)

@@ -1,0 +1,27 @@
+
+> pi-goal-list-loop-audit@0.39.40 test
+> node scripts/run-tests.mjs tests/stale-settling-retry.test.ts -t live retry-waiting
+
+[run-tests] mode=explicit slow_files=13 stall_timeout=180s heartbeat=30s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/stale-settling-retry.test.ts:
+[run-tests] progress: 30s elapsed · 30s since last output · 0 KiB of suite output
+[run-tests] progress: 60s elapsed · 60s since last output · 0 KiB of suite output
+killed 1 dangling process
+(fail) live retry-waiting claim is unaffected by the fence (origin=provider-retry) [60004.36ms]
+  ^ this test timed out after 60000ms, before its done callback was called. If a done callback was not intended, remove the last parameter from the test callback function
+[run-tests] progress: 90s elapsed · 24s since last output · 0 KiB of suite output
+[run-tests] progress: 120s elapsed · 54s since last output · 0 KiB of suite output
+killed 1 dangling process
+(fail) live retry-waiting claim is unaffected by the fence (origin=session-retry) [60000.92ms]
+  ^ this test timed out after 60000ms, before its done callback was called. If a done callback was not intended, remove the last parameter from the test callback function
+
+ 0 pass
+ 8 filtered out
+ 2 fail
+Ran 2 tests across 1 file. [125.99s]
+[run-tests] detached cleanup: 1 owned groups; 0 unverified survivors/records
+[run-tests] failure diagnostics retained at /tmp/glla-test-processes-98xBau/failure.json
+[run-tests] cleanup evidence retained at /tmp/glla-test-processes-98xBau
+[run-tests] finished in 129s (exit 1)

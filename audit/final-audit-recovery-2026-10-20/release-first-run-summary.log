@@ -1,0 +1,45 @@
+(pass) 153404: a 4.5h load wait is clamped to the hourly horizon with a re-check notice [4222.29ms]
+(pass) 153404: a short wait inside the horizon is stored as requested [1487.30ms]
+
+tests/length-exhaustion-relentless.test.ts:
+(pass) hot context with fallback refs rotates to a larger-context model [313.50ms]
+(pass) hot context at the 90% boundary still rotates [0.04ms]
+(pass) hot context without fallback refs defers to auto-compaction [0.02ms]
+(pass) roomy context grants one fresh budget, never an immediate manual park [0.03ms]
+(pass) exhaustion episodes: first wedge stays relentless, second parks [0.48ms]
+(pass) exhaustion episodes degrade garbage to a fresh first episode [0.06ms]
+(pass) unknown context heat degrades to fresh-budget, never rotate [0.03ms]
+
+tests/loops/goal.test.ts:
+(pass) v0.34.57: a compaction inside the watchdog window pauses the watchdog instead of firing the unacknowledged warning [2834.77ms]
+(pass) v0.34.57: compaction rearm cap goes directly to unacknowledged without a retry [3178.61ms]
+(pass) v0.34.124: a recovery resume inside the watchdog window pauses the watchdog instead of firing the unacknowledged warning [2622.87ms]
+(pass) v0.34.124: recovery rearm counters clear when the dispatch watchdog settles [0.70ms]
+(pass) v0.34.124: a recovery resume OUTSIDE the grace window does not pause the watchdog [3278.37ms]
+(pass) v0.34.57: a genuine stall (no compaction in the window) still fires the unacknowledged warning [3388.48ms]
+
+1 tests skipped:
+(skip) commit survives the auto-committer daemon (item 32, env-gated watched repo)
+
+
+10 tests failed:
+(fail) unified: one dead backend does not burn a launch per rung [10.89ms]
+(fail) v0.36.0: exhausted no-verdict auditor chain enters the shared ladder with an automatic retry timer [32785.49ms]
+(fail) bounded recovery: initial aggressive completion preserves its horizon and exhausted chain [34811.10ms]
+(fail) v0.35.x: stale host loss releases an in-flight completion audit without a verdict [30075.91ms]
+  ^ this test timed out after 30000ms, before its done callback was called. If a done callback was not intended, remove the last parameter from the test callback function
+(fail) v0.34.29: audit fan-out honors autoAcceptDrafts without opening confirmation [58.00ms]
+(fail) v0.34.129: fan-out dedupe does not drop a finding whose prefix appears inside another queue item [3.14ms]
+(fail) v0.34.129: fan-out reports cap-deferred findings separately from true queue dedupes [22.46ms]
+(fail) v0.34.20 lifecycle: fan-out confirmation from the old generation cannot queue into its replacement [3429.96ms]
+(fail) v0.34.20 lifecycle: loop measurement abandons the old generation after replacement [1803.91ms]
+(fail) live retry-waiting claim is unaffected by the fence (origin=provider-retry) [60102.18ms]
+  ^ this test timed out after 60000ms, before its done callback was called. If a done callback was not intended, remove the last parameter from the test callback function
+
+ 4188 pass
+ 1 skip
+ 10 fail
+Ran 4199 tests across 459 files. [2905.29s]
+[run-tests] failure diagnostics retained at /tmp/glla-test-processes-iCE8GR/failure.json
+[run-tests] cleanup evidence retained at /tmp/glla-test-processes-iCE8GR
+[run-tests] finished in 2911s (exit 1)

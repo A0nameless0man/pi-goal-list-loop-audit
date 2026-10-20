@@ -27,7 +27,7 @@ AssertionError: Expected values to be strictly deep-equal:
       at withFakeContext (/tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:126:2)
       at /tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:645:11
       at processTicksAndRejections (native:7:39)
-(fail) session remains reachable on the same provider after subscription quota exhausted; retry in 7 days [13.38ms]
+(fail) session remains reachable on the same provider after subscription quota exhausted; retry in 7 days [198.59ms]
 650 |         calls.push(candidate.model.id);
 651 |         return candidate.model.id === "session"
 652 |           ? result({ approved: true, model: "test/session" })
@@ -54,7 +54,7 @@ AssertionError: Expected values to be strictly deep-equal:
       at withFakeContext (/tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:126:2)
       at /tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:645:11
       at processTicksAndRejections (native:7:39)
-(fail) session remains reachable on the same provider after HTTP 429 Retry-After: 7200 [1.29ms]
+(fail) session remains reachable on the same provider after HTTP 429 Retry-After: 7200 [3.61ms]
 650 |         calls.push(candidate.model.id);
 651 |         return candidate.model.id === "session"
 652 |           ? result({ approved: true, model: "test/session" })
@@ -81,10 +81,10 @@ AssertionError: Expected values to be strictly deep-equal:
       at withFakeContext (/tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:126:2)
       at /tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:645:11
       at processTicksAndRejections (native:7:39)
-(fail) session remains reachable on the same provider after insufficient credits [1.13ms]
-(pass) session remains reachable on the same provider after 503 provider unavailable [0.84ms]
+(fail) session remains reachable on the same provider after insufficient credits [2.17ms]
+(pass) session remains reachable on the same provider after 503 provider unavailable [93.57ms]
 
  1 pass
- 26 filtered out
+ 28 filtered out
  3 fail
-Ran 4 tests across 1 file. [796.00ms]
+Ran 4 tests across 1 file. [11.50s]

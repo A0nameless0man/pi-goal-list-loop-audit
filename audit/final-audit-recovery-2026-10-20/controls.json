@@ -15,6 +15,11 @@
     "expectedExit": "nonzero"
   },
   {
+    "control": "session-pin-identity",
+    "exit": 1,
+    "expectedExit": "nonzero"
+  },
+  {
     "control": "account-delay",
     "exit": 1,
     "expectedExit": "nonzero"
@@ -23,5 +28,10 @@
     "control": "worker-retry-loop",
     "exit": 1,
     "expectedExit": "nonzero"
+  },
+  {
+    "control": "harmless-helper-rename",
+    "exit": 0,
+    "expectedExit": 0
   }
 ]
