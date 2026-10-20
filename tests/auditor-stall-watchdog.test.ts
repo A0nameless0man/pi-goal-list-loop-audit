@@ -300,10 +300,10 @@ process.on("SIGTERM", () => { clearInterval(timer); process.exit(0); });
       now: () => eventClock,
       // This deliberately expires before the worker's first result. It is
       // legacy metadata only; real progress and the result must win.
-      wallTimeoutMs: 100,
-      firstEventTimeoutMs: 5_000,
-      heartbeatNoProgressMs: 2_000,
-      heartbeatFreshMs: 1_000,
+            : budget(100),
+            : budget(5_000),
+            : budget(2_000),
+            : budget(1_000),
     },
   });
   assert.equal(result.approved, true, result.error ?? "live worker did not settle");
@@ -352,16 +352,16 @@ setInterval(() => {}, 1_000);
       pollIntervalMs: 10,
       // A legacy wall shorter than the open tool must be ignored; the
       // independent per-tool watchdog owns this axis.
-      wallTimeoutMs: 250,
+            : budget(250),
       toolTimeoutMs: 800,
       // v0.38.99: the parent now grants the worker a bounded window to cancel
       // the over-budget tool and resume before it falls back to the hard kill.
       // A zero grace keeps this test on the pre-grace semantics: the kill is
       // the only way the run can end.
       toolCancelGraceMs: 0,
-      heartbeatNoProgressMs: 1_200,
-      firstEventTimeoutMs: 20_000,
-      heartbeatFreshMs: 500,
+            : budget(1_200),
+            : budget(20_000),
+            : budget(500),
     },
   }).then((result) => {
     toolTimedOut = /tool bash exceeded its 1s timeout/.test(result.error ?? "");
@@ -420,10 +420,10 @@ setInterval(() => {}, 1_000);
       workerPath: worker,
       attemptId: () => "attempt-stall-evidence",
       pollIntervalMs: 10,
-      wallTimeoutMs: 20_000,
-      heartbeatNoProgressMs: 1_200,
-      firstEventTimeoutMs: 20_000,
-      heartbeatFreshMs: 500,
+            : budget(20_000),
+            : budget(1_200),
+            : budget(20_000),
+            : budget(500),
     },
   });
   assert.equal(result.infrastructureClass, "timeout", "silence past the bound is still retryable infra");
@@ -488,14 +488,14 @@ setInterval(() => {}, 1_000);
       workerPath: worker,
       attemptId: () => "attempt-worker-brake",
       pollIntervalMs: 10,
-      wallTimeoutMs: 20_000,
+            : budget(20_000),
       // The parent watchdogs are deliberately DISARMED here: this test pins
       // the result path (the worker winning the shared window), so the
       // result must be the first thing the parent sees. Both files are
       // published back-to-back, so the parent consumes them in one poll.
-      heartbeatNoProgressMs: 20_000,
-      firstEventTimeoutMs: 20_000,
-      heartbeatFreshMs: 500,
+            : budget(20_000),
+            : budget(20_000),
+            : budget(500),
     },
   });
   assert.equal(result.infrastructureClass, "timeout", "the worker's own brake stays retryable infra");
@@ -583,18 +583,18 @@ process.on("SIGTERM", () => { clearTimeout(next); process.exit(0); });
       workerPath: worker,
       attemptId: () => "attempt-tool-silence",
       pollIntervalMs: 10,
-      wallTimeoutMs: 30_000,
+      wallTimeoutMs: budget(30_000),
       // Far smaller than the tool's own 60s grant: without the open-tool
       // exemption the no-progress watchdog cut a healthy audit in half.
-      heartbeatNoProgressMs: 300,
-      firstEventTimeoutMs: 30_000,
-      heartbeatFreshMs: 5_000,
-      toolTimeoutMs: 60_000,
+      heartbeatNoProgressMs: budget(300),
+      firstEventTimeoutMs: budget(30_000),
+      heartbeatFreshMs: budget(5_000),
+      toolTimeoutMs: budget(60_000),
     },
   });
   assert.deepEqual(stalled, [], "an in-budget open tool is exempt from the no-progress bound");
   assert.equal(result.approved, true, result.error ?? "the long-tool audit did not settle");
-  assert.ok(Date.now() - started < 10_000, "the audit outlived several no-progress windows without burning the wall");
+  assert.ok(Date.now() - started < budget(10_000), "the audit outlived several no-progress windows without burning the wall");
   await cleanup();
 });
 
@@ -672,9 +672,9 @@ setInterval(() => {}, 1_000);
       pollIntervalMs: 10,
       toolTimeoutMs: 800,
       toolCancelGraceMs: 10_000, // wide enough that only the worker can end this
-      heartbeatNoProgressMs: 10_000,
-      firstEventTimeoutMs: 20_000,
-      heartbeatFreshMs: 10_000,
+            : budget(10_000),
+            : budget(20_000),
+            : budget(10_000),
     },
   });
   assert.equal(stalled.length, 1, "the over-budget tool is recorded as one stall");
@@ -734,9 +734,9 @@ setInterval(() => {}, 1_000);
       pollIntervalMs: 10,
       toolTimeoutMs: 800,
       toolCancelGraceMs: 10_000,
-      heartbeatNoProgressMs: 10_000,
-      firstEventTimeoutMs: 20_000,
-      heartbeatFreshMs: 10_000,
+            : budget(10_000),
+            : budget(20_000),
+            : budget(10_000),
     },
   });
   assert.equal(result.approved, false, "the approval is refused");
@@ -785,9 +785,9 @@ setInterval(() => {}, 1_000);
       pollIntervalMs: 10,
       toolTimeoutMs: 800,
       toolCancelGraceMs: 400,
-      heartbeatNoProgressMs: 20_000,
-      firstEventTimeoutMs: 20_000,
-      heartbeatFreshMs: 20_000,
+            : budget(20_000),
+            : budget(20_000),
+            : budget(20_000),
     },
   });
   assert.equal(stalled.length, 1, "one stall event, recorded at first expiry");
