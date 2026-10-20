@@ -5,8 +5,9 @@ import activate, { __testOnlyLoadState, __testOnlyResetOwnerSession, __testOnlyR
 import { readState } from '../extensions/goal-loop-core.js';
 import { MockPi, makeMockCtx, tmpCwd, seedGoal, seedState } from './harness/mock-pi.js';
 import { untilMs } from "./harness/host-budget.js";
+import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
-test('manual audit exhaustion retries through timer with fresh candidates and unchanged envelope', { timeout: 60000 }, async () => {
+test('manual audit exhaustion retries through timer with fresh candidates and unchanged envelope', { timeout: scaledBudgetMs(60000) }, async () => {
   // Regression pin — 2026-09-17T14:07 ledger sequence: exhausted selection
   // ("no auditor model"), 5s uniform schedule, attempt:1 repetition. The
   // timer must retry with automatic provenance so counters advance and the
