@@ -411,7 +411,7 @@ setInterval(() => {}, 1_000);
       // Controlled clock: jump the parent's view of time past the silence
       // bound on the first observed snapshot. Everything else (the worker, the
       // poll loop, the cancellation and scratch cleanup) still runs for real.
-      if (progress.lastActivityAt) clock = Math.max(clock, progress.lastActivityAt) + 4_000;
+      if (progress.lastActivityAt) clock = Math.max(clock, progress.lastActivityAt) + scaledBudgetMs(4_000);
     },
     onStalled: (info) => stalled.push(info),
     runtime: {
@@ -430,9 +430,9 @@ setInterval(() => {}, 1_000);
   assert.equal(stalled.length, 1, "one stall event per attempt");
   const stall = stalled[0]!;
   assert.equal(stall.reason, "heartbeat-stale");
-  assert.ok(stall.heartbeatAgeMs >= 1_200, `silence reached the window: ${stall.heartbeatAgeMs}ms`);
+  assert.ok(stall.heartbeatAgeMs >= scaledBudgetMs(1_200), `silence reached the window: ${stall.heartbeatAgeMs}ms`);
   assert.ok(
-    Date.now() - started < 10_000,
+    Date.now() - started < scaledBudgetMs(10_000),
     "the controlled clock tripped the watchdog — the doomed attempt burns no real wall",
   );
   // The evidence: a slow audit must be able to name its driver.
