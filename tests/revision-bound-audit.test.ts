@@ -99,7 +99,6 @@ function writeDelayedApprovedAuditor(cwd: string): string {
   const script = path.join(cwd, "delayed-approved-auditor-pi.mjs");
   fs.writeFileSync(script, `#!/usr/bin/env node
 import fs from "node:fs";
-import { untilMs } from "./harness/host-budget.js";
 const ready = ${JSON.stringify(path.join(cwd, "auditor-ready"))};
 const release = ${JSON.stringify(path.join(cwd, "auditor-release"))};
 let input = "";
