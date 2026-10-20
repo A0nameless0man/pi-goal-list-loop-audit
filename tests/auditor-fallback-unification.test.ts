@@ -640,3 +640,38 @@ test("A7: a cursor-callback refusal after a generation handoff stops quietly on 
   });
   assert.equal(outcome.result.error, "503 upstream unavailable", "no manufactured failure after handoff");
 });
+
+for (const error of ["subscription quota exhausted; retry in 7 days", "HTTP 429 Retry-After: 7200", "insufficient credits", "503 provider unavailable"]) {
+  test(`session remains reachable on the same provider after ${error}`, async () => {
+    await withFakeContext(async ({ ctx }) => {
+      const resolved = resolveAuditorModel(ctx, "test/primary", ["test/fallback-1"], true);
+      const candidates = [{ model: resolved.model, via: resolved.via! }, ...(resolved.fallbackModels ?? [])];
+      const calls: string[] = [], waits: number[] = [];
+      const out = await runAuditorFallbackWithPolicy(candidates, async (candidate) => {
+        calls.push(candidate.model.id);
+        return candidate.model.id === "session"
+          ? result({ approved: true, model: "test/session" })
+          : result({ error, model: `test/${candidate.model.id}` });
+      }, { sleep: async (ms) => { waits.push(ms); } });
+      assert.deepEqual(calls, error.startsWith("503") ? ["primary", "primary", "session"] : ["primary", "session"]);
+      if (!error.startsWith("503")) assert.deepEqual(waits, [], "account failure does not delay the session fallback");
+      assert.equal(out.result.approved, true);
+      assert.equal(out.result.model, "test/session");
+    });
+  });
+}
+
+test("all unavailable auditors retain an infrastructure failure rather than a verdict", async () => {
+  const calls: string[] = [];
+  const out = await runAuditorFallbackWithPolicy([
+    { model: { provider: "a", id: "primary" }, via: "setting" },
+    { model: { provider: "a", id: "session" }, via: "session-fallback" },
+  ], async (candidate) => {
+    calls.push(candidate.model.id);
+    return result({ error: "subscription quota exhausted", model: `a/${candidate.model.id}` });
+  }, { sleep: async () => { assert.fail("account fallback must not sleep"); } });
+  assert.deepEqual(calls, ["primary", "session"]);
+  assert.equal(out.result.fallbackExhausted, true);
+  assert.equal(out.result.approved, false);
+  assert.equal(out.result.disapproved, false);
+});

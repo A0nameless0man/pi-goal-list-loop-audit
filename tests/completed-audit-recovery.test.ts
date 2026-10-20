@@ -4,6 +4,8 @@ import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import activate, { __testOnlyResetOwnerSession, __testOnlyResetStaleFlag, __testOnlyLoadState, __testOnlySetLastActivityAt, __testOnlySetLastRealActivityAt } from "../extensions/loops/goal.js";
+import { markCompletionAuditRecoveryPending, parkCompletionAuditRecovery } from "../extensions/goal-recovery.js";
+import { runAuditorFallbackWithPolicy } from "../extensions/goal-loop-auditor-process.js";
 import { __testOnlyHeartbeatTick } from "../extensions/goal-heartbeat.js";
 import { __testOnlyResetAuditorSurface } from "../extensions/loops/goal-auditor-surface.js";
 import { archivedGoalPath, readState, type Goal, type State } from "../extensions/goal-loop-core.js";
@@ -512,3 +514,42 @@ test("reconcile names its rejecting gate in the ledger", () => {
   assert.equal((hit[0].value as { gate?: string }).gate, "no-verdict");
   assert.equal((hit[0].value as { logicalAttemptId?: string }).logicalAttemptId, "saved-claim");
 });
+
+// Reload must preserve both known failed predecessors and the retry budget.
+for (const contextFree of [false, true]) {
+  for (const retryStarted of [false, true]) {
+    test(`durable fallback survives recovery: contextFree=${contextFree}, retryStarted=${retryStarted}`, async () => {
+      const cwd = tmpCwd(), pi = new MockPi(); activate(pi.api); const ctx = await boot(pi, cwd);
+      const g = goal();
+      g.pendingCompletion = { ...g.pendingCompletion!,
+        auditorCandidateRefs: ["a/preferred", "b/fallback", "c/session"],
+        auditorCandidateRef: "b/fallback", auditorAttemptedRefs: ["a/preferred"],
+        ...(retryStarted ? { auditorRetryCandidateRef: "b/fallback", auditorRetryAttemptStartedAt: new Date().toISOString(), auditorFailureCount: 1 } : {}),
+      };
+      seedState(cwd, { goal: g }); __testOnlyLoadState(cwd);
+      try {
+        assert.equal(contextFree ? parkCompletionAuditRecovery(cwd, "reload") : markCompletionAuditRecoveryPending(ctx, "reload"), true);
+        // Read the journal projection, not live RAM.
+        const saved = readState(cwd).goal!.pendingCompletion!;
+        assert.deepEqual(saved.auditorAttemptedRefs, ["a/preferred"]);
+        assert.equal(saved.auditorCandidateRef, "b/fallback");
+        assert.equal(saved.completionSummary, g.pendingCompletion!.completionSummary);
+        const calls: string[] = [];
+        const out = await runAuditorFallbackWithPolicy(saved.auditorCandidateRefs!.map((ref) => {
+          const [provider, id] = ref.split("/");
+          return { ref, model: { provider: provider!, id: id! }, via: ref === "c/session" ? "session-fallback" : "setting" };
+        }), async (candidate) => {
+          calls.push(candidate.ref!);
+          return { approved: true, disapproved: false, output: "verified", model: candidate.ref! };
+        }, {
+          resumeCandidateRef: saved.auditorCandidateRef, attemptedRefs: saved.auditorAttemptedRefs,
+          retryCandidateRef: saved.auditorRetryCandidateRef, retryAttemptStarted: !!saved.auditorRetryAttemptStartedAt,
+          sleep: async () => {},
+        });
+        assert.deepEqual(calls, [retryStarted ? "c/session" : "b/fallback"]);
+        assert.equal(out.result.approved, true);
+        assert.equal(readState(cwd).goal?.status, "paused", "policy result alone cannot settle a claim");
+      } finally { await pi.fire("session_shutdown", { reason: "test-end" }, ctx); }
+    });
+  }
+}
