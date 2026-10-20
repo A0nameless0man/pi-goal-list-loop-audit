@@ -15,7 +15,7 @@ let cleanup: (() => Promise<void>) | undefined;
 afterEach(async () => { await cleanup?.(); cleanup = undefined; });
 const summary = "Outcome: Fixed routing.\nChanged: router.ts.\nEvidence: routing fixture.\nTests: routing suite passed.\nUnresolved: none.\nNext: await audit.";
 async function waitFor(check: () => boolean, timeout = 30000) {
-  const until = Date.now() + timeout;
+  const until = untilMs(timeout);
   while (!check()) { if (Date.now() > until) throw new Error("settlement timeout"); await new Promise(r => setTimeout(r, 20)); }
 }
 async function setup(verdict: "approved" | "disapproved", idle = true) {

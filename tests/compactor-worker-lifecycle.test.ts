@@ -41,7 +41,7 @@ for (const scenario of ["SIGTERM", "timeout", "normal", "result-write-failure"] 
         fs.readFileSync=(file,...args)=>{
           if(!held && /^\\/proc\\/\\d+\\/stat$/.test(String(file))){
             held=true;fs.writeFileSync(${JSON.stringify(held)},'held');
-            const deadline=Date.now()+5000;
+            const deadline=untilMs(5000);
             while(!fs.existsSync(${JSON.stringify(signalSent)}) && Date.now()<deadline){}
           }
           return read(file,...args);
@@ -56,7 +56,7 @@ for (const scenario of ["SIGTERM", "timeout", "normal", "result-write-failure"] 
         worker!.once("error", error => { clearTimeout(timer); reject(error); });
         worker!.once("close", code => { clearTimeout(timer); resolve(code); });
       });
-      const deadline = Date.now() + 10_000;
+      const deadline = untilMs(10_000);
       while (!fs.existsSync(ready)) {
         if (Date.now() > deadline) throw new Error("Pi descendant did not become ready");
         await new Promise(resolve => setTimeout(resolve, 10));

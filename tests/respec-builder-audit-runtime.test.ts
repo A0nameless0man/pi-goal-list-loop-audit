@@ -73,7 +73,7 @@ test("a time bound cancels an in-flight worker and retains unfinished requiremen
     assert.equal(respecBuilderAuditInFlight(f.cwd), false, "an old dispatch cannot protect a replacement claim");
     replaceState({ ...state, loop: dispatched });
     const jobs = path.join(f.cwd, ".pi-glla", "audit-jobs");
-    const deadline = Date.now() + 20000;
+    const deadline = untilMs(20000);
     while (!fs.existsSync(jobs) || !fs.readdirSync(jobs).some(name => fs.existsSync(path.join(jobs, name, "progress.json")))) {
       if (Date.now() > deadline) throw new Error("Worker did not publish progress");
       await new Promise(resolve => setTimeout(resolve, 10));
@@ -163,7 +163,7 @@ test("pausing during an actual worker run prevents late approval from settling t
   const f = fixture({ RESULT_DELAY: "5000" });
   try {
     const pending = runRespecBuilderAudit(f.ctx);
-    const deadline = Date.now() + 5000;
+    const deadline = untilMs(5000);
     while (!fs.existsSync(path.join(f.cwd, ".pi-glla", "audit-jobs")) || !fs.readdirSync(path.join(f.cwd, ".pi-glla", "audit-jobs")).some(name => fs.existsSync(path.join(f.cwd, ".pi-glla", "audit-jobs", name, "progress.json")))) {
       if (Date.now() > deadline) throw new Error("Worker did not publish progress");
       await new Promise(resolve => setTimeout(resolve, 10));
@@ -270,7 +270,7 @@ for (const resumeHeld of [false, true]) test(`actual project lifecycle reaches d
       await pi.command("glla", "resume", ctx);
       assert.equal(readState(cwd).loop!.active, true, "broad resume must recognise the stalled audit hold");
       assert.equal(readState(cwd).loop!.builder!.audit!.attemptId, retainedAttempt, "resume preserves the claim identity");
-      const dispatchDeadline = Date.now() + 3000;
+      const dispatchDeadline = untilMs(3000);
       while (!respecBuilderAuditInFlight(cwd)) {
         if (Date.now() > dispatchDeadline) throw new Error("Resume did not dispatch the retained audit");
         await new Promise(resolve => setTimeout(resolve, 10));
@@ -296,7 +296,7 @@ for (const resumeHeld of [false, true]) test(`actual project lifecycle reaches d
     ctx.compact = () => { compacts++; };
     await pi.fire("agent_settled", {}, ctx);
     assert.equal(compacts, 0, "settled-boundary compaction cannot interrupt an increment auditor's wait");
-    const deadline = Date.now() + 5000;
+    const deadline = untilMs(5000);
     while (readState(cwd).loop!.builder!.phase !== "complete") {
       if (Date.now() > deadline) throw new Error(JSON.stringify(readState(cwd).loop));
       await new Promise(resolve => setTimeout(resolve, 10));

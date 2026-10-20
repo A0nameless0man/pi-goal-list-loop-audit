@@ -44,9 +44,9 @@ export const HOST_BUDGET_PROBE_CPU_MS = 25;
  * `baseMs` scaled by the measured slowdown, so the wait is given the CPU
  * time it would have had on an idle machine.
  */
-export function hangDeadlineMs(baseMs: number, options: { maxAgeMs?: number } = {}): number {
+export function hangDeadlineMs(baseMs: number, options: { maxAgeMs?: number; factor?: number } = {}): number {
 	if (!Number.isFinite(baseMs) || baseMs <= 0) return baseMs;
-	const factor = contentionFactor({
+	const factor = options.factor ?? contentionFactor({
 		maxAgeMs: options.maxAgeMs ?? HOST_BUDGET_MAX_AGE_MS,
 		probeCpuMs: HOST_BUDGET_PROBE_CPU_MS,
 	});
@@ -60,6 +60,6 @@ export function hangDeadlineMs(baseMs: number, options: { maxAgeMs?: number } = 
  * The loop, its predicate, its poll interval and its failure message are
  * unchanged — only the budget is sized for the host the suite is running on.
  */
-export function untilMs(baseMs: number, options: { maxAgeMs?: number } = {}): number {
+export function untilMs(baseMs: number, options: { maxAgeMs?: number; factor?: number } = {}): number {
 	return Date.now() + hangDeadlineMs(baseMs, options);
 }

@@ -165,11 +165,20 @@ const log = (line) => {
 };
 
 function main() {
-  const { mode, bunArgs } = buildRunnerArgs(process.argv.slice(2), SLOW_TEST_FILES);
+  // Size the gate's hang bounds for the CPU this host is actually giving
+  // the suite. On an idle host the factor is 1.0 and every bound is exactly
+  // what it was before; on a contended host the per-test bound grows in
+  // proportion, so a slow-but-progressing test is not reported as a hang.
+  const factor = contentionFactor();
+  const timeoutMs = Math.min(MAX_TEST_TIMEOUT_MS, Math.ceil(DEFAULT_TEST_TIMEOUT_MS * factor));
+  const { mode, bunArgs } = buildRunnerArgs(process.argv.slice(2), SLOW_TEST_FILES, undefined, { timeoutMs });
   const stallLimit = stallTimeoutMs();
   const beat = heartbeatMs();
   const startedAt = Date.now();
   log(`mode=${mode} slow_files=${SLOW_TEST_FILES.length} stall_timeout=${Math.round(stallLimit / 1000)}s heartbeat=${Math.round(beat / 1000)}s`);
+  if (factor > 1.05) {
+    log(`host is ${factor.toFixed(1)}x slower than an idle host — per-test budget raised to ${Math.round(timeoutMs / 1000)}s`);
+  }
 
   // Give the suite a group we can terminate without signalling this wrapper.
   const registryDir = fs.mkdtempSync(path.join(os.tmpdir(), "glla-test-processes-"));

@@ -8,7 +8,7 @@ import path from "node:path";
 import { test } from "node:test";
 
 async function waitForWorkerResult(resultPath: string, timeoutMs = 30_000): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
+  const deadline = untilMs(timeoutMs);
   for (;;) {
     try { await readFile(resultPath); return; }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
@@ -458,7 +458,7 @@ setInterval(() => {}, 1_000);
         // seconds, so give it real headroom.
         wallTimeoutMs: 30_000 },
     });
-    const startupDeadline = Date.now() + 20_000;
+    const startupDeadline = untilMs(20_000);
     while (Date.now() < startupDeadline) {
       try { await readFile(pidMarker); break; }
       catch { await new Promise((resolve) => setTimeout(resolve, 10)); }
@@ -490,7 +490,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { existsSync } from "node:fs";
 const ackPrefix = ${JSON.stringify(ackPrefix)};
 async function observed(phase) {
-  const deadline = Date.now() + 20_000;
+  const deadline = untilMs(20_000);
   while (!existsSync(ackPrefix + phase)) {
     if (Date.now() >= deadline) throw new Error('parent did not observe ' + phase);
     await sleep(10);
@@ -766,7 +766,7 @@ process.stdin.on("data", async (chunk) => {
     // Handshake: the parent's onProgress writes ackDir/<bytes> when it
     // observes this fragment's count. Bounded so a real telemetry stall
     // fails the test instead of hanging it.
-    const deadline = Date.now() + 20_000;
+    const deadline = untilMs(20_000);
     while (!existsSync(ackDir + "/" + expected[i]) && Date.now() < deadline) await sleep(10);
   }
   out({ type: "agent_settled" });
@@ -1298,7 +1298,7 @@ const stagedProgress = {
 };
 await writeFile(dir + "/result.json.tmp", JSON.stringify(stagedResult));
 await writeFile(dir + "/progress.json", JSON.stringify(stagedProgress));
-const deadline = Date.now() + 5000;
+const deadline = untilMs(5000);
 while (!existsSync(${JSON.stringify(releasePath)})) {
   if (Date.now() >= deadline) throw new Error("parent did not observe granted tool before publication deadline");
   await new Promise(resolve => setTimeout(resolve, 5));

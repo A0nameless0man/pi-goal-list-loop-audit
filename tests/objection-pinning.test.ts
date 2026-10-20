@@ -45,7 +45,7 @@ async function tick(ms = 0): Promise<void> {
 }
 
 async function waitUntil(predicate: () => boolean, timeoutMs = 30_000): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
+  const deadline = untilMs(timeoutMs);
   while (!predicate()) {
     if (Date.now() >= deadline) throw new Error("timed out waiting for detached-auditor state");
     await new Promise((resolve) => setTimeout(resolve, 20));

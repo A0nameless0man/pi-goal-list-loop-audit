@@ -100,3 +100,19 @@ export function contentionFactor(options = {}) {
 export function resetContentionFactor() {
   cached = null;
 }
+
+/**
+ * The wall-clock budget for work that asked for `baseMs`.
+ *
+ * On an idle host this is `baseMs` exactly. On a contended host it is
+ * `baseMs` scaled by the measured slowdown, so the work is given the CPU
+ * time it would have had on an idle machine. The budget is never smaller
+ * than what was asked for.
+ *
+ * This is the one implementation of that rule: the test helper, the test
+ * runner and the child processes a test spawns all size their budgets here.
+ */
+export function scaledBudgetMs(baseMs, options = {}) {
+  if (!Number.isFinite(baseMs) || baseMs <= 0) return baseMs;
+  return Math.ceil(baseMs * contentionFactor(options));
+}

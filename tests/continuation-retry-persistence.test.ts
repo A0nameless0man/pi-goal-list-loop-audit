@@ -23,7 +23,7 @@ const pi = new MockPi();
 activate(pi.api);
 
 function waitUntil(predicate: () => boolean, timeoutMs = 8_000): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
+  const deadline = untilMs(timeoutMs);
   return (async () => {
     while (!predicate()) {
       if (Date.now() >= deadline) throw new Error("timed out waiting for the continuation retry state");

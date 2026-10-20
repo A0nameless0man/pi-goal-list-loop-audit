@@ -78,7 +78,7 @@ process.stdin.on("data", async (chunk) => {
 // restores the margin under the 60s runner cap; the assertions after the
 // wait are unchanged, and a wedged audit still times out loudly.
 async function waitUntil(predicate: () => boolean, timeoutMs = 45_000, label = ""): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
+  const deadline = untilMs(timeoutMs);
   while (!predicate()) {
     if (Date.now() >= deadline) throw new Error(`timed out waiting for detached-auditor state ${label}`.trim());
     await new Promise((resolve) => setTimeout(resolve, 20));

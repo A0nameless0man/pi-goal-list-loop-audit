@@ -27,7 +27,7 @@ afterEach(async () => { await cleanup?.(); cleanup = undefined; });
 // out loudly. Three audits share the 60s outer deadline; a 25s outer
 // timeout would interrupt otherwise valid 30s per-transition waits.
 async function waitFor(check: () => boolean, timeout = 30000) {
-  const until = Date.now() + timeout;
+  const until = untilMs(timeout);
   while (!check()) { if (Date.now() > until) throw new Error("settlement timeout"); await new Promise(r => setTimeout(r, 20)); }
 }
 

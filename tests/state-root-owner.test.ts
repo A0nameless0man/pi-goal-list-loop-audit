@@ -257,7 +257,7 @@ test("confirmed takeover SIGTERMs a pi-shaped owner, verifies exit, claims", asy
   // Bounded exit poll, not an instant kill(0): under suite load libuv may
   // briefly report a not-yet-reaped zombie as signalable. Kernel truth
   // (raw kill ESRCH) with a deadline is deterministic either way.
-  const exitDeadline = Date.now() + 5000;
+  const exitDeadline = untilMs(5000);
   let exited = false;
   while (Date.now() < exitDeadline) {
     try {

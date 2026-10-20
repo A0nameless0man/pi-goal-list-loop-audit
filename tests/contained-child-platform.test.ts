@@ -25,7 +25,7 @@ test(`real ${process.platform} cleanup stops a live owned Node tree and inherite
   let descendant: number | undefined;
   child.on("error", () => {});
   try {
-    const deadline = Date.now() + 15_000;
+    const deadline = untilMs(15_000);
     while (!fs.existsSync(ready)) {
       if (Date.now() >= deadline) throw new Error("owned descendant did not start");
       await new Promise(resolve => setTimeout(resolve, 10));
@@ -33,7 +33,7 @@ test(`real ${process.platform} cleanup stops a live owned Node tree and inherite
     descendant = Number(fs.readFileSync(ready, "utf8"));
     assert.ok(executing(child.pid!) && executing(descendant));
     await terminateContainedChild(child, { graceMs: 1000, forceMs: 1000 });
-    const settled = Date.now() + 3000;
+    const settled = untilMs(3000);
     while ((executing(child.pid!) || executing(descendant)) && Date.now() < settled) await new Promise(resolve => setTimeout(resolve, 10));
     assert.equal(executing(child.pid!), false);
     assert.equal(executing(descendant), false);

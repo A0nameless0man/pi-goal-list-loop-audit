@@ -80,7 +80,7 @@ test("durable: an ordinary complete_goal records phase running + lastActivityAt 
     // While the worker is alive the DURABLE claim must already say running and
     // carry the worker's own activity stamp. Sampling the ledger (not RAM) is
     // the point: a restart reads this, not the HUD.
-    const deadline = Date.now() + 30_000;
+    const deadline = untilMs(30_000);
     let seen: { phase?: string; lastActivityAt?: string } = {};
     while (Date.now() < deadline) {
       const claim = (readState(cwd).goal as { pendingCompletion?: { phase?: string; lastActivityAt?: string } } | null)?.pendingCompletion;
@@ -92,7 +92,7 @@ test("durable: an ordinary complete_goal records phase running + lastActivityAt 
 
     // Drain the worker to settlement so the ledger assertion reads the final
     // durable history, not a mid-flight snapshot.
-    const drainDeadline = Date.now() + 15_000;
+    const drainDeadline = untilMs(15_000);
     while (Date.now() < drainDeadline) {
       const claim = (readState(cwd).goal as { pendingCompletion?: { phase?: string } } | null)?.pendingCompletion;
       if (!claim || (claim.phase !== "running" && claim.phase !== "starting")) break;

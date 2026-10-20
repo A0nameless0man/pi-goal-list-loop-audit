@@ -65,7 +65,7 @@ async function acknowledgeLastContinuation(ctx: MockCtx): Promise<void> {
 }
 
 async function waitUntil(predicate: () => boolean, timeoutMs = 20_000): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
+  const deadline = untilMs(timeoutMs);
   while (!predicate()) {
     if (Date.now() >= deadline) throw new Error("timed out waiting for state");
     await new Promise((resolve) => setTimeout(resolve, 20));

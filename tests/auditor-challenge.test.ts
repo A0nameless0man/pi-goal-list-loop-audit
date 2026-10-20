@@ -97,7 +97,7 @@ async function runWorker(env: NodeJS.ProcessEnv, requestExtra: Record<string, un
     stdio: "ignore",
   });
   const resultPath = path.join(jobDir, "result.json");
-  const deadline = Date.now() + 30_000;
+  const deadline = untilMs(30_000);
   let result: WorkerResult | undefined;
   while (Date.now() < deadline) {
     try {

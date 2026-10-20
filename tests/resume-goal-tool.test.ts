@@ -276,7 +276,7 @@ emit({type:"agent_settled"});
     assert.match(claimed.content[0]!.text, /AUDIT PENDING — nonterminal/);
     assert.equal(readState(cwd).goal?.status, "auditing");
     const claimId = (readState(cwd).goal as { id: string }).id;
-    const until = Date.now() + 10000;
+    const until = untilMs(10000);
     while (readState(cwd).goal !== null) {
       if (Date.now() > until) throw new Error("settlement timeout");
       await new Promise((r) => setTimeout(r, 20));
@@ -331,7 +331,7 @@ emit({type:"agent_settled"});
     const entries = ledgerEntries(cwd);
     assert.ok(entries.some((entry) => entry.type === "goal_resumed" && entry.via === "resume_goal"), "the tool resume is ledgered");
     assert.ok(entries.some((entry) => entry.type === "goal_resumed" && entry.via === "agent-audit"), "the re-fired audit carries the agent origin");
-    const until = Date.now() + 10000;
+    const until = untilMs(10000);
     while (readState(cwd).goal !== null) {
       if (Date.now() > until) throw new Error("settlement timeout");
       await new Promise((r) => setTimeout(r, 20));

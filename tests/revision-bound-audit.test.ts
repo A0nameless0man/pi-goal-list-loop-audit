@@ -128,7 +128,7 @@ async function waitUntil(predicate: () => boolean, timeoutMs = 30_000): Promise<
   // hardened 2026-08-11: a load-58 spike stretched the detached-auditor
   // subprocess past the old 4s wall (revision-bound-audit timed out while
   // the rest of the suite was green; standalone run also failed at load 58).
-  const deadline = Date.now() + timeoutMs;
+  const deadline = untilMs(timeoutMs);
   while (!predicate()) {
     if (Date.now() >= deadline) throw new Error("timed out waiting for detached-auditor state");
     await new Promise((resolve) => setTimeout(resolve, 20));

@@ -90,7 +90,7 @@ test(
     const probe = git(dir, ["rev-parse", "HEAD"]);
     assert.notEqual(probe, before, "probe commit did not advance HEAD");
 
-    const deadline = Date.now() + DAEMON_SETTLE_MS;
+    const deadline = untilMs(DAEMON_SETTLE_MS);
     while (Date.now() < deadline) {
       const head = git(dir, ["rev-parse", "HEAD"]);
       assert.ok(

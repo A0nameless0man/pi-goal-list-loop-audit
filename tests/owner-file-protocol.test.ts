@@ -86,7 +86,7 @@ test("a live mutation times out contenders; SIGKILL recovery never removes a suc
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,60000);
   });`);
   try {
-    const deadline = Date.now() + 10_000;
+    const deadline = untilMs(10_000);
     while (!fs.existsSync(ready)) {
       if (Date.now() >= deadline) throw new Error(holder.output() || "holder did not start");
       await new Promise(resolve => setTimeout(resolve, 10));

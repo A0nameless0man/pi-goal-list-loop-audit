@@ -287,7 +287,7 @@ test("/loop stop mid-tick still restores the original branch (no false branch-ch
         stopReason: "end_turn",
       }],
     }, ctx).finally(() => { tickSettled = true; });
-    const deadline = Date.now() + 5000;
+    const deadline = untilMs(5000);
     while (!measureInvoked && Date.now() < deadline) await new Promise((r) => setTimeout(r, 10));
     assert.ok(measureInvoked, "the tick reached its measure await before the stop");
     await pi.command("loop", "stop", ctx);
@@ -365,7 +365,7 @@ test("/loop stop mid-tick commits the in-flight iteration instead of resetting i
         stopReason: "end_turn",
       }],
     }, ctx).finally(() => { tickSettled = true; });
-    const deadline = Date.now() + 5000;
+    const deadline = untilMs(5000);
     while (!measureInvoked && Date.now() < deadline) await new Promise((r) => setTimeout(r, 10));
     assert.ok(measureInvoked, "the tick reached its measure await before the stop");
     await pi.command("loop", "stop", ctx);

@@ -205,7 +205,7 @@ test("v0.35.x behavioral: a hung post-accept turn aborts, parks, then AUTO-resum
   // The retry callback records its ledger entry BEFORE scheduling a second
   // timer for the continuation. A fixed sleep can settle between those two
   // timers under load; observe the actual send, then assert exactly once.
-  const sendDeadline = Date.now() + 5_000;
+  const sendDeadline = untilMs(5_000);
   while (pi.sent.length === sendsBeforeAbort && Date.now() < sendDeadline) await tick(20);
 
   assert.equal((readState(cwd).goal as { status?: string } | null)?.status, "active", "the automatic retry un-parks the goal");

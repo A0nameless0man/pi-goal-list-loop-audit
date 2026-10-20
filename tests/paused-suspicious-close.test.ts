@@ -33,7 +33,7 @@ afterEach(async () => { await cleanup?.(); cleanup = undefined; });
 // against that 30s ceiling — the margin was gone. 45s restores it; the
 // assertions after the wait are unchanged.
 async function waitFor(check: () => boolean, timeout = 45000) {
-  const until = Date.now() + timeout;
+  const until = untilMs(timeout);
   while (!check()) { if (Date.now() > until) throw new Error("settlement timeout"); await new Promise(r => setTimeout(r, 20)); }
 }
 

@@ -93,7 +93,7 @@ process.stdin.on("data", (chunk) => {
 // observed). 30s follows the paused-suspicious-close precedent: a wedged
 // audit still times out loudly, with real margin under the 60s runner cap.
 async function waitUntil(predicate: () => boolean, timeoutMs = 30_000): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
+  const deadline = untilMs(timeoutMs);
   while (!predicate()) {
     if (Date.now() >= deadline) throw new Error("timed out waiting for terminal impossible archive");
     await new Promise((resolve) => setTimeout(resolve, 20));

@@ -76,7 +76,7 @@ process.stdin.on("data", async (chunk) => {
 }
 
 async function waitUntil(predicate: () => boolean, timeoutMs = 30_000, label = ""): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
+  const deadline = untilMs(timeoutMs);
   while (!predicate()) {
     if (Date.now() >= deadline) throw new Error(`timed out waiting for detached-auditor state ${label}`.trim());
     await new Promise((resolve) => setTimeout(resolve, 20));

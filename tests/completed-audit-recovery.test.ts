@@ -34,7 +34,7 @@ function writeWorkerLock(dir: string, attemptId: string, pid: number): void {
  * checks a just-spawned pid (heartbeat/reap only inspect previous-session
  * locks), so the wait lives here: poll until the stub is observable. */
 async function waitForWorkerStub(cwd: string, pid: number, dir: string, platform?: NodeJS.Platform): Promise<boolean> {
-  const deadline = Date.now() + 5000;
+  const deadline = untilMs(5000);
   for (;;) {
     if (workerProcessMatches(cwd, pid, dir, platform ?? process.platform)) return true;
     if (Date.now() >= deadline) return false;

@@ -50,7 +50,7 @@ function ledgerText(cwd: string): string {
 }
 
 async function waitUntil(predicate: () => boolean, timeoutMs = 8_000): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
+  const deadline = untilMs(timeoutMs);
   while (!predicate()) {
     if (Date.now() >= deadline) throw new Error("timed out waiting for the continuation self-heal state");
     await new Promise((resolve) => setTimeout(resolve, 20));

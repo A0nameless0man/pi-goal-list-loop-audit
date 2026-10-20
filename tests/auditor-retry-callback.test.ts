@@ -47,7 +47,7 @@ process.stdin.once('data', () => {
     const first = parked?.pendingCompletion;
     assert.equal(first?.retryAttempts, 1, JSON.stringify({ first, notices: ctx.ui.notifies }));
     assert.equal(first?.auditorAttemptedRefs, undefined, 'burned candidates cleared before timer retry');
-    const deadline = Date.now() + 25000;
+    const deadline = untilMs(25000);
     while ((readState(cwd).goal?.pendingCompletion?.retryAttempts ?? 0) < 2 && Date.now() < deadline) {
       await new Promise(resolve => setTimeout(resolve, 50));
     }
