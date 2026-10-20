@@ -42,6 +42,7 @@ import {
   MAX_AUDITOR_CANDIDATE_REFS,
   type MainModelFailureKind,
 } from "./main-model-recovery.js";
+import { isAuditorAccountFailure } from "../scripts/auditor-provider-failure.mjs";
 import { ModelSelector, type ModelFallbackEvent } from "./model-selector.js";
 import { buildGoalAuditorPrompt } from "./goal-loop-auditor.js";
 import { checkRegressionShield, parseAuditorVerdict } from "./goal-loop-shield.js";
@@ -405,7 +406,6 @@ export async function runAuditorFallbackWithPolicy(
   // for unrecognized text, and an ambiguous local worker death must still
   // walk the chain — the session fallback is the model most likely to work.
   // Stalls stay rung-local via the failureClass gate at the call sites.
-  const ACCOUNT_THROTTLE_WORDS = /\b429\b|rate[\s_-]*limit|too many requests|quota|billing|insufficient[\s_-]+(?:credits?|balance)|token[\s_-]*plan|usage[\s_-]*limit|plan limit/i;
   const isBackendSideFailure = (
     cls: AuditorInfrastructureClass,
     kind: MainModelFailureKind,
@@ -413,7 +413,7 @@ export async function runAuditorFallbackWithPolicy(
   ): boolean => {
     if (cls !== "provider") return false;
     if (kind === "transient" || kind === "auth") return true;
-    return ACCOUNT_THROTTLE_WORDS.test(error ?? "");
+    return isAuditorAccountFailure(error);
   };
   // One dead backend must not burn a launch per rung: mark every untried
   // rung on the same provider attempted so the walker advances past them.
@@ -423,6 +423,10 @@ export async function runAuditorFallbackWithPolicy(
     for (const ref of refs) {
       if (sameRef(ref, failedRef)) continue;
       if (attempted.some((entry) => sameRef(entry, ref))) continue;
+      // The current session is a mandatory last attempt, even on the same
+      // provider: model/account routing can differ from the configured pin.
+      const via = byRef.get(ref.toLowerCase())?.via;
+      if (via === "session" || via === "session-fallback") continue;
       if (providerOfRef(ref) === provider) addAttempted(ref);
     }
   };
@@ -616,7 +620,8 @@ export async function runAuditorFallbackWithPolicy(
     // (model-not-found family). A same-ref retry can never heal it, and
     // sleeping the backoff before advancing only delays the live fallback —
     // evict via onCandidateExhausted and advance immediately with no delay.
-    if (!isRetryAttempt && isUnresolvableAuditorModelRefError(first.error)) {
+    if (isUnresolvableAuditorModelRefError(first.error) || (failureClass(first) === "provider" && isAuditorAccountFailure(first.error))) {
+      if (isAuditorAccountFailure(first.error)) skipSameProviderRungs(selectedRef);
       currentRef = selectedRef;
       const nextRef = nextUntriedModelRef(currentRef, refs, attempted);
       failureAttempt += 1;

@@ -127,26 +127,20 @@ function sanitizeCompletionAuditCursorPatch(patch: CompletionAuditCursorPatch | 
   };
 }
 
-/** Field 2026-10-02 (clean-web): a parked claim kept the DEAD attempt's
- * cursor (auditorAttemptedRefs=[dead model]). The next session-recovery
- * begin inherits it — freshAuditorCycleClaim only runs when
- * auditorFallbackExhausted===true, which a worker-death park never
- * set — so the walker finds every candidate already tried and exhausts
- * in milliseconds with "no auditor model", consuming the one-shot auto
- * retry and parking again until a manual resume. A dead worker teaches
- * nothing about the models: drop its cursor refs (mirror the burn
- * clearing) so the next episode re-walks. Evictions + the identical
- * streak survive (same rationale as the burn path). Spread BEFORE the
- * explicit patch so the exception path's exhausted flag still wins. */
-const DEAD_AUDITOR_CURSOR_CLEARING: Partial<PendingCompletion> = {
-  auditorCandidateRefs: undefined,
-  auditorCandidateRef: undefined,
-  auditorRetryCandidateRef: undefined,
-  auditorRetryAttemptStartedAt: undefined,
-  auditorAttemptedRefs: undefined,
-  auditorFailureCount: undefined,
-  auditorFallbackExhausted: undefined,
-};
+/** A host interruption is not a model failure. Preserve exhausted predecessors
+ * and the selected fallback, including its one-retry launch marker. Legacy
+ * cursors sometimes include the interrupted first attempt in attemptedRefs;
+ * release only that ref so it can resume without reviving failed predecessors.
+ * Fully exhausted cycles are reseeded by freshAuditorCycleClaim at admission. */
+function interruptedAuditorCursor(claim: PendingCompletion): CompletionAuditCursorPatch {
+  const cursor = sanitizeCompletionAuditCursorPatch(claim);
+  if (cursor.auditorFallbackExhausted || cursor.auditorRetryCandidateRef) return cursor;
+  const current = cursor.auditorCandidateRef;
+  if (current && cursor.auditorAttemptedRefs) {
+    cursor.auditorAttemptedRefs = cursor.auditorAttemptedRefs.filter((ref) => ref.toLowerCase() !== current.toLowerCase());
+  }
+  return cursor;
+}
 
 export function markCompletionAuditRecoveryPending(ctx: ExtensionContext, reason: string, cursorPatch?: CompletionAuditCursorPatch): boolean {
   const goal = state.goal;
@@ -161,7 +155,7 @@ export function markCompletionAuditRecoveryPending(ctx: ExtensionContext, reason
   const recoveryEpisodeKey = claim.recoveryEpisodeKey ?? `${claim.at}:${failureCopy.fingerprint}`;
   const pending: PendingCompletion = {
     ...claim,
-    ...DEAD_AUDITOR_CURSOR_CLEARING,
+    ...interruptedAuditorCursor(claim),
     ...sanitizeCompletionAuditCursorPatch(cursorPatch),
     phase: "recovery-pending",
     recoveryAt: nowIso(),
@@ -216,7 +210,7 @@ export function parkCompletionAuditRecovery(cwd: string, reason: string, cursorP
   const recoveryEpisodeKey = claim.recoveryEpisodeKey ?? `${claim.at}:${failureCopy.fingerprint}`;
   const pending: PendingCompletion = {
     ...claim,
-    ...DEAD_AUDITOR_CURSOR_CLEARING,
+    ...interruptedAuditorCursor(claim),
     ...sanitizeCompletionAuditCursorPatch(cursorPatch),
     phase: "recovery-pending",
     recoveryAt: nowIso(),

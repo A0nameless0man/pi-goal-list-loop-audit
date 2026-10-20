@@ -14,6 +14,7 @@ import { constants as fsConstants, readdirSync, readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { buildAuditorPiSpawnSpec, renameWithWindowsRetry } from "./goal-auditor-launch.mjs";
+import { isAuditorAccountFailure } from "./auditor-provider-failure.mjs";
 import { accumulateStderrDiagnostic } from "./auditor-stderr-diagnostic.mjs";
 import { terminateContainedChild } from "./contained-child.mjs";
 
@@ -981,6 +982,14 @@ async function main() {
       if (event.type === "message_end" && event.message?.role === "assistant" && event.message.stopReason === "error") {
         const message = normalizeErrorText(event.message);
         if (message) streamError = message;
+      }
+      // Let GLLA's parent walk the auditor chain immediately rather than
+      // keeping this detached worker alive in Pi's account-error retry loop.
+      if ((event.type === "error" || event.type === "auto_retry_start" || event.type === "auto_retry_end"
+        || (event.type === "message_end" && event.message?.stopReason === "error"))
+        && isAuditorAccountFailure(streamError)) {
+        failRound(streamError);
+        return;
       }
       if (event.type === "response" && event.command === "prompt" && event.success === false) {
         const message = normalizeErrorText(event) || "RPC prompt was rejected before acceptance";
