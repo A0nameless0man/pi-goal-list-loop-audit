@@ -674,3 +674,21 @@ test("all unavailable auditors retain an infrastructure failure rather than a ve
   assert.equal(out.result.approved, false);
   assert.equal(out.result.disapproved, false);
 });
+
+for (const sessionRef of ["test/session", "session"]) {
+  test(`explicit session fallback remains reachable with same-session swap disabled: ${sessionRef}`, async () => {
+    await withFakeContext(async ({ ctx }) => {
+      const resolved = resolveAuditorModel(ctx, "test/primary", [sessionRef], false);
+      const candidates = [{ model: resolved.model, via: resolved.via! }, ...(resolved.fallbackModels ?? [])];
+      const calls: string[] = [];
+      const out = await runAuditorFallbackWithPolicy(candidates, async (candidate) => {
+        calls.push(candidate.model.id);
+        return candidate.model.id === "session"
+          ? result({ approved: true, model: "test/session" })
+          : result({ error: "subscription quota exhausted", model: "test/primary" });
+      }, { sleep: async () => { assert.fail("account errors must advance promptly"); } });
+      assert.deepEqual(calls, ["primary", "session"]);
+      assert.equal(out.result.approved, true);
+    });
+  });
+}

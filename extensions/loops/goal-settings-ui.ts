@@ -458,7 +458,7 @@ import {
 } from "../goal-loop.js";
 import { defineGoalRuntimeGlobal } from "./goal-runtime-globals.js";
 
-type AuditorModelCandidate = { ref?: string; model: any; via: string };
+type AuditorModelCandidate = { ref?: string; model: any; via: string; isSessionModel?: boolean };
 
 function auditorThinkingLevels(model: any): string[] {
   return model ? getSupportedThinkingLevels(model) : ["off"];
@@ -689,7 +689,7 @@ export function resolveAuditorModel(
     // does not pass through ModelSelector's configured-ref filter.
     if (forbidden(candidateRef) || forbidden(key) || seenModels.has(key)) return;
     seenModels.add(key);
-    candidates.push({ ref: candidateRef, model, via });
+    candidates.push({ ref: candidateRef, model, via, ...(key === currentRef?.toLowerCase() ? { isSessionModel: true } : {}) });
   };
   // Unlike main recovery, the auditor may deliberately use the session model
   // when same-model swapping is disabled. Seed that configured primary before

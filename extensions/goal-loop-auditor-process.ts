@@ -289,6 +289,8 @@ export interface AuditorFallbackCandidate {
   ref?: string;
   model: any;
   via: string;
+  /** Session identity survives an explicit fallback pin's provenance label. */
+  isSessionModel?: boolean;
 }
 
 export interface AuditorFallbackAttemptInfo {
@@ -425,8 +427,9 @@ export async function runAuditorFallbackWithPolicy(
       if (attempted.some((entry) => sameRef(entry, ref))) continue;
       // The current session is a mandatory last attempt, even on the same
       // provider: model/account routing can differ from the configured pin.
-      const via = byRef.get(ref.toLowerCase())?.via;
-      if (via === "session" || via === "session-fallback") continue;
+      const candidate = byRef.get(ref.toLowerCase());
+      const via = candidate?.via;
+      if (candidate?.isSessionModel || via === "session" || via === "session-fallback") continue;
       if (providerOfRef(ref) === provider) addAttempted(ref);
     }
   };
