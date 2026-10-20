@@ -10,7 +10,6 @@ import type { AssistantMessage } from "@earendil-works/pi-ai";
 import activate, { __testOnlyResetProcessState } from "../extensions/loops/goal.js";
 import { globalSettingsPath, saveSettings } from "../extensions/goal-settings.js";
 import { MockPi, makeMockCtx, tmpCwd, invalidateHostSession } from "./harness/mock-pi.js";
-import { scaledBudgetMs } from "../scripts/host-contention.mjs";
 
 const settingsFile = globalSettingsPath();
 const original = fs.readFileSync(settingsFile, "utf8");
@@ -46,11 +45,11 @@ async function call(input: Record<string, unknown>) {
 }
 
 test("project optional arguments override supplied values and apply to later calls", async () => {
-  const { ctx } = await boot({ timeout: scaledBudgetMs(60), format: "json" });
+  const { ctx } = await boot({ timeout: 60, format: "json" });
   const first = { command: "example", timeout: 5 } as Record<string, unknown>;
   assert.equal((await call(first))?.block, undefined);
   assert.deepEqual(first, { command: "example", timeout: 60, format: "json" });
-  saveSettings("project", ctx.cwd, { toolOverrides: { perToolConfig: { bash: { timeout: scaledBudgetMs(12) } } } });
+  saveSettings("project", ctx.cwd, { toolOverrides: { perToolConfig: { bash: { timeout: 12 } } } });
   const second = { command: "another" };
   await call(second);
   assert.deepEqual(second, { command: "another", timeout: 12 });
@@ -69,7 +68,7 @@ for (const config of [{ timeout: "bad" }, { unsupported: true }, { command: "rep
 }
 
 test("a stale host cannot rewrite tool arguments", async () => {
-  const { pi, ctx } = await boot({ timeout: scaledBudgetMs(60) });
+  const { pi, ctx } = await boot({ timeout: 60 });
   invalidateHostSession(pi, ctx);
   const input = { command: "original", timeout: 5 };
   await call(input);
@@ -88,7 +87,7 @@ test("the real Pi tool pipeline executes bash with the configured timeout", asyn
       return { exitCode: 0 };
     },
   } });
-  const { pi, ctx } = await boot({ timeout: scaledBudgetMs(60) }, definition.parameters);
+  const { pi, ctx } = await boot({ timeout: 60 }, definition.parameters);
   const contextFields = { systemPrompt: "", messages: [], tools: [{ ...definition, execute: (...args: any[]) => (definition.execute as any)(...args, ctx) }] };
   const context: AgentContext = contextFields;
   const outcome = await runToolCall({ type: "toolCall", id: "pipeline-call", name: "bash", arguments: { command: "fixture command", timeout: 5 } }, {
@@ -114,7 +113,7 @@ test("the real Pi tool pipeline executes bash with the configured timeout", asyn
 
 test("invalid merged options leave every input field unchanged", () => {
   const input = { command: "original", timeout: 5, format: "text" };
-  assert.equal(applyToolConfig("bash", input, { timeout: scaledBudgetMs(60), format: "unsupported" }, () => [{ name: "bash", parameters: schema }])?.block, true);
+  assert.equal(applyToolConfig("bash", input, { timeout: 60, format: "unsupported" }, () => [{ name: "bash", parameters: schema }])?.block, true);
   assert.deepEqual(input, { command: "original", timeout: 5, format: "text" });
 });
 
@@ -136,8 +135,8 @@ test("unconfigured calls do not need a registry; missing or unsupported schemas 
   const unavailable = () => { throw new Error("registry unavailable"); };
   assert.equal(applyToolConfig("bash", input, undefined, unavailable), undefined);
   assert.equal(applyToolConfig("bash", input, {}, unavailable), undefined);
-  assert.equal(applyToolConfig("bash", input, { timeout: scaledBudgetMs(60) }, unavailable)?.block, true);
-  assert.equal(applyToolConfig("bash", input, { timeout: scaledBudgetMs(60) }, () => [])?.block, true);
-  assert.equal(applyToolConfig("bash", input, { timeout: scaledBudgetMs(60) }, () => [{ name: "bash", parameters: Type.String() }])?.block, true);
+  assert.equal(applyToolConfig("bash", input, { timeout: 60 }, unavailable)?.block, true);
+  assert.equal(applyToolConfig("bash", input, { timeout: 60 }, () => [])?.block, true);
+  assert.equal(applyToolConfig("bash", input, { timeout: 60 }, () => [{ name: "bash", parameters: Type.String() }])?.block, true);
   assert.deepEqual(input, { command: "original" });
 });
