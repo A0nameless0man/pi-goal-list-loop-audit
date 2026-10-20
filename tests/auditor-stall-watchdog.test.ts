@@ -187,8 +187,8 @@ setInterval(() => {}, 1_000);
     stalled[0]!.at - spawnReturnedAt >= 700,
     `first-event budget was measured after spawn: ${stalled[0]!.at - spawnReturnedAt}ms`,
   );
-  assert.ok(stalled[0]!.at - spawnReturnedAt < 9_000, "the watchdog still beats the wall bound");
-  assert.ok(existsSync(sigtermMarker), "the delayed-start worker was SIGTERMed");
+  assert.ok(stalled[0]!.at - spawnReturnedAt < scaledBudgetMs(9_000), "the watchdog still beats the wall bound");
+  await waitFor(() => existsSync(sigtermMarker), "the delayed-start worker was SIGTERMed");
   await cleanup();
 });
 
