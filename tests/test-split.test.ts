@@ -127,9 +127,14 @@ test("v0.39.38: test:all keeps exactly one execution path per node-only gate", a
 
 test("runner: the stall window is bounded and overridable", () => {
   assert.ok(DEFAULT_STALL_TIMEOUT_MS >= 60_000, "the default stall window is generous enough for a slow host");
-  assert.equal(stallTimeoutMs({}), DEFAULT_STALL_TIMEOUT_MS, "unset env uses the default");
-  assert.equal(stallTimeoutMs({ GLLA_TEST_STALL_TIMEOUT_MS: "5000" }), DEFAULT_STALL_TIMEOUT_MS, "an absurdly small window is refused");
-  assert.equal(stallTimeoutMs({ GLLA_TEST_STALL_TIMEOUT_MS: "nonsense" }), DEFAULT_STALL_TIMEOUT_MS, "junk env is refused");
+  // v0.39.41: the default stall window follows the host's CPU too — a suite
+  // that is merely slow is not a suite that has stopped. It is never
+  // shorter than the base, and an explicit override is honoured exactly.
+  const scaled = stallTimeoutMs({});
+  assert.ok(scaled >= DEFAULT_STALL_TIMEOUT_MS, "the scaled stall window is never shorter than the base");
+  assert.equal(stallTimeoutMs({}), scaled, "unset env uses the scaled default");
+  assert.equal(stallTimeoutMs({ GLLA_TEST_STALL_TIMEOUT_MS: "5000" }), scaled, "an absurdly small window is refused");
+  assert.equal(stallTimeoutMs({ GLLA_TEST_STALL_TIMEOUT_MS: "nonsense" }), scaled, "junk env is refused");
   assert.equal(stallTimeoutMs({ GLLA_TEST_STALL_TIMEOUT_MS: "45000" }), 45_000, "a sane override is honoured");
   assert.equal(heartbeatMs({}), DEFAULT_HEARTBEAT_MS);
   assert.equal(heartbeatMs({ GLLA_TEST_HEARTBEAT_MS: "2000" }), 2_000);
