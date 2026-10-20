@@ -22,6 +22,7 @@ import { auditLifecycleProjection } from "../extensions/audit-lifecycle.ts";
 import { buildStatusText, buildWidgetLines } from "../extensions/goal-loop-display.js";
 import { readState, type Goal, type State } from "../extensions/goal-loop-core.ts";
 import { MockPi, makeMockCtx, seedGoal, seedState, tick, tmpCwd, type MockCtx } from "./harness/mock-pi.js";
+import { untilMs } from "./harness/host-budget.js";
 
 const NOW = Date.parse("2026-09-25T12:00:00.000Z");
 const SUMMARY = "Outcome: shipped.\nChanged: one file.\nEvidence: test.\nTests: bun test pass.\nUnresolved: none.\nNext: none.";

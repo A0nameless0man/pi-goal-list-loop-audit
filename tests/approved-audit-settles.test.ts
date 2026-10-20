@@ -23,6 +23,7 @@ import activate, {
 import { __testOnlyResetAuditorSurface } from "../extensions/loops/goal-auditor-surface.js";
 import { archivedGoalPath, readState } from "../extensions/goal-loop-core.js";
 import { MockPi, makeMockCtx, seedGoal, seedState, tick, tmpCwd, type MockCtx } from "./harness/mock-pi.js";
+import { untilMs } from "./harness/host-budget.js";
 
 const ago = (ms: number): string => new Date(Date.now() - ms).toISOString();
 

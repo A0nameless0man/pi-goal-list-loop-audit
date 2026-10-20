@@ -22,6 +22,7 @@ import { readState } from "../extensions/goal-loop-core.js";
 import { buildStatusText } from "../extensions/goal-loop-display.js";
 import { HELD_ON_RESTORE } from "../extensions/goal-loop-forever.js";
 import { MockPi, makeMockCtx, seedGoal, seedLoop, seedState, tick, tmpCwd, type MockCtx } from "./harness/mock-pi.js";
+import { untilMs } from "./harness/host-budget.js";
 
 const GLOBAL_SETTINGS_PATH = process.env.GLLA_GLOBAL_SETTINGS_PATH!;
 

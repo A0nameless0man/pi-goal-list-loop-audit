@@ -7,6 +7,7 @@ import * as os from "node:os";
 import { spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { publishOwnerRecord, withOwnerMutation } from "../extensions/owner-file-protocol.js";
+import { untilMs } from "./harness/host-budget.js";
 
 const load = `import fs from 'node:fs'; import {createJiti} from ${JSON.stringify(pathToFileURL(path.resolve("node_modules/jiti/lib/jiti.mjs")).href)};
   const {withOwnerMutation,publishOwnerRecord}=await createJiti(import.meta.url).import(${JSON.stringify(path.resolve("extensions/owner-file-protocol.ts"))});`;

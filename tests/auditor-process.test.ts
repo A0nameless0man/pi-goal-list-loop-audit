@@ -6,6 +6,7 @@ import { EventEmitter } from "node:events";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import { untilMs } from "./harness/host-budget.js";
 
 async function waitForWorkerResult(resultPath: string, timeoutMs = 30_000): Promise<void> {
   const deadline = untilMs(timeoutMs);

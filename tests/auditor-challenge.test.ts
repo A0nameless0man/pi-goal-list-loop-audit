@@ -17,6 +17,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { requestHash } from "../extensions/goal-loop-auditor-process.ts";
+import { untilMs } from "./harness/host-budget.js";
 
 const WORKER = path.resolve(process.cwd(), "scripts/goal-auditor-worker.mjs");
 const AUDIT_OUTPUT = "<evidence>\nartifact exists; tests pass\n</evidence>\n<approved/>";

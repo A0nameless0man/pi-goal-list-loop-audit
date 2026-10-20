@@ -23,6 +23,7 @@ import * as assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { execFileSync } from "node:child_process";
+import { untilMs } from "./harness/host-budget.js";
 
 const ENABLED = process.env.GLLA_E2E_DAEMON === "1";
 const DAEMON_REPO = process.env.GLLA_E2E_DAEMON_REPO;

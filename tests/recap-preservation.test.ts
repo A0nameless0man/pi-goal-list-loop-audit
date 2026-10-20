@@ -16,6 +16,7 @@ import { __testOnlyResetZombieRunWatchdog } from "../extensions/goal-heartbeat.j
 import { resetContinuationDispatchState } from "../extensions/goal-continuation.js";
 import { readState } from "../extensions/goal-loop-core.js";
 import { MockPi, makeMockCtx, tmpCwd } from "./harness/mock-pi.js";
+import { untilMs } from "./harness/host-budget.js";
 
 const pi = new MockPi(); activate(pi.api);
 let cleanup: (() => Promise<void>) | undefined;

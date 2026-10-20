@@ -44,6 +44,7 @@ import activate, {
 import { __testOnlyResetZombieRunWatchdog, __testOnlyHeartbeatTick, __testOnlySetZombieRunWindows } from "../extensions/goal-heartbeat.js";
 import { readState } from "../extensions/goal-loop-core.js";
 import { MockPi, makeMockCtx, tmpCwd, tick, type MockCtx } from "./harness/mock-pi.js";
+import { untilMs } from "./harness/host-budget.js";
 
 const pi = new MockPi();
 activate(pi.api);

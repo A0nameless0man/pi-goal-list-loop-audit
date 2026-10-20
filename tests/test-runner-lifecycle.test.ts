@@ -16,6 +16,8 @@ async function runStub(source: string, signal?: NodeJS.Signals, preload?: string
     if (preload) fs.writeFileSync(bootstrap, preload);
     child = spawn("node", [...(preload ? ["--import", bootstrap] : []), path.resolve("scripts/run-tests.mjs"), "--all"], {
       env: { ...process.env, PATH: `${cwd}${path.delimiter}${process.env.PATH}`, GLLA_TEST_RUNNER_QUIET: "0",
+        // The stub sizes its own wait for the CPU this host is giving it.
+        GLLA_TEST_WAIT_BUDGET_MS: String(hangDeadlineMs(10_000)),
         ...(preload || isolateRegistry ? { GLLA_TEST_ROOT_PROCESS_REGISTRY: "", GLLA_TEST_ROOT_PROCESS_TOKEN: "" } : {}) },
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -155,7 +157,7 @@ test(`runner refuses a green suite after a swallowed ${channel} registration wri
     // Refuse a worker launch, after the suite's own startup is acknowledged.
     // Otherwise chmod races the parent's initial suite registration instead.
     const dir=process.env.GLLA_TEST_PROCESS_REGISTRY;
-    const deadline=Date.now()+10000;
+    const deadline=Date.now()+Number(process.env.GLLA_TEST_WAIT_BUDGET_MS);
     while(!fs.readdirSync(dir).some(file=>{
       if(!file.startsWith('process-'+process.pid+'-')||!file.endsWith('.json'))return false;
       try{return JSON.parse(fs.readFileSync(dir+'/'+file,'utf8')).leader?.pid===process.pid}catch{return false}

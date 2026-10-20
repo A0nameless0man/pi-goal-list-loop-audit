@@ -4,6 +4,7 @@ import * as fs from 'node:fs';
 import activate, { __testOnlyLoadState, __testOnlyResetOwnerSession, __testOnlyResetStaleFlag, __testOnlyResetTerminalFlags } from '../extensions/loops/goal.js';
 import { readState } from '../extensions/goal-loop-core.js';
 import { MockPi, makeMockCtx, tmpCwd, seedGoal, seedState } from './harness/mock-pi.js';
+import { untilMs } from "./harness/host-budget.js";
 
 test('manual audit exhaustion retries through timer with fresh candidates and unchanged envelope', { timeout: 60000 }, async () => {
   // Regression pin — 2026-09-17T14:07 ledger sequence: exhausted selection

@@ -34,6 +34,7 @@ import {
   __testOnlySetHeartbeatStaleDebounce,
 } from "../extensions/goal-heartbeat.js";
 import { readGoalRuntimeSource } from "./harness/goal-source.js";
+import { untilMs } from "./harness/host-budget.js";
 
 const SRC = readGoalRuntimeSource();
 const HB = fs.readFileSync("extensions/goal-heartbeat.ts", "utf-8"); // decomposition step 4 (v0.34.112)

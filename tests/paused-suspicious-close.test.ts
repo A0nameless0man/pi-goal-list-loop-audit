@@ -10,6 +10,7 @@ import { assessSuspiciousObjective } from "../extensions/faulty-objective-recove
 import { guardGoalBeforeContinuation, resetContinuationDispatchState } from "../extensions/goal-continuation.js";
 import { MockPi, makeMockCtx, tmpCwd, seedState, seedGoal, tick } from "./harness/mock-pi.js";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { untilMs } from "./harness/host-budget.js";
 
 // Field 032245: a work-done goal whose objective carried report prose
 // ("Evidence: tsc clean, 666 tests pass") was flagged verification-fragment,

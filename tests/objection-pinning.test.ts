@@ -22,6 +22,7 @@ import activate, {
 import { readState, appendAuditVerdict, liveDisapproval, type AuditVerdict } from "../extensions/goal-loop-core.js";
 import { continuationPrompt } from "../extensions/goal-continuation.js";
 import { MockPi, makeMockCtx, tmpCwd, type MockCtx } from "./harness/mock-pi.js";
+import { untilMs } from "./harness/host-budget.js";
 
 const GLOBAL_SETTINGS_PATH = process.env.GLLA_GLOBAL_SETTINGS_PATH!;
 function setGlobalAutoResume(v: boolean): void {

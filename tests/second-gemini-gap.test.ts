@@ -15,6 +15,7 @@ import { resetContinuationDispatchState } from "../extensions/goal-continuation.
 import { readState, sanitizeFindingGroups, sanitizeGateRows, type FindingGroup, type GateRow, type Goal } from "../extensions/goal-loop-core.js";
 import { buildRichTerminalParts, buildTerminalApprovalRender } from "../extensions/completion-summary.js";
 import { MockPi, makeMockCtx, seedGoal, tmpCwd } from "./harness/mock-pi.js";
+import { untilMs } from "./harness/host-budget.js";
 
 const GATES: GateRow[] = [
   { gate: "Unit Tests", scope: "65 test files", notes: "743 passed, 0 failed" },

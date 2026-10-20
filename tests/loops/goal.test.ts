@@ -32,6 +32,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { MockPi, makeMockCtx, tmpCwd, tick, type MockCtx } from "../harness/mock-pi.js";
 import activate, { __testOnlyResetOwnerSession, __testOnlyResetStaleFlag, __testOnlySetContinuationRetryBackoff, __testOnlySetContinuationStartTimeout, __testOnlySetLastCompactionAt, __testOnlySetLastMainModelRecoveryResumeAt } from "../../extensions/loops/goal.js";
+import { untilMs } from "../harness/host-budget.js";
 
 const pi = new MockPi();
 activate(pi.api);

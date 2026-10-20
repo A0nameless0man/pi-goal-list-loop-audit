@@ -4,6 +4,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
+import { untilMs } from "./harness/host-budget.js";
 
 function alive(pid: number): boolean {
   try {

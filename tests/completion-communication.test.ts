@@ -9,6 +9,7 @@ import { resetContinuationDispatchState } from "../extensions/goal-continuation.
 import { readState, readArchiveIntent, archivedGoalPath, archiveIntentPath } from "../extensions/goal-loop-core.js";
 import { approvalRenderStorePath } from "../extensions/approval-render-store.js";
 import { MockPi, makeMockCtx, tmpCwd } from "./harness/mock-pi.js";
+import { untilMs } from "./harness/host-budget.js";
 
 const pi = new MockPi(); activate(pi.api);
 let cleanup: (() => Promise<void>) | undefined;

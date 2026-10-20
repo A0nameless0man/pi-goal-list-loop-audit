@@ -27,6 +27,7 @@ import {
   readOwnerFile,
 } from "../extensions/loops/goal-session.js";
 import { tmpCwd } from "./harness/mock-pi.js";
+import { untilMs } from "./harness/host-budget.js";
 
 const GLOBAL_SETTINGS_PATH = process.env.GLLA_GLOBAL_SETTINGS_PATH;
 function setGlobalSettings(value: Record<string, unknown>): void {

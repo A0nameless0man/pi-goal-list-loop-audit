@@ -20,4 +20,11 @@ export function contentionFactor(options?: {
   min?: number;
   max?: number;
 }): number;
+export function scaledBudgetMs(baseMs: number, options?: {
+  maxAgeMs?: number;
+  force?: boolean;
+  probeCpuMs?: number;
+  min?: number;
+  max?: number;
+}): number;
 export function resetContentionFactor(): void;

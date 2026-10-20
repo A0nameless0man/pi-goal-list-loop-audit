@@ -25,7 +25,7 @@
 // test; it just gets a budget that matches the CPU it is actually getting.
 // The hang is still a hang.
 
-import { contentionFactor } from "../../scripts/host-contention.mjs";
+import { scaledBudgetMs } from "../../scripts/host-contention.mjs";
 
 /** How long a measured contention factor stays fresh. Contention moves on a
  * scale of seconds, and a wait that starts now must be sized for the host
@@ -46,11 +46,11 @@ export const HOST_BUDGET_PROBE_CPU_MS = 25;
  */
 export function hangDeadlineMs(baseMs: number, options: { maxAgeMs?: number; factor?: number } = {}): number {
 	if (!Number.isFinite(baseMs) || baseMs <= 0) return baseMs;
-	const factor = options.factor ?? contentionFactor({
+	if (options.factor !== undefined) return Math.ceil(baseMs * options.factor);
+	return scaledBudgetMs(baseMs, {
 		maxAgeMs: options.maxAgeMs ?? HOST_BUDGET_MAX_AGE_MS,
 		probeCpuMs: HOST_BUDGET_PROBE_CPU_MS,
 	});
-	return Math.ceil(baseMs * factor);
 }
 
 /**

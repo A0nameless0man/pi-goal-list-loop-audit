@@ -13,6 +13,7 @@ import { archivedGoalPath, readState, type Goal, type State } from "../extension
 import { buildWidgetLines, buildStatusText } from "../extensions/goal-loop-display.js";
 import { auditorWorkerLiveForAttempt, completionAuditRecoveryIdentity, requestHash, readCompletedCompletionAudit, runDetachedGoalCompletionAuditor, buildGoalAuditorPrompt, workerProcessMatches } from "../extensions/goal-loop-auditor-process.js";
 import { MockPi, makeMockCtx, invalidateHostSession, seedGoal, seedState, tick, tmpCwd } from "./harness/mock-pi.js";
+import { untilMs } from "./harness/host-budget.js";
 
 /** Spawn a stub whose cmdline passes workerProcessMatches for this job dir:
  * a live `node` process whose argv carries the --job-dir marker and the dir,

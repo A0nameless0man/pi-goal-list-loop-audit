@@ -47,6 +47,7 @@ afterEach(() => setGlobalAutoResume(false));
 import { appendAuditLog, auditPhaseOwnsAttempt, queueItemSidecarCount, readState, writeQueueItemFile } from "../extensions/goal-loop-core.js";
 import { MockPi, invalidateHostSession, makeMockCtx, tmpCwd, seedState, seedGoal, seedLoop, staleError, tick, type MockCtx } from "./harness/mock-pi.js";
 import { readGoalRuntimeSource } from "./harness/goal-source.js";
+import { untilMs } from "./harness/host-budget.js";
 
 /**
  * v0.38.99: a LAUNCHED attempt owns its durable claim. The stored phase is

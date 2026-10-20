@@ -23,6 +23,7 @@ import { normalizeLoadedSettings, THINKING_LEVELS } from "../extensions/goal-set
 import { buildSettingsRows } from "../extensions/settings-menu.js";
 import { buildGoalAuditorPrompt } from "../extensions/goal-loop-auditor.js";
 import { MockPi, makeMockCtx, seedGoal, seedState, tick, tmpCwd, type MockCtx } from "./harness/mock-pi.js";
+import { untilMs } from "./harness/host-budget.js";
 
 const GLOBAL_SETTINGS_PATH = process.env.GLLA_GLOBAL_SETTINGS_PATH!;
 

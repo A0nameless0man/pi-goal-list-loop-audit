@@ -24,6 +24,7 @@ import path from "node:path";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { bumpGoalRevision, readState } from "../extensions/goal-loop-core.js";
 import { persistStateLine, state } from "../extensions/goal-state.js";
+import { untilMs } from "./harness/host-budget.js";
 import { guardGoalBeforeContinuation } from "../extensions/goal-continuation.js";
 import activate, {
   __testOnlyLoadState,

@@ -739,6 +739,7 @@ test("real stalled detached workers automatically journal a paced timeout episod
 
 import { buildWidgetLines, buildStatusText } from "../extensions/goal-loop-display.js";
 import { respecAuditStatus } from "../extensions/respec-builder-ui.js";
+import { untilMs } from "./harness/host-budget.js";
 test("project retry causes survive actual journal reload and production recovery UI without credentials", async () => {
   const f = fixture();
   let clock = Date.parse("2026-10-14T12:00:00Z");

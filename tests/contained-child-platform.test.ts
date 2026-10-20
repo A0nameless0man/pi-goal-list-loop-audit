@@ -5,6 +5,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { spawn } from "node:child_process";
 import { terminateContainedChild } from "../scripts/contained-child.mjs";
+import { untilMs } from "./harness/host-budget.js";
 
 function executing(pid: number): boolean {
   if (process.platform === "linux") {

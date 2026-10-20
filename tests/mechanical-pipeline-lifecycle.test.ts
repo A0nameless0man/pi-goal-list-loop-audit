@@ -5,6 +5,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
+import { untilMs } from "./harness/host-budget.js";
 
 test("Node callers survive noisy early-closing filters and retain head failure/cancellation", { skip: process.platform === "win32", timeout: 60_000 }, async () => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "glla-pipeline-lifecycle-"));
@@ -31,7 +32,7 @@ test("Node callers survive noisy early-closing filters and retain head failure/c
       process.env.PATH=${JSON.stringify(bin + path.delimiter)}+process.env.PATH;
       const activeController=new AbortController();
       const active=runMechanicalPreAuditChecks(${JSON.stringify(cwd)},['node noisy.cjs | head -n 0'],5000,activeController.signal);
-      const deadline=Date.now()+10000;
+      const deadline=Date.now()+Number(process.env.GLLA_TEST_WAIT_BUDGET_MS);
       while(!fs.existsSync(${JSON.stringify(marker)})) {
         if(Date.now()>deadline) throw new Error('filter never started');
         await new Promise(resolve=>setTimeout(resolve,10));
@@ -40,7 +41,11 @@ test("Node callers survive noisy early-closing filters and retain head failure/c
       const activeCancelled=await active;
       assert.equal(activeCancelled.outcome,'inconclusive'); assert.equal(activeCancelled.inconclusiveReason,'aborted');
       console.log('verified noisy filter lifecycle');`;
-    const child = spawn("node", ["--input-type=module", "-e", source], { stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn("node", ["--input-type=module", "-e", source], {
+      stdio: ["ignore", "pipe", "pipe"],
+      // The child sizes its own wait for the CPU this host is giving it.
+      env: { ...process.env, GLLA_TEST_WAIT_BUDGET_MS: String(untilMs(10000) - Date.now()) },
+    });
     let output = "";
     child.stdout.on("data", chunk => { output += chunk; });
     child.stderr.on("data", chunk => { output += chunk; });

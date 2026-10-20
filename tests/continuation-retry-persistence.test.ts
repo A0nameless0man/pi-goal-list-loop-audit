@@ -17,6 +17,7 @@ import activate, {
 } from "../extensions/loops/goal.js";
 import { resetContinuationDispatchState } from "../extensions/goal-continuation.js";
 import { MockPi, makeMockCtx, tick, tmpCwd, type MockCtx } from "./harness/mock-pi.js";
+import { untilMs } from "./harness/host-budget.js";
 
 const GLOBAL_SETTINGS_PATH = process.env.GLLA_GLOBAL_SETTINGS_PATH!;
 const pi = new MockPi();
