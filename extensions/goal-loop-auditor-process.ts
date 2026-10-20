@@ -1853,7 +1853,7 @@ function failedResultClass(error: string | undefined): AuditorInfrastructureClas
   // wording. Keep status-bearing failures on the generic provider retry
   // path; status-free worker exits and missing verdicts stay no-verdict
   // infrastructure failures.
-  return /(?:^|\b)(?:HTTP\s*)?(?:401|403|408|409|429|5\d\d)\b/i.test(error ?? "")
+  return isAuditorAccountFailure(error) || /(?:^|\b)(?:HTTP\s*)?(?:401|403|408|409|429|5\d\d)\b/i.test(error ?? "")
     ? "provider"
     : "no-verdict";
 }

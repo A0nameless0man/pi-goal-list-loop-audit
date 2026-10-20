@@ -92,7 +92,7 @@ test("eager: an upstream Retry-After hint does not suppress the uniform retry", 
   assert.ok(later.retryAfterSec <= 15 * 60);
 });
 
-test("eager: detached auditor retries an account-shaped failure once before durable parking", async () => {
+test("account failure exhausts a candidate immediately without manufacturing a verdict", async () => {
   const waits: number[] = [];
   let calls = 0;
   const outcome = await runDetachedCompletionWithFallback(
@@ -103,9 +103,12 @@ test("eager: detached auditor retries an account-shaped failure once before dura
     },
     { sleep: async (ms) => { waits.push(ms); }, shouldRetry: () => true },
   );
-  assert.equal(outcome.retriedOnce, true);
-  assert.equal(calls, 2, "account-shaped text does not suppress the eager retry");
-  assert.deepEqual(waits, [5000], "the first retry uses the uniform eager delay");
+  assert.equal(outcome.retriedOnce, false);
+  assert.equal(calls, 1, "account errors advance instead of retrying a known wall");
+  assert.deepEqual(waits, []);
+  assert.equal(outcome.result.fallbackExhausted, true);
+  assert.equal(outcome.result.approved, false);
+  assert.equal(outcome.result.disapproved, false);
 });
 
 test("eager: a second recoverable provider error remains infrastructure after the one retry", async () => {

@@ -161,7 +161,6 @@ Every fallback runs in an isolated audit session. If all candidates fail, the
 completion claim remains stored for infrastructure recovery; no verdict is
 inferred from availability. Configured model preferences remain unchanged.
 
-
 Auditors try an explicit primary, ordered configured fallbacks, then the session
 model as last resort. With no explicit primary but a non-empty fallback list,
 the first eligible fallback is tried **before** the session, even with same-model

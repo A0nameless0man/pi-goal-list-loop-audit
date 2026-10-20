@@ -571,7 +571,12 @@ process.stdin.on("data", async (chunk) => {
   }
 });
 
-test("real worker escapes a quota retry loop and preserves structured HTTP 429 diagnostics", async () => {
+for (const event of [
+  { type: "error", statusCode: "429", errorMessage: "limit exceeded" },
+  { type: "auto_retry_start", error: "subscription quota exhausted; retry in 7 days" },
+  { type: "message_end", message: { role: "assistant", stopReason: "error", errorMessage: "subscription quota exhausted" } },
+]) {
+test(`real worker escapes a quota retry loop: ${event.type}`, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-structured-error-"));
   const fakePi = path.join(dir, "structured-error-pi.mjs");
   const fakePiSource = `
@@ -579,7 +584,7 @@ let handled = false;
 process.stdin.on("data", (chunk) => {
   if (handled || !String(chunk).includes("\\n")) return;
   handled = true;
-  process.stdout.write(JSON.stringify({ type: "error", statusCode: "429", errorMessage: "limit exceeded" }) + "\\n");
+  process.stdout.write(JSON.stringify(${JSON.stringify(event)}) + "\\n");
   setInterval(() => process.stdout.write(JSON.stringify({ type: "auto_retry_start", error: "HTTP 429 quota exhausted" }) + "\\n"), 50);
 });
 `;
@@ -601,11 +606,13 @@ process.stdin.on("data", (chunk) => {
     });
     assert.equal(result.approved, false);
     assert.equal(result.disapproved, false, "a provider failure never becomes a semantic verdict");
-    assert.match(result.error ?? "", /HTTP 429.*limit exceeded/);
+    assert.match(result.error ?? "", event.type === "error" ? /HTTP 429.*limit exceeded/ : /subscription quota exhausted/);
+    assert.equal(result.infrastructureClass, "provider", "prose-only account failures must reach the immediate fallback path");
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
 });
+}
 
 test("real worker persists the auditor session when inspection is enabled (spawn spec + progress shape)", { timeout: 40_000 }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-inspection-on-"));
