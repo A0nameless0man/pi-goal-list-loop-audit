@@ -300,10 +300,10 @@ process.on("SIGTERM", () => { clearInterval(timer); process.exit(0); });
       now: () => eventClock,
       // This deliberately expires before the worker's first result. It is
       // legacy metadata only; real progress and the result must win.
-            : budget(100),
-            : budget(5_000),
-            : budget(2_000),
-            : budget(1_000),
+      wallTimeoutMs: 100,
+      firstEventTimeoutMs: budget(5_000),
+      heartbeatNoProgressMs: budget(2_000),
+      heartbeatFreshMs: budget(1_000),
     },
   });
   assert.equal(result.approved, true, result.error ?? "live worker did not settle");
