@@ -11,6 +11,7 @@
 // production schedule/fire path (second half), mirroring
 // hourly-quota-probe.test.ts.
 
+import { runAuditorFallbackWithPolicy } from "../extensions/goal-loop-auditor-process.ts";
 import { test } from "node:test";
 import * as assert from "node:assert/strict";
 import { execFile } from "node:child_process";
@@ -67,11 +68,20 @@ test("unified: the ladder arms the ticker as its backstop", () => {
   assert.match(GOAL_SRC, /Shared-ticker backstop rides along with the restored ladder timer/);
 });
 
-test("unified: one dead backend does not burn a launch per rung", () => {
-  assert.match(PROCESS_SRC, /skipSameProviderRungs/);
-  assert.match(PROCESS_SRC, /isBackendSideFailure\(failureClass\(second\), failure\.kind, second\.error\)\) skipSameProviderRungs/);
-  assert.match(PROCESS_SRC, /isBackendSideFailure\(failureClass\(first\), failure\.kind, first\.error\)\) skipSameProviderRungs/);
-  assert.match(PROCESS_SRC, /ACCOUNT_THROTTLE_WORDS/);
+test("unified: one dead backend skips configured rungs while retaining the session last resort", async () => {
+  const calls: string[] = [];
+  const out = await runAuditorFallbackWithPolicy([
+    { model: { provider: "a", id: "preferred" }, via: "setting" },
+    { model: { provider: "a", id: "backup" }, via: "fallback-pin" },
+    { model: { provider: "a", id: "session" }, via: "session-fallback" },
+  ], async (candidate) => {
+    calls.push(candidate.model.id);
+    return candidate.model.id === "session"
+      ? { approved: true, disapproved: false, output: "verified", model: "a/session" }
+      : { approved: false, disapproved: false, output: "", model: "a/preferred", error: "HTTP 503 provider unavailable" };
+  }, { sleep: async () => {} });
+  assert.deepEqual(calls, ["preferred", "preferred", "session"]);
+  assert.equal(out.result.approved, true);
 });
 
 test("unified: executable runtime regression covers arming, past-due fire, guards, and opt-out", async () => {
