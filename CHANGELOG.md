@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.39.41 — completion audit recovery across reloads (2026-10-20)
+
 ### Completion audit recovery
 
 - Interrupted audits retain failed candidates, the selected fallback and its
