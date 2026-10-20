@@ -36,8 +36,38 @@ import { terminateContainedChild } from "./contained-child.mjs";
 import { createTestProcessRegistry, registerOwnedTestProcess, reapOwnedTestProcesses } from "./test-process-registry.mjs";
 import { captureTestFailureDiagnostics, diagnosticTail } from "./test-failure-diagnostics.mjs";
 import { SLOW_TEST_FILES } from "../tests/slow-files.mjs";
+import { contentionFactor } from "./host-contention.mjs";
 
-export const SERIAL_FLAGS = ["--parallel=1", "--max-concurrency=1", "--timeout=60000"];
+/** v0.39.41: the gate's default per-test budget, in wall-clock time.
+ *
+ * The previous 60s default left only ~2.6x headroom over the slowest
+ * legitimate test in the suite (22.8s, tests/goal-timeline.test.ts). On a
+ * contended host that test needs 5x the wall time and was killed by bun's
+ * own timeout, which reports a healthy system as a hung one. 120s restores
+ * ~5x headroom on an idle host; below it, a genuinely hung test is still
+ * caught by this bound and by the suite-level stall watchdog below.
+ *
+ * Tests that legitimately need longer declare their own budget
+ * (`test(name, { timeout: N })`), which overrides this default — the same as
+ * before this change. */
+export const DEFAULT_TEST_TIMEOUT_MS = 120_000;
+
+/** The ceiling for a contention-scaled per-test budget. Contention is capped
+ * too, but the product of the two could otherwise reach ~16 minutes for a
+ * single test; ten minutes still fails a hung test long before a human
+ * gives up, and the stall watchdog covers a silent suite. */
+export const MAX_TEST_TIMEOUT_MS = 600_000;
+
+/** The serial flags bun must run with. The per-test timeout is the gate's
+ * hang bound, so it is sized for the CPU the host is actually giving the
+ * suite: on an idle host this is exactly DEFAULT_TEST_TIMEOUT_MS. */
+export function serialFlags(timeoutMs = DEFAULT_TEST_TIMEOUT_MS) {
+  return ["--parallel=1", "--max-concurrency=1", `--timeout=${timeoutMs}`];
+}
+
+/** The base serial flags (idle host). Kept exported for callers that need
+ * the shape without the scaled timeout. */
+export const SERIAL_FLAGS = serialFlags();
 
 /** v0.39.38 (audit): node-only gates. Bun discovers *.test.mjs, but this
  * repro MUST run under node with the real jiti loader (see its header) —
@@ -57,7 +87,12 @@ export const DEFAULT_HEARTBEAT_MS = 30_000;
 
 export function stallTimeoutMs(env = process.env) {
   const raw = Number(env.GLLA_TEST_STALL_TIMEOUT_MS);
-  return Number.isFinite(raw) && raw >= 10_000 ? Math.floor(raw) : DEFAULT_STALL_TIMEOUT_MS;
+  if (Number.isFinite(raw) && raw >= 10_000) return Math.floor(raw);
+  // The stall bound watches for a SILENT suite. Under contention the suite
+  // still prints, but a starved child can hold the output for longer than an
+  // idle-host budget allows, so the bound scales with the same measured
+  // slowdown the per-test budget uses.
+  return Math.ceil(DEFAULT_STALL_TIMEOUT_MS * contentionFactor());
 }
 
 export function heartbeatMs(env = process.env) {
@@ -71,7 +106,8 @@ export function isStalled({ silentMs, limitMs }) {
 }
 
 /** Pure arg builder (unit-tested in tests/test-split.test.ts). */
-export function buildRunnerArgs(argv, slowFiles, nodeOnlyFiles = NODE_ONLY_TEST_FILES) {
+export function buildRunnerArgs(argv, slowFiles, nodeOnlyFiles = NODE_ONLY_TEST_FILES, options = {}) {
+  const flags = serialFlags(options.timeoutMs ?? DEFAULT_TEST_TIMEOUT_MS);
   // Bun only accepts the --changed=<ref> filter form (`bun test --help`);
   // fold the space form up front so a bare ref is never mistaken for an
   // explicit path (or filename filter). A bare --changed stays bare: it
@@ -114,13 +150,13 @@ export function buildRunnerArgs(argv, slowFiles, nodeOnlyFiles = NODE_ONLY_TEST_
   // unlike slow files they are not merely slow elsewhere, they are WRONG
   // under any loader but node, so the ignore survives --changed scope too.
   const nodeOnlyIgnores = nodeOnlyFiles.flatMap((f) => ["--path-ignore-patterns", f]);
-  if (mode === "slow") return { mode, bunArgs: [...SERIAL_FLAGS, ...slowFiles, ...rest] };
-  if (hasExplicitPaths) return { mode: "explicit", bunArgs: [...SERIAL_FLAGS, ...rest] };
-  if (hasChangedFilter) return { mode: "changed", bunArgs: [...SERIAL_FLAGS, ...nodeOnlyIgnores, ...rest] };
-  if (mode === "all") return { mode, bunArgs: [...SERIAL_FLAGS, ...nodeOnlyIgnores, ...rest] };
+  if (mode === "slow") return { mode, bunArgs: [...flags, ...slowFiles, ...rest] };
+  if (hasExplicitPaths) return { mode: "explicit", bunArgs: [...flags, ...rest] };
+  if (hasChangedFilter) return { mode: "changed", bunArgs: [...flags, ...nodeOnlyIgnores, ...rest] };
+  if (mode === "all") return { mode, bunArgs: [...flags, ...nodeOnlyIgnores, ...rest] };
   return {
     mode,
-    bunArgs: [...SERIAL_FLAGS, ...slowFiles.flatMap((f) => ["--path-ignore-patterns", f]), ...nodeOnlyIgnores, ...rest],
+    bunArgs: [...flags, ...slowFiles.flatMap((f) => ["--path-ignore-patterns", f]), ...nodeOnlyIgnores, ...rest],
   };
 }
 
