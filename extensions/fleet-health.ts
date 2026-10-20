@@ -8,7 +8,15 @@ export interface FleetBounds {
   maxJournalBytes: number; maxTotalBytes: number;
 }
 export const FLEET_DEFAULT_BOUNDS: Readonly<FleetBounds> = Object.freeze({
-  maxDepth: 4, maxDirectories: 2000, maxProjects: 100, maxMs: 2000,
+  // v0.39.41: the wall-clock ceiling was 2000ms, which was tight enough that
+  // a loaded host made a HEALTHY project look broken: the scan's first
+  // async open could not be scheduled inside the budget, the deadline
+  // fired, and the project was reported with no status and an incomplete
+  // report — a false negative from a read-only diagnostic. The bound still
+  // exists (this is an on-demand command, not a background scanner), but it
+  // now has room for the I/O it actually does. A caller may still ask for
+  // less; requests above the ceiling are clamped and reported.
+  maxDepth: 4, maxDirectories: 2000, maxProjects: 100, maxMs: 10_000,
   maxJournalBytes: 512 * 1024, maxTotalBytes: 8 * 1024 * 1024,
 });
 export interface FleetIssue { path: string; kind: 'unreadable' | 'malformed' | 'partial' | 'skipped'; detail: string }

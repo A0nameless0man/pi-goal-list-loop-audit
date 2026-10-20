@@ -13,6 +13,45 @@ silent for 37 minutes and, once, as a 26-hour orphan). The heavy files live in
 `tests/slow-files.mjs` and are EXCLUDED from the fast run — a green `npm test`
 is not the whole suite:
 
+## Hang budgets follow the host's CPU
+
+Every wait in the suite ends in a wall-clock deadline: keep polling until the
+condition holds, but give up after N milliseconds. That deadline only means
+"this is a hang" if the process gets the CPU the wait assumes. On a shared
+workstation it does not: a wait that needs 2.5s of CPU can take 12s of wall
+time while the condition is approaching normally, and the deadline fires and
+reports a healthy system as broken. A release gate on a 43-user workstation
+failed its own healthy tests exactly this way — "settlement timeout",
+"timed out after 60000ms" — and every one of those tests passed when its file
+was run alone.
+
+So the budget is sized for the CPU the host is actually giving the suite.
+`scripts/host-contention.mjs` measures the discrepancy directly: it runs a
+short CPU-bound probe and compares the wall time it took with the CPU time it
+consumed. The ratio is the slowdown the process is really experiencing
+(1.0 on an idle host, ~2-5x on a contended one), and the budget is scaled by
+it.
+
+- On an **idle host** the factor is 1.0 and every budget is exactly what the
+  test asked for — no behaviour change at all, and CI is unaffected.
+- On a **contended host** the budget grows in proportion to the slowdown.
+- A predicate that never becomes true **still fails**. The hang is still a
+  hang; it just gets a budget that matches the CPU it is actually getting.
+
+Use the shared helper instead of hand-rolling a deadline:
+
+```ts
+import { untilMs } from "./harness/host-budget.js";
+
+const deadline = untilMs(10_000); // was: Date.now() + 10_000
+```
+
+A test that spawns a child which does its own waiting must size that child's
+budget too: the child imports `scripts/host-contention.mjs` and uses
+`scaledBudgetMs`, or the parent hands it the budget through
+`GLLA_TEST_WAIT_BUDGET_MS`. `tests/host-contention.test.ts` fails the build
+if a test file goes back to hand-rolling a wait deadline.
+
 On Linux, GLLA subprocess launch sites also register detached test workers
 with process start identities. The wrapper reaps verified session groups
 after the suite exits, including TERM-ignoring descendants. Nested runner

@@ -37,6 +37,30 @@ git tag v<major.minor.patch>
 git push origin main v<major.minor.patch>
 ```
 
+### The gate on a busy host
+
+`npm run release:check` is the release contract, and it is a wall-clock
+contract: the suite's waits end in deadlines, and bun bounds every test
+individually. That only distinguishes "slow" from "hung" if the process gets
+the CPU the deadlines assume. On a shared workstation it may not — a wait
+that needs 2.5s of CPU can take 12s of wall time while making steady
+progress, and the deadline fires and reports a healthy system as broken.
+
+The gate therefore sizes its hang budgets for the CPU the host is actually
+giving it (`scripts/host-contention.mjs`; see `tests/README.md`). On an idle
+host every budget is exactly what it was, so CI is unaffected. A hung test
+still fails: the budget is larger, never the tolerance.
+
+If a release gate fails on a busy host, check whether the failing test is a
+wall-clock wait before treating it as a regression. Run the file alone:
+
+```bash
+node scripts/run-tests.mjs tests/some-file.test.ts
+```
+
+A test that passes alone and fails in the suite is contending for the host,
+not broken. A test that fails alone is a real failure and must be fixed.
+
 The sync daemon owns source/evidence commits. Do not amend, reset or rebase
 its commits; a release tag must point at the reviewed, validated source. If the
 daemon is paused, follow AGENTS.md's repo-local checkpoint identity rule.

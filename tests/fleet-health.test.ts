@@ -178,7 +178,7 @@ test('bounds raised above the safety ceiling are clamped and reported, never sil
   try {
     const p = f.project('one');
     const report = await inspectFleetHealth([p], { maxMs: 60_000, maxProjects: 10_000 });
-    assert.equal(report.bounds.maxMs, 2000);
+    assert.equal(report.bounds.maxMs, 10_000);
     assert.equal(report.bounds.maxProjects, 100);
     assert.ok(report.issues.some((i) => i.kind === 'partial' && i.detail.includes('maxMs')),
       `clamp-down is surfaced: ${JSON.stringify(report.issues)}`);
