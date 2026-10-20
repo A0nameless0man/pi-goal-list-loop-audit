@@ -106,14 +106,14 @@ setInterval(() => {}, 1_000);
       pollIntervalMs: 10,
       // Wall deliberately exceeds the silence window: the STALL must fire
       // first — that is the entire point of the watchdog.
-      wallTimeoutMs: scaledBudgetMs(10_000),
+      wallTimeoutMs: wall,
       // Give the detached Node child enough startup budget to install its
       // SIGTERM handler on the busy full-suite rig. The first-event watchdog
       // still fires well before the 10s wall; the delayed launcher already
       // consumes 1.5s before the child can install its handler.
-      firstEventTimeoutMs: scaledBudgetMs(5_000),
-      heartbeatNoProgressMs: scaledBudgetMs(20_000),
-      heartbeatFreshMs: scaledBudgetMs(500),
+      firstEventTimeoutMs: firstEvent,
+      heartbeatNoProgressMs: noProgress,
+      heartbeatFreshMs: fresh,
     },
   });
   assert.equal(result.approved, false, "a stalled worker is never a verdict");
@@ -123,9 +123,9 @@ setInterval(() => {}, 1_000);
   assert.equal(result.infrastructureClass, "timeout", "the stall classifies as retryable infra, feeding the eager ladder");
   assert.equal(stalled.length, 1, "the watchdog emits auditor_stalled exactly once");
   assert.equal(stalled[0]!.reason, "first-event-timeout");
-  assert.ok(stalled[0]!.noProgressMs >= scaledBudgetMs(1_200), `silence reached the window: ${stalled[0]!.noProgressMs}ms`);
+  assert.ok(stalled[0]!.noProgressMs >= silenceFloor, `silence reached the window: ${stalled[0]!.noProgressMs}ms`);
   assert.ok(
-    Date.now() - started < scaledBudgetMs(9_000),
+    Date.now() - started < wall - 1_000,
     "the stall fired well before the 10s wall — the doomed attempt must not burn its full wall",
   );
   // The child installs its SIGTERM handler as its first statement, but the
@@ -173,10 +173,10 @@ setInterval(() => {}, 1_000);
       spawn: delayedSpawn,
       attemptId: () => "attempt-first-event-clock",
       pollIntervalMs: 10,
-      wallTimeoutMs: scaledBudgetMs(10_000),
-      firstEventTimeoutMs: scaledBudgetMs(5_000),
-      heartbeatNoProgressMs: scaledBudgetMs(20_000),
-      heartbeatFreshMs: scaledBudgetMs(500),
+      wallTimeoutMs: wall,
+      firstEventTimeoutMs: firstEvent,
+      heartbeatNoProgressMs: noProgress,
+      heartbeatFreshMs: fresh,
     },
   });
   assert.equal(result.infrastructureClass, "timeout", result.error ?? "no error");
@@ -193,7 +193,7 @@ setInterval(() => {}, 1_000);
   // "first-event-timeout" stall means the watchdog beat the wall, not the
   // other way round. The bound below is generous enough not to measure host
   // starvation, and still fails if the stall never arrives.
-  assert.ok(stalled[0]!.at - spawnReturnedAt < scaledBudgetMs(20_000), "the watchdog still beats the wall bound");
+  assert.ok(stalled[0]!.at - spawnReturnedAt < wall + firstEvent, "the watchdog still beats the wall bound");
   await waitFor(() => existsSync(sigtermMarker), "the delayed-start worker was SIGTERMed");
   await cleanup();
 });
@@ -231,10 +231,10 @@ setInterval(() => {}, 1_000);
       workerPath: worker,
       attemptId: () => "attempt-stale-heartbeat-stall",
       pollIntervalMs: 10,
-      wallTimeoutMs: scaledBudgetMs(10_000),
-      heartbeatNoProgressMs: scaledBudgetMs(1_200),
-      firstEventTimeoutMs: scaledBudgetMs(20_000),
-      heartbeatFreshMs: scaledBudgetMs(500),
+      wallTimeoutMs: wall,
+      heartbeatNoProgressMs: noProgress,
+      firstEventTimeoutMs: firstEvent,
+      heartbeatFreshMs: fresh,
     },
   });
   assert.equal(result.approved, false, "a stalled worker is never a verdict");
@@ -243,9 +243,9 @@ setInterval(() => {}, 1_000);
   assert.equal(result.infrastructureClass, "timeout", "the stall classifies as retryable infra, feeding the eager ladder");
   assert.equal(stalled.length, 1, "the watchdog emits auditor_stalled exactly once");
   assert.equal(stalled[0]!.reason, "heartbeat-stale");
-  assert.ok(stalled[0]!.heartbeatAgeMs >= scaledBudgetMs(1_200), `heartbeat was stale at detection: ${stalled[0]!.heartbeatAgeMs}ms`);
+  assert.ok(stalled[0]!.heartbeatAgeMs >= noProgress, `heartbeat was stale at detection: ${stalled[0]!.heartbeatAgeMs}ms`);
   assert.ok(
-    Date.now() - started < scaledBudgetMs(9_000),
+    Date.now() - started < wall - 1_000,
     "the stall fired well before the 10s wall — the doomed attempt must not burn its full wall",
   );
   assert.ok(existsSync(sigtermMarker), "the wedged worker was SIGTERMed — the detached job was cancelled");
@@ -425,10 +425,10 @@ setInterval(() => {}, 1_000);
       workerPath: worker,
       attemptId: () => "attempt-stall-evidence",
       pollIntervalMs: 10,
-      wallTimeoutMs: scaledBudgetMs(20_000),
-      heartbeatNoProgressMs: scaledBudgetMs(1_200),
-      firstEventTimeoutMs: scaledBudgetMs(20_000),
-      heartbeatFreshMs: scaledBudgetMs(500),
+      wallTimeoutMs: wall,
+      heartbeatNoProgressMs: noProgress,
+      firstEventTimeoutMs: firstEvent,
+      heartbeatFreshMs: fresh,
     },
   });
   assert.equal(result.infrastructureClass, "timeout", "silence past the bound is still retryable infra");
@@ -436,9 +436,9 @@ setInterval(() => {}, 1_000);
   assert.equal(stalled.length, 1, "one stall event per attempt");
   const stall = stalled[0]!;
   assert.equal(stall.reason, "heartbeat-stale");
-  assert.ok(stall.heartbeatAgeMs >= scaledBudgetMs(1_200), `silence reached the window: ${stall.heartbeatAgeMs}ms`);
+  assert.ok(stall.heartbeatAgeMs >= noProgress, `silence reached the window: ${stall.heartbeatAgeMs}ms`);
   assert.ok(
-    Date.now() - started < scaledBudgetMs(10_000),
+    Date.now() - started < wall / 2,
     "the controlled clock tripped the watchdog — the doomed attempt burns no real wall",
   );
   // The evidence: a slow audit must be able to name its driver.
@@ -588,18 +588,18 @@ process.on("SIGTERM", () => { clearTimeout(next); process.exit(0); });
       workerPath: worker,
       attemptId: () => "attempt-tool-silence",
       pollIntervalMs: 10,
-      wallTimeoutMs: scaledBudgetMs(30_000),
+      wallTimeoutMs: wall,
       // Far smaller than the tool's own 60s grant: without the open-tool
       // exemption the no-progress watchdog cut a healthy audit in half.
-      heartbeatNoProgressMs: scaledBudgetMs(300),
-      firstEventTimeoutMs: scaledBudgetMs(30_000),
-      heartbeatFreshMs: scaledBudgetMs(5_000),
+      heartbeatNoProgressMs: noProgress,
+      firstEventTimeoutMs: firstEvent,
+      heartbeatFreshMs: fresh,
       toolTimeoutMs: scaledBudgetMs(60_000),
     },
   });
   assert.deepEqual(stalled, [], "an in-budget open tool is exempt from the no-progress bound");
   assert.equal(result.approved, true, result.error ?? "the long-tool audit did not settle");
-  assert.ok(Date.now() - started < scaledBudgetMs(10_000), "the audit outlived several no-progress windows without burning the wall");
+  assert.ok(Date.now() - started < wall / 3, "the audit outlived several no-progress windows without burning the wall");
   await cleanup();
 });
 

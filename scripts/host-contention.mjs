@@ -115,6 +115,24 @@ export function stableContentionFactor(options = {}) {
   return stableCached.factor;
 }
 
+/**
+ * The scenario factor, which only ever GROWS.
+ *
+ * A scenario budget and the assertion that compares against it must use the
+ * same number, or the test measures how the host drifted mid-test instead of
+ * what it is about. So the factor is fixed for the life of the process —
+ * and it only grows, because a host that has been busy once can be busy
+ * again, and a budget that shrank would be smaller than the work it has to
+ * cover. A test captures its scenario numbers once and compares against
+ * those.
+ */
+export function monotonicContentionFactor(options = {}) {
+  const measured = measureContentionFactor(options);
+  if (!stableCached) stableCached = { at: now(), factor: measured.factor };
+  else stableCached.factor = Math.max(stableCached.factor, measured.factor);
+  return stableCached.factor;
+}
+
 /** Forget the cached factor (tests). */
 export function resetContentionFactor() {
   cached = null;
@@ -135,6 +153,6 @@ export function resetContentionFactor() {
 export function scaledBudgetMs(baseMs, options = {}) {
   if (!Number.isFinite(baseMs) || baseMs <= 0) return baseMs;
   const { stable = true, ...rest } = options;
-  const factor = stable ? stableContentionFactor(rest) : contentionFactor(rest);
+  const factor = stable ? monotonicContentionFactor(rest) : contentionFactor(rest);
   return Math.ceil(baseMs * factor);
 }
