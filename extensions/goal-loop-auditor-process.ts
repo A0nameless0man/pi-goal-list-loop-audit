@@ -616,10 +616,9 @@ export async function runAuditorFallbackWithPolicy(
     if (!isRetriableInfraError(first.error) || !isMainModelFallbackFailure(failure)) {
       return { result: first, retriedOnce, fallbackUsed, via: candidate.via };
     }
-    // v0.38.63 (audit-stuck batch, field 124541): the ref itself is dead
-    // (model-not-found family). A same-ref retry can never heal it, and
-    // sleeping the backoff before advancing only delays the live fallback —
-    // evict via onCandidateExhausted and advance immediately with no delay.
+    // Missing models and explicit account walls cannot heal in a same-ref
+    // retry. Persist exhaustion and advance immediately; the session tail
+    // remains eligible even when it shares the configured pin's provider.
     if (isUnresolvableAuditorModelRefError(first.error) || (failureClass(first) === "provider" && isAuditorAccountFailure(first.error))) {
       if (isAuditorAccountFailure(first.error)) skipSameProviderRungs(selectedRef);
       currentRef = selectedRef;

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Completion audit recovery
+
+- Interrupted audits retain failed candidates, the selected fallback and its
+  retry budget across reloads instead of restarting at an unavailable pin.
+- Detached workers surface account errors promptly. Auditor fallback skips
+  quota/billing retry delays and always attempts the permitted session model,
+  even when provider-wide failure handling skips other configured backups.
+  Exhaustion remains an infrastructure wait with the completion claim stored.
+
 ## 0.39.40 — durable update checks, consent gates and shipped-doc guards (2026-10-20)
 
 ### Project review follow-ups

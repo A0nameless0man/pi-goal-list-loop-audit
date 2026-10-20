@@ -152,6 +152,16 @@ This authority boundary applies before settings-value normalization.
 
 ## Auditor backup selection
 
+Explicit quota, rate-limit and billing errors end the worker's internal retry
+loop and advance immediately to the next eligible auditor. Provider failures
+may skip configured backups on that provider, but the permitted session model
+still gets a final attempt, including when it shares the provider. Host reloads
+preserve exhausted candidates, the current fallback and its retry budget.
+Every fallback runs in an isolated audit session. If all candidates fail, the
+completion claim remains stored for infrastructure recovery; no verdict is
+inferred from availability. Configured model preferences remain unchanged.
+
+
 Auditors try an explicit primary, ordered configured fallbacks, then the session
 model as last resort. With no explicit primary but a non-empty fallback list,
 the first eligible fallback is tried **before** the session, even with same-model

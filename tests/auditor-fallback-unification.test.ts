@@ -247,9 +247,8 @@ test("auditor retries the same ref, then walks the next untried ref with bounded
   assert.ok(waits.every((delay) => delay >= 1_000 && delay <= MAIN_MODEL_MAX_RETRY_DELAY_MS));
   assert.deepEqual(selections, ["ok:test/primary", "ok:other/fallback-1"]);
 
-  // The mirror case: a WALL must not inherit the transient eagerness. This is
-  // the half of the contract that keeps the change honest — only transient
-  // weather is hammered, a real wall still climbs the ladder.
+  // An account wall should reach the healthy fallback without hammering
+  // the unavailable account or sleeping its retry schedule.
   const wallWaits: number[] = [];
   const wallOutcome = await runAuditorFallbackWithPolicy(candidates, async (candidate) => {
     const ref = candidate.ref!;

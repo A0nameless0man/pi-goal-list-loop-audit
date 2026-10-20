@@ -1,3 +1,4 @@
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { spawn, type ChildProcess } from "node:child_process";
@@ -477,9 +478,8 @@ test("workerless park releases only the interrupted candidate (legacy clean-web 
   const cwd = tmpCwd(), pi = new MockPi(); activate(pi.api); const ctx = await boot(pi, cwd);
   const g = goal();
   // The dead worker's cursor: every configured candidate already "tried".
-  // Without clearing, the next session-recovery begin inherits it and the
-  // walker exhausts in milliseconds with "no auditor model", consuming the
-  // one-shot auto retry and parking again until a manual resume.
+  // Releasing only the interrupted ref prevents instant exhaustion while
+  // preserving failures of any predecessors in the chain.
   g.pendingCompletion = { ...g.pendingCompletion!, phase: "starting",
     auditorCandidateRefs: ["dead/model"], auditorCandidateRef: "dead/model",
     auditorAttemptedRefs: ["dead/model"], auditorFailureCount: 1 };
@@ -528,7 +528,7 @@ for (const contextFree of [false, true]) {
       };
       seedState(cwd, { goal: g }); __testOnlyLoadState(cwd);
       try {
-        assert.equal(contextFree ? parkCompletionAuditRecovery(cwd, "reload") : markCompletionAuditRecoveryPending(ctx, "reload"), true);
+        assert.equal(contextFree ? parkCompletionAuditRecovery(cwd, "reload") : markCompletionAuditRecoveryPending(ctx as unknown as ExtensionContext, "reload"), true);
         // Read the journal projection, not live RAM.
         const saved = readState(cwd).goal!.pendingCompletion!;
         assert.deepEqual(saved.auditorAttemptedRefs, ["a/preferred"]);
