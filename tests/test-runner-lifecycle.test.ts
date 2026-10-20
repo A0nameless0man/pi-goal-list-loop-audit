@@ -5,6 +5,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
+import { hangDeadlineMs } from "./harness/host-budget.js";
 import { createTestProcessRegistry, reapOwnedTestProcesses } from "../scripts/test-process-registry.mjs";
 
 async function runStub(source: string, signal?: NodeJS.Signals, preload?: string, isolateRegistry = false): Promise<{ code: number | null; output: string }> {

@@ -4,7 +4,12 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
+import { pathToFileURL } from "node:url";
 import { untilMs } from "./harness/host-budget.js";
+
+/** The bootstrap below sizes its own wait for the CPU this host is actually
+ * giving it, using the same shared measurement the gate uses. */
+const CONTENTION_MODULE = pathToFileURL(path.resolve("scripts/host-contention.mjs")).href;
 
 function alive(pid: number): boolean {
   try {
@@ -38,11 +43,12 @@ for (const scenario of ["SIGTERM", "timeout", "normal", "result-write-failure"] 
       const signalSent = path.join(cwd, "signal-sent");
       if (scenario === "SIGTERM") fs.writeFileSync(bootstrap, `
         import fs from 'node:fs'; import {syncBuiltinESMExports} from 'node:module';
+        import {scaledBudgetMs} from ${JSON.stringify(CONTENTION_MODULE)};
         const read=fs.readFileSync;let held=false;
         fs.readFileSync=(file,...args)=>{
           if(!held && /^\\/proc\\/\\d+\\/stat$/.test(String(file))){
             held=true;fs.writeFileSync(${JSON.stringify(held)},'held');
-            const deadline=untilMs(5000);
+            const deadline=Date.now()+scaledBudgetMs(5000);
             while(!fs.existsSync(${JSON.stringify(signalSent)}) && Date.now()<deadline){}
           }
           return read(file,...args);

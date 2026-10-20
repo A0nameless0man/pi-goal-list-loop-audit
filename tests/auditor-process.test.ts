@@ -6,7 +6,11 @@ import { EventEmitter } from "node:events";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { untilMs } from "./harness/host-budget.js";
+import { pathToFileURL } from "node:url";
+
+/** The child scripts below size their own waits for the CPU this host is
+ * actually giving them, using the same shared measurement the gate uses. */
+const CONTENTION_MODULE = pathToFileURL(path.resolve("scripts/host-contention.mjs")).href;
 
 async function waitForWorkerResult(resultPath: string, timeoutMs = 30_000): Promise<void> {
   const deadline = untilMs(timeoutMs);
@@ -37,6 +41,7 @@ import {
   type AuditorStalledInfo,
 } from "../extensions/goal-loop-auditor-process.ts";
 import { buildAuditorPiSpawnSpec, quoteWindowsCommandArgument, renameWithWindowsRetry } from "../scripts/goal-auditor-launch.mjs";
+import { untilMs } from "./harness/host-budget.js";
 
 function workerPathFor(dir: string): string {
   return path.join(dir, "auditor-fake-worker.mjs");
@@ -489,9 +494,10 @@ test("the real worker forwards ordered tool and report phases to the parent", { 
   const fakePiSource = `
 import { setTimeout as sleep } from "node:timers/promises";
 import { existsSync } from "node:fs";
+import { scaledBudgetMs } from ${JSON.stringify(CONTENTION_MODULE)};
 const ackPrefix = ${JSON.stringify(ackPrefix)};
 async function observed(phase) {
-  const deadline = untilMs(20_000);
+  const deadline = Date.now() + scaledBudgetMs(20_000);
   while (!existsSync(ackPrefix + phase)) {
     if (Date.now() >= deadline) throw new Error('parent did not observe ' + phase);
     await sleep(10);
@@ -751,6 +757,7 @@ test("worker assembles streamed report fragments into cumulative display lines w
   const fakePiSource = `
 import { setTimeout as sleep } from "node:timers/promises";
 import { existsSync } from "node:fs";
+import { scaledBudgetMs } from ${JSON.stringify(CONTENTION_MODULE)};
 let handled = false;
 process.stdin.on("data", async (chunk) => {
   if (handled || !String(chunk).includes("\\n")) return;
@@ -767,7 +774,7 @@ process.stdin.on("data", async (chunk) => {
     // Handshake: the parent's onProgress writes ackDir/<bytes> when it
     // observes this fragment's count. Bounded so a real telemetry stall
     // fails the test instead of hanging it.
-    const deadline = untilMs(20_000);
+    const deadline = Date.now() + scaledBudgetMs(20_000);
     while (!existsSync(ackDir + "/" + expected[i]) && Date.now() < deadline) await sleep(10);
   }
   out({ type: "agent_settled" });
@@ -1281,6 +1288,7 @@ test("parent tool watchdog honors the worker-armed granted budget", async () => 
 import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { randomUUID } from "node:crypto";
+import { scaledBudgetMs } from ${JSON.stringify(CONTENTION_MODULE)};
 ${ATOMIC_JSON_SOURCE}
 const dir = process.argv[process.argv.indexOf("--job-dir") + 1];
 const request = JSON.parse(await readFile(dir + "/request.json", "utf8"));
@@ -1299,7 +1307,7 @@ const stagedProgress = {
 };
 await writeFile(dir + "/result.json.tmp", JSON.stringify(stagedResult));
 await writeFile(dir + "/progress.json", JSON.stringify(stagedProgress));
-const deadline = untilMs(5000);
+const deadline = Date.now() + scaledBudgetMs(5000);
 while (!existsSync(${JSON.stringify(releasePath)})) {
   if (Date.now() >= deadline) throw new Error("parent did not observe granted tool before publication deadline");
   await new Promise(resolve => setTimeout(resolve, 5));

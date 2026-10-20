@@ -15,6 +15,7 @@ import { createRespecBuilder, adoptRespecRequirements, planRespecIncrement, clai
 import { state, replaceState, persistStateLine } from "../extensions/goal-state.js";
 import { readState } from "../extensions/goal-loop-core.js";
 import { MockPi, tmpCwd, makeMockCtx } from "./harness/mock-pi.js";
+import { untilMs } from "./harness/host-budget.js";
 
 const worker = `
 import { readFile, writeFile, rename } from "node:fs/promises";
@@ -739,7 +740,6 @@ test("real stalled detached workers automatically journal a paced timeout episod
 
 import { buildWidgetLines, buildStatusText } from "../extensions/goal-loop-display.js";
 import { respecAuditStatus } from "../extensions/respec-builder-ui.js";
-import { untilMs } from "./harness/host-budget.js";
 test("project retry causes survive actual journal reload and production recovery UI without credentials", async () => {
   const f = fixture();
   let clock = Date.parse("2026-10-14T12:00:00Z");

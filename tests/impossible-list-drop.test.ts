@@ -24,9 +24,9 @@ import { readState } from "../extensions/goal-loop-core.js";
 import activate, { __testOnlyLoadState, __testOnlyResetOwnerSession, __testOnlyResetStaleFlag, __testOnlyResetTerminalFlags } from "../extensions/loops/goal.js";
 import {
   MockPi, makeMockCtx, tmpCwd, seedState, seedGoal, seedLoop, tick,
-import { untilMs } from "./harness/host-budget.js";
   type MockCtx,
 } from "./harness/mock-pi.js";
+import { untilMs } from "./harness/host-budget.js";
 
 const GLOBAL_SETTINGS_PATH = process.env.GLLA_GLOBAL_SETTINGS_PATH!;
 function setGlobalAutoResume(v: boolean): void {
