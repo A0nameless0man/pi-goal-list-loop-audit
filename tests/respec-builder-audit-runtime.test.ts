@@ -727,6 +727,7 @@ test("exhausted finite worker chain resets only at the next due admitted episode
     delete env.FAIL_ALL;
     clock = state.loop!.builder!.audit!.infrastructureRetry!.nextRetryAt;
     await runRespecBuilderAudit(f.ctx);
+    await waitForPhase(f.cwd, "complete");
     assert.equal(readState(f.cwd).loop!.builder!.phase, "complete");
     assert.equal(fs.readdirSync(jobs).length, 5);
   } finally { restore(); replaceState(f.original); }
