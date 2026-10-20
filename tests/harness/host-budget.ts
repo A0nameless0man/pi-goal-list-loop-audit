@@ -47,7 +47,10 @@ export const HOST_BUDGET_PROBE_CPU_MS = 25;
 export function hangDeadlineMs(baseMs: number, options: { maxAgeMs?: number; factor?: number } = {}): number {
 	if (!Number.isFinite(baseMs) || baseMs <= 0) return baseMs;
 	if (options.factor !== undefined) return Math.ceil(baseMs * options.factor);
+	// A WAIT wants the freshest reading: the host may have slowed down since
+	// the last one, and this budget is the wait's own time.
 	return scaledBudgetMs(baseMs, {
+		stable: false,
 		maxAgeMs: options.maxAgeMs ?? HOST_BUDGET_MAX_AGE_MS,
 		probeCpuMs: HOST_BUDGET_PROBE_CPU_MS,
 	});

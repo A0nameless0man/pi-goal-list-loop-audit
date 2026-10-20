@@ -23,6 +23,12 @@ export function contentionFactor(options?: {
 export function scaledBudgetMs(baseMs: number, options?: {
   maxAgeMs?: number;
   force?: boolean;
+  stable?: boolean;
+  probeCpuMs?: number;
+  min?: number;
+  max?: number;
+}): number;
+export function stableContentionFactor(options?: {
   probeCpuMs?: number;
   min?: number;
   max?: number;

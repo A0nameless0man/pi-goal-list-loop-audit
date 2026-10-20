@@ -429,7 +429,10 @@ test("workerProcessMatches darwin branch reads identity via ps", async () => {
   try {
     if (stub.child.pid) writeWorkerLock(saved.dir, "saved-claim-physical", stub.child.pid);
     assert.equal(await waitForWorkerStub(cwd, stub.child.pid!, saved.dir, "darwin"), true, "the stub is observable before the identity check");
-    assert.equal(workerProcessMatches(cwd, stub.child.pid!, saved.dir, "darwin"), true, "live stub matches via ps cmdline");
+    // The `ps` probe carries a 1s bound and fails CLOSED when it is too slow,
+    // so on a loaded host a single call can time out. The identity check is
+    // what is under test here, so poll it rather than racing that timeout.
+    assert.equal(await waitForWorkerStub(cwd, stub.child.pid!, saved.dir, "darwin"), true, "live stub matches via ps cmdline");
     const other = job(cwd, g, { name: "saved-claim-other-physical", result: false });
     if (stub.child.pid) writeWorkerLock(other.dir, "saved-claim-other-physical", stub.child.pid);
     assert.equal(workerProcessMatches(cwd, stub.child.pid!, other.dir, "darwin"), false, "same pid, other job dir does not match");

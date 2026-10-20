@@ -41,7 +41,13 @@ test("the contention measurement is bounded and never reports a speedup", () => 
   assert.ok(measured.factor >= MIN_CONTENTION_FACTOR, `factor ${measured.factor} is at least ${MIN_CONTENTION_FACTOR}`);
   assert.ok(measured.factor <= MAX_CONTENTION_FACTOR, `factor ${measured.factor} is at most ${MAX_CONTENTION_FACTOR}`);
   assert.ok(measured.cpuMs > 0, "the probe actually consumed CPU");
-  assert.ok(measured.wallMs >= measured.cpuMs, "wall time is at least the CPU time it took to get it");
+  // The probe's CPU time is the PROCESS's, so background threads (GC, libuv)
+  // can make it exceed the wall time it took. The ratio is then below 1 and
+  // the factor is clamped UP to 1 — a budget is never shrunk. Either way the
+  // factor stays inside the bounds.
+  if (measured.wallMs < measured.cpuMs) {
+    assert.equal(measured.factor, MIN_CONTENTION_FACTOR, "a ratio below 1 is clamped, never allowed to shrink a budget");
+  }
 });
 
 test("a budget is never smaller than the one the test asked for", () => {

@@ -81,6 +81,7 @@ export function measureContentionFactor(options = {}) {
 }
 
 let cached = null;
+let stableCached = null;
 
 /**
  * The cached factor. `maxAgeMs` bounds staleness; pass 0 to force a fresh
@@ -96,9 +97,28 @@ export function contentionFactor(options = {}) {
   return cached.factor;
 }
 
+/**
+ * The factor for SCENARIO budgets, measured once per process.
+ *
+ * A scenario budget is a number a test hands to the product, and the
+ * assertions that follow compare against the same number. If the factor
+ * could change between the two reads, the scenario and its assertions would
+ * disagree — a test would then measure how the host drifted mid-test instead
+ * of what it is about. So the scenario factor is fixed for the life of the
+ * process. Wait deadlines want the opposite (the freshest reading), and use
+ * `contentionFactor` directly.
+ */
+export function stableContentionFactor(options = {}) {
+  if (stableCached) return stableCached.factor;
+  const measured = measureContentionFactor(options);
+  stableCached = { at: now(), factor: measured.factor };
+  return stableCached.factor;
+}
+
 /** Forget the cached factor (tests). */
 export function resetContentionFactor() {
   cached = null;
+  stableCached = null;
 }
 
 /**
@@ -114,5 +134,7 @@ export function resetContentionFactor() {
  */
 export function scaledBudgetMs(baseMs, options = {}) {
   if (!Number.isFinite(baseMs) || baseMs <= 0) return baseMs;
-  return Math.ceil(baseMs * contentionFactor(options));
+  const { stable = true, ...rest } = options;
+  const factor = stable ? stableContentionFactor(rest) : contentionFactor(rest);
+  return Math.ceil(baseMs * factor);
 }
