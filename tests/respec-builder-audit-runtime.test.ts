@@ -50,17 +50,6 @@ function fixture(env: Record<string, string> = {}) {
 }
 
 
-/** The builder phase advances when the audit's verdict lands, which is after
- * the dispatch returns. Wait for the phase instead of racing it: on a loaded
- * host the worker needs longer to settle, and the assertion would then read
- * a perfectly healthy "auditing". */
-async function waitForPhase(cwd: string, phase: string, timeoutMs = 20000): Promise<void> {
-  const deadline = untilMs(timeoutMs);
-  while (readState(cwd).loop?.builder?.phase !== phase) {
-    if (Date.now() > deadline) throw new Error(`builder phase never reached ${phase}: ${JSON.stringify(readState(cwd).loop?.builder?.phase)}`);
-    await new Promise((resolve) => setTimeout(resolve, 20));
-  }
-}
 
 test("a stale audit wake does not resolve a model or launch a worker", async () => {
   const f = fixture();
@@ -113,7 +102,6 @@ test("real detached protocol approval archives the intended project before termi
   const f = fixture();
   try {
     await runRespecBuilderAudit(f.ctx);
-    await waitForPhase(f.cwd, "complete");
     assert.equal(readState(f.cwd).loop!.builder!.phase, "complete", JSON.stringify(readState(f.cwd).loop));
     assert.equal(readState(f.cwd).loop!.active, false);
     const archive = JSON.parse(fs.readFileSync(respecProjectArchivePath(f.cwd, f.startedAt, f.builder.revision), "utf8"));
@@ -169,7 +157,6 @@ test("completed job is recovered after reloading an unsettled claim without anot
     assert.deepEqual(fs.readdirSync(path.join(f.cwd, ".pi-glla", "audit-jobs")), jobs, "startup-style cleanup retains the unsettled approval before recovery");
     fs.unlinkSync(f.file); // A new spawn would fail: only saved evidence can approve.
     await runRespecBuilderAudit(f.ctx);
-    await waitForPhase(f.cwd, "complete");
     assert.equal(readState(f.cwd).loop!.builder!.phase, "complete", fs.readFileSync(path.join(f.cwd, ".pi-glla", "active.jsonl"), "utf8"));
     assert.deepEqual(fs.readdirSync(path.join(f.cwd, ".pi-glla", "audit-jobs")), jobs);
   } finally { replaceState(f.original); }
@@ -212,7 +199,6 @@ test("archive failure preserves approval evidence for settlement retry instead o
     replaceState({ ...state, loop: { ...state.loop!, active: true, stopReason: undefined } });
     persistStateLine(f.cwd, state);
     await runRespecBuilderAudit(f.ctx);
-    await waitForPhase(f.cwd, "complete");
     assert.equal(readState(f.cwd).loop!.builder!.phase, "complete");
     assert.deepEqual(fs.readdirSync(path.join(f.cwd, ".pi-glla", "audit-jobs")), jobs);
     assert.deepEqual(f.counts(), { wakes: 1, finishes: 1 });
@@ -225,7 +211,6 @@ test("concurrent wake paths dispatch only one worker for the exact durable claim
   try {
     await Promise.all([runRespecBuilderAudit(f.ctx), runRespecBuilderAudit(f.ctx)]);
     assert.equal(fs.readdirSync(path.join(f.cwd, ".pi-glla", "audit-jobs")).length, 1);
-    await waitForPhase(f.cwd, "complete");
     assert.equal(readState(f.cwd).loop!.builder!.phase, "complete");
     assert.deepEqual(f.counts(), { wakes: 0, finishes: 1 });
   } finally { replaceState(f.original); }
@@ -235,7 +220,6 @@ test("respec uses the shared bounded retry/fallback policy and journals its cand
   const f = fixture({ FAIL_PRIMARY: "1" });
   try {
     await runRespecBuilderAudit(f.ctx);
-    await waitForPhase(f.cwd, "complete");
     assert.equal(readState(f.cwd).loop!.builder!.phase, "complete");
     assert.equal(readState(f.cwd).loop!.builder!.requirements[0]!.evidence!.model, "test/backup");
     const requests = fs.readdirSync(path.join(f.cwd, ".pi-glla", "audit-jobs")).map(name => JSON.parse(fs.readFileSync(path.join(f.cwd, ".pi-glla", "audit-jobs", name, "request.json"), "utf8")));
@@ -336,7 +320,6 @@ test("terminal summary delivery failure preserves a replayable durable summary",
   const env = { SUMMARY_FAIL: "1" }, f = fixture(env);
   try {
     await runRespecBuilderAudit(f.ctx);
-    await waitForPhase(f.cwd, "complete");
     assert.equal(readState(f.cwd).loop!.builder!.phase, "complete");
     assert.ok(readState(f.cwd).loop!.completionSummary);
     assert.equal(readState(f.cwd).loop!.builder!.summaryDeliveredAt, undefined);
@@ -391,7 +374,6 @@ test("rapid pause/resume discards the cancelled worker result and rearms the sav
     assert.deepEqual(f.counts(), { wakes: 1, finishes: 0 });
     delete env.RESULT_DELAY;
     await runRespecBuilderAudit(f.ctx);
-    await waitForPhase(f.cwd, "complete");
     assert.equal(readState(f.cwd).loop!.builder!.phase, "complete");
     assert.equal(f.counts().finishes, 1);
   } finally { replaceState(f.original); }
@@ -440,7 +422,6 @@ test("a corrupt summary outbox prevents terminal handoff and retains approved jo
     replaceState({ ...state, loop: { ...state.loop!, active: true, stopReason: undefined } });
     persistStateLine(f.cwd, state);
     await runRespecBuilderAudit(f.ctx);
-    await waitForPhase(f.cwd, "complete");
     assert.equal(readState(f.cwd).loop!.builder!.phase, "complete");
     assert.deepEqual(fs.readdirSync(path.join(f.cwd, ".pi-glla", "audit-jobs")), jobs);
     assert.equal(f.summaries.length, 1);
@@ -500,7 +481,6 @@ test("project adapter survives 2105 paced infrastructure episodes then a real wo
     restore();
     const restoreClock = __testOnlyRespecAuditorRuntime({ auditNow: () => clock });
     try { await runRespecBuilderAudit(f.ctx); } finally { restoreClock(); }
-    await waitForPhase(f.cwd, "complete");
     assert.equal(readState(f.cwd).loop!.builder!.phase, "complete");
     assert.equal(fs.readdirSync(path.join(f.cwd, ".pi-glla", "audit-jobs")).length, 1);
   } finally { restore(); replaceState(f.original); fs.rmSync(f.cwd, { recursive: true, force: true }); }
@@ -729,7 +709,6 @@ test("exhausted finite worker chain resets only at the next due admitted episode
     delete env.FAIL_ALL;
     clock = state.loop!.builder!.audit!.infrastructureRetry!.nextRetryAt;
     await runRespecBuilderAudit(f.ctx);
-    await waitForPhase(f.cwd, "complete");
     assert.equal(readState(f.cwd).loop!.builder!.phase, "complete");
     assert.equal(fs.readdirSync(jobs).length, 5);
   } finally { restore(); replaceState(f.original); }
