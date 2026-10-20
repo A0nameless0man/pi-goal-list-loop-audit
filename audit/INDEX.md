@@ -8,6 +8,7 @@ plus a `v0.34.x-<TOPIC>.md` symlink for versioned docs). Older docs
 
 - [Final audit fallback recovery — 20 October 2026](FINAL-AUDIT-RECOVERY-2026-10-20.md): durable fallback cursors, prompt account-error recovery and a protected session-model last resort.
 
+- [Release 0.39.41 — 20 October 2026](RELEASE-0-39-41-2026-10-20.md): completion audit recovery and a load-aware release gate, with the gate's host-relative budgets, the focused verification and the contract attempts.
 - [Release 0.39.40 — 20 October 2026](RELEASE-0-39-40-2026-10-20.md): durable update checks, consent gates and shipped-doc guards, with the full release gate and the gated-tree manifest.
 - [Task-list implementation — 19 October 2026](TASKLIST-IMPLEMENTATION-2026-10-19.md): six improvements and the suspicious-goal screenshot correction, with validation evidence.
 - [Project review and task list — 19 October 2026](PROJECT-REVIEW-2026-10-19.md): six prioritized follow-ups with reproduction evidence.
