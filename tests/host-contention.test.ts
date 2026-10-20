@@ -117,13 +117,16 @@ test("no test file hand-rolls a wait deadline any more", () => {
     if (!file.endsWith(".test.ts")) continue;
     const lines = fs.readFileSync(file, "utf8").split("\n");
     for (let i = 0; i < lines.length; i++) {
-      const made = lines[i].match(DEADLINE);
+      const made = lines[i]?.match(DEADLINE);
       if (!made) continue;
-      if (SHARED.test(made[2])) continue;
+      const name = made[1];
+      const value = made[2];
+      if (name === undefined || value === undefined) continue;
+      if (SHARED.test(value)) continue;
       const window = lines.slice(i + 1, i + 8).join("\n");
       const checked = window.match(CHECK);
-      if (!checked || checked[1] !== made[1]) continue;
-      offenders.push(`${path.relative(ROOT, file)}:${i + 1}  ${lines[i].trim()}`);
+      if (!checked || checked[1] !== name) continue;
+      offenders.push(`${path.relative(ROOT, file)}:${i + 1}  ${lines[i]?.trim() ?? ""}`);
     }
   }
   assert.deepEqual(

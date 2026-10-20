@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## 0.39.41 — completion audit recovery across reloads (2026-10-20)
+## 0.39.41 — completion audit recovery and a load-aware release gate (2026-10-20)
 
 ### Completion audit recovery
 
@@ -12,6 +12,30 @@
   quota/billing retry delays and always attempts the permitted session model,
   even when provider-wide failure handling skips other configured backups.
   Exhaustion remains an infrastructure wait with the completion claim stored.
+
+### Release gate follows the host's CPU
+
+- The suite's hang budgets are sized for the CPU the host is actually giving
+  it. A wait that needs 2.5s of CPU can take 12s of wall time on a shared
+  workstation while the condition approaches normally; the deadline used to
+  fire and report a healthy system as broken, which blocked a release with
+  "settlement timeout" and "timed out after 60000ms" on a 43-user host. The
+  slowdown is measured directly (a short CPU-bound probe compared with the
+  wall time it took) and the budget is scaled by it. On an idle host the
+  factor is 1.0 and every budget is exactly what it was, so CI is unchanged.
+  A hung test still fails: the budget is larger, never the tolerance.
+- The default per-test timeout moves from 60s to 120s. The old bound left
+  only ~2.6x headroom over the slowest legitimate test (22.8s), and that test
+  was killed by bun's own timeout on a contended host.
+- Fifty wait deadlines across 38 test files now come from one shared helper
+  instead of forty hand-rolled copies. A convention guard fails the build if
+  a test file goes back to sizing its own budget.
+- The read-only `/glla fleet` scan's wall-clock ceiling moves from 2s to 10s.
+  The old bound was tight enough that a loaded host could not schedule the
+  scan's first read inside the budget, and a healthy project was then
+  reported with no status and an incomplete report — a false negative from a
+  diagnostic. Callers may still ask for less; requests above the ceiling are
+  clamped and reported as before.
 
 ## 0.39.40 — durable update checks, consent gates and shipped-doc guards (2026-10-20)
 
