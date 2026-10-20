@@ -108,6 +108,16 @@ async function waitUntil(predicate: () => boolean, timeoutMs = 30_000): Promise<
   }
 }
 
+/** The recovery ledger entry is appended BEFORE the goal state moves to
+ * "auditing", so a wait that only watches the ledger races the state write:
+ * on a loaded host the state can still read "paused" when the ledger is
+ * already there. Wait for both facts — the dispatch is recorded AND the
+ * state carries it — so the assertion that follows sees a settled goal. */
+async function waitForRecoveryAuditing(cwd: string): Promise<void> {
+  await waitUntil(() => readLedger(cwd).some((entry) => entry.type === "audit_recovery_started")
+    && (readState(cwd).goal as { status?: string } | null)?.status === "auditing");
+}
+
 function readLedger(cwd: string): Array<{ type: string; value: Record<string, unknown> }> {
   const file = path.join(cwd, ".pi-glla", "active.jsonl");
   return fs.readFileSync(file, "utf8")
@@ -3254,7 +3264,7 @@ test("v0.35.x: a successful main-model recovery gives a parked audit its one aut
     const ctx = await freshSession(cwd, "startup");
     assert.equal((readState(cwd).goal as { status?: string }).status, "paused", "cold startup keeps the parked claim held");
     mainModelRecoverySucceeded(ctx as unknown as Parameters<typeof mainModelRecoverySucceeded>[0]);
-    await waitUntil(() => readLedger(cwd).some((entry) => entry.type === "audit_recovery_started"));
+    await waitForRecoveryAuditing(cwd);
     const started = readState(cwd).goal as {
       status?: string;
       pendingCompletion?: { phase?: string; automaticRecoveryAttempted?: boolean; automaticRecoveryGeneration?: number };
@@ -4423,7 +4433,7 @@ test("v0.35.x: validated session handoff auto-retries a parked completion audit"
     // this is different from merely contacting the successor with a tool.
     await pi.fire("session_shutdown", { reason: "reload" }, first);
     const replacement = await freshSession(cwd, "reload");
-    await waitUntil(() => readLedger(cwd).some((entry) => entry.type === "audit_recovery_started"));
+    await waitForRecoveryAuditing(cwd);
 
     const afterStart = readState(cwd).goal as { status?: string; pendingCompletion?: { attemptId?: string; phase?: string } } | null;
     assert.equal(afterStart?.status, "auditing", "the fresh host continues the detached audit, not the main goal");
@@ -4470,7 +4480,7 @@ test("v0.35.x: explicit Auto-resume retries a parked claim on cold startup", asy
   });
   try {
     const ctx = await freshSession(cwd, "startup");
-    await waitUntil(() => readLedger(cwd).some((entry) => entry.type === "audit_recovery_started"));
+    await waitForRecoveryAuditing(cwd);
     const started = readState(cwd).goal as { status?: string; pendingCompletion?: { attemptId?: string } } | null;
     assert.equal(started?.status, "auditing");
     assert.notEqual(started?.pendingCompletion?.attemptId, oldAttempt);
@@ -4578,7 +4588,7 @@ test("v0.35.x: one automatic parked-audit retry is durable across repeated lifec
   });
   try {
     const first = await freshSession(cwd, "startup");
-    await waitUntil(() => readLedger(cwd).some((entry) => entry.type === "audit_recovery_started"));
+    await waitForRecoveryAuditing(cwd);
     const started = readState(cwd).goal as {
       status?: string;
       pendingCompletion?: { phase?: string; attemptId?: string; automaticRecoveryAttempted?: boolean; automaticRecoveryGeneration?: number };
@@ -4663,7 +4673,7 @@ test("v0.35.x: stale host replacement session_start auto-recovers the parked aud
       },
     });
     await pi.fire("session_start", { reason: "startup" }, successor);
-    await waitUntil(() => readLedger(cwd).some((entry) => entry.type === "audit_recovery_started"));
+    await waitForRecoveryAuditing(cwd);
     const restarted = readState(cwd).goal as { status?: string; pendingCompletion?: { attemptId?: string } } | null;
     assert.equal(restarted?.status, "auditing");
     assert.notEqual(restarted?.pendingCompletion?.attemptId, oldAttempt);
@@ -4717,7 +4727,11 @@ test("v0.35.x: healthy same-session heartbeat recovers a parked completion audit
     first.hasPendingMessages = () => false;
     await waitUntil(() => {
       __testOnlyHeartbeatTick();
-      return readLedger(cwd).some((entry) => entry.type === "audit_recovery_started");
+      // The ledger records the dispatch before the state moves to
+      // "auditing", so the tick is kept going until the STATE carries it —
+      // waiting only for the ledger races the state write and reads
+      // "paused" on a loaded host.
+      return (readState(cwd).goal as { status?: string } | null)?.status === "auditing";
     }, 4_000);
 
     const retrying = readState(cwd).goal as { status?: string; pendingCompletion?: { phase?: string; automaticRecoveryAttempted?: boolean } } | null;
