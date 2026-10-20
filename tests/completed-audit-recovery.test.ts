@@ -471,7 +471,7 @@ test("S7: stranded recovery measures real activity, not the heartbeat's own refi
   } finally { await pi.fire("session_shutdown", { reason: "test-end" }, ctx); }
 });
 
-test("workerless park drops the dead attempt's auditor cursor so recovery re-walks (clean-web field)", async () => {
+test("workerless park releases only the interrupted candidate (legacy clean-web cursor)", async () => {
   const cwd = tmpCwd(), pi = new MockPi(); activate(pi.api); const ctx = await boot(pi, cwd);
   const g = goal();
   // The dead worker's cursor: every configured candidate already "tried".
@@ -491,10 +491,10 @@ test("workerless park drops the dead attempt's auditor cursor so recovery re-wal
     const restored = readState(cwd).goal;
     assert.equal(restored?.status, "paused");
     assert.equal(restored?.pendingCompletion?.phase, "recovery-pending");
-    assert.equal(restored?.pendingCompletion?.auditorAttemptedRefs, undefined, "dead attempted refs are cleared");
-    assert.equal(restored?.pendingCompletion?.auditorCandidateRefs, undefined, "dead candidate refs are cleared");
-    assert.equal(restored?.pendingCompletion?.auditorCandidateRef, undefined);
-    assert.equal(restored?.pendingCompletion?.auditorFailureCount, undefined);
+    assert.deepEqual(restored?.pendingCompletion?.auditorAttemptedRefs, [], "interrupted candidate may be retried");
+    assert.deepEqual(restored?.pendingCompletion?.auditorCandidateRefs, ["dead/model"]);
+    assert.equal(restored?.pendingCompletion?.auditorCandidateRef, "dead/model");
+    assert.equal(restored?.pendingCompletion?.auditorFailureCount, 1);
     assert.equal(events(cwd).filter(e => e.type === "audit_started").length, 0);
   } finally {
     runtime.completionAuditInFlight = false;

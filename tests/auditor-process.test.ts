@@ -571,7 +571,7 @@ process.stdin.on("data", async (chunk) => {
   }
 });
 
-test("real worker preserves structured HTTP 429 diagnostics for the parent", async () => {
+test("real worker escapes a quota retry loop and preserves structured HTTP 429 diagnostics", async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "glla-structured-error-"));
   const fakePi = path.join(dir, "structured-error-pi.mjs");
   const fakePiSource = `
@@ -580,7 +580,7 @@ process.stdin.on("data", (chunk) => {
   if (handled || !String(chunk).includes("\\n")) return;
   handled = true;
   process.stdout.write(JSON.stringify({ type: "error", statusCode: "429", errorMessage: "limit exceeded" }) + "\\n");
-  process.stdout.write(JSON.stringify({ type: "agent_settled" }) + "\\n");
+  setInterval(() => process.stdout.write(JSON.stringify({ type: "auto_retry_start", error: "HTTP 429 quota exhausted" }) + "\\n"), 50);
 });
 `;
   await writeFile(fakePi, `#!/usr/bin/env node\n${fakePiSource}`);

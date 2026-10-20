@@ -262,7 +262,7 @@ test("auditor retries the same ref, then walks the next untried ref with bounded
     shouldRetry: () => true,
   });
   assert.equal(wallOutcome.result.approved, true);
-  assert.deepEqual(wallWaits, [5_000, 120_000], "a billing wall keeps the bounded ladder, not the eager window");
+  assert.deepEqual(wallWaits, [], "a billing wall advances immediately instead of sleeping before a healthy fallback");
 });
 
 test("auditor forbidden and duplicate refs are skipped before retry ordering", async () => {
@@ -519,7 +519,7 @@ test("account-throttle wording collapses same-provider rungs", async () => {
     sleep: async () => {},
     shouldRetry: () => true,
   });
-  assert.deepEqual(calls, ["test/primary", "test/primary"]);
+  assert.deepEqual(calls, ["test/primary"]);
   assert.equal(outcome.result.fallbackExhausted, true);
 });
 
