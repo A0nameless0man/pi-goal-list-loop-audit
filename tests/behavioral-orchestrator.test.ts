@@ -4728,12 +4728,12 @@ test("v0.35.x: healthy same-session heartbeat recovers a parked completion audit
     first.hasPendingMessages = () => false;
     await waitUntil(() => {
       __testOnlyHeartbeatTick();
-      // The ledger records the dispatch before the state moves to
-      // "auditing", so the tick is kept going until the STATE carries it —
-      // waiting only for the ledger races the state write and reads
-      // "paused" on a loaded host.
-      return (readState(cwd).goal as { status?: string } | null)?.status === "auditing";
+      return readLedger(cwd).some((entry) => entry.type === "audit_recovery_started");
     }, 4_000);
+    // The ledger records the dispatch BEFORE the state moves to "auditing",
+    // so the state can still read "paused" when the ledger is already there —
+    // on a loaded host, reliably. Wait for the state to catch up.
+    await waitUntil(() => (readState(cwd).goal as { status?: string } | null)?.status === "auditing");
 
     const retrying = readState(cwd).goal as { status?: string; pendingCompletion?: { phase?: string; automaticRecoveryAttempted?: boolean } } | null;
     assert.equal(retrying?.status, "auditing", "healthy heartbeat starts the bounded recovery audit");
