@@ -79,6 +79,10 @@ async function cleanup(): Promise<void> {
 }
 
 test("stall: worker that never emits a first event is failed fast, not left for the wall", { timeout: scaledBudgetMs(20_000) }, async () => {
+  const wall = scaledBudgetMs(10_000), firstEvent = scaledBudgetMs(5_000);
+  const noProgress = scaledBudgetMs(20_000), fresh = scaledBudgetMs(500);
+  const silenceFloor = scaledBudgetMs(1_200);
+
   const dir = await mkdtemp(path.join(tmpdir(), "glla-first-event-stall-"));
   dirs.push(dir);
   const sigtermMarker = path.join(dir, "sigterm-marker");
@@ -142,6 +146,9 @@ setInterval(() => {}, 1_000);
 });
 
 test("stall: first-event budget starts after successful spawn, not pre-spawn setup", { timeout: scaledBudgetMs(20_000) }, async () => {
+  const wall = scaledBudgetMs(10_000), firstEvent = scaledBudgetMs(5_000);
+  const noProgress = scaledBudgetMs(20_000), fresh = scaledBudgetMs(500);
+
   const dir = await mkdtemp(path.join(tmpdir(), "glla-first-event-clock-"));
   dirs.push(dir);
   const sigtermMarker = path.join(dir, "sigterm-marker");
@@ -199,6 +206,9 @@ setInterval(() => {}, 1_000);
 });
 
 test("stall: worker whose single boot heartbeat goes stale is failed fast, not left for the wall", { timeout: scaledBudgetMs(20_000) }, async () => {
+  const wall = scaledBudgetMs(10_000), firstEvent = scaledBudgetMs(20_000);
+  const noProgress = scaledBudgetMs(1_200), fresh = scaledBudgetMs(500);
+
   const dir = await mkdtemp(path.join(tmpdir(), "glla-stale-heartbeat-stall-"));
   dirs.push(dir);
   const sigtermMarker = path.join(dir, "sigterm-marker");
@@ -381,6 +391,9 @@ setInterval(() => {}, 1_000);
 });
 
 test("stall: a silent-past-bound attempt fails fast WITH its cost record (controlled clock)", { timeout: scaledBudgetMs(20_000) }, async () => {
+  const wall = scaledBudgetMs(20_000), firstEvent = scaledBudgetMs(20_000);
+  const noProgress = scaledBudgetMs(1_200), fresh = scaledBudgetMs(500);
+
   const dir = await mkdtemp(path.join(tmpdir(), "glla-stall-evidence-"));
   dirs.push(dir);
   // One heartbeat + two finished tool calls (one of them an image read, i.e.
@@ -518,6 +531,9 @@ setInterval(() => {}, 1_000);
 });
 
 test("stall: an open in-budget tool is not silence — the no-progress bound spares it", { timeout: scaledBudgetMs(20_000) }, async () => {
+  const wall = scaledBudgetMs(30_000), firstEvent = scaledBudgetMs(30_000);
+  const noProgress = scaledBudgetMs(300), fresh = scaledBudgetMs(5_000);
+
   const dir = await mkdtemp(path.join(tmpdir(), "glla-tool-silence-"));
   dirs.push(dir);
   // Fresh heartbeats, no progress signature change, an OPEN tool well inside
