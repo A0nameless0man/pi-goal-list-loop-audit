@@ -1,0 +1,90 @@
+bun test v1.3.14 (0d9b296a)
+
+tests/auditor-fallback-unification.test.ts:
+650 |         calls.push(candidate.model.id);
+651 |         return candidate.model.id === "session"
+652 |           ? result({ approved: true, model: "test/session" })
+653 |           : result({ error, model: `test/${candidate.model.id}` });
+654 |       }, { sleep: async (ms) => { waits.push(ms); } });
+655 |       assert.deepEqual(calls, error.startsWith("503") ? ["primary", "primary", "session"] : ["primary", "session"]);
+                   ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
+    'primary',
++   'primary',
+    'session'
+  ]
+
+ generatedMessage: true,
+     actual: [ "primary", "primary", "session" ],
+   expected: [ "primary", "session" ],
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:655:14
+      at withFakeContext (/tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:126:2)
+      at /tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:645:11
+      at processTicksAndRejections (native:7:39)
+(fail) session remains reachable on the same provider after subscription quota exhausted; retry in 7 days [13.38ms]
+650 |         calls.push(candidate.model.id);
+651 |         return candidate.model.id === "session"
+652 |           ? result({ approved: true, model: "test/session" })
+653 |           : result({ error, model: `test/${candidate.model.id}` });
+654 |       }, { sleep: async (ms) => { waits.push(ms); } });
+655 |       assert.deepEqual(calls, error.startsWith("503") ? ["primary", "primary", "session"] : ["primary", "session"]);
+                   ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
+    'primary',
++   'primary',
+    'session'
+  ]
+
+ generatedMessage: true,
+     actual: [ "primary", "primary", "session" ],
+   expected: [ "primary", "session" ],
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:655:14
+      at withFakeContext (/tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:126:2)
+      at /tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:645:11
+      at processTicksAndRejections (native:7:39)
+(fail) session remains reachable on the same provider after HTTP 429 Retry-After: 7200 [1.29ms]
+650 |         calls.push(candidate.model.id);
+651 |         return candidate.model.id === "session"
+652 |           ? result({ approved: true, model: "test/session" })
+653 |           : result({ error, model: `test/${candidate.model.id}` });
+654 |       }, { sleep: async (ms) => { waits.push(ms); } });
+655 |       assert.deepEqual(calls, error.startsWith("503") ? ["primary", "primary", "session"] : ["primary", "session"]);
+                   ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
+    'primary',
++   'primary',
+    'session'
+  ]
+
+ generatedMessage: true,
+     actual: [ "primary", "primary", "session" ],
+   expected: [ "primary", "session" ],
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:655:14
+      at withFakeContext (/tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:126:2)
+      at /tmp/glla-audit-controls-geieiimz/tests/auditor-fallback-unification.test.ts:645:11
+      at processTicksAndRejections (native:7:39)
+(fail) session remains reachable on the same provider after insufficient credits [1.13ms]
+(pass) session remains reachable on the same provider after 503 provider unavailable [0.84ms]
+
+ 1 pass
+ 26 filtered out
+ 3 fail
+Ran 4 tests across 1 file. [796.00ms]

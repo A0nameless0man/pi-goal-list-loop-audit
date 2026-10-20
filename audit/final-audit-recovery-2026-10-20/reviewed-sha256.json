@@ -1,0 +1,11 @@
+{
+  "extensions/goal-recovery.ts": "62459f9996ac4e1016fae8dcf0bcad96c11f14427675a61d143b46705cee5e14",
+  "extensions/goal-loop-auditor-process.ts": "81be8945049d778ba3831f3bdf483e52d481449568fa75b3ec19aeef99862aad",
+  "scripts/goal-auditor-worker.mjs": "6bceb7934f62db9667f07897a2618becbc766ccc6d63f2d51a457875c24ecd4d",
+  "scripts/auditor-provider-failure.mjs": "e38ea9b3558f04ade12f63da317b6b77da560df644128d3736735c3f0a4d2a7a",
+  "scripts/auditor-provider-failure.d.mts": "850eeba732a754f844d3a863278d1d8cd2778f95c1cfb52c8c4af1447676fa67",
+  "tests/auditor-fallback-unification.test.ts": "aab4dd5023798239ed41ee87b106972ef5bfeb0d5eab5fb6bf2727473c20497a",
+  "tests/completed-audit-recovery.test.ts": "656edb2b5306564f678cce30f7331b0bad6af6ef6ebd602d346d4ef82aed32f0",
+  "tests/auditor-process.test.ts": "f569eb91a9e6d5aae2bcccc7a3aa52b39678c02f229d2984d3fb823cf0aa2997",
+  "tests/auditor-eager-retry.test.ts": "afa39af10e44dcea7dac4e945131d95adf8bc8f62eca27364cd1a026b5f5249f"
+}

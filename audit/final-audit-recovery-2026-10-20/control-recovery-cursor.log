@@ -1,0 +1,104 @@
+bun test v1.3.14 (0d9b296a)
+
+tests/completed-audit-recovery.test.ts:
+529 |       seedState(cwd, { goal: g }); __testOnlyLoadState(cwd);
+530 |       try {
+531 |         assert.equal(contextFree ? parkCompletionAuditRecovery(cwd, "reload") : markCompletionAuditRecoveryPending(ctx as unknown as ExtensionContext, "reload"), true);
+532 |         // Read the journal projection, not live RAM.
+533 |         const saved = readState(cwd).goal!.pendingCompletion!;
+534 |         assert.deepEqual(saved.auditorAttemptedRefs, ["a/preferred"]);
+                     ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
++ undefined
+- [
+-   'a/preferred'
+- ]
+
+ generatedMessage: true,
+     actual: undefined,
+   expected: [ "a/preferred" ],
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-audit-controls-geieiimz/tests/completed-audit-recovery.test.ts:534:16
+      at processTicksAndRejections (native:7:39)
+(fail) durable fallback survives recovery: contextFree=false, retryStarted=false [861.17ms]
+529 |       seedState(cwd, { goal: g }); __testOnlyLoadState(cwd);
+530 |       try {
+531 |         assert.equal(contextFree ? parkCompletionAuditRecovery(cwd, "reload") : markCompletionAuditRecoveryPending(ctx as unknown as ExtensionContext, "reload"), true);
+532 |         // Read the journal projection, not live RAM.
+533 |         const saved = readState(cwd).goal!.pendingCompletion!;
+534 |         assert.deepEqual(saved.auditorAttemptedRefs, ["a/preferred"]);
+                     ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
++ undefined
+- [
+-   'a/preferred'
+- ]
+
+ generatedMessage: true,
+     actual: undefined,
+   expected: [ "a/preferred" ],
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-audit-controls-geieiimz/tests/completed-audit-recovery.test.ts:534:16
+      at processTicksAndRejections (native:7:39)
+(fail) durable fallback survives recovery: contextFree=false, retryStarted=true [393.30ms]
+529 |       seedState(cwd, { goal: g }); __testOnlyLoadState(cwd);
+530 |       try {
+531 |         assert.equal(contextFree ? parkCompletionAuditRecovery(cwd, "reload") : markCompletionAuditRecoveryPending(ctx as unknown as ExtensionContext, "reload"), true);
+532 |         // Read the journal projection, not live RAM.
+533 |         const saved = readState(cwd).goal!.pendingCompletion!;
+534 |         assert.deepEqual(saved.auditorAttemptedRefs, ["a/preferred"]);
+                     ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
++ undefined
+- [
+-   'a/preferred'
+- ]
+
+ generatedMessage: true,
+     actual: undefined,
+   expected: [ "a/preferred" ],
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-audit-controls-geieiimz/tests/completed-audit-recovery.test.ts:534:16
+      at processTicksAndRejections (native:7:39)
+(fail) durable fallback survives recovery: contextFree=true, retryStarted=false [361.93ms]
+529 |       seedState(cwd, { goal: g }); __testOnlyLoadState(cwd);
+530 |       try {
+531 |         assert.equal(contextFree ? parkCompletionAuditRecovery(cwd, "reload") : markCompletionAuditRecoveryPending(ctx as unknown as ExtensionContext, "reload"), true);
+532 |         // Read the journal projection, not live RAM.
+533 |         const saved = readState(cwd).goal!.pendingCompletion!;
+534 |         assert.deepEqual(saved.auditorAttemptedRefs, ["a/preferred"]);
+                     ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
++ undefined
+- [
+-   'a/preferred'
+- ]
+
+ generatedMessage: true,
+     actual: undefined,
+   expected: [ "a/preferred" ],
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-audit-controls-geieiimz/tests/completed-audit-recovery.test.ts:534:16
+      at processTicksAndRejections (native:7:39)
+(fail) durable fallback survives recovery: contextFree=true, retryStarted=true [149.58ms]
+
+ 0 pass
+ 38 filtered out
+ 4 fail
+Ran 4 tests across 1 file. [2.73s]

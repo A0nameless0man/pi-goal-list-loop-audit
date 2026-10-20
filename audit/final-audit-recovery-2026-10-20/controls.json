@@ -1,0 +1,27 @@
+[
+  {
+    "control": "baseline",
+    "exit": 0,
+    "expectedExit": 0
+  },
+  {
+    "control": "recovery-cursor",
+    "exit": 1,
+    "expectedExit": "nonzero"
+  },
+  {
+    "control": "session-tail",
+    "exit": 1,
+    "expectedExit": "nonzero"
+  },
+  {
+    "control": "account-delay",
+    "exit": 1,
+    "expectedExit": "nonzero"
+  },
+  {
+    "control": "worker-retry-loop",
+    "exit": 1,
+    "expectedExit": "nonzero"
+  }
+]
