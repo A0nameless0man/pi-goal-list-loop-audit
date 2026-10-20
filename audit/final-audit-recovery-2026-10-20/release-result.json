@@ -1,0 +1,16 @@
+{
+  "command": "npm run release:check",
+  "exitCode": 0,
+  "recordedAt": "2026-10-20T10:13:30.460737+00:00",
+  "tests": {
+    "passed": 4200,
+    "skipped": 1,
+    "failed": 0,
+    "total": 4201,
+    "files": 459
+  },
+  "reviewedSourceHashesMatch": true,
+  "sourceFilesVerified": 12,
+  "logSha256": "96fdeaa784ebf043333d4fa443281dde7eadb0bd2a5aa2400e0dff35a7cc0e5b",
+  "toolResult": "release-tool-result.json"
+}
