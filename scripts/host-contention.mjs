@@ -94,6 +94,8 @@ export function contentionFactor(options = {}) {
   if (!force && cached && stamp - cached.at < maxAgeMs) return cached.factor;
   const measured = measureContentionFactor(options);
   cached = { at: stamp, factor: measured.factor };
+  if (!stableCached) stableCached = { at: stamp, factor: measured.factor };
+  else stableCached.factor = Math.max(stableCached.factor, measured.factor);
   return cached.factor;
 }
 
@@ -153,6 +155,11 @@ export function resetContentionFactor() {
 export function scaledBudgetMs(baseMs, options = {}) {
   if (!Number.isFinite(baseMs) || baseMs <= 0) return baseMs;
   const { stable = true, ...rest } = options;
-  const factor = stable ? monotonicContentionFactor(rest) : contentionFactor(rest);
-  return Math.ceil(baseMs * factor);
+  if (stable) return Math.ceil(baseMs * monotonicContentionFactor(rest));
+  // A WAIT gets the worse of "how slow is the host right now" and "how slow
+  // has it been at any point in this run". A momentary quiet reading must not
+  // hand a wait a budget the host has already shown it cannot meet.
+  const current = contentionFactor(rest);
+  const worst = stableCached?.factor ?? current;
+  return Math.ceil(baseMs * Math.max(current, worst));
 }
