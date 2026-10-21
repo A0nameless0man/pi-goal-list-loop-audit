@@ -275,11 +275,12 @@ export function syncSubagentModelOverrides(opts: {
     // Designer is also opt-in: role selection or an explicit model/thinking
     // pin. A plain startup must not create or repair it automatically.
     // Dedicated Designer settings, when supplied, take precedence over the
-    // generic map entries for this role.
+    // generic map entries for this role. A resolved implicit session pair
+    // is payload for an authorized role, not permission to register it.
     const desired = name === "Designer" && opts.designer
       ? (opts.designer.disabled
         ? undefined
-        : (opts.designerRequested === true || opts.designer.configured || opts.designer.model !== undefined || opts.designer.thinking !== undefined)
+        : (opts.designerRequested === true || opts.designer.configured)
           ? (() => {
             try { return buildAgentOverrideMd(name, opts.designer!.model, opts.designer!.thinking); }
             catch (error) {
