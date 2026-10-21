@@ -114,10 +114,11 @@ git diff --check
 
 Results:
 
-- Required behavioral tests: **42 pass, 0 fail**, exit 0 (`/tmp/glla-designer-lifecycle-required.log`).
+- Required behavioral tests: **43 pass, 0 fail**, exit 0 (`/tmp/glla-designer-lifecycle-required.log`).
 - Typecheck: **exit 0**, no diagnostics (`/tmp/glla-designer-lifecycle-typecheck.log`).
-- Adjacent Designer/settings suites: **53 pass, 0 fail**, exit 0
-  (`/tmp/glla-designer-lifecycle-adjacent.log`).
+- Adjacent Designer/settings suites (`tests/settings-editors.test.ts`,
+  `tests/manual-resume-failback.test.ts`, `tests/subagent-polish.test.ts`): **61 pass,
+  0 fail**, exit 0 (`/tmp/glla-designer-lifecycle-adjacent.log`).
 - Tracked review reproducer: the two Designer cases pass; the three other findings in that
   file are open items owned elsewhere (`/tmp/glla-designer-lifecycle-repro.log`).
 - Runtime inventory regenerated; `npm run check:inventory` and `git diff --check`: exit 0.
@@ -126,11 +127,11 @@ Full-suite execution is not claimed.
 
 Tested source SHA-256:
 
-- `extensions/designer-registration.ts`: `848d77afac89e27c66c3a21b5f90e3f2383cc6789bf582e9f4afd16f0a87a826`
+- `extensions/designer-registration.ts`: `8f98651b99c6da05355a54e4ec9b9753d35ec4a50f4c988f0cc6a87213042cbc`
 - `extensions/goal-loop-subagents.ts`: `3feff2ecd927467379d79eb4f5525e5d3ea2f5a71f0588baec41cfd61fa6af7b`
 - `extensions/designer-model.ts`: `99672965ff5703762dd145ff31c197f7bb361c665d62eee9a4bd2a3b51996185`
-- `extensions/loops/goal-activation.ts`: `3b79740ed22687c88f99653dc3bc320f53f9eb9e7102a3377855c737b31f2599`
-- `tests/designer-settings.test.ts`: `5930fa2dc01f4a4899f54559093bf8c7d7bb02bd895094a5a59ab8f30cd63a76`
+- `extensions/loops/goal-activation.ts`: `cac852fd23947ad3ad80a46d057a9efa3eaa3b9205b299d3b37818c599c3fc44`
+- `tests/designer-settings.test.ts`: `338e9014b6f43b1de8d4b8ef35965894454ae8c68d560fbb6c2641ad8cda7861`
 
 Observed checkpoint: `663caca22` (the daemon may subsequently commit documentation and
 evidence without changing these tested source hashes).
