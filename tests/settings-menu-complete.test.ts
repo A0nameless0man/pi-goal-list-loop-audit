@@ -17,6 +17,8 @@ import {
   type SettingsRow,
 } from "../extensions/settings-menu.ts";
 import { normalizeLoadedSettings, type Settings } from "../extensions/goal-settings.ts";
+import { resolveAuditorThinkingLevel, resolveCandidateThinkingLevel } from "../extensions/auditor-thinking.ts";
+import { resolveDesignerModel } from "../extensions/designer-model.ts";
 import { CURRENT_SUBAGENT_AGENT_NAMES } from "../extensions/goal-loop-subagents.ts";
 import { readGoalRuntimeSource } from "./harness/goal-source.js";
 
@@ -131,6 +133,59 @@ test("main fallback row explains ordered, deselectable selection", () => {
   const row = rows.find((candidate) => candidate.id === "mainModelFallbacks")!;
   assert.equal(row.section, "main-agent");
   assert.match(row.description, /ordered and deselectable/);
+});
+
+// Protect display/dispatch parity, not a particular explanation string. Extra
+// registry entries and unordered capability lists must not change the answer.
+test("auditor and Designer displays resolve unsupported thinking exactly as dispatch does", () => {
+  for (const reasoning of [true, false]) {
+    const model = { provider: "test", id: "selected", reasoning, thinkingLevelMap: { xhigh: null, max: "max" } };
+    const levels = reasoning ? ["max", "off", "high", "medium", "low", "minimal"] : ["off"];
+    const ctx = {
+      cwd: "/tmp", model: { ...model, id: "session" }, thinkingLevel: "max",
+      modelRegistry: { find: () => model, hasConfiguredAuth: () => true, getAvailable: () => [model] },
+    } as any;
+    for (const configured of [true, false]) {
+      const settings = {
+        auditorModel: "test/selected", designerModel: "test/selected",
+        ...(configured ? { auditorThinkingLevel: "xhigh", designerThinkingLevel: "xhigh" } : {}),
+      } as Settings;
+      const designer = resolveDesignerModel(ctx, settings);
+      const auditor = resolveCandidateThinkingLevel({ model, via: "configured" }, {
+        auditorThinkingLevel: settings.auditorThinkingLevel, sessionThinkingLevel: ctx.thinkingLevel,
+      });
+      const expected = reasoning ? configured ? "high" : "max" : "off";
+      assert.equal(auditor, expected);
+      assert.equal(designer.thinking, expected);
+      const rows = buildSettingsRows(settings, EMPTY_PROV, {
+        sessionModel: "test/session", sessionThinkingLevel: ctx.thinkingLevel,
+        thinkingLevelsByRef: { "test/selected": levels, "test/irrelevant": ["off"] },
+        designerResolved: designer,
+      });
+      for (const id of ["auditorModel", "designerModel", "designerEffective"]) {
+        const text = rows.find(row => row.id === id)!.valueText;
+        assert.match(text, new RegExp(`test/selected · ${expected}(?: |$)`), `${id}: ${text}`);
+        if (configured) assert.doesNotMatch(text, / · max(?: |$)/);
+      }
+    }
+  }
+});
+
+test("session category displays use session capabilities and ignore stale configured role thinking", () => {
+  for (const reasoning of [true, false]) {
+    const model = { reasoning, thinkingLevelMap: { max: "max", xhigh: null } };
+    const sessionThinking = reasoning ? "max" : "off";
+    const runtime = resolveAuditorThinkingLevel(model, sessionThinking);
+    const rows = buildSettingsRows({ designerThinkingLevel: "low", auditorThinkingLevel: "low" } as Settings, EMPTY_PROV, {
+      sessionModel: "test/session", sessionThinkingLevel: sessionThinking,
+      thinkingLevelsByRef: { "test/session": reasoning ? ["off", "high", "max"] : ["off"] },
+      designerResolved: { selectedRef: "test/session", via: "session", thinking: runtime, blocked: false },
+    });
+    for (const id of ["auditorModel", "designerModel"]) {
+      assert.equal(rows.find(row => row.id === id)!.valueText, `session model · ${runtime}`);
+    }
+    assert.match(rows.find(row => row.id === "designerEffective")!.valueText, new RegExp(`test/session · ${runtime} `));
+  }
 });
 
 test("role rows show each selected model with requested/effective thinking", () => {

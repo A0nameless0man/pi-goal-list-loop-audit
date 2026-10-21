@@ -513,6 +513,12 @@ function menuThinkingLevelsByRef(ctx: ExtensionContext): Record<string, readonly
     // The interactive menu still renders refs and requested thinking when a
     // legacy/headless registry cannot enumerate model metadata.
   }
+  // The running session can use an extension-provided model that is absent
+  // from registry enumeration. Inherited rows still need its capabilities.
+  if (ctx.model) {
+    const ref = modelRef(ctx.model);
+    if (ref) out[ref.toLowerCase()] = auditorThinkingLevels(ctx.model);
+  }
   return out;
 }
 
