@@ -79,7 +79,13 @@ async function withDrafter(
   const api = pi.api as any;
   api.getThinkingLevel = () => ctx.thinkingLevel;
   api.setThinkingLevel = (level: string) => { ctx.thinkingLevel = level; };
-  api.setModel = async (model: unknown) => { pi.modelSelections.push(model); ctx.model = model; return true; };
+  api.setModel = async (model: unknown) => {
+    const previousModel = ctx.model;
+    pi.modelSelections.push(model);
+    ctx.model = model;
+    await pi.fire("model_select", { model, previousModel, source: "set" }, ctx);
+    return true;
+  };
   fs.writeFileSync(file, JSON.stringify({ aggressiveMode: false, ...settings }));
   pi.modelSelections.length = 0;
   pi.userMessages.length = 0;
@@ -253,8 +259,13 @@ test("cancelling an interview during its retry wait aborts recovery before any d
 test("a manual model selection during retry delay supersedes the old drafter and restoration", async () => {
   await withDrafter({ drafterModel: "test/selected", drafterThinkingLevel: "low" }, async ({ ctx, manual, api }) => {
     let resume!: (ready: boolean) => void;
-    const recovery = recoverDraft(ctx, { wait: () => new Promise(resolve => { resume = resolve; }) });
+    let signal!: AbortSignal;
+    const recovery = recoverDraft(ctx, { wait: (_ms, currentSignal) => {
+      signal = currentSignal;
+      return new Promise(resolve => { resume = resolve; });
+    } });
     await api.setModel(manual);
+    assert.equal(signal.aborted, true, "manual model_select cancels even a long retry delay immediately");
     (ctx as any).thinkingLevel = "medium";
     resume(true);
     assert.equal(await recovery, false);
