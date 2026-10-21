@@ -126,16 +126,19 @@ export interface MenuSubagentContext {
   designerResolved?: { selectedRef?: string; blocked: boolean; via?: "configured" | "session" | "session-fallback"; thinking?: string };
 }
 
+import { resolveSupportedThinkingLevel } from "./auditor-thinking.js";
+
 function modelThinkingText(
   ref: string,
   requested: string,
   context: MenuSubagentContext,
 ): string {
-  const levels = context.thinkingLevelsByRef?.[ref.toLowerCase()];
+  const capabilityRef = ref === "session model" ? context.sessionModel ?? ref : ref;
+  const levels = context.thinkingLevelsByRef?.[capabilityRef.toLowerCase()];
   if (!levels || levels.length === 0 || requested === "session thinking" || requested === "session level") {
     return `${ref} · ${requested}`;
   }
-  const effective = levels.includes(requested) ? requested : levels[levels.length - 1] ?? "off";
+  const effective = resolveSupportedThinkingLevel(levels, requested);
   return effective === requested
     ? `${ref} · ${effective}`
     : `${ref} · ${effective} (requested ${requested})`;
@@ -198,7 +201,7 @@ export function buildSettingsRows(
     : subagent.designerResolved?.blocked
       ? "blocked — session model is forbidden and no eligible Designer model is configured"
       : subagent.designerResolved?.selectedRef
-        ? `${subagent.designerResolved.selectedRef} · ${subagent.designerResolved.thinking ?? designerThinking} · ${subagent.designerResolved.via === "session" ? "inherits session model + thinking" : subagent.designerResolved.via === "session-fallback" ? "session model + thinking (configured chain unavailable)" : "first eligible of the configured chain"}`
+        ? `${modelThinkingText(subagent.designerResolved.selectedRef, subagent.designerResolved.thinking ?? designerThinking, subagent)} · ${subagent.designerResolved.via === "session" ? "inherits session model + thinking" : subagent.designerResolved.via === "session-fallback" ? "session model + thinking (configured chain unavailable)" : "first eligible of the configured chain"}`
         : designerChain.length
           ? `${designerChain.join(" → ")} → session model + thinking (last resort)`
           : `${sessionRef} · ${sessionThinking} (inherits session model + thinking)`;

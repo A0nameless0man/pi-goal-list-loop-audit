@@ -4,13 +4,20 @@
 export function resolveAuditorThinkingLevel(model: { reasoning?: boolean; thinkingLevelMap?: Record<string, string | null> } | undefined, requested: string): string {
   const levels = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
   if (!model?.reasoning) return 'off';
-  const ceiling = levels.indexOf(requested);
-  const start = ceiling < 0 ? levels.indexOf('high') : ceiling;
-  for (let index = start; index >= 0; index--) {
-    const level = levels[index]!;
+  const supported = levels.filter(level => {
     const mapped = model.thinkingLevelMap?.[level];
-    if (mapped === null || ((level === 'xhigh' || level === 'max') && mapped === undefined)) continue;
-    return level;
+    return mapped !== null && !((level === 'xhigh' || level === 'max') && mapped === undefined);
+  });
+  return resolveSupportedThinkingLevel(supported, requested);
+}
+
+/** Shared by dispatch and capability-aware displays. Never raise an unsupported
+ * request to a higher supported level, even when max exists without xhigh. */
+export function resolveSupportedThinkingLevel(supported: readonly string[], requested: string): string {
+  const levels = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
+  const ceiling = levels.indexOf(requested);
+  for (let index = ceiling < 0 ? levels.indexOf('high') : ceiling; index >= 0; index--) {
+    if (supported.includes(levels[index]!)) return levels[index]!;
   }
   return 'off';
 }
