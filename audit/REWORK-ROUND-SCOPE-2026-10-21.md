@@ -238,14 +238,20 @@ that will actually be used.
 
 ## A note on the state of the four projects
 
-The four states at the end of the work:
+The goals that were struggling, and where each one ended:
 
-| Project | State | Why |
-| --- | --- | --- |
-| clean-web | `paused` / `recovery-pending` | The claim was parked durably when the churn was stopped (`audit_recovery_pending` → `audit_worker_cancelled`, reason `quit`), and the re-audit under the fixed code was stopped once it had demonstrated the new scope. |
-| eve | no active goal | The re-audit under the fixed code exhausted its chain on **provider** failures and the claim settled on the bounded retry ladder; the goal has since completed. |
-| youtube-filter | `active` | Its parked claim was re-audited and the goal is active again — it is no longer a parked, looping claim. |
-| dracon-platform | new work in flight | The goal that struggled SETTLED (`audit_settlement_completed`, 2026-10-20T15:32:49) and no goal was active in that project afterwards. The goal now auditing there (`20261021032356-omjo1j`, created 2026-10-21T03:23) is NEW operator work — "we are getting 500 on ai hub" — started after this investigation, and it was deliberately left alone. |
+| Project | Goal | Final state | Why |
+| --- | --- | --- | --- |
+| clean-web | `20261020152114-efyhiq` | `paused` / `recovery-pending` | The claim was parked durably when the churn was stopped (`audit_recovery_pending` → `audit_worker_cancelled`, reason `quit`). Its re-audit under the fixed code demonstrated the new scope — 64 tool calls, one single-file test run — and was then stopped so the host could finish the release gate. |
+| eve | `20261020082848-4ok2j0` | **complete** (2026-10-21T04:33) | The re-audit under the fixed code exhausted its chain on **provider** failures and the claim settled on the bounded retry ladder instead of re-dispatching whole audits; the goal then completed. |
+| youtube-filter | `20261020193443-lnasag` | **complete** (2026-10-21T02:55) | Its parked claim was re-audited under the fixed code and the goal completed — it is no longer a parked, looping claim. |
+| dracon-platform | `20261019215211-h4spm4` | settled (`audit_settlement_completed`, 2026-10-20T15:32) | The goal that struggled settled and no goal was active in that project afterwards. |
+
+Each of those projects has since started NEW work — a sidebar declutter
+group in youtube-filter (02:55), an "ai hub 500" check in dracon-platform
+(03:23), a screenshot comparison in eve (04:58) — and those goals are the
+operator's own, in flight while this investigation finished. They were
+deliberately left alone; the table above is about the goals that struggled.
 
 The audit workers of the two projects that were actively looping were
 stopped with their sessions, so their claims parked durably; the re-audits
