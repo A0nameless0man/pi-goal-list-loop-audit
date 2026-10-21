@@ -82,6 +82,13 @@ export const NODE_ONLY_TEST_FILES = ["tests/repro-jiti-state-split.test.mjs"];
  * output every few seconds, and bun's own --timeout=60000 only bounds a
  * single test, not a runner that stops making progress. */
 export const DEFAULT_STALL_TIMEOUT_MS = 180_000;
+/** v0.39.43: the stall window may be extended when the host is measurably
+ * slow (see the watchdog), but never without bound: a genuinely wedged suite
+ * must still die in minutes, and the field cases this bound exists for were
+ * 37 minutes of silence and a 26-hour orphan. */
+export const MAX_STALL_TIMEOUT_MS = 900_000;
+/** How many times the window may be extended before the run is killed. */
+export const MAX_STALL_EXTENSIONS = 3;
 /** Heartbeat cadence: frequent enough that a watcher sees movement. */
 export const DEFAULT_HEARTBEAT_MS = 30_000;
 
@@ -173,6 +180,7 @@ function main() {
   const timeoutMs = Math.min(MAX_TEST_TIMEOUT_MS, Math.ceil(DEFAULT_TEST_TIMEOUT_MS * factor));
   const { mode, bunArgs } = buildRunnerArgs(process.argv.slice(2), SLOW_TEST_FILES, undefined, { timeoutMs });
   const stallLimit = stallTimeoutMs();
+  let stallExtensions = 0;
   const beat = heartbeatMs();
   const startedAt = Date.now();
   log(`mode=${mode} slow_files=${SLOW_TEST_FILES.length} stall_timeout=${Math.round(stallLimit / 1000)}s heartbeat=${Math.round(beat / 1000)}s`);
@@ -237,6 +245,20 @@ function main() {
     const silentMs = Date.now() - lastOutputAt;
     const elapsed = Date.now() - startedAt;
     if (!stallFired && isStalled({ silentMs, limitMs: stallLimit })) {
+      // v0.39.43: a silent suite is not automatically a HUNG suite. One test
+      // file can legitimately run for minutes without emitting a line (the
+      // suite's whale takes over a minute standalone, and minutes under host
+      // load), and killing the run there reports a busy machine as a broken
+      // suite. Before killing, ask the host how slow it is RIGHT NOW: a
+      // contended host explains the silence, so extend the window instead.
+      // The extension is bounded, so a genuinely wedged suite still dies.
+      const factor = contentionFactor({ force: true, maxAgeMs: 0 });
+      if (factor > 1.2 && stallExtensions < MAX_STALL_EXTENSIONS) {
+        stallExtensions += 1;
+        stallLimit = Math.min(stallLimit * Math.min(factor, 4), MAX_STALL_TIMEOUT_MS);
+        log(`stall window extended to ${Math.round(stallLimit / 1000)}s — the host is ${factor.toFixed(1)}x slower than idle (extension ${stallExtensions}/${MAX_STALL_EXTENSIONS})`);
+        return;
+      }
       stallFired = true;
       log(`STALLED: no suite output for ${Math.round(silentMs / 1000)}s (limit ${Math.round(stallLimit / 1000)}s) after ${Math.round(elapsed / 1000)}s — killing the run instead of hanging.`);
       log(`hint: a hung run is usually CPU starvation (host load) or a test awaiting a child that exited; rerun that file alone, or raise GLLA_TEST_STALL_TIMEOUT_MS if the host is simply slow.`);
