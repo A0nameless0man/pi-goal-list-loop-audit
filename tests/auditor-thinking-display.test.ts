@@ -10,6 +10,7 @@ import * as fs from "node:fs";
 
 import activate, { __testOnlyResetOwnerSession, __testOnlyResetStaleFlag } from "../extensions/loops/goal.js";
 import { MockPi, makeMockCtx, tmpCwd } from "./harness/mock-pi.js";
+import { loadSettings, saveSettings } from "../extensions/goal-settings.js";
 
 const GLOBAL_SETTINGS_PATH = process.env.GLLA_GLOBAL_SETTINGS_PATH!;
 const pi = new MockPi();
@@ -70,6 +71,30 @@ test("headless fallback-only auditors do not claim the session thinking cap is e
     const text = headlessText(ctx);
     assert.match(text, /auditorThinkingEffective: pending \(requested max \[session-inherit\]; configured fallbacks precede session; per-model support checked at dispatch\)/);
     assert.doesNotMatch(text, /auditorThinkingEffective: max \(.*capabilities unknown/);
+  } finally {
+    await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
+  }
+});
+
+test("headless explicit session selection reports the live pair despite global pins and retained backups", async () => {
+  const cwd = tmpCwd();
+  fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify({
+    aggressiveMode: false, auditorModel: "agnes/agnes-3.0-flash",
+    auditorThinkingLevel: "low", auditorModelFallbacks: ["agnes/agnes-3.0-flash"],
+  }));
+  const ctx = await boot(cwd);
+  const session = { provider: "live", id: "current", reasoning: true, thinkingLevelMap: { max: "max" } };
+  ctx.model = session;
+  ctx.modelRegistry = { getAvailable: () => [FLASH, session] };
+  saveSettings("project", cwd, { auditorModel: null });
+  try {
+    await pi.command("glla", "", ctx);
+    const line = headlessText(ctx).split("\n").find(line => line.startsWith("auditorThinkingEffective:"));
+    assert.ok(line, "headless output includes the effective auditor route");
+    assert.match(line, /^auditorThinkingEffective: max /, "uses the live dial, not the global pin or backup cap");
+    assert.ok(line.includes("live/current"), "identifies the live session model");
+    assert.doesNotMatch(line, /pending|fallbacks precede session|capped by agnes/);
+    assert.deepEqual(loadSettings(cwd).auditorModelFallbacks, ["agnes/agnes-3.0-flash"], "display leaves the explicit backups intact");
   } finally {
     await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
   }

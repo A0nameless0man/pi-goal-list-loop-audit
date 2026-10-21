@@ -3401,7 +3401,8 @@ function auditorThinkingEffectiveLine(
   if (!meta) return `auditorThinkingEffective: ${effectiveRequested} (requested ${effectiveRequested} [${effectiveSource}]; ${ref} capabilities unknown)`;
   const effective = resolveAuditorThinkingLevel(meta, effectiveRequested);
   const why = effective === effectiveRequested ? "as requested" : `capped by ${ref} support`;
-  return `auditorThinkingEffective: ${effective} (requested ${effectiveRequested} [${effectiveSource}]; ${why})`;
+  const sessionRoute = effectiveSettings.auditorModel === null ? `session model ${ref}; ` : "";
+  return `auditorThinkingEffective: ${effective} (requested ${effectiveRequested} [${effectiveSource}]; ${sessionRoute}${why})`;
 }
 
 async function cmdSettings(args: string, ctx: ExtensionContext): Promise<void> {
