@@ -337,6 +337,21 @@ test("restoration preserves a deliberate thinking-only change by the user", asyn
   });
 });
 
+test("a manual thinking change during retry backoff is not overwritten by recovery or restoration", async () => {
+  await withDrafter({ drafterModel: "test/selected", drafterThinkingLevel: "low" }, async ({ ctx, selected, session }) => {
+    let resume!: (ready: boolean) => void;
+    const recovery = recoverDraft(ctx, { wait: () => new Promise(resolve => { resume = resolve; }) });
+    (ctx as any).thinkingLevel = "medium";
+    resume(true);
+    assert.equal(await recovery, false);
+    assert.equal(ctx.model, selected);
+    assert.equal(recoveryPrompts(), 0);
+    await restoreDraft();
+    assert.equal(ctx.model, session);
+    assert.equal(ctx.thinkingLevel, "medium");
+  });
+});
+
 test("a forbidden session introduced during retry delay is not selected or restored until policy permits it", async () => {
   await withDrafter({ drafterModel: "test/selected", drafterThinkingLevel: "low" }, async ({ ctx, selected, session }) => {
     let resume!: (ready: boolean) => void;
