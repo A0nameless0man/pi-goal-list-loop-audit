@@ -1,0 +1,9 @@
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+../../../../../tmp/glla-release-sensitivity-JePOGu/tests/respec-builder-audit-runtime.test.ts:
+(pass) real detached protocol approval archives the intended project before terminal handoff [6437.17ms]
+
+ 1 pass
+ 33 filtered out
+ 0 fail
+Ran 1 test across 1 file. [21.29s]

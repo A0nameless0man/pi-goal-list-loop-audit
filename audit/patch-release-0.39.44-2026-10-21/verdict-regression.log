@@ -1,0 +1,30 @@
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+../../../../../tmp/glla-release-sensitivity-JePOGu/tests/respec-builder-audit-runtime.test.ts:
+113 | 
+114 | test("real detached protocol approval archives the intended project before terminal handoff", async () => {
+115 |   const f = fixture();
+116 |   try {
+117 |     await runRespecBuilderAudit(f.ctx);
+118 |     assert.equal(readState(f.cwd).loop!.builder!.phase, "complete", JSON.stringify(readState(f.cwd).loop));
+                 ^
+AssertionError: {"target":"Build an artifact","builder":{"projectId":"62cc15be-4393-48e7-ad67-27a978a7c05f","phase":"replanning","revision":1,"cycle":1,"vision":"Build an artifact","requirements":[{"id":"artifact","text":"Artifact","acceptance":"artifact exists","status":"open"}],"tasks":[{"id":"task","text":"Build artifact","requirementIds":["artifact"],"status":"claimed"}],"feedback":["<evidence>\nartifact exists\n</evidence>\n<disapproved/>"],"history":[{"cycle":1,"tasks":[{"id":"task","text":"Build artifact","requirementIds":["artifact"],"status":"claimed"}],"outcome":"needs-work","report":"<evidence>\nartifact exists\n</evidence>\n<disapproved/>","attemptId":"aabbccdd-1111-2222-3333-444455556666"}]},"active":true,"startedAt":"2026-10-21T19:03:13.178Z","iteration":1,"maxIterations":0,"plateauWindow":5,"stallCount":0,"bestValue":null,"lastValue":null,"history":[]}
++ actual - expected
+
++ 'replanning'
+- 'complete'
+
+ generatedMessage: false,
+     actual: "replanning",
+   expected: "complete",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-release-sensitivity-JePOGu/tests/respec-builder-audit-runtime.test.ts:118:12
+      at processTicksAndRejections (native:7:39)
+(fail) real detached protocol approval archives the intended project before terminal handoff [2089.95ms]
+
+ 0 pass
+ 33 filtered out
+ 1 fail
+Ran 1 test across 1 file. [6.93s]

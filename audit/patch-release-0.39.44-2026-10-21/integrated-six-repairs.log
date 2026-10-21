@@ -1,0 +1,30 @@
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+audit/glla-command-review-2026-10-21/repro.test.ts:
+session picker effective result: {"auditorModel":null,"notifications":[{"message":"Auditor agent: live session model and thinking inherited together for this project; global settings and fallback lists preserved.","type":"info"}]}
+(pass) session selection must not resurrect global auditor settings hidden by project overrides [26.61ms]
+drafter runtime recovery: {"recovery":true,"model":"session","thinking":"max","selectedModels":["selected","session"]}
+(pass) runtime drafter failure must attempt the session fallback and retain restoration [5326.41ms]
+Designer frontmatter after model switch: 
+name: Designer
+description: 'Read-only design specialist for turning an explicit design request into an architecture, affected-file map, risks, trade-offs, and a verification plan before implementation.'
+tools: read, bash, grep, find, ls
+systemPromptMode: replace
+inheritProjectContext: true
+inheritSkills: false
+model: audit/other
+thinking: low
+x-managed-by: pi-goal-list-loop-audit
+x-glla-note: glla-managed Designer projection (model audit/other, thinking low). The pair comes from the /glla Designer pin or the live session; glla refreshes this file before every Designer launch, so it is a launch projection and not an independently saved pin. Managed by glla.
+
+(pass) session-backed Designer must update when the session model and thinking change [45.71ms]
+unconfigured Designer registered on startup: false
+(pass) on-demand Designer must stay unregistered until explicitly requested [74.07ms]
+thinking display/runtime: {"runtime":"high","display":"audit/selected · high (requested xhigh)"}
+(pass) thinking display must not raise an unsupported request above the runtime level [164.04ms]
+tenth fallback results: {"designer":"audit/other","drafter":"audit/other","configuredDesignerRefs":["audit/missing-primary","audit/missing-0","audit/missing-1","audit/missing-2","audit/missing-3","audit/missing-4","audit/missing-5","audit/missing-6","audit/missing-7","audit/missing-8","audit/other"]}
+(pass) ten configured fallback slots must remain available after a Designer or Drafter primary [58.58ms]
+
+ 6 pass
+ 0 fail
+Ran 6 tests across 1 file. [8.28s]

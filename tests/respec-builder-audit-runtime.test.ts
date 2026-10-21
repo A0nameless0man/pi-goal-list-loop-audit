@@ -15,7 +15,7 @@ import { createRespecBuilder, adoptRespecRequirements, planRespecIncrement, clai
 import { state, replaceState, persistStateLine } from "../extensions/goal-state.js";
 import { readState } from "../extensions/goal-loop-core.js";
 import { MockPi, tmpCwd, makeMockCtx } from "./harness/mock-pi.js";
-import { untilMs } from "./harness/host-budget.js";
+import { hangDeadlineMs, untilMs } from "./harness/host-budget.js";
 
 const worker = `
 import { readFile, writeFile, rename } from "node:fs/promises";
@@ -45,7 +45,7 @@ function fixture(env: Record<string, string> = {}) {
     completed: (_ctx, _id, summary) => { if (env.SUMMARY_FAIL) throw new Error("Receipt failed"); summaries.push(summary); return true; },
     refresh: () => { const value = state.loop?.builder && getRespecAuditLive(state.loop.builder, respecAuditLiveScope(cwd, startedAt)); if (value) { progress.push(value.phase); observations.push({ ...value }); } },
     auditSleep: async () => { if (env.FREEZE_RETRY) { replaceState({ ...state, supervisorPausedAt: Date.now() }); persistStateLine(cwd, state); } },
-    auditRuntime: { command: process.execPath, workerPath: file, homeDir: cwd, pollIntervalMs: 10, heartbeatNoProgressMs: 5000, firstEventTimeoutMs: 5000, env } });
+    auditRuntime: { command: process.execPath, workerPath: file, homeDir: cwd, pollIntervalMs: 10, heartbeatNoProgressMs: hangDeadlineMs(5000), firstEventTimeoutMs: hangDeadlineMs(5000), env } });
   return { cwd, ctx, startedAt, original, builder, file, counts: () => ({ wakes, finishes }), summaries, progress, observations, disown: () => { owned = false; }, resolutions: () => resolutions };
 }
 
@@ -271,7 +271,7 @@ for (const resumeHeld of [false, true]) test(`actual project lifecycle reaches d
   const file = path.join(cwd, "bounded-auditor-worker.mjs"); fs.writeFileSync(file, worker);
   await pi.fire("session_start", { reason: "startup" }, ctx);
   const restore = __testOnlyRespecAuditorRuntime({ resolveModel: () => ({ model: "test/provider-model" }), auditSleep: async () => {},
-    auditRuntime: { command: process.execPath, workerPath: file, homeDir: cwd, pollIntervalMs: 10, heartbeatNoProgressMs: 5000, firstEventTimeoutMs: 5000, env: { RESULT_DELAY: "1500" } } });
+    auditRuntime: { command: process.execPath, workerPath: file, homeDir: cwd, pollIntervalMs: 10, heartbeatNoProgressMs: hangDeadlineMs(5000), firstEventTimeoutMs: hangDeadlineMs(5000), env: { RESULT_DELAY: "1500" } } });
   try {
     await pi.command("loop", "respec build the artifact", ctx); clearLoopTimer();
     await pi.runTool("propose_project_requirements", { requirements: [{ id: "artifact", text: "Artifact", acceptance: "artifact exists" }] }, ctx);
