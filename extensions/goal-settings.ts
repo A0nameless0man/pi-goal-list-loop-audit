@@ -543,6 +543,9 @@ export function __testOnlyResetInvalidSettingReports(): void {
 }
 
 export function normalizeLoadedSettings(settings: Settings): Settings {
+  // null is an intentional pair-level override, not invalid lower-layer
+  // thinking. Apply that policy before collecting dropped-junk evidence.
+  if (settings.auditorModel === null) delete settings.auditorThinkingLevel;
   // C10 snapshot: every key the checks below DELETE is a dead hand-edited
   // value (defaults are valid by construction, so merged-in file junk is
   // the only deletable content). Snapshot first, diff at the end.
@@ -776,11 +779,7 @@ export function normalizeLoadedSettings(settings: Settings): Settings {
   if (typeof settings.notifyCmd !== "string" || settings.notifyCmd.trim().length === 0) {
     delete settings.notifyCmd;
   }
-  if (settings.auditorModel === null) {
-    // Explicit inheritance is different from deleting a project override:
-    // deleting reveals a global pin; null masks both halves of that pair.
-    delete settings.auditorThinkingLevel;
-  } else if (typeof settings.auditorModel !== "string" || settings.auditorModel.trim().length === 0) {
+  if (settings.auditorModel !== null && (typeof settings.auditorModel !== "string" || settings.auditorModel.trim().length === 0)) {
     delete settings.auditorModel;
   }
   if (typeof settings.drafterModel !== "string" || settings.drafterModel.trim().length === 0) {

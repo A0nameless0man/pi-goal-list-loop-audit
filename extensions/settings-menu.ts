@@ -205,12 +205,13 @@ export function buildSettingsRows(
   // v0.38.10: the compactor never runs on the session model (it is the
   // stuck one) — unset means registry plan B, not a session lease.
   const compactorRef = settings.compactorModel?.trim() ? settings.compactorModel : "registry plan B";
-  const auditorRef = settings.auditorModel?.trim() ? settings.auditorModel
-    : settings.auditorModelFallbacks?.length ? "fallback chain (first eligible)" : "session model";
+  const auditorRef = settings.auditorModel === null ? sessionRef
+    : settings.auditorModel?.trim() ? settings.auditorModel
+      : settings.auditorModelFallbacks?.length ? "fallback chain (first eligible)" : "session model";
   // An unset auditor level follows the live parent dial. This keeps the
   // detached verifier at the same effective reasoning level as the main
   // agent (including max) without preventing an explicit auditor override.
-  const auditorThinking = settings.auditorModel?.trim() || settings.auditorModelFallbacks?.length
+  const auditorThinking = settings.auditorModel !== null && (settings.auditorModel?.trim() || settings.auditorModelFallbacks?.length)
     ? settings.auditorThinkingLevel ?? sessionThinking : sessionThinking;
   // v0.37.0: compact ms duration for the auditor timeout rows ("5m" / "90s").
   const fmtTimeoutMs = (ms?: number): string => {

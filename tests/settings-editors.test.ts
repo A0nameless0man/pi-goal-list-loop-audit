@@ -24,6 +24,7 @@ import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { readGoalRuntimeSource } from "./harness/goal-source.js";
 import { resolveAuditorModel } from "../extensions/loops/goal-settings-ui.js";
 import { resolveCandidateThinkingLevel } from "../extensions/auditor-thinking.js";
+import { buildSettingsRows } from "../extensions/settings-menu.js";
 
 const GOAL_SRC = readGoalRuntimeSource();
 const GLOBAL_FILE = globalSettingsPath();
@@ -395,6 +396,7 @@ for (const scenario of [
         find: (provider: string, id: string) => models.find(model => model.provider === provider && model.id === id),
       },
     });
+    const hostCtx = ctx as unknown as ExtensionContext;
     const global = { auditorModel: "audit/global", auditorThinkingLevel: "low", auditorModelFallbacks: backups, autoAcceptDrafts: false, mainModelSameModelRetries: 3 };
     fs.mkdirSync(path.dirname(GLOBAL_FILE), { recursive: true });
     fs.writeFileSync(GLOBAL_FILE, JSON.stringify(global, null, 2));
@@ -404,7 +406,7 @@ for (const scenario of [
     fs.writeFileSync(projectSettingsPath(cwd), JSON.stringify(project));
     ctx.ui.customStubMode = true;
     ctx.ui.customImpl = async () => ({ kind: "session" });
-    await handleSettingChoice("auditorModel", ctx);
+    await handleSettingChoice("auditorModel", hostCtx);
 
     assert.equal(fs.readFileSync(GLOBAL_FILE, "utf8"), globalBytes, "global settings are byte-for-byte unchanged");
     const persisted = JSON.parse(fs.readFileSync(projectSettingsPath(cwd), "utf8"));
@@ -413,12 +415,22 @@ for (const scenario of [
     const settings = loadSettings(cwd);
     assert.equal(settings.auditorModel, null);
     assert.equal(settings.auditorThinkingLevel, undefined);
+    const journal = path.join(cwd, ".pi-glla", "active.jsonl");
+    const entries: Array<{ type: string; value?: { key?: string } }> = fs.existsSync(journal)
+      ? fs.readFileSync(journal, "utf8").split("\n").filter(Boolean).map(line => JSON.parse(line)) : [];
+    assert.ok(!entries.some(entry => entry.type === "settings_invalid_ignored" && entry.value?.key === "auditorThinkingLevel"), "an intentionally shadowed valid dial is not junk");
     assert.deepEqual(settings.auditorModelFallbacks, backups);
-    const resolved = resolveAuditorModel(ctx, settings.auditorModel, settings.auditorModelFallbacks);
+    const resolved = resolveAuditorModel(hostCtx, settings.auditorModel, settings.auditorModelFallbacks);
     assert.equal(resolved.model, session);
     assert.equal(resolved.via, "session");
     assert.equal(resolveCandidateThinkingLevel(resolved, { auditorThinkingLevel: settings.auditorThinkingLevel, sessionThinkingLevel: ctx.thinkingLevel }), "max");
     assert.deepEqual(resolved.fallbackModels?.map(candidate => candidate.ref), backups);
+    const row = buildSettingsRows(settings, settingsProvenance(cwd), {
+      sessionModel: "live/current", sessionThinkingLevel: ctx.thinkingLevel,
+    }).find(row => row.id === "auditorModel");
+    assert.ok(row, "auditor model row exists");
+    assert.ok(row.valueText.includes("live/current"), "menu names the live session model, not the backup chain");
+    assert.ok(row.valueText.includes("max"), "menu shows the effective session dial");
     assert.equal(loadSettings(otherProject).auditorModel, "audit/global");
     assert.equal(loadSettings(otherProject).auditorThinkingLevel, "low");
     assert.deepEqual(loadSettings(otherProject).auditorModelFallbacks, global.auditorModelFallbacks);
@@ -426,14 +438,14 @@ for (const scenario of [
     // It is a live choice, not a pin to whatever ref/dial was current on save.
     const replacement = { ...session, id: "replacement" };
     Object.assign(ctx, { model: replacement, thinkingLevel: "medium" });
-    const later = resolveAuditorModel(ctx, loadSettings(cwd).auditorModel, settings.auditorModelFallbacks);
+    const later = resolveAuditorModel(hostCtx, loadSettings(cwd).auditorModel, settings.auditorModelFallbacks);
     assert.equal(later.model, replacement);
     assert.equal(resolveCandidateThinkingLevel(later, { sessionThinkingLevel: ctx.thinkingLevel }), "medium");
 
     // A subsequent explicit pin replaces the tombstone in the same project.
     ctx.ui.customImpl = async () => ({ kind: "model", ref: "audit/project" });
     ctx.ui.selectImpl = async () => "high";
-    await handleSettingChoice("auditorModel", ctx);
+    await handleSettingChoice("auditorModel", hostCtx);
     assert.equal(loadSettings(cwd).auditorModel, "audit/project");
     assert.equal(loadSettings(cwd).auditorThinkingLevel, "high");
     assert.equal(fs.readFileSync(GLOBAL_FILE, "utf8"), globalBytes);

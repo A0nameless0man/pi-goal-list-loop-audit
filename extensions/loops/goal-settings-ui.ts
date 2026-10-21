@@ -1709,7 +1709,12 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
         ctx.ui.notify("Auditor agent: live session model and thinking inherited together for this project; global settings and fallback lists preserved.", "info");
         return;
       }
-      saveSettings("global", ctx, { auditorModel: pick.ref });
+      // Model + dial are one editor transaction. A project-owned pair must
+      // not save its dial into the global baseline after replacing null.
+      const sources = settingsProvenance(ctx.cwd);
+      const scope = sources.auditorModel?.source === "project" || sources.auditorThinkingLevel?.source === "project" ? "project" : "global";
+      const saveAuditor = (patch: Pick<Settings, "auditorModel" | "auditorThinkingLevel">): void => saveSettings(scope, ctx, patch);
+      saveAuditor({ auditorModel: pick.ref });
       // v0.31.4: thinking is chosen WITH the model (user: "we are setting
       // the thinking when we select the model now or we should") — there is
       // no standalone thinking row to forget about. Esc keeps the level.
@@ -1727,7 +1732,7 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
         // Audit 2026-09-07 (MEDIUM, finding 387): a non-reasoning model
         // must not inherit a dead override — clear it so the next
         // reasoning model starts from session inheritance, not a stale pin.
-        if (curThinking !== undefined) saveSettings("global", ctx, { auditorThinkingLevel: undefined });
+        if (curThinking !== undefined) saveAuditor({ auditorThinkingLevel: undefined });
         ctx.ui.notify(`Auditor model: ${pick.ref} — this model exposes no thinking levels (auditor runs with thinking off)${curThinking !== undefined ? "; cleared the stale thinking override" : ""}.`, "info");
         return;
       }
@@ -1746,8 +1751,8 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
         ),
       );
       const inheritThinking = t?.startsWith("session —") ?? false;
-      if (inheritThinking) saveSettings("global", ctx, { auditorThinkingLevel: undefined });
-      else if (t) saveSettings("global", ctx, { auditorThinkingLevel: t.split(" ")[0] as Settings["auditorThinkingLevel"] });
+      if (inheritThinking) saveAuditor({ auditorThinkingLevel: undefined });
+      else if (t) saveAuditor({ auditorThinkingLevel: t.split(" ")[0] as Settings["auditorThinkingLevel"] });
       ctx.ui.notify(`Auditor model: ${pick.ref}${inheritThinking ? " · thinking inherited from the session" : t ? ` · thinking ${t.split(" ")[0]}` : ""}`, "info");
       return;
     }
