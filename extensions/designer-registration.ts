@@ -60,7 +60,9 @@ export type DesignerRegistrationOutcome =
   /** The session model is forbidden and no eligible Designer model exists. */
   | "blocked"
   /** A user-owned definition file is present and was left untouched. */
-  | "user-owned";
+  | "user-owned"
+  /** The projection could not be written; a requested launch would fail. */
+  | "failed";
 
 /** Keep the managed Designer definition current without enabling it on an
  * unconfigured startup. An explicit request or explicit configuration can
@@ -91,11 +93,13 @@ export function refreshDesignerRegistration(
       return "blocked";
     }
     if (!ensureRequestedDesigner({ agentDir, model: resolution.selectedRef, thinking: resolution.thinking })) {
-      return "absent";
+      return "failed";
     }
     return "registered";
   } catch {
-    // A failed refresh must never break the launch it was preparing.
-    return "absent";
+    // A failed refresh must never break the launch it was preparing, but it
+    // must not be silent either: the caller reports it so a requested launch
+    // does not fail later as an unexplained unknown agent.
+    return "failed";
   }
 }

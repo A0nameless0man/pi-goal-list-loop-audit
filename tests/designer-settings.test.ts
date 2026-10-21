@@ -164,6 +164,38 @@ for (const enabled of [undefined, false] as const) {
   });
 }
 
+test("a failed Designer registration is reported instead of failing later as an unknown agent", async () => {
+  const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
+  const previousSettingsPath = process.env.GLLA_GLOBAL_SETTINGS_PATH;
+  __testOnlyResetProcessState();
+  const agentDir = tmpCwd();
+  // A file where the agents directory belongs makes every managed write fail.
+  fs.writeFileSync(path.join(agentDir, "agents"), "not a directory");
+  process.env.PI_CODING_AGENT_DIR = agentDir;
+  process.env.GLLA_GLOBAL_SETTINGS_PATH = path.join(tmpCwd(), "settings.json");
+  try {
+    fs.writeFileSync(globalSettingsPath(), JSON.stringify({ aggressiveMode: false }));
+    const pi = new MockPi();
+    activate(pi.api);
+    const cwd = tmpCwd();
+    seedState(cwd, {});
+    const ctx = makeMockCtx(cwd, { sessionManager: { name: "designer-failure" } });
+    await pi.fire("session_start", { reason: "startup" }, ctx);
+    await pi.fire("tool_call", { toolName: "subagent", input: { agent: "Designer", task: "Review this approach" } }, ctx);
+    const warnings = ctx.ui.notifies.filter((entry) => entry.type === "warning");
+    assert.ok(
+      warnings.some((entry) => /could not register the Designer definition/.test(entry.message)),
+      "a failed registration must be reported at the launch boundary",
+    );
+  } finally {
+    __testOnlyResetProcessState();
+    if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+    else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
+    if (previousSettingsPath === undefined) delete process.env.GLLA_GLOBAL_SETTINGS_PATH;
+    else process.env.GLLA_GLOBAL_SETTINGS_PATH = previousSettingsPath;
+  }
+});
+
 test("resolveDesignerConfig: dedicated keys win per-field over legacy pins", () => {
   const legacyOnly = resolveDesignerConfig({
     subagentModelOverrides: { Designer: "legacy/model" },

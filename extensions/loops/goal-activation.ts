@@ -3593,7 +3593,13 @@ async function handleHotLengthExhaustion(
     // launch entry even outside goals and even if a model/thinking event was
     // missed (restore, extension-driven changes, or a fresh turn context).
     if (configuredToolName === "subagent" && event?.input?.action === undefined) {
-      refreshDesignerRegistration(designerSessionContext(ctx), toolSettings, requestsDesigner(event?.input));
+      const designerRequested = requestsDesigner(event?.input);
+      const outcome = refreshDesignerRegistration(designerSessionContext(ctx), toolSettings, designerRequested);
+      // A write that failed must not surface later as an unexplained
+      // unknown-agent error at the launch.
+      if (designerRequested && outcome === "failed") {
+        ctx.ui.notify("glla could not register the Designer definition for this launch — the managed agent file could not be written.", "warning");
+      }
     }
     if (draftingTarget !== null) {
       draftingHandoff.invalidate();
@@ -3681,7 +3687,9 @@ async function handleHotLengthExhaustion(
     if (backgroundContext) return { systemPrompt: `${event?.systemPrompt ?? ""}\n\n${backgroundContext}` };
   });
   pi.on("thinking_level_select", (event, ctx) => {
-    if (isForeignCtx(ctx)) return;
+    // Same admission gate as the sibling selection/turn hooks: a session
+    // that is not the live host must not rewrite the managed projection.
+    if (sessionHandoffPending || extensionApiStale || staleTerminalDone || zombieStoodDown || isForeignCtx(ctx)) return;
     observeDrafterThinkingSelection(ctx, event.level);
     refreshDesignerRegistration(designerSessionContext(ctx, { thinkingLevel: event.level }), loadSettings(ctx.cwd));
   });
