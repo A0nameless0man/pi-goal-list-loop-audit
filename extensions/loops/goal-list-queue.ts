@@ -493,10 +493,11 @@ export function observeDrafterModelSelection(ctx: ExtensionContext, ref: string)
 /** Select the drafting-only model and retain a generation-fenced restore lease. */
 async function beginDrafterModel(ctx: ExtensionContext): Promise<boolean> {
   const generation = sessionGeneration;
+  const startSequence = draftingStartSequence;
   await restoreDrafterModel();
   // A failed restoration still owns the original pair. Never replace it
   // with a new lease whose "original" is the failed drafter.
-  if (generation !== sessionGeneration || draftingModelLease || draftingTarget === null
+  if (generation !== sessionGeneration || startSequence !== draftingStartSequence || draftingModelLease || draftingTarget === null
     || sessionHandoffPending || extensionApiStale || staleTerminalDone || zombieStoodDown) return false;
   const settings = loadSettings(ctx.cwd);
   const resolution = resolveDrafterModel(ctx, settings);
@@ -529,7 +530,8 @@ async function beginDrafterModel(ctx: ExtensionContext): Promise<boolean> {
   const alreadyActive = beforeRef.toLowerCase() === selectedRef.toLowerCase();
   const switched = alreadyActive || await switchDraftingModel(lease, selected.model);
   const live = draftingLeaseContext(lease);
-  if (draftingModelLease !== lease || lease.controller.signal.aborted || draftingTarget === null || !live) return false;
+  if (draftingModelLease !== lease || lease.controller.signal.aborted || draftingTarget === null || !live
+    || startSequence !== draftingStartSequence) return false;
   if (!switched) {
     appendLedger(live.cwd, "drafter_model_fallback", { configured: resolution.configuredRefs, selected: selectedRef, via: "session-model", reason: "setModel rejected" });
     live.ui.notify(`Drafter model ${selectedRef} could not be selected; drafting stays on the current session model.`, "warning");

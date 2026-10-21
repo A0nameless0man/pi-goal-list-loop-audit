@@ -328,6 +328,32 @@ test("cancellation serializes restoration behind an already-started model switch
   });
 });
 
+test("a newer drafting command survives cancellation of an older in-flight model selection", async () => {
+  await withDrafter({ drafterModel: "test/selected", drafterThinkingLevel: "low" }, async ({ ctx, selected, api }) => {
+    const select = api.setModel;
+    let finishSwitch!: () => void;
+    let delayOnce = true;
+    api.setModel = (model: unknown) => {
+      if (model === selected && delayOnce) {
+        delayOnce = false;
+        return new Promise<boolean>(resolve => { finishSwitch = () => { (ctx as any).model = selected; resolve(true); }; });
+      }
+      return select(model);
+    };
+    const prompts = pi.userMessages.length;
+    const first = pi.command("list", "", ctx);
+    await tick(20);
+    assert.ok(finishSwitch);
+    const second = pi.command("list", "", ctx);
+    finishSwitch();
+    await first;
+    await second;
+    assert.equal(pi.userMessages.length, prompts + 1, "only the latest interview receives its seed");
+    assert.equal(ctx.model, selected);
+    assert.equal(ctx.thinkingLevel, "low");
+  });
+});
+
 test("restoration preserves a deliberate thinking-only change by the user", async () => {
   await withDrafter({ drafterModel: "test/selected", drafterThinkingLevel: "low" }, async ({ ctx, session }) => {
     (ctx as any).thinkingLevel = "medium";
