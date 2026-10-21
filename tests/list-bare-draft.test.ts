@@ -265,19 +265,23 @@ test("a manual model selection during retry delay supersedes the old drafter and
   });
 });
 
-test("a host replacement during a pending retry cannot receive the old interview's model, dial or prompt", async () => {
+for (const shutdown of [true, false]) test(`host replacement (shutdown=${shutdown}) cannot receive the old drafter's model, dial or prompt`, async () => {
   await withDrafter({ drafterModel: "test/selected", drafterThinkingLevel: "low" }, async ({ ctx, manual, api }) => {
     let waiting: AbortSignal | undefined;
     const recovery = recoverDraft(ctx, { wait: async (_ms, signal) => {
       waiting = signal;
       return waitForDrafterRetry(60_000, signal);
     } });
-    // A real reload announces shutdown before replacing the host API.
-    // Cancellation must settle its delay before that replacement is bound.
-    await pi.fire("session_shutdown", { reason: "reload" }, ctx);
-    assert.equal(waiting!.aborted, true);
-    await restoreDraft();
-    const replacement = makeMockCtx(ctx.cwd, { sessionManager: { name: "replacement-host" } }) as any;
+    // Cover both a normal reload and a file-backed host successor that
+    // arrives without shutdown. An arbitrary in-memory child is not a host.
+    if (shutdown) {
+      await pi.fire("session_shutdown", { reason: "reload" }, ctx);
+      assert.equal(waiting!.aborted, true);
+      await restoreDraft();
+    }
+    const replacement = makeMockCtx(ctx.cwd, { sessionManager: {
+      getSessionFile: () => `${ctx.cwd}/replacement.jsonl`, getBranch: () => [],
+    } }) as any;
     replacement.model = manual;
     replacement.thinkingLevel = "medium";
     api.getThinkingLevel = () => replacement.thinkingLevel;
