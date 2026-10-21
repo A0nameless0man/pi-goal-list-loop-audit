@@ -205,11 +205,20 @@ test("v0.36.0: auditor thinking inherits the parent dial unless explicitly overr
   // sites; max is the detached/headless default when the host exposes no dial.
   // Initial completion resolves the dial per candidate (auditor 22:39: the raw
   // requested level must never reach a worker that does not support it).
-  assert.match(SRC, /const requestedThinking = settings\.auditorThinkingLevel \?\? ctx\.thinkingLevel \?\? "max";/);
+  //
+  // v0.39.43: the SESSION model — the auditor's default and its last resort
+  // — runs at the SESSION's dial. `auditorThinkingLevel` is a choice about
+  // the CONFIGURED auditor models, so it no longer turns down the route that
+  // has to carry the final decision. With no configured dial, every
+  // candidate still inherits the live session dial exactly as before.
+  assert.match(SRC, /const sessionThinking = ctx\.thinkingLevel \?\? "max";/);
+  assert.match(SRC, /const requestedThinking = isSessionModelTail\(candidate\)/);
+  assert.match(SRC, /\? sessionThinking\s*:\s*\(settings\.auditorThinkingLevel \?\? sessionThinking\);/);
   assert.match(SRC, /thinkingLevel: effectiveThinking as any,/);
   // Completion retries inherit the dial before resolving support separately
   // for every fallback model; never pass an unsupported level to the worker.
-  assert.match(SRC, /const requestedThinking = settings\.auditorThinkingLevel \?\? liveCtx\.thinkingLevel \?\? "max";/);
+  assert.match(SRC, /const sessionThinking = liveCtx\.thinkingLevel \?\? "max";/);
+  assert.match(SRC, /const requestedThinking = isSessionModelTail\(candidate\)/);
   assert.match(SRC, /const effectiveThinking = resolveAuditorThinkingLevel\(candidate\.model, requestedThinking\);/);
   assert.match(SRC, /thinkingLevel: effectiveThinking as any,/);
   assert.ok(!SRC.includes("getSessionThinkingLevel"), "the session-dial follower is explicit context, not a hidden helper");
