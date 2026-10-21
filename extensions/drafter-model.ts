@@ -8,7 +8,7 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 import { appendLedger, isForbiddenModel } from "./goal-loop-core.js";
-import { MAX_MAIN_MODEL_FALLBACKS, modelRef, normalizeMainModelFallbackRefs } from "./main-model-recovery.js";
+import { MAX_MAIN_MODEL_FALLBACKS, modelRef, normalizeBoundedModelRefs, normalizeMainModelFallbackRefs } from "./main-model-recovery.js";
 import { ModelSelector } from "./model-selector.js";
 import type { Settings } from "./goal-settings.js";
 
@@ -59,15 +59,20 @@ export function resolveDrafterModelRef(ctx: Pick<ExtensionContext, "modelRegistr
  */
 export function resolveDrafterModel(ctx: ExtensionContext, settings: Pick<Settings, "drafterModel" | "drafterModelFallbacks" | "forbiddenModels">): DrafterModelResolution {
   const primary = typeof settings.drafterModel === "string" ? settings.drafterModel.trim() : "";
-  const configuredRefs = normalizeMainModelFallbackRefs([
+  // Bound the fallback setting before prepending the independent primary.
+  const configuredRefs = normalizeBoundedModelRefs([
     ...(primary ? [primary] : []),
     ...normalizeMainModelFallbackRefs(settings.drafterModelFallbacks),
-  ]).slice(0, MAX_DRAFTER_FALLBACKS);
+  ], MAX_DRAFTER_FALLBACKS + 1);
   const currentRef = modelRef(ctx.model);
   const forbidden = (ref: string) => isForbiddenModel(ref, settings.forbiddenModels);
   const selector = new ModelSelector({
     getChain: () => configuredRefs,
-    resolve: (ref) => resolveDrafterModelRef(ctx, ref),
+    resolve: (ref) => {
+      const model = resolveDrafterModelRef(ctx, ref);
+      // Bare names/aliases must not bypass policy on the resolved identity.
+      return model && !forbidden(modelRef(model) ?? ref) ? model : undefined;
+    },
     isForbidden: forbidden,
     record: (event) => {
       appendLedger(ctx.cwd, "model_fallback_select", {
@@ -101,9 +106,12 @@ export function resolveDrafterModel(ctx: ExtensionContext, settings: Pick<Settin
     const selected = selector.selectNextValid({ kind: "drafter" }, currentRef, attempted);
     if (!("model" in selected) || typeof selected.ref !== "string") break;
     attempted.push(selected.ref);
-    candidates.push({ ref: selected.ref, model: selected.model, via: "configured" });
+    const identity = modelRef(selected.model)?.toLowerCase() ?? selected.ref.toLowerCase();
+    if (!candidates.some(candidate => (modelRef(candidate.model) ?? candidate.ref).toLowerCase() === identity)) {
+      candidates.push({ ref: selected.ref, model: selected.model, via: "configured" });
+    }
   }
-  if (ctx.model && currentRef && !candidates.some((candidate) => candidate.ref.toLowerCase() === currentRef.toLowerCase())) {
+  if (ctx.model && currentRef && !candidates.some((candidate) => (modelRef(candidate.model) ?? candidate.ref).toLowerCase() === currentRef.toLowerCase())) {
     // Audit 2026-09-06: the session last resort must not bypass the
     // forbiddenModels gate — a forbidden session model is refused (and
     // ledgered) instead of being leased silently.

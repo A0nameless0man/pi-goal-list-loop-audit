@@ -17,7 +17,7 @@ import { resolveDrafterModelRef } from "./drafter-model.js";
 import { resolveAuditorThinkingLevel } from "./auditor-thinking.js";
 import { resolveDesignerConfig, type Settings } from "./goal-settings.js";
 import { appendLedger, isForbiddenModel } from "./goal-loop-core.js";
-import { MAX_MAIN_MODEL_FALLBACKS, modelRef, normalizeMainModelFallbackRefs } from "./main-model-recovery.js";
+import { MAX_MAIN_MODEL_FALLBACKS, modelRef, normalizeBoundedModelRefs, normalizeMainModelFallbackRefs } from "./main-model-recovery.js";
 
 export interface DesignerModelResolution {
   /** Ordered configured refs (primary first), bounded and deduped.
@@ -49,10 +49,12 @@ export function resolveDesignerModel(
   opts?: { reportBlocked?: boolean },
 ): DesignerModelResolution {
   const config = resolveDesignerConfig(settings as Settings);
-  const configuredRefs = normalizeMainModelFallbackRefs([
+  // Ten fallback slots are independent of the optional primary. Only the
+  // setting itself is capped; combining it with the primary must not drop #10.
+  const configuredRefs = normalizeBoundedModelRefs([
     ...(config.model ? [config.model] : []),
-    ...config.fallbacks,
-  ]).slice(0, MAX_MAIN_MODEL_FALLBACKS);
+    ...normalizeMainModelFallbackRefs(config.fallbacks),
+  ], MAX_MAIN_MODEL_FALLBACKS + 1);
   const forbidden = (ref: string) => isForbiddenModel(ref, settings.forbiddenModels);
   const currentRef = modelRef(ctx.model as any);
   for (const ref of configuredRefs) {
