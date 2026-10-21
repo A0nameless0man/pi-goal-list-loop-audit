@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import activate, { __testOnlyResetProcessState } from '../../extensions/loops/goal.ts';
-import { handleSettingChoice } from '../../extensions/loops/goal-settings-ui.ts';
+import { resolveAuditorModel, handleSettingChoice } from '../../extensions/loops/goal-settings-ui.ts';
 import { MockPi, makeMockCtx } from '../../tests/harness/mock-pi.ts';
 import { loadSettings, projectSettingsPath } from '../../extensions/goal-settings.ts';
 import { resolveDesignerModel } from '../../extensions/designer-model.ts';
@@ -49,7 +49,10 @@ test('session selection must not resurrect global auditor settings hidden by pro
     await handleSettingChoice('auditorModel', ctx);
     const settings = loadSettings(cwd);
     console.log('session picker effective result:', JSON.stringify({auditorModel: settings.auditorModel, auditorThinkingLevel: settings.auditorThinkingLevel, notifications: ctx.ui.notifies}));
-    assert.equal(settings.auditorModel, undefined, 'session selection must actually inherit, not unmask the global auditor pin');
+    const resolved = resolveAuditorModel(ctx, settings.auditorModel, settings.auditorModelFallbacks);
+    assert.equal(resolved.model, ctx.model, 'session selection must actually inherit, not unmask the global auditor pin');
+    assert.equal(settings.auditorThinkingLevel, undefined, 'hidden global thinking must not shadow the live session');
+    assert.equal(JSON.parse(fs.readFileSync(globalFile, 'utf8')).auditorModel, 'audit/selected', 'other projects retain the global model');
   } finally { await pi.fire('session_shutdown', {reason: 'audit-test'}, ctx); }
 });
 

@@ -2,7 +2,30 @@
 
 Reviewed implementation revision: `b36d84063` (the source/settings changes from the preceding conversation). This is a scoped code-and-behavior review, not a whole-repository approval, detached goal completion verdict, release validation or live-provider health check. No implementation files were changed in this review.
 
-## Findings
+## Final dispositions for patch 0.39.44
+
+All six findings below are retained as historical observations against `b36d84063`.
+The integrated reproducer now passes **6/6** on the repaired tree. Finding 2's old
+`undefined` assertion was replaced with the actual contract: production auditor
+resolution returns the live session, inherited thinking is not shadowed, and the
+global model stays unchanged for other projects. The explicit project session
+representation is documented `auditorModel: null`, not deletion that reveals a pin.
+Original failure logs remain historical and unchanged.
+
+| Finding | Disposition and behavioral regression | Detailed evidence |
+| --- | --- | --- |
+| 1 — Drafter recovery loses session/lease | Repaired: real lifecycle recovery, rejected restoration, cancellation, manual selection/thinking and policy rechecks in `tests/list-bare-draft.test.ts` | [Drafter recovery](../drafter-recovery-repair-2026-10-21/README.md) |
+| 2 — Session choice unmasks global auditor pins | Repaired: layered session selection, global preservation and later re-pin in `tests/settings-editors.test.ts`; actual headless display in `tests/auditor-thinking-display.test.ts` | [Auditor layers](../auditor-session-layers-2026-10-21/README.md) |
+| 3 — Implicit pair enables on-demand Designer | Repaired: actual startup/marked request in `tests/manual-resume-failback.test.ts`; configuration, disabled and ownership boundaries in `tests/designer-settings.test.ts` | [Designer opt-in](../designer-enablement-2026-10-21/README.md) |
+| 4 — Designer session inheritance becomes static | Repaired: real model/thinking/turn/tool-call handlers, ordinary no-goal request, explicit pin independence in `tests/designer-settings.test.ts` | [Designer lifecycle](../designer-session-inheritance-2026-10-21/README.md) |
+| 5 — Thinking display exceeds dispatch | Repaired: menu/runtime and actual headless parity, max without xhigh, inherited thinking and non-reasoning models in `tests/settings-menu-complete.test.ts` and `tests/auditor-thinking-display.test.ts` | [Thinking parity](../thinking-display-parity-2026-10-21/README.md) |
+| 6 — Primary consumes fallback slot ten | Repaired: actual tenth selection for both roles, overflow, aliases, forbidden identities and explicit session order in `tests/designer-drafter-policy.test.ts` | [Ten slots](../ten-role-fallback-slots-2026-10-21/README.md) |
+
+Release gate results are recorded below when observed; the integrated 6/6 result alone
+is **not** a release-gate pass. No live project recovery, publication or installed-session
+reload is claimed.
+
+## Findings (historical review)
 
 ### 1. P1 — Drafter runtime recovery discards the session fallback and its restoration lease
 
@@ -14,7 +37,7 @@ Reviewed implementation revision: `b36d84063` (the source/settings changes from 
 
 **Durable direction:** walk all eligible candidates, including the session pair, recompute thinking for each route, and retain the restoration lease until restoration succeeds or a real user model change supersedes it. Recheck lifecycle/ownership after any awaited recovery delay.
 
-**Implementation candidate:** the first queued repair now passes the original drafter reproduction and expanded lifecycle regressions. Independent approval is pending; see [repair evidence](../drafter-recovery-repair-2026-10-21/README.md). Findings 2–6 remain separate open work.
+**Final disposition:** repaired; see the final regression map above and [repair evidence](../drafter-recovery-repair-2026-10-21/README.md).
 
 ### 2. P1 — Selecting session can reveal an old global auditor pin instead of inheriting the session
 
@@ -26,7 +49,7 @@ The session picker saves `{ auditorModel: undefined, auditorThinkingLevel: undef
 
 **Durable direction:** represent explicit project-level session inheritance instead of conflating it with removing a project override. Do not silently clear unrelated global settings for all projects as a workaround.
 
-**Implementation candidate:** project-local `auditorModel: null` now explicitly inherits the live session pair, keeps configured backups, and leaves global settings intact. Required behavioral checks pass; independent approval is pending. See [layer repair evidence](../auditor-session-layers-2026-10-21/README.md).
+**Final disposition:** project-local `auditorModel: null` explicitly inherits the live session pair, keeps configured backups, and leaves global settings intact. See the final regression map above and [layer repair evidence](../auditor-session-layers-2026-10-21/README.md).
 
 ### 3. P2 — Default session resolution accidentally enables the on-demand Designer on startup
 
@@ -68,7 +91,7 @@ Both normalize/cap the combined primary-plus-fallback list at ten. The settings 
 
 **Durable direction:** bound the fallback setting independently, then prepend the primary and append the session route with model-aware deduplication.
 
-## Reproduction and checks
+## Original reproduction and checks (historical)
 
 From repository root:
 
@@ -76,7 +99,7 @@ From repository root:
 bun test --parallel=1 --max-concurrency=1 --timeout=120000 audit/glla-command-review-2026-10-21/repro.test.ts
 ```
 
-The six tests assert the intended contract and intentionally **fail on the reviewed implementation**. They use temporary settings, mock host APIs, real GLLA lifecycle handlers and production resolvers; they make no model/provider requests. `repro.log` records the original run from `/tmp`; the tracked reproducer only changes import paths to repository-relative paths.
+The six tests asserted the intended contract and intentionally **failed on the originally reviewed implementation**. The current reproducer verifies the repaired behavior; its auditor assertion now checks effective behavior rather than the old incidental undefined representation. They use temporary settings, mock host APIs, real GLLA lifecycle handlers and production resolvers; they make no model/provider requests. `repro.log` records the original run from `/tmp`; the tracked reproducer only changes import paths to repository-relative paths.
 
 Additional checks:
 
@@ -86,4 +109,4 @@ Additional checks:
 - `node scripts/generate-inventory.mjs --check`: **passed**.
 - Full `npm test`: exceeded a **240-second** shell budget; **not passing / not completed**. Its partial output already contains the independent Designer opt-in failure; `existing-suite-incomplete.log`.
 
-The review is **not clean**. These findings are implementation work, not external blockers or permission to weaken the session-inheritance contract. No active project/session was changed or claimed recovered.
+The original review was **not clean**. Its failures were implementation work, not external blockers or permission to weaken the session-inheritance contract. Final dispositions are indexed above; original verification output is not relabeled as passing. No active project/session was changed or claimed recovered.

@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+## 0.39.44 — session inheritance and role fallback repairs (2026-10-21)
+
+- Drafter recovery tries the permitted original session pair after configured
+  models fail and retains its restoration lease until restoration succeeds.
+  Cancellation, ownership changes and manual selections stop stale retries.
+- Selecting the auditor's session route saves a project-local explicit session
+  override, so hidden global model/thinking pins cannot reappear. Other projects'
+  global settings and ordered backups remain intact.
+- An implicit resolved session pair no longer enables the on-demand Designer on
+  startup. Explicit configuration or a role request still registers it; disabled
+  settings and user-owned definitions remain independent.
+- Designer session inheritance follows subsequent model/thinking changes and
+  ordinary launches outside Designer-marked goals. Its managed definition is a
+  refreshed launch projection, not a stored session pin; explicit picks stay fixed.
+- `/glla` thinking displays share dispatch's downward resolution: unsupported
+  `xhigh` cannot appear as `max`, and non-reasoning models show `off`. Inherited
+  session thinking remains distinct from configured role thinking.
+- Designer and Drafter preserve ten fallback alternatives independently of the
+  primary. Ordered resolved identities are deduplicated, explicit session
+  fallbacks keep their position, and aliases cannot bypass forbidden-model policy.
+
+This patch is prepared locally; publication and installed-session reload are separate
+operator actions. Finding-to-regression evidence is indexed in
+`audit/glla-command-review-2026-10-21/README.md`.
+
 ## 0.39.43 — a rework round verifies the open objections, and a transient blip no longer discards it (2026-10-21)
 
 ### Rework rounds and transient provider failures
