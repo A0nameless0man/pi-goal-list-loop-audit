@@ -183,6 +183,8 @@ The read-only Designer role (goal/list items and tasks marked `Agent: Designer`)
 
 Enablement is tri-state: on keeps Designer registered, off never registers it (your model picks are preserved, and a marked item falls back to the inline design checkpoint with a warning), and on-demand (unset) registers it when work asks for it or a Designer model/thinking/fallback is configured. Registration resolves the model at write time — primary → fallbacks → session inherit — and if no configured ref is eligible and the session model itself is forbidden, Designer is not registered and the operator is warned rather than silently inheriting a forbidden model. A user-owned `Designer.md` (no glla marker) is never overwritten or removed.
 
+The managed `Designer.md` is a **launch projection, not a saved pin**: the companion resolves the child from that file when the child starts, so GLLA rewrites it from the live session before a Designer launch — after a model switch, a thinking-level change, a new turn, and on an ordinary Designer request that is not part of a Designer-marked goal. Session inheritance therefore never becomes a stale static pin: the resolved pair is not written into the settings, and the file itself records that it is a projection. An explicitly selected Designer model and thinking stay independent of the session dial and are preserved unchanged.
+
 ## Tool visibility and execution options
 
 `/glla tooloverride allow <tool>` and `hide <tool>` change project tool

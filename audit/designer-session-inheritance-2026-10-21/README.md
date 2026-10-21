@@ -146,11 +146,13 @@ Reviewer findings and their disposition:
 - **P2 — a thinking-only Designer selection is not independent of the session dial**
   (`extensions/designer-model.ts`, the session route): an explicit `designerThinkingLevel`
   without an explicit `designerModel` is not carried onto the session route. **Retained,
-  not changed.** The Designer tab always picks model and thinking together, so this
+  not changed.** This is the documented product contract (`docs/SETTINGS.md`: "When
+  registration returns to the session route, it uses the current session thinking, not this
+  override"), the Designer tab always picks model and thinking together, so the
   configuration is only reachable from a hand-edited or legacy settings file, and the
-  "session route inherits the pair" behavior is an existing intentional contract with its
-  own regression test. Changing it would rewrite an existing intentional expectation
-  without the user's consent; it is flagged here and in the completion record instead.
+  behavior has its own regression test. Changing it would rewrite an existing intentional
+  expectation without the user's consent; it is flagged here and in the completion record
+  instead.
 - **P2 — a workflow-script launch does not register an on-demand Designer.** **Retained
   by design**: GLLA never infers a role request from prose, management actions or
   executable scripts.
