@@ -184,6 +184,13 @@ models display `off`. Configured role thinking remains separate from inherited
 session thinking. Headless auditor output keeps the effective level pending when
 capabilities are unknown.
 
+Designer and Drafter each allow ten fallback models **in addition to** the optional
+primary. The fallback setting is bounded before combining it with the primary;
+explicit order is retained, duplicate model identities do not create independent
+attempts, and a permitted session model remains available as the final route. An
+explicit fallback naming the session model keeps its configured position. Forbidden
+refs and their resolved model identities remain excluded.
+
 ## Designer
 
 The read-only Designer role (goal/list items and tasks marked `Agent: Designer`) is configured on its own `/glla` **Designer** tab — enablement, the Designer agent (model + thinking, picked together like the Drafter), ordered fallback models, the effective resolution, and whether the managed `Designer.md` is currently registered in the pi agent dir. The generic Designer pins that used to live on the Subagents tab (`subagentModelOverrides.Designer`, `subagentThinkingOverrides.Designer`, `subagentFallbacks.Designer`) are migrated into the dedicated `designer*` keys on load: dedicated values win (an explicit `designerModelFallbacks: []` beats a legacy chain), the legacy entries are removed, and other roles' pins are untouched. Because `Designer.md` lives in the global agent dir, the dedicated keys are global-only; a legacy project-scoped Designer pin no longer applies.

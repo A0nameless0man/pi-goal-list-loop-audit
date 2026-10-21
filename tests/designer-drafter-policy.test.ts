@@ -17,10 +17,83 @@ import {
   buildAgentOverrideMd,
   syncSubagentModelOverrides,
 } from "../extensions/goal-loop-subagents.ts";
+import { resolveDesignerModel } from "../extensions/designer-model.ts";
 import { resolveDrafterModel, resolveDrafterThinkingLevel } from "../extensions/drafter-model.ts";
 import { continuationPrompt } from "../extensions/goal-continuation.ts";
 import { buildSettingsRows } from "../extensions/settings-menu.ts";
 import type { Settings } from "../extensions/goal-settings.ts";
+
+// The primary is not a fallback slot. Exercise selection (not just list size)
+// with a full ten-slot setting, then policy and identity aliases on both roles.
+for (const role of ["designer", "drafter"] as const) {
+  test(`${role} can select its tenth independent alternative and caps only the fallback setting`, () => {
+    const session = { provider: "test", id: "session", reasoning: true };
+    const tenth = { provider: "test", id: "tenth", reasoning: true };
+    const eleventh = { provider: "test", id: "eleventh", reasoning: true };
+    let available = [tenth, eleventh];
+    const ctx = {
+      cwd: fs.mkdtempSync(path.join(os.tmpdir(), "glla-ten-slots-")), model: session, thinkingLevel: "high",
+      modelRegistry: {
+        find: (provider: string, id: string) => available.find(m => m.provider === provider && m.id === id),
+        getAvailable: () => available, hasConfiguredAuth: () => true,
+      },
+    } as any;
+    const alternatives = [...Array.from({ length: 9 }, (_, i) => `test/missing-${i}`), "test/tenth"];
+    const settings = { [`${role}Model`]: "test/missing-primary", [`${role}ModelFallbacks`]: alternatives };
+    const resolve = (s: any) => role === "designer"
+      ? resolveDesignerModel(ctx, s, { reportBlocked: false })
+      : resolveDrafterModel(ctx, s);
+    const selected = (s: any): string | undefined => {
+      const result = resolve(s);
+      return "selectedRef" in result ? result.selectedRef : (result as ReturnType<typeof resolveDrafterModel>).selected?.ref;
+    };
+    assert.equal(selected(settings), "test/tenth");
+    assert.deepEqual(resolve(settings).configuredRefs, ["test/missing-primary", ...alternatives]);
+    // Input past the independently bounded setting must not create extra slots.
+    available = [eleventh];
+    assert.equal(selected({ ...settings, [`${role}ModelFallbacks`]: [...alternatives, "test/eleventh"] }), "test/session");
+    available = [tenth, eleventh];
+    assert.equal(selected({ ...settings, forbiddenModels: ["test/tenth"] }), "test/session");
+    assert.equal(selected({ ...settings, forbiddenModels: ["test/tenth", "test/session"] }), undefined);
+  });
+
+  test(`${role} retains explicit order and refuses forbidden resolved aliases`, () => {
+    const session = { provider: "test", id: "session", reasoning: true };
+    const first = { provider: "test", id: "first", name: "alias-first", reasoning: true };
+    const second = { provider: "test", id: "second", reasoning: true };
+    const ctx = {
+      cwd: fs.mkdtempSync(path.join(os.tmpdir(), "glla-slot-order-")), model: session,
+      modelRegistry: {
+        find: (provider: string, id: string) => [first, second, session].find(m => m.provider === provider && m.id === id),
+        getAvailable: () => [second, first, session], hasConfiguredAuth: () => true,
+      },
+    } as any;
+    const settings = {
+      [`${role}Model`]: "test/missing", [`${role}ModelFallbacks`]: ["alias-first", "test/first", "test/second", "test/SECOND"],
+    };
+    const resolve = (s: any) => role === "designer"
+      ? resolveDesignerModel(ctx, s, { reportBlocked: false })
+      : resolveDrafterModel(ctx, s);
+    const selected = (s: any) => {
+      const result = resolve(s);
+      return "selectedRef" in result ? result.selectedRef : (result as ReturnType<typeof resolveDrafterModel>).selected?.ref;
+    };
+    const explicitSession = { [`${role}Model`]: "test/missing", [`${role}ModelFallbacks`]: ["test/session", "test/second"] };
+    assert.equal(selected(explicitSession), "test/session", "explicit session fallback keeps its configured position");
+    if (role === "drafter") {
+      assert.deepEqual(resolveDrafterModel(ctx, explicitSession).candidates.map(c => c.model), [session, second]);
+    }
+    assert.equal(selected(settings), "alias-first", "operator order beats registry order");
+    assert.equal(selected({ ...settings, forbiddenModels: ["test/first"] }), "test/second", "alias cannot bypass canonical model policy");
+    assert.equal(selected({ ...settings, forbiddenModels: ["alias-first", "test/first", "test/second"] }), "test/session");
+    if (role === "drafter") {
+      const resolved = resolveDrafterModel(ctx, settings);
+      assert.deepEqual(resolved.candidates.map(c => c.model), [first, second, session], "aliases and case variants do not create independent candidates");
+      const sessionAlias = resolveDrafterModel(ctx, { drafterModel: "session", drafterModelFallbacks: ["test/second"] });
+      assert.deepEqual(sessionAlias.candidates.map(c => c.model), [session, second], "session alias is not appended again as last resort");
+    }
+  });
+}
 
 test("long-running judgment policy is default-decide and bans band-aid-vs-proper questions", () => {
   assert.match(LONG_RUNNING_JUDGMENT_POLICY, /durable, maintainable root-cause fix/);

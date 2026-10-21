@@ -103,7 +103,9 @@ export function resolveDrafterModel(ctx: ExtensionContext, settings: Pick<Settin
   }
 
   while (configuredRefs.length > 0) {
-    const selected = selector.selectNextValid({ kind: "drafter" }, currentRef, attempted);
+    // Unlike main-model recovery, the current session has not failed: an
+    // explicit fallback naming it must retain its configured position.
+    const selected = selector.selectNextValid({ kind: "drafter" }, undefined, attempted);
     if (!("model" in selected) || typeof selected.ref !== "string") break;
     attempted.push(selected.ref);
     const identity = modelRef(selected.model)?.toLowerCase() ?? selected.ref.toLowerCase();
