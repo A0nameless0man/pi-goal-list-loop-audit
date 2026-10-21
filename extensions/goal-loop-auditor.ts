@@ -253,8 +253,7 @@ export function buildGoalAuditorPrompt(goal: Goal, completionSummary: string | n
       `REWORK ROUND — this claim was disapproved ${priorDisapprovals} time${priorDisapprovals === 1 ? "" : "s"} before.`,
       "- Your primary question is whether the PRIOR objections are now closed. Re-verify those first; they are the reason you are here.",
       "- The prior objections are listed in the goal markdown's audit history below.",
-      "- VERIFY THE OPEN OBJECTIONS, NOT THE WHOLE CHANGE. Do not re-run the project's full verification suite, its whole test run, or its end-to-end harness to re-establish what the prior round already established. Check each open objection with the narrowest command that produces evidence for it (the single test, the single file, the single command the objection names).",
-      "- The prior round's evidence still stands. If a prior objection is closed, say so and quote the narrow check that closes it. Re-verify only what the objection requires.",
+      ...REWORK_SCOPE_RULES,
       "- A genuinely new defect in the change is still valid and still blocks. But a new objection must clear the same CHANGE SCOPE bar above — a fresh finding is not a licence to re-audit the repository.",
     ] : []),
     "Return a concise audit report. The final line MUST be exactly one of:",
@@ -365,3 +364,4 @@ export function buildGoalAuditorPrompt(goal: Goal, completionSummary: string | n
 // tests can import it without pulling in pi). Re-exported for callers.
 export { checkRegressionShield, contractItems, parseAuditorVerdict, type RegressionShieldResult } from "./goal-loop-shield.js";
 import { checkRegressionShield, parseAuditorVerdict } from "./goal-loop-shield.js";
+import { REWORK_SCOPE_RULES } from "../scripts/auditor-round-prompts.mjs";
