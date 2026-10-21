@@ -11,6 +11,9 @@ import { globalSettingsPath, loadSettings, projectSettingsPath, resolveDesignerC
 import { resolveDesignerModel } from "../extensions/designer-model.js";
 import { designerFileState, syncSubagentModelOverrides } from "../extensions/goal-loop-subagents.js";
 import { buildSettingsRows } from "../extensions/settings-menu.js";
+import activate, { __testOnlyResetProcessState } from "../extensions/loops/goal.js";
+import { state } from "../extensions/goal-state.js";
+import { MockPi, makeMockCtx, seedState, tmpCwd } from "./harness/mock-pi.js";
 
 function tmpDir(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -30,6 +33,118 @@ function fakeCtx(cwd: string, available: Array<{ provider: string; id: string }>
       hasConfiguredAuth() { return true; },
     },
   } as any;
+}
+
+async function withDesignerLifecycle(settings: Partial<Settings>, run: (fixture: {
+  pi: MockPi; ctx: ReturnType<typeof makeMockCtx>; file: string; settingsFile: string;
+}) => Promise<void>): Promise<void> {
+  const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
+  const previousSettingsPath = process.env.GLLA_GLOBAL_SETTINGS_PATH;
+  __testOnlyResetProcessState();
+  process.env.PI_CODING_AGENT_DIR = tmpCwd();
+  process.env.GLLA_GLOBAL_SETTINGS_PATH = path.join(tmpCwd(), "settings.json");
+  try {
+    const settingsFile = globalSettingsPath();
+    fs.writeFileSync(settingsFile, JSON.stringify({ aggressiveMode: false, ...settings }));
+    const pi = new MockPi();
+    activate(pi.api);
+    const cwd = tmpCwd();
+    seedState(cwd, {});
+    const ctx = makeMockCtx(cwd, { sessionManager: { name: "designer-lifecycle" } });
+    const models = ["initial", "current", "late", "pinned"].map(id => ({ ...ctx.model!, provider: "test", id, reasoning: true }));
+    Object.assign(ctx, {
+      model: models[0], thinkingLevel: "high",
+      modelRegistry: {
+        find: (provider: string, id: string) => models.find(model => model.provider === provider && model.id === id),
+        getAvailable: () => models,
+        hasConfiguredAuth: () => true,
+      },
+    });
+    await pi.fire("session_start", { reason: "startup" }, ctx);
+    await run({ pi, ctx, file: path.join(process.env.PI_CODING_AGENT_DIR!, "agents", "Designer.md"), settingsFile });
+  } finally {
+    __testOnlyResetProcessState();
+    if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+    else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
+    if (previousSettingsPath === undefined) delete process.env.GLLA_GLOBAL_SETTINGS_PATH;
+    else process.env.GLLA_GLOBAL_SETTINGS_PATH = previousSettingsPath;
+  }
+}
+
+test("Designer refreshes its inherited pair at model, thinking, turn and ordinary launch boundaries without saving a pin", async () => {
+  await withDesignerLifecycle({ designerEnabled: true }, async ({ pi, ctx, file, settingsFile }) => {
+    const assertPair = (model: string, thinking: string) => {
+      const definition = fs.readFileSync(file, "utf8");
+      assert.ok(definition.includes(`model: test/${model}\n`));
+      assert.ok(definition.includes(`thinking: ${thinking}\n`));
+    };
+    assertPair("initial", "high");
+    const previousModel = ctx.model;
+    Object.assign(ctx, { model: { ...ctx.model!, id: "current" }, thinkingLevel: "low" });
+    await pi.fire("model_select", { previousModel, model: ctx.model, source: "set" }, ctx);
+    assertPair("current", "low");
+    Object.assign(ctx, { thinkingLevel: "medium" });
+    await pi.fire("thinking_level_select", { level: "medium" }, ctx);
+    assertPair("current", "medium");
+
+    // Extension-driven changes need not deliver selection events. Each real
+    // launch/turn entry still consumes the latest context, not the old file.
+    Object.assign(ctx, { model: { ...ctx.model!, id: "late" }, thinkingLevel: "off" });
+    await pi.fire("before_agent_start", { prompt: "ordinary work", systemPrompt: "" }, ctx);
+    assertPair("late", "off");
+    Object.assign(ctx, { model: { ...ctx.model!, id: "current" }, thinkingLevel: "max" });
+    assert.equal(state.goal, null, "ordinary Designer invocation has no Designer-marked goal");
+    await pi.fire("tool_call", { toolName: "subagent", input: { agent: "Designer", task: "Review this approach" } }, ctx);
+    assertPair("current", "max");
+    const saved = JSON.parse(fs.readFileSync(settingsFile, "utf8"));
+    assert.equal(saved.designerModel, undefined, "a generated projection never becomes a configured static model");
+    assert.equal(saved.designerThinkingLevel, undefined, "live thinking never becomes a configured static dial");
+  });
+});
+
+test("Designer explicit model/thinking pins remain independent across actual lifecycle and launch boundaries", async () => {
+  await withDesignerLifecycle({ designerModel: "test/pinned", designerThinkingLevel: "high" }, async ({ pi, ctx, file }) => {
+    const original = fs.readFileSync(file, "utf8");
+    assert.match(original, /^model: test\/pinned$/m);
+    assert.match(original, /^thinking: high$/m);
+    const previousModel = ctx.model;
+    Object.assign(ctx, { model: { ...ctx.model!, id: "current" }, thinkingLevel: "low" });
+    await pi.fire("model_select", { previousModel, model: ctx.model, source: "set" }, ctx);
+    await pi.fire("thinking_level_select", { level: "low" }, ctx);
+    await pi.fire("before_agent_start", { prompt: "ordinary work", systemPrompt: "" }, ctx);
+    await pi.fire("tool_call", { toolName: "subagent", input: { agent: "Designer", task: "Review the pins" } }, ctx);
+    assert.equal(fs.readFileSync(file, "utf8"), original, "parent session changes cannot overwrite a selected Designer pair");
+  });
+});
+
+for (const enabled of [undefined, false] as const) {
+  test(`Designer lifecycle preserves ${enabled === false ? "disabled" : "on-demand"} registration`, async () => {
+    await withDesignerLifecycle(enabled === false ? { designerEnabled: false } : {}, async ({ pi, ctx, file }) => {
+      assert.equal(fs.existsSync(file), false);
+      const previousModel = ctx.model;
+      Object.assign(ctx, { model: { ...ctx.model!, id: "current" }, thinkingLevel: "low" });
+      await pi.fire("model_select", { previousModel, model: ctx.model, source: "set" }, ctx);
+      await pi.fire("thinking_level_select", { level: "low" }, ctx);
+      await pi.fire("before_agent_start", { prompt: "ordinary work", systemPrompt: "" }, ctx);
+      await pi.fire("tool_call", { toolName: "subagent", input: { action: "list" } }, ctx);
+      assert.equal(fs.existsSync(file), false, "lifecycle and management events do not opt in");
+      await pi.fire("tool_call", { toolName: "subagent", input: { agent: "Designer", task: "Explicit ordinary request" } }, ctx);
+      assert.equal(fs.existsSync(file), enabled !== false, "only an authorized ordinary role request registers Designer");
+      if (enabled !== false) {
+        Object.assign(ctx, { thinkingLevel: "medium" });
+        await pi.fire("tool_call", { toolName: "subagent", input: { agent: "Designer", task: "Next request" } }, ctx);
+        assert.match(fs.readFileSync(file, "utf8"), /^thinking: medium$/m, "an on-demand registration stays live on later launches");
+      }
+      // Even disabled or inherited refreshes never rewrite a user's agent.
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      const userContent = "---\nname: Designer\n---\nUser-owned prompt.\n";
+      fs.writeFileSync(file, userContent);
+      await pi.fire("thinking_level_select", { level: "off" }, ctx);
+      await pi.fire("before_agent_start", { prompt: "ordinary work", systemPrompt: "" }, ctx);
+      await pi.fire("tool_call", { toolName: "subagent", input: { agent: "Designer", task: "User-owned request" } }, ctx);
+      assert.equal(fs.readFileSync(file, "utf8"), userContent);
+    });
+  });
 }
 
 test("resolveDesignerConfig: dedicated keys win per-field over legacy pins", () => {
