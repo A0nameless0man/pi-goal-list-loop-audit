@@ -13,7 +13,7 @@ on-disk evidence of struggle:
 | clean-web | Goal stuck in `status=auditing`, `phase=running`; the auditor re-ran the project's browser-test harness round after round | `.pi-glla/active.jsonl`: `audit_tier_decided tier="full" reasons=["rework history (2 prior disapprovals)"]` → `audit_started` → `audit_prior_worker_cancelled` → `audit_recovery_started`; `.pi-glla/audits.jsonl`: `Provider returned an empty response` ×3, `Streaming response failed: [451] …` ×8, `429 … Rate limit` ×1, `Provider finish_reason: content_filter` ×1 |
 | eve | Goal stuck in `status=auditing`, `phase=running`; the same single-model chain | `.pi-glla/audits.jsonl`: `Provider returned an empty response` ×3, `Auditor stalled — tool bash exceeded its 5m timeout during the challenge round` ×1, `… 10m timeout …` ×1, `auditor produced no verdict marker` ×1 |
 | youtube-filter | Claim parked (`status=paused`, `phase=recovery-pending`) with 13 leftover audit-job scratch directories; one retention sweep reaped 12 at once | `.pi-glla/active.jsonl`: `audit_recovery_pending` (reason `session_shutdown:quit`) → `audit_worker_cancelled` (reason `quit`); `audit_jobs_retention_sweep reaped=12` |
-| dracon-platform | Chain exhaustion; its last audit record is a settlement, and no goal is active now | `.pi-glla/active.jsonl`: `auditor_candidate_exhausted`, `auditor_fallback_exhausted`; `.pi-glla/audits.jsonl`: `Provider returned an empty response` ×7, `Auditor stalled — tool bash exceeded its 5m timeout` ×4, `Auditor approved, but verification is incomplete — a tool call was cancelled at its time budget` ×8, `regression_shield: approved but report's evidence does not address` ×3 |
+| dracon-platform | Chain exhaustion; its last audit record is a settlement, and no goal was active when the investigation ran | `.pi-glla/active.jsonl`: `auditor_candidate_exhausted`, `auditor_fallback_exhausted`, then `audit_settlement_completed` at 2026-10-20T15:32:49 — the goal that struggled SETTLED, and no goal was active in that project afterwards. `.pi-glla/audits.jsonl`: `Provider returned an empty response` ×7, `Auditor stalled — tool bash exceeded its 5m timeout` ×4, `Auditor approved, but verification is incomplete — a tool call was cancelled at its time budget` ×8, `regression_shield: approved but report's evidence does not address` ×3 |
 
 Three of the four carried the same signature: **`Provider returned an empty
 response`**, counted in the durable verdict log (3 × clean-web, 3 × eve,
@@ -236,6 +236,39 @@ completion path, the stored-claim retry path and the project (respec) path —
 so they cannot drift, and the read-only `/glla status` line shows the dial
 that will actually be used.
 
+## A note on the state of the four projects
+
+The four states at the end of the work:
+
+| Project | State | Why |
+| --- | --- | --- |
+| clean-web | `paused` / `recovery-pending` | The claim was parked durably when the churn was stopped (`audit_recovery_pending` → `audit_worker_cancelled`, reason `quit`), and the re-audit under the fixed code was stopped once it had demonstrated the new scope. |
+| eve | no active goal | The re-audit under the fixed code exhausted its chain on **provider** failures and the claim settled on the bounded retry ladder; the goal has since completed. |
+| youtube-filter | `active` | Its parked claim was re-audited and the goal is active again — it is no longer a parked, looping claim. |
+| dracon-platform | new work in flight | The goal that struggled SETTLED (`audit_settlement_completed`, 2026-10-20T15:32:49) and no goal was active in that project afterwards. The goal now auditing there (`20261021032356-omjo1j`, created 2026-10-21T03:23) is NEW operator work — "we are getting 500 on ai hub" — started after this investigation, and it was deliberately left alone. |
+
+The audit workers of the two projects that were actively looping were
+stopped with their sessions, so their claims parked durably; the re-audits
+under the fixed code were then started with a tool-restricted, headless
+session (`pi --continue --tools resume_goal`) that could only resume the
+claim — it could not touch a file in either project.
+
+## The stall watchdog no longer kills a slow run
+
+The release gate was terminated by its own stall watchdog while a legitimate
+slow test file was running: 218 seconds of silence against a 195-second
+limit, on a host running at load 30-45. A silent suite is not automatically a
+HUNG suite — the suite's whale takes over a minute standalone and minutes
+under load — so the watchdog now measures how slow the host is right now and
+extends the window when the host is measurably contended, instead of
+reporting a busy machine as a broken suite. The extension is bounded
+(at most three extensions, capped at 15 minutes), so a genuinely wedged
+suite still dies in minutes; the field cases the bound exists for were 37
+minutes of silence and a 26-hour orphan.
+
+The decision is a pure function (`stallDecision` in `scripts/run-tests.mjs`),
+pinned by a unit test.
+
 ## What GLLA does not own — recorded, not fixed
 
 - **The configuration gap.** The global settings carry
@@ -259,22 +292,6 @@ that will actually be used.
   no-verdict infrastructure failure), but a model that keeps reaching for
   `write` in a read-only audit is a prompt-level observation worth a separate
   look.
-
-## The stall watchdog no longer kills a slow run
-
-The release gate was terminated by its own stall watchdog while a legitimate
-slow test file was running: 218 seconds of silence against a 195-second
-limit, on a host running at load 30-45. A silent suite is not automatically a
-HUNG suite — the suite's whale takes over a minute standalone and minutes
-under load — so the watchdog now measures how slow the host is right now and
-extends the window when the host is measurably contended, instead of
-reporting a busy machine as a broken suite. The extension is bounded
-(at most three extensions, capped at 15 minutes), so a genuinely wedged
-suite still dies in minutes; the field cases the bound exists for were 37
-minutes of silence and a 26-hour orphan.
-
-The decision is a pure function (`stallDecision` in `scripts/run-tests.mjs`),
-pinned by a unit test.
 
 ## Known open items
 
