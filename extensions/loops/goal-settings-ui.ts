@@ -591,7 +591,7 @@ const THINKING_DESCR: Record<string, string> = {
 
 export function resolveAuditorModel(
   ctx: ExtensionContext,
-  ref?: string,
+  ref?: string | null,
   fallbackRefs?: string | readonly string[],
   _legacySameSessionSwap?: boolean,
 ): { model: any; error?: string; via?: string; fallbackModels?: AuditorModelCandidate[] } {
@@ -681,6 +681,9 @@ export function resolveAuditorModel(
     seenModels.add(key);
     candidates.push({ ref: candidateRef, model, via, ...(key === currentRef?.toLowerCase() ? { isSessionModel: true } : {}) });
   };
+  // An explicit session choice masks lower-layer primary/thinking pins,
+  // without throwing away the separately configured backup chain.
+  if (ref === null && sessionModel && currentRef) addCandidate(currentRef, sessionModel, "session");
   // A configured auditor is an explicit choice, even when it is the
   // session's own model. Isolation is provided by the detached worker,
   // not by silently skipping a selected model to manufacture diversity.
@@ -1702,8 +1705,8 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
       const pick = await promptModelRef(ctx, "Auditor model override", "provider/model-id — empty keeps the pi session model", { excludeRefs: loadSettings(ctx.cwd).forbiddenModels });
       if (pick === undefined) return;
       if (pick.kind === "session") {
-        saveSettings("global", ctx, { auditorModel: undefined, auditorThinkingLevel: undefined });
-        ctx.ui.notify("Auditor agent: session model and thinking inherited together (overrides cleared).", "info");
+        saveSettings("project", ctx, { auditorModel: null, auditorThinkingLevel: undefined });
+        ctx.ui.notify("Auditor agent: live session model and thinking inherited together for this project; global settings and fallback lists preserved.", "info");
         return;
       }
       saveSettings("global", ctx, { auditorModel: pick.ref });

@@ -139,7 +139,7 @@ export interface Settings {
   mainModelPrimaryProbeMinutes?: number;
   /** "provider/model-id" or bare "model-id". Unset → configured fallbacks,
    * then session model; with no configured chain, inherit session directly. */
-  auditorModel?: string;
+  auditorModel?: string | null; // null explicitly inherits the live session pair, masking lower-layer pins
   /** Global-only ordered provider/model refs to try after the detached
    * auditor primary fails or is skipped. The session model remains the final
    * fallback. The shape and cap match mainModelFallbacks. */
@@ -776,7 +776,11 @@ export function normalizeLoadedSettings(settings: Settings): Settings {
   if (typeof settings.notifyCmd !== "string" || settings.notifyCmd.trim().length === 0) {
     delete settings.notifyCmd;
   }
-  if (typeof settings.auditorModel !== "string" || settings.auditorModel.trim().length === 0) {
+  if (settings.auditorModel === null) {
+    // Explicit inheritance is different from deleting a project override:
+    // deleting reveals a global pin; null masks both halves of that pair.
+    delete settings.auditorThinkingLevel;
+  } else if (typeof settings.auditorModel !== "string" || settings.auditorModel.trim().length === 0) {
     delete settings.auditorModel;
   }
   if (typeof settings.drafterModel !== "string" || settings.drafterModel.trim().length === 0) {
