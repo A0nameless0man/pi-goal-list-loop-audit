@@ -14,6 +14,7 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 import { resolveDrafterModelRef } from "./drafter-model.js";
+import { resolveAuditorThinkingLevel } from "./auditor-thinking.js";
 import { resolveDesignerConfig, type Settings } from "./goal-settings.js";
 import { appendLedger, isForbiddenModel } from "./goal-loop-core.js";
 import { MAX_MAIN_MODEL_FALLBACKS, modelRef, normalizeMainModelFallbackRefs } from "./main-model-recovery.js";
@@ -29,6 +30,10 @@ export interface DesignerModelResolution {
    * automatic last fallback. Undefined = inherit session dynamically (no
    * session model is known at resolve time). */
   selectedRef?: string;
+  /** Session inheritance is the default when no chain was configured, not
+   * an exhausted fallback. Configured models retain their own dial. */
+  via?: "configured" | "session" | "session-fallback";
+  thinking?: string;
   /** No eligible configured ref AND the session model itself is forbidden:
    * the caller must NOT register Designer (it would inherit a forbidden model). */
   blocked: boolean;
@@ -39,7 +44,7 @@ export interface DesignerModelResolution {
  * `reportBlocked: false` suppresses the ledger entry — pure display paths
  * (settings menu rendering) must not ledger on every repaint. */
 export function resolveDesignerModel(
-  ctx: Pick<ExtensionContext, "modelRegistry" | "model" | "cwd">,
+  ctx: Pick<ExtensionContext, "modelRegistry" | "model" | "cwd"> & { thinkingLevel?: string },
   settings: Pick<Settings, "designerModel" | "designerThinkingLevel" | "designerModelFallbacks" | "designerEnabled" | "subagentModelOverrides" | "subagentThinkingOverrides" | "subagentFallbacks" | "forbiddenModels">,
   opts?: { reportBlocked?: boolean },
 ): DesignerModelResolution {
@@ -50,20 +55,26 @@ export function resolveDesignerModel(
   ]).slice(0, MAX_MAIN_MODEL_FALLBACKS);
   const forbidden = (ref: string) => isForbiddenModel(ref, settings.forbiddenModels);
   const currentRef = modelRef(ctx.model as any);
-  // Automatic last fallback: the live session model closes the chain unless
-  // it is absent, forbidden, or already configured (dedupe, case-insensitive
-  // like the normalizer). Configured refs always win; the session pin only
-  // fires when the whole configured chain is ineligible.
-  const chain = [...configuredRefs];
-  if (currentRef && !forbidden(currentRef)
-    && !chain.some((ref) => ref.toLowerCase() === currentRef.toLowerCase())) {
-    chain.push(currentRef);
-  }
-  for (const ref of chain) {
+  for (const ref of configuredRefs) {
     if (forbidden(ref)) continue;
-    if (resolveDrafterModelRef(ctx, ref)) {
-      return { configuredRefs, selectedRef: ref, blocked: false };
-    }
+    const model = resolveDrafterModelRef(ctx, ref);
+    if (!model || forbidden(modelRef(model) ?? ref)) continue;
+    const requested = config.thinking ?? ctx.thinkingLevel;
+    return {
+      configuredRefs, selectedRef: ref, via: "configured", blocked: false,
+      ...(requested !== undefined ? { thinking: resolveAuditorThinkingLevel(model, requested) } : {}),
+    };
+  }
+  // The session route inherits the PAIR: model and live thinking. Never
+  // carry a configured Designer dial onto this route. The live session is
+  // already resolved; requiring registry auth again can reject working
+  // extension-provided session models.
+  if (currentRef && !forbidden(currentRef)) {
+    return {
+      configuredRefs, selectedRef: currentRef, blocked: false,
+      via: configuredRefs.length ? "session-fallback" : "session",
+      ...(ctx.thinkingLevel !== undefined ? { thinking: ctx.thinkingLevel } : {}),
+    };
   }
   const blocked = !!currentRef && forbidden(currentRef);
   if (blocked && opts?.reportBlocked !== false) {
