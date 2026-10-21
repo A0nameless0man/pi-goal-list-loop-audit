@@ -81,7 +81,11 @@ export function refreshDesignerRegistration(
       return "disabled";
     }
     if (!requested && !config.configured && registered !== "managed") return "absent";
-    const resolution = resolveDesignerModel(ctx as any, settings);
+    // A lifecycle refresh is a projection refresh, not a policy decision
+    // point: the forbidden-model report belongs to the startup/settings
+    // surfaces. Reporting here would append one ledger entry per model,
+    // thinking, turn and launch event.
+    const resolution = resolveDesignerModel(ctx, settings, { reportBlocked: false });
     if (resolution.blocked) {
       removeManagedDesigner(agentDir);
       return "blocked";

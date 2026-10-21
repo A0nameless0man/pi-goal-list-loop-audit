@@ -149,11 +149,28 @@ function installedAgentDefinition(name: string): string {
   return fs.readFileSync(file, "utf-8");
 }
 
+/** The note the managed Designer file carries. The file is a launch
+ * projection, never a saved pin: the pair comes from the /glla Designer pin
+ * or from the live session, and GLLA rewrites the file before every Designer
+ * launch. Presenting a session projection as a static pin is the stale-pin
+ * defect itself, so the file must say what it is. The wording avoids a colon
+ * so the frontmatter stays a plain YAML scalar. */
+export function designerProjectionNote(model?: string, thinking?: string): string {
+  const pair = [
+    model ? `model ${model}` : undefined,
+    thinking ? `thinking ${thinking}` : undefined,
+  ].filter(Boolean).join(", ");
+  return `x-glla-note: glla-managed Designer projection (${pair || "inherits the parent session"}). `
+    + "The pair comes from the /glla Designer pin or the live session; glla refreshes this file before every "
+    + "Designer launch, so it is a launch projection and not an independently saved pin. Managed by glla.";
+}
+
 /** Build the override .md file content. With `model`, the pin is written;
  * without, the file falls through to the parent session model. The complete
  * current role definition is retained so a model-only override cannot turn a
- * worker/scout into an accidentally empty agent. */
-export function buildAgentOverrideMd(name: string, model?: string, thinking?: string): string {
+ * worker/scout into an accidentally empty agent. `note` replaces the default
+ * provenance note (the Designer projection carries its own wording). */
+export function buildAgentOverrideMd(name: string, model?: string, thinking?: string, note?: string): string {
   const def = EMBEDDED_DEFAULTS[name];
   if (!def) throw new Error(`no embedded default config for agent "${name}"`);
   const source = def.upstream ? installedAgentDefinition(name) : designerDefinition();
@@ -167,11 +184,11 @@ export function buildAgentOverrideMd(name: string, model?: string, thinking?: st
   if (thinking) lines.push(`thinking: ${thinking}`);
   lines.push(
     `x-managed-by: ${SUBAGENT_MANAGED_MARKER}`,
-    model
+    note ?? (model
       ? `x-glla-note: model pinned to ${model} by glla subagentModelOverrides${thinking ? `, thinking ${thinking} by subagentThinkingOverrides` : ""}. Remove the file or clear the /glla ${name} pin to restore the upstream model behavior.`
       : thinking
         ? `x-glla-note: thinking pinned to ${thinking} by glla subagentThinkingOverrides (model inherits the parent session). Managed by glla; clear the override to remove this file.`
-        : "x-glla-note: model pin omitted so this agent inherits the parent session model. Managed by glla; clear the override or switch /glla subagent strategy to agent-default to remove this file.",
+        : "x-glla-note: model pin omitted so this agent inherits the parent session model. Managed by glla; clear the override or switch /glla subagent strategy to agent-default to remove this file."),
     "---",
     "",
     body || def.systemPrompt || "(no system-prompt override)",
@@ -277,42 +294,31 @@ export function syncSubagentModelOverrides(opts: {
     // Dedicated Designer settings, when supplied, take precedence over the
     // generic map entries for this role. A resolved implicit session pair
     // is payload for an authorized role, not permission to register it.
+    const buildFor = (model?: string, thinking?: string): string | undefined => {
+      try {
+        return buildAgentOverrideMd(
+          name,
+          model,
+          thinking,
+          name === "Designer" ? designerProjectionNote(model, thinking) : undefined,
+        );
+      } catch (error) {
+        result.skipped.push({ name, reason: error instanceof Error ? error.message : String(error) });
+        return undefined;
+      }
+    };
     const desired = name === "Designer" && opts.designer
       ? (opts.designer.disabled
         ? undefined
         : (opts.designerRequested === true || opts.designer.configured)
-          ? (() => {
-            try { return buildAgentOverrideMd(name, opts.designer!.model, opts.designer!.thinking); }
-            catch (error) {
-              result.skipped.push({ name, reason: error instanceof Error ? error.message : String(error) });
-              return undefined;
-            }
-          })()
+          ? buildFor(opts.designer!.model, opts.designer!.thinking)
           : undefined)
       : overrideModel !== undefined
-      ? (() => {
-        try { return buildAgentOverrideMd(name, overrideModel, thinkingPin); }
-        catch (error) {
-          result.skipped.push({ name, reason: error instanceof Error ? error.message : String(error) });
-          return undefined;
-        }
-      })()
+      ? buildFor(overrideModel, thinkingPin)
       : name === "Designer" && (opts.designerRequested === true || thinkingPin !== undefined)
-        ? (() => {
-          try { return buildAgentOverrideMd(name, undefined, thinkingPin); }
-          catch (error) {
-            result.skipped.push({ name, reason: error instanceof Error ? error.message : String(error) });
-            return undefined;
-          }
-        })()
+        ? buildFor(undefined, thinkingPin)
         : thinkingPin !== undefined && def
-          ? (() => {
-            try { return buildAgentOverrideMd(name, undefined, thinkingPin); }
-            catch (error) {
-              result.skipped.push({ name, reason: error instanceof Error ? error.message : String(error) });
-              return undefined;
-            }
-          })()
+          ? buildFor(undefined, thinkingPin)
           : undefined;
 
     if (desired === undefined) {
@@ -375,7 +381,7 @@ export function ensureRequestedDesigner(opts: { agentDir: string; model?: string
     const file = path.join(opts.agentDir, "agents", "Designer.md");
     const current = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : undefined;
     if (current !== undefined && !hasManagedMarker(current)) return true;
-    const desired = buildAgentOverrideMd("Designer", opts.model, opts.thinking);
+    const desired = buildAgentOverrideMd("Designer", opts.model, opts.thinking, designerProjectionNote(opts.model, opts.thinking));
     if (current !== desired) {
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, desired);

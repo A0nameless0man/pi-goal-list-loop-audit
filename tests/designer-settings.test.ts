@@ -79,26 +79,43 @@ test("Designer refreshes its inherited pair at model, thinking, turn and ordinar
       assert.ok(definition.includes(`thinking: ${thinking}\n`));
     };
     assertPair("initial", "high");
-    const previousModel = ctx.model;
-    Object.assign(ctx, { model: { ...ctx.model!, id: "current" }, thinkingLevel: "low" });
-    await pi.fire("model_select", { previousModel, model: ctx.model, source: "set" }, ctx);
+
+    // A model switch is reported by the event while the context still
+    // carries the model the session just left. The projection must follow
+    // the event, or the next launch inherits a model that is gone.
+    const switched = { ...ctx.model!, id: "current" };
+    await pi.fire("model_select", { previousModel: ctx.model, model: switched, source: "set" }, ctx);
+    assertPair("current", "high");
+    Object.assign(ctx, { model: switched });
+
+    // A thinking change is reported the same way and refreshes the pair.
+    Object.assign(ctx, { thinkingLevel: "low" });
+    await pi.fire("thinking_level_select", { level: "low" }, ctx);
     assertPair("current", "low");
-    Object.assign(ctx, { thinkingLevel: "medium" });
-    await pi.fire("thinking_level_select", { level: "medium" }, ctx);
-    assertPair("current", "medium");
 
     // Extension-driven changes need not deliver selection events. Each real
     // launch/turn entry still consumes the latest context, not the old file.
     Object.assign(ctx, { model: { ...ctx.model!, id: "late" }, thinkingLevel: "off" });
     await pi.fire("before_agent_start", { prompt: "ordinary work", systemPrompt: "" }, ctx);
     assertPair("late", "off");
+
+    // The launch boundary refreshes on its own: a session that changed
+    // without any event (restore, extension-driven dial) still launches the
+    // Designer on the current pair.
     Object.assign(ctx, { model: { ...ctx.model!, id: "current" }, thinkingLevel: "max" });
     assert.equal(state.goal, null, "ordinary Designer invocation has no Designer-marked goal");
     await pi.fire("tool_call", { toolName: "subagent", input: { agent: "Designer", task: "Review this approach" } }, ctx);
     assertPair("current", "max");
+
     const saved = JSON.parse(fs.readFileSync(settingsFile, "utf8"));
     assert.equal(saved.designerModel, undefined, "a generated projection never becomes a configured static model");
     assert.equal(saved.designerThinkingLevel, undefined, "live thinking never becomes a configured static dial");
+    // A launch projection must not be presented as a saved pin: the file is
+    // rewritten before every launch, so the note describes a projection.
+    // The check is about the claim, not the exact wording.
+    const definition = fs.readFileSync(file, "utf8");
+    assert.match(definition, /x-glla-note: .*projection/i, "the managed file declares that it is a launch projection");
+    assert.doesNotMatch(definition, /pinned to/i, "a session projection is never announced as a static pin");
   });
 });
 
