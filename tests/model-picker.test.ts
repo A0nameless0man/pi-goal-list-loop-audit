@@ -256,7 +256,7 @@ test("v0.36.0: auditor thinking inherits the parent dial unless explicitly overr
   assert.match(SETTINGS, /inherit the live session thinking level/);
 });
 
-test("v0.36.0: the auditor chain — pinned primary → ordered fallbacks → session LAST; same-as-session auto-swap", () => {
+test("auditor chain honors the pinned primary then ordered fallbacks then session", () => {
   const SRC = readGoalRuntimeSource();
   // The cascade is assembled through the canonical normalizer and selector;
   // the settings contract uses the same ordered fallback array as the main
@@ -266,10 +266,9 @@ test("v0.36.0: the auditor chain — pinned primary → ordered fallbacks → se
   assert.match(SRC, /primaryRef = normalizeModelRefs\(ref\)\[0\]/);
   assert.match(SRC, /new ModelSelector\(/);
   assert.match(SRC, /All pinned auditor models are unavailable — falling back to the session model/);
-  assert.match(SRC, /auditor_model_same_as_session/);
-  assert.match(SRC, /select a different \/glla → Auditor fallback model so the verifier can differ/);
-  assert.match(SRC, /resolveAuditorModel\(liveCtx, settings\.auditorModel, settings\.auditorModelFallbacks, settings\.auditorSameSessionSwap !== false\)/);
-  assert.match(SRC, /resolveAuditorModel\(ctx, settings\.auditorModel, settings\.auditorModelFallbacks, settings\.auditorSameSessionSwap !== false\)/);
+  assert.doesNotMatch(SRC, /auditor_model_same_as_session|auditor auto-swapped/);
+  assert.match(SRC, /resolveAuditorModel\(liveCtx, settings\.auditorModel, settings\.auditorModelFallbacks\)/);
+  assert.match(SRC, /resolveAuditorModel\(ctx, settings\.auditorModel, settings\.auditorModelFallbacks\)/);
   const SETTINGS = fs.readFileSync("extensions/goal-settings.ts", "utf-8");
   assert.match(SETTINGS, /auditorModelFallbacks\?: string\[\];/);
   assert.match(SETTINGS, /@deprecated v0\.36\.0: singular compatibility alias/);
@@ -283,19 +282,14 @@ test("v0.36.0: the auditor chain — pinned primary → ordered fallbacks → se
   assert.ok(!SRC.includes("pickDiverseAuditorModel") && !SRC.includes('"diverse"'), "diverse strategy removed");
 });
 
-test("v0.31.6: same-model swap toggle — default ON, off = same-model audits stand", () => {
+test("legacy same-model swap cannot override an explicit auditor choice", () => {
   const SRC = readGoalRuntimeSource();
-  assert.match(SRC, /sameSessionSwap = true,\n\): \{ model: any; error\?: string; via\?: string; fallbackModels\?: AuditorModelCandidate\[\] \} \{/);
-  assert.equal(SRC.match(/settings\.auditorSameSessionSwap !== false/g)!.length, 3, "goal, stored-claim and respec audit call sites pass the toggle (undefined = on)");
-  assert.match(SRC, /const currentPinned = sameSessionSwap && primaryMatchesSession/); // same-model guard remains explicit
-  assert.match(SRC, /case "auditorSameSessionSwap": \{/);
-  assert.match(SRC, /off — same-model audits stand; isolation \+ evidence contract still apply/);
+  assert.doesNotMatch(SRC, /settings\.auditorSameSessionSwap|case "auditorSameSessionSwap"/);
   const SETTINGS = fs.readFileSync("extensions/goal-settings.ts", "utf-8");
   assert.match(SETTINGS, /auditorSameSessionSwap\?: boolean;/);
-  assert.match(SETTINGS, /Default ON \(undefined\)/);
+  assert.match(SETTINGS, /Compatibility-only; ignored/);
   const MENU = fs.readFileSync("extensions/settings-menu.ts", "utf-8");
-  assert.match(MENU, /id: "auditorSameSessionSwap"/);
-  assert.match(MENU, /valueText: show\("auditorSameSessionSwap", "on"\)/);
+  assert.doesNotMatch(MENU, /id: "auditorSameSessionSwap"/);
 });
 
 test("v0.31.8: thinking options come from the PICKED MODEL — xhigh/max only when the model maps them", () => {

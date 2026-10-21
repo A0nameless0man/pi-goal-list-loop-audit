@@ -153,7 +153,7 @@ test("T4: select editor — carryover writes clear/resume, pause removes the key
 
 test("T4: select options stay concise — rationale lives in the title, not the option rows (v0.34.25)", async () => {
   const ctx = makeMockCtx(tmpCwd());
-  for (const id of ["autoResume", "carryover", "aggressiveMode", "auditorSameSessionSwap", "decisionPopup", "autoAcceptDrafts", "auditorInspection", "contextCheckpointProjection"]) {
+  for (const id of ["autoResume", "carryover", "aggressiveMode", "decisionPopup", "autoAcceptDrafts", "auditorInspection", "contextCheckpointProjection"]) {
     let seen: string[] = [];
     ctx.ui.selectImpl = async (_t, options) => { seen = options ?? []; return undefined; };
     await handleSettingChoice(id, ctx as unknown as ExtensionContext);

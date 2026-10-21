@@ -599,7 +599,7 @@ function registerAgentTools(pi: any): void {
     wake: ctx => scheduleLoopTick(ctx),
     resolveModel: ctx => {
       const settings = loadSettings(ctx.cwd);
-      return resolveAuditorModel(ctx, settings.auditorModel, settings.auditorModelFallbacks, settings.auditorSameSessionSwap !== false);
+      return resolveAuditorModel(ctx, settings.auditorModel, settings.auditorModelFallbacks);
     },
     wrapTool: tool => defineTool(tool),
     thinkingLevel: () => pi.getThinkingLevel?.(),
@@ -1071,7 +1071,7 @@ function registerAgentTools(pi: any): void {
           completionClaim.timeoutEscalation ?? 0,
         ),
       };
-      const { model: auditorModel, error: modelError, via, fallbackModels } = resolveAuditorModel(ctx, settings.auditorModel, settings.auditorModelFallbacks, settings.auditorSameSessionSwap !== false);
+      const { model: auditorModel, error: modelError, via, fallbackModels } = resolveAuditorModel(ctx, settings.auditorModel, settings.auditorModelFallbacks);
       if (modelError) {
         const modelFailureCopy = providerErrorPresentation(modelError, "completion");
         ctx.ui.notify(`Auditor model issue: ${modelFailureCopy.display}. ${modelFailureCopy.action}`, "warning");

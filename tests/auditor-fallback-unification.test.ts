@@ -23,6 +23,7 @@ import {
   type GoalAuditorResult,
 } from "../extensions/goal-loop-auditor-process.ts";
 import { resolveAuditorModel } from "../extensions/loops/goal-settings-ui.ts";
+import { resolveCandidateThinkingLevel } from "../extensions/auditor-thinking.ts";
 
 interface FakeContext {
   ctx: any;
@@ -157,6 +158,58 @@ test("auditor ordered fallback refs retain order and use the main normalizer", a
       ["test/primary", "test/fallback-1"],
     );
     assert.equal(MAX_MAIN_MODEL_FALLBACKS, 10);
+  });
+});
+
+test("selected session auditor stays first regardless of legacy swap or alias spelling", async () => {
+  await withFakeContext(({ ctx, session, fallback1, fallback2 }) => {
+    for (const legacySwap of [undefined, true, false]) {
+      for (const ref of ["test/session", "session"]) {
+        const resolved = resolveAuditorModel(ctx, ref, ["test/fallback-1", "test/fallback-2"], legacySwap);
+        assert.equal(resolved.model, session);
+        assert.equal(resolved.via, "setting");
+        assert.deepEqual(resolved.fallbackModels?.map(candidate => candidate.model), [fallback1, fallback2]);
+      }
+    }
+    assert.equal(ctx.__notifyMessages.length, 0, "no diversity warning or auto-swap");
+  });
+});
+
+test("configured session fallback retains its configured position", async () => {
+  await withFakeContext(({ ctx, primary, session, fallback1 }) => {
+    const resolved = resolveAuditorModel(ctx, "test/primary", ["test/session", "test/fallback-1"]);
+    assert.deepEqual([resolved.model, ...resolved.fallbackModels!.map(candidate => candidate.model)], [primary, session, fallback1]);
+    assert.equal(resolved.fallbackModels![0]!.via, "fallback-pin");
+  });
+});
+
+test("missing or unkeyed selection falls back to the session at its own thinking level", async () => {
+  await withFakeContext(({ ctx, session, primary }) => {
+    ctx.modelRegistry.hasConfiguredAuth = (model: any) => model !== primary;
+    for (const ref of [undefined, "test/missing", "test/primary"]) {
+      const resolved = resolveAuditorModel(ctx, ref);
+      assert.equal(resolved.model, session);
+      assert.equal(resolved.via, ref ? "session-fallback" : "session");
+      assert.equal(resolveCandidateThinkingLevel({ model: resolved.model, via: resolved.via }, {
+        auditorThinkingLevel: "high", sessionThinkingLevel: "low",
+      }), "low");
+      assert.deepEqual(resolved.fallbackModels, []);
+    }
+  });
+});
+
+test("resolved selected auditor is actually launched before fallback", async () => {
+  await withFakeContext(async ({ ctx, session }) => {
+    const resolved = resolveAuditorModel(ctx, "test/session", ["test/fallback-1"]);
+    const calls: any[] = [];
+    const outcome = await runAuditorFallbackWithPolicy([
+      { model: resolved.model, via: resolved.via! }, ...resolved.fallbackModels!,
+    ], async candidate => {
+      calls.push(candidate.model);
+      return result({ approved: true });
+    });
+    assert.equal(outcome.result.approved, true);
+    assert.deepEqual(calls, [session]);
   });
 });
 

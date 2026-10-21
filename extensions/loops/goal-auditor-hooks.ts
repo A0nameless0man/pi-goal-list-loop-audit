@@ -1426,7 +1426,7 @@ async function retryStoredCompletionAudit(origin: CompletionAuditOrigin = "provi
       claim.timeoutEscalation ?? 0,
     ),
   };
-  const { model: auditorModel, error: modelError, via, fallbackModels } = resolveAuditorModel(liveCtx, settings.auditorModel, settings.auditorModelFallbacks, settings.auditorSameSessionSwap !== false);
+  const { model: auditorModel, error: modelError, via, fallbackModels } = resolveAuditorModel(liveCtx, settings.auditorModel, settings.auditorModelFallbacks);
   if (modelError) {
     const modelFailureCopy = providerErrorPresentation(modelError, "completion");
     liveCtx.ui.notify(`Auditor model issue: ${modelFailureCopy.display}. ${modelFailureCopy.action}`, "warning");

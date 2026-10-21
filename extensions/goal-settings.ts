@@ -148,11 +148,8 @@ export interface Settings {
    * migrate it to auditorModelFallbacks; new UI/runtime code uses the ordered
    * array. */
   auditorModelFallback?: string;
-  /** v0.31.6: when the pinned auditor IS the session model, walk the
-   * ordered fallback chain (verifier ≠ executor). Default ON (undefined); false =
-   * same-model audits stand — the isolated session + evidence contract is
-   * the first-order defense either way; diversity is the second-order one
-   * the user may deliberately trade away. */
+  /** @deprecated Compatibility-only; ignored. Explicit auditor selection
+   * always wins, including when it matches the session model. */
   auditorSameSessionSwap?: boolean;
   /** v0.34.66: on → the auditor's report text renders FINAL-ONLY in the
    * widget: the live per-token tail is hidden while the detached worker
