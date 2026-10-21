@@ -395,11 +395,11 @@ for (const scenario of [
         find: (provider: string, id: string) => models.find(model => model.provider === provider && model.id === id),
       },
     });
-    const global = { auditorModel: "audit/global", auditorThinkingLevel: "low", auditorModelFallbacks: ["audit/global-backup"], autoAcceptDrafts: false, mainModelSameModelRetries: 3 };
+    const global = { auditorModel: "audit/global", auditorThinkingLevel: "low", auditorModelFallbacks: backups, autoAcceptDrafts: false, mainModelSameModelRetries: 3 };
     fs.mkdirSync(path.dirname(GLOBAL_FILE), { recursive: true });
     fs.writeFileSync(GLOBAL_FILE, JSON.stringify(global, null, 2));
     const globalBytes = fs.readFileSync(GLOBAL_FILE, "utf8");
-    const project = { ...scenario.project, auditorModelFallbacks: backups, subagentFallbacks: { scout: ["audit/project"] }, progressEvery: 7 };
+    const project = { ...scenario.project, subagentFallbacks: { scout: ["audit/project"] }, progressEvery: 7 };
     fs.mkdirSync(path.dirname(projectSettingsPath(cwd)), { recursive: true });
     fs.writeFileSync(projectSettingsPath(cwd), JSON.stringify(project));
     ctx.ui.customStubMode = true;
@@ -476,7 +476,7 @@ test("v0.36.0: the singular auditor fallback setting migrates to the ordered cha
   }
 });
 
-test("choosing session clears both role overrides without a separate thinking prompt", async () => {
+test("choosing session inherits both role settings without a separate thinking prompt", async () => {
   const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
   process.env.PI_CODING_AGENT_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "glla-session-pair-editor-"));
   try {
@@ -491,8 +491,16 @@ test("choosing session clears both role overrides without a separate thinking pr
       ctx.ui.customImpl = async () => ({ kind: "session" });
       ctx.ui.selectImpl = async () => { throw new Error("session inherits its thinking without another choice"); };
       await handleSettingChoice(`${role}Model`, ctx as ExtensionContext);
-      assert.equal(readGlobal()[`${role}Model`], undefined, role);
-      assert.equal(readGlobal()[`${role}ThinkingLevel`], undefined, role);
+      if (role === "auditor") {
+        const effective = loadSettings(ctx.cwd);
+        assert.equal(effective.auditorModel, null, "explicit session masks the global model");
+        assert.equal(effective.auditorThinkingLevel, undefined);
+        assert.equal(readGlobal().auditorModel, "test/selected", "other projects keep their pin");
+        assert.equal(readGlobal().auditorThinkingLevel, "low");
+      } else {
+        assert.equal(readGlobal()[`${role}Model`], undefined, role);
+        assert.equal(readGlobal()[`${role}ThinkingLevel`], undefined, role);
+      }
       assert.ok(ctx.ui.matching("session model and thinking inherited together").length > 0, role);
       if (role === "designer") {
         const file = path.join(process.env.PI_CODING_AGENT_DIR!, "agents", "Designer.md");

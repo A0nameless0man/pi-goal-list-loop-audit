@@ -860,9 +860,11 @@ export function migrateLegacySettings(value: Partial<Settings>): Record<string, 
     delete next.Designer;
     return Object.keys(next).length > 0 ? next : undefined;
   };
-  migrated.subagentModelOverrides = stripDesigner(legacyOverrides);
-  migrated.subagentThinkingOverrides = stripDesigner(legacyThinking);
-  migrated.subagentFallbacks = stripDesigner(legacyFallbacks);
+  // A partial save patch must not manufacture undefined map entries: the
+  // writer interprets those as explicit deletions of unrelated settings.
+  if ("subagentModelOverrides" in migrated) migrated.subagentModelOverrides = stripDesigner(legacyOverrides);
+  if ("subagentThinkingOverrides" in migrated) migrated.subagentThinkingOverrides = stripDesigner(legacyThinking);
+  if ("subagentFallbacks" in migrated) migrated.subagentFallbacks = stripDesigner(legacyFallbacks);
   return migrated;
 }
 
