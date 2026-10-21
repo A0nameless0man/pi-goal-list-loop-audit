@@ -378,6 +378,7 @@ import {
   type DrafterModelCandidate,
 } from "../drafter-model.js";
 import { ModelSelector } from "../model-selector.js";
+import { waitForDrafterRetry } from "../drafter-recovery.js";
 import {
   assessSuspiciousObjective,
   deriveObjectiveFromContract,
@@ -401,10 +402,15 @@ interface DraftingModelLease {
   candidates: DrafterModelCandidate[];
   attempted: string[];
   generation: number;
+  cwd: string;
+  api: ExtensionAPI;
+  controller: AbortController;
+  recovering: boolean;
+  switchInFlight?: Promise<boolean>;
 }
 
 let draftingModelLease: DraftingModelLease | null = null;
-let draftingModelRestoreInFlight: Promise<void> | null = null;
+let draftingModelRestoreInFlight: { lease: DraftingModelLease; promise: Promise<void> } | null = null;
 const DRAFTER_RECOVERY_PROMPT = "The drafting model turn failed. Resume the existing drafting interview from the conversation, keep the user's intent, ask at most one focused decision question if truly necessary, and continue toward the appropriate propose_* tool. Do not restart the interview or implement work.";
 
 /** Read the host's current thinking level without making older/test hosts a
@@ -435,128 +441,147 @@ function applyDrafterThinkingLevel(ctx: ExtensionContext, requested: string): st
   return currentThinkingLevel(ctx);
 }
 
+/** Delayed drafting work must use the live owner, never its captured context. */
+function draftingLeaseContext(lease: DraftingModelLease): ExtensionContext | null {
+  if (lease.generation !== sessionGeneration || lease.api !== extensionApi
+    || sessionHandoffPending || extensionApiStale || staleTerminalDone || zombieStoodDown) return null;
+  const live = freshCtx();
+  return live && live.cwd === lease.cwd && !isForeignCtx(live) ? live : null;
+}
+
+function releaseDraftingLease(lease: DraftingModelLease): void {
+  lease.controller.abort();
+  if (draftingModelLease === lease) draftingModelLease = null;
+}
+
+/** Restoration serializes behind a switch already accepted by the host.
+ * A cancelled recovery may finish its host call, but cannot apply a dial
+ * or send a new interview prompt afterward. */
+async function switchDraftingModel(lease: DraftingModelLease, model: any): Promise<boolean> {
+  const pending = (async () => {
+    try {
+      const switched = await lease.api.setModel(model);
+      if (switched) lease.activeRef = modelRef(model) ?? lease.activeRef;
+      return switched;
+    } catch { return false; }
+  })();
+  lease.switchInFlight = pending;
+  try { return await pending; }
+  finally { if (lease.switchInFlight === pending) lease.switchInFlight = undefined; }
+}
+
 /** Select the drafting-only model and retain a generation-fenced restore lease. */
-async function beginDrafterModel(ctx: ExtensionContext): Promise<void> {
+async function beginDrafterModel(ctx: ExtensionContext): Promise<boolean> {
+  const generation = sessionGeneration;
   await restoreDrafterModel();
+  // A failed restoration still owns the original pair. Never replace it
+  // with a new lease whose "original" is the failed drafter.
+  if (generation !== sessionGeneration || draftingModelLease || draftingTarget === null
+    || sessionHandoffPending || extensionApiStale || staleTerminalDone || zombieStoodDown) return false;
   const settings = loadSettings(ctx.cwd);
   const resolution = resolveDrafterModel(ctx, settings);
   const selected = resolution.selected;
-  if (!selected || !ctx.model || !extensionApi) {
-    if (resolution.configuredRefs.length > 0 && selected?.via === "session-last-resort") {
-      appendLedger(ctx.cwd, "drafter_model_fallback", { configured: resolution.configuredRefs, via: "session-model" });
-      ctx.ui.notify("Configured drafter models were unavailable; drafting stays on the current session model. Main and auditor recovery chains are unchanged.", "warning");
-    }
-    return;
-  }
+  if (!selected || !ctx.model || !extensionApi) return true;
   const originalModel = ctx.model;
   const beforeRef = modelRef(originalModel);
-  if (!beforeRef) return;
+  if (!beforeRef) return true;
   const originalThinkingLevel = currentThinkingLevel(ctx);
   const requestedThinkingLevel = resolveDrafterThinkingLevel(selected, originalThinkingLevel, settings.drafterThinkingLevel);
+  const selectedRef = modelRef(selected.model) ?? selected.ref;
+  const lease: DraftingModelLease = {
+    originalModel, originalThinkingLevel, activeRef: beforeRef,
+    activeThinkingLevel: originalThinkingLevel, requestedThinkingLevel,
+    candidates: resolution.candidates,
+    // Implicit session inheritance gets one bounded same-model retry.
+    attempted: selected.via === "configured" ? [selectedRef] : [],
+    generation, cwd: ctx.cwd, api: extensionApi,
+    controller: new AbortController(), recovering: false,
+  };
+  draftingModelLease = lease;
   if (selected.via !== "configured") {
-    const activeThinkingLevel = applyDrafterThinkingLevel(ctx, requestedThinkingLevel);
-    draftingModelLease = {
-      originalModel,
-      originalThinkingLevel,
-      activeRef: selected.ref,
-      activeThinkingLevel,
-      requestedThinkingLevel,
-      candidates: resolution.candidates,
-      // The current session model is a bounded same-model retry, not a model
-      // switch. It must remain unattempted so one drafting error can replay
-      // the interview without consulting main-goal recovery.
-      attempted: [],
-      generation: sessionGeneration,
-    };
+    lease.activeThinkingLevel = applyDrafterThinkingLevel(ctx, requestedThinkingLevel);
     if (resolution.configuredRefs.length > 0) {
       appendLedger(ctx.cwd, "drafter_model_fallback", { configured: resolution.configuredRefs, via: "session-model" });
       ctx.ui.notify("Configured drafter models were unavailable; drafting stays on the current session model. Main and auditor recovery chains are unchanged.", "warning");
     }
-    return;
+    return true;
   }
-  if (beforeRef.toLowerCase() === selected.ref.toLowerCase()) {
-    const activeThinkingLevel = applyDrafterThinkingLevel(ctx, requestedThinkingLevel);
-    draftingModelLease = {
-      originalModel,
-      originalThinkingLevel,
-      activeRef: selected.ref,
-      activeThinkingLevel,
-      requestedThinkingLevel,
-      candidates: resolution.candidates,
-      attempted: [selected.ref],
-      generation: sessionGeneration,
-    };
-    appendLedger(ctx.cwd, "drafter_model_selected", { from: beforeRef, to: selected.ref, candidates: resolution.configuredRefs, alreadyActive: true });
-    return;
-  }
-  let switched = false;
-  try { switched = await extensionApi.setModel(selected.model); } catch { switched = false; }
+  const alreadyActive = beforeRef.toLowerCase() === selectedRef.toLowerCase();
+  const switched = alreadyActive || await switchDraftingModel(lease, selected.model);
+  const live = draftingLeaseContext(lease);
+  if (draftingModelLease !== lease || lease.controller.signal.aborted || draftingTarget === null || !live) return false;
   if (!switched) {
-    appendLedger(ctx.cwd, "drafter_model_fallback", { configured: resolution.configuredRefs, selected: selected.ref, via: "session-model", reason: "setModel rejected" });
-    ctx.ui.notify(`Drafter model ${selected.ref} could not be selected; drafting stays on the current session model.`, "warning");
-    return;
+    appendLedger(live.cwd, "drafter_model_fallback", { configured: resolution.configuredRefs, selected: selectedRef, via: "session-model", reason: "setModel rejected" });
+    live.ui.notify(`Drafter model ${selectedRef} could not be selected; drafting stays on the current session model.`, "warning");
+    return true;
   }
-  const activeThinkingLevel = applyDrafterThinkingLevel(ctx, requestedThinkingLevel);
-  draftingModelLease = {
-    originalModel,
-    originalThinkingLevel,
-    activeRef: selected.ref,
-    activeThinkingLevel,
-    requestedThinkingLevel,
-    candidates: resolution.candidates,
-    attempted: [selected.ref],
-    generation: sessionGeneration,
-  };
-  appendLedger(ctx.cwd, "drafter_model_selected", { from: beforeRef, to: selected.ref, candidates: resolution.configuredRefs });
-  ctx.ui.notify(`Drafting uses ${selected.ref} temporarily; the session model will be restored when drafting ends.`, "info");
+  lease.activeThinkingLevel = applyDrafterThinkingLevel(live, requestedThinkingLevel);
+  appendLedger(live.cwd, "drafter_model_selected", { from: beforeRef, to: selectedRef, candidates: resolution.configuredRefs, ...(alreadyActive ? { alreadyActive: true } : {}) });
+  if (!alreadyActive) live.ui.notify(`Drafting uses ${selectedRef} temporarily; the session model will be restored when drafting ends.`, "info");
+  return true;
 }
 
 /** Restore the pre-drafting model unless the user changed it meanwhile. */
 async function restoreDrafterModel(): Promise<void> {
-  if (draftingModelRestoreInFlight) {
-    await draftingModelRestoreInFlight;
-    return;
-  }
   const lease = draftingModelLease;
-  draftingModelLease = null;
-  if (!lease || lease.generation !== sessionGeneration || !extensionApi) return;
-  const fresh = (globalThis as any).freshCtx as (() => ExtensionContext | null) | undefined;
-  const liveCtx = fresh ? fresh() : null;
-  const currentCtx = liveCtx ?? lastCtx;
-  const currentRef = modelRef(currentCtx?.model);
-  if (currentRef && currentRef.toLowerCase() !== lease.activeRef.toLowerCase()) {
-    appendLedger(currentCtx?.cwd ?? process.cwd(), "drafter_model_restore_skipped", { active: lease.activeRef, current: currentRef, reason: "model changed during drafting" });
+  if (!lease) return;
+  // Abort the sleep synchronously, even when restoration itself must wait
+  // for a host model switch already in flight.
+  lease.controller.abort();
+  if (lease.generation !== sessionGeneration || lease.api !== extensionApi) {
+    releaseDraftingLease(lease);
     return;
   }
-  if ((globalThis as any).extensionApiStale) {
-    appendLedger(currentCtx?.cwd ?? process.cwd(), "drafter_model_restore_skipped", { active: lease.activeRef, reason: "extension handle stale" });
-    return;
-  }
-  const originalRef = modelRef(lease.originalModel);
-  const currentThinking = currentCtx ? currentThinkingLevel(currentCtx) : undefined;
-  const shouldRestoreThinking = currentThinking === lease.activeThinkingLevel;
-  if (currentRef && originalRef && currentRef.toLowerCase() === originalRef.toLowerCase()) {
-    if (shouldRestoreThinking && currentCtx) applyDrafterThinkingLevel(currentCtx, lease.originalThinkingLevel);
-    appendLedger(currentCtx?.cwd ?? process.cwd(), "drafter_model_restored", { to: originalRef, alreadyActive: true });
+  if (draftingModelRestoreInFlight?.lease === lease) {
+    await draftingModelRestoreInFlight.promise;
     return;
   }
   const restore = (async () => {
-    try {
-      const restored = await extensionApi.setModel(lease.originalModel);
-      if (restored && shouldRestoreThinking && currentCtx) applyDrafterThinkingLevel(currentCtx, lease.originalThinkingLevel);
-      appendLedger(currentCtx?.cwd ?? process.cwd(), restored ? "drafter_model_restored" : "drafter_model_restore_failed", { to: originalRef });
-      if (!restored) currentCtx?.ui.notify("The drafting model could not be restored; the current model remains active. Main and auditor settings were not changed.", "warning");
-    } catch {
-      appendLedger(currentCtx?.cwd ?? process.cwd(), "drafter_model_restore_failed", { to: originalRef });
-      currentCtx?.ui.notify("The drafting model could not be restored; the current model remains active. Main and auditor settings were not changed.", "warning");
+    if (lease.switchInFlight) await lease.switchInFlight;
+    const currentCtx = draftingLeaseContext(lease);
+    if (draftingModelLease !== lease || !currentCtx) return;
+    const currentRef = modelRef(currentCtx.model);
+    if (!currentRef) return;
+    if (currentRef.toLowerCase() !== lease.activeRef.toLowerCase()) {
+      appendLedger(currentCtx.cwd, "drafter_model_restore_skipped", { active: lease.activeRef, current: currentRef, reason: "model changed during drafting" });
+      releaseDraftingLease(lease);
+      return;
+    }
+    const originalRef = modelRef(lease.originalModel);
+    if (!originalRef) return;
+    if (isForbiddenModel(originalRef, loadSettings(currentCtx.cwd).forbiddenModels)) {
+      appendLedger(currentCtx.cwd, "drafter_model_restore_failed", { to: originalRef, reason: "original session model is now forbidden" });
+      currentCtx.ui.notify("The original session model is now forbidden; select an allowed session model before starting another drafting interview.", "warning");
+      return;
+    }
+    const shouldRestoreThinking = currentThinkingLevel(currentCtx) === lease.activeThinkingLevel;
+    const alreadyActive = currentRef.toLowerCase() === originalRef.toLowerCase();
+    const restored = alreadyActive || await switchDraftingModel(lease, lease.originalModel);
+    const live = draftingLeaseContext(lease);
+    if (draftingModelLease !== lease || !live) return;
+    if (restored && modelRef(live.model)?.toLowerCase() !== lease.activeRef.toLowerCase()) {
+      // A real user selection supersedes restoration; never apply the old
+      // interview's dial onto that newly selected model.
+      releaseDraftingLease(lease);
+      return;
+    }
+    const thinkingRestored = !shouldRestoreThinking || (restored
+      && applyDrafterThinkingLevel(live, lease.originalThinkingLevel) === lease.originalThinkingLevel);
+    if (restored && thinkingRestored) {
+      appendLedger(live.cwd, "drafter_model_restored", { to: originalRef, ...(alreadyActive ? { alreadyActive: true } : {}) });
+      releaseDraftingLease(lease);
+    } else {
+      if (restored && !thinkingRestored) lease.activeThinkingLevel = currentThinkingLevel(live);
+      // Keep the original pair for the next restoration attempt. Exhaustion
+      // and rejected host actions are not proof that restoration happened.
+      appendLedger(live.cwd, "drafter_model_restore_failed", { to: originalRef });
+      live.ui.notify("The drafting model or thinking could not be restored; restoration remains pending. Main and auditor settings were not changed.", "warning");
     }
   })();
-  draftingModelRestoreInFlight = restore;
-  try {
-    await restore;
-  } finally {
-    if (draftingModelRestoreInFlight === restore) draftingModelRestoreInFlight = null;
-  }
+  const inFlight = { lease, promise: restore };
+  draftingModelRestoreInFlight = inFlight;
+  try { await restore; }
+  finally { if (draftingModelRestoreInFlight === inFlight) draftingModelRestoreInFlight = null; }
 }
 
 /**
@@ -565,61 +590,86 @@ async function restoreDrafterModel(): Promise<void> {
  * and provider retries use the bounded ladder (5s → base*2^(n-1) cap 5h).
  * The session model remains the last resort; same-model lease is preserved.
  */
-async function handleDrafterModelFailure(ctx: ExtensionContext, error?: string): Promise<boolean> {
+async function handleDrafterModelFailure(
+  ctx: ExtensionContext,
+  error?: string,
+  runtime: { wait?: typeof waitForDrafterRetry } = {},
+): Promise<boolean> {
   const lease = draftingModelLease;
-  if (!lease || draftingTarget === null || lease.generation !== sessionGeneration || !extensionApi) return false;
-  const settings = loadSettings(ctx.cwd);
+  if (!lease || lease.recovering || isForeignCtx(ctx)) return false;
+  const liveOwner = (): ExtensionContext | null => {
+    if (draftingModelLease !== lease || draftingTarget === null || lease.controller.signal.aborted) return null;
+    const live = draftingLeaseContext(lease);
+    if (live && modelRef(live.model)?.toLowerCase() !== lease.activeRef.toLowerCase()) {
+      // Do not rotate a genuine user selection back into the old interview.
+      releaseDraftingLease(lease);
+      return null;
+    }
+    return live;
+  };
+  if (!liveOwner()) return false;
   const failure = classifyMainModelFailure(error);
   if (failure.kind === "non-recoverable") return false;
-  const configuredRefs = lease.candidates.filter((candidate) => candidate.via === "configured").map((candidate) => candidate.ref);
-  const selector = new ModelSelector({
-    getChain: () => configuredRefs,
-    resolve: (ref) => lease.candidates.find((candidate) => candidate.ref.toLowerCase() === ref.toLowerCase())?.model,
-    isForbidden: (ref) => isForbiddenModel(ref, settings.forbiddenModels),
-    record: (event) =>
-      appendLedger(ctx.cwd, "model_fallback_select", {
-        scope: "drafter",
-        fromRef: event.fromRef,
-        toRef: event.toRef,
-        reason: event.reason,
-      }),
-  });
-  let attempt = lease.attempted.length;
-  for (;;) {
-    const pick = selector.selectNextValid({ kind: "drafter" }, lease.activeRef, lease.attempted);
-    for (const visited of selector.lastVisitedRefs) {
-      if (!lease.attempted.some((ref) => ref.toLowerCase() === visited.toLowerCase())) lease.attempted.push(visited);
-    }
-    if (!("model" in pick)) break;
-    const delayMs = mainModelFailureDelayMs(failure, ++attempt, (settings as any).mainModelRetryMinutes ?? 15);
-    if (delayMs > 5_000) await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
-    let switched = false;
-    try {
-      switched = await extensionApi.setModel(pick.model);
-    } catch {
-      switched = false;
-    }
-    const alreadyActive = pick.ref.toLowerCase() === lease.activeRef.toLowerCase();
-    if (!switched && !alreadyActive) continue;
-    const previous = lease.activeRef;
-    lease.activeRef = pick.ref;
-    lease.activeThinkingLevel = applyDrafterThinkingLevel(ctx, lease.requestedThinkingLevel);
-    appendLedger(ctx.cwd, alreadyActive ? "drafter_model_retry" : "drafter_model_fallback", {
-      from: previous,
-      to: pick.ref,
-      attempted: lease.attempted.slice(),
-      delayMs,
-    });
-    ctx.ui.notify(`Drafting provider failed; retrying the existing interview on ${pick.ref} after ${Math.round(delayMs / 1000)}s.`, "warning");
-    const safeSteer = (globalThis as any).safeSteerUser as ((context: ExtensionContext, text: string) => boolean) | undefined;
-    if (!safeSteer || !safeSteer(ctx, DRAFTER_RECOVERY_PROMPT)) return false;
-    draftingSeedInFlight = true;
-    return true;
+  // Canonical model identities keep aliases from granting duplicate attempts.
+  // Crucially, the implicit session candidate is part of this bounded chain.
+  const candidates = new Map<string, DrafterModelCandidate>();
+  for (const candidate of lease.candidates) {
+    const ref = modelRef(candidate.model) ?? candidate.ref;
+    if (!candidates.has(ref.toLowerCase())) candidates.set(ref.toLowerCase(), { ...candidate, ref });
   }
-  draftingModelLease = null;
-  appendLedger(ctx.cwd, "drafter_model_fallback_exhausted", { attempted: lease.attempted });
-  ctx.ui.notify("The dedicated drafter chain is exhausted; the drafting interview remains open on the current model. Retry the drafting command when ready.", "warning");
-  return false;
+  const refs = [...candidates.values()].map(candidate => candidate.ref);
+  const selector = new ModelSelector({
+    getChain: () => refs,
+    resolve: ref => candidates.get(ref.toLowerCase())?.model,
+    isForbidden: ref => isForbiddenModel(ref, loadSettings(lease.cwd).forbiddenModels),
+    record: event => appendLedger(lease.cwd, "model_fallback_select", {
+      scope: "drafter", fromRef: event.fromRef, toRef: event.toRef, reason: event.reason,
+    }),
+  });
+  lease.recovering = true;
+  try {
+    let attempt = lease.attempted.length;
+    for (;;) {
+      if (!liveOwner()) return false;
+      // An implicit session default is allowed ONE same-model retry. It is
+      // unattempted initially; every visited candidate is consumed below.
+      const pick = selector.selectNextValid({ kind: "drafter" }, undefined, lease.attempted);
+      for (const visited of selector.lastVisitedRefs) {
+        if (!lease.attempted.some(ref => ref.toLowerCase() === visited.toLowerCase())) lease.attempted.push(visited);
+      }
+      if (!("model" in pick)) break;
+      const settings = loadSettings(lease.cwd);
+      const delayMs = mainModelFailureDelayMs(failure, ++attempt, settings.mainModelRetryMinutes ?? 15);
+      if (!await (runtime.wait ?? waitForDrafterRetry)(delayMs, lease.controller.signal)) return false;
+      // Revalidate ownership AND policy after sleep: cancellation, a host
+      // replacement, or a newly forbidden model must not launch old work.
+      const before = liveOwner();
+      if (!before) return false;
+      if (isForbiddenModel(pick.ref, loadSettings(lease.cwd).forbiddenModels)) continue;
+      const previous = lease.activeRef;
+      const alreadyActive = pick.ref.toLowerCase() === previous.toLowerCase();
+      const switched = alreadyActive || await switchDraftingModel(lease, pick.model);
+      const live = liveOwner();
+      if (!live) return false;
+      if (!switched) continue;
+      const candidate = candidates.get(pick.ref.toLowerCase())!;
+      const requested = resolveDrafterThinkingLevel(candidate, lease.originalThinkingLevel, lease.requestedThinkingLevel);
+      lease.activeThinkingLevel = applyDrafterThinkingLevel(live, requested);
+      appendLedger(live.cwd, alreadyActive ? "drafter_model_retry" : "drafter_model_fallback", {
+        from: previous, to: pick.ref, attempted: lease.attempted.slice(), delayMs,
+      });
+      live.ui.notify(`Drafting provider failed; retrying the existing interview on ${pick.ref} after ${Math.round(delayMs / 1000)}s.`, "warning");
+      if (!safeSteerUser(live, DRAFTER_RECOVERY_PROMPT)) return false;
+      draftingSeedInFlight = true;
+      return true;
+    }
+    const live = liveOwner();
+    if (!live) return false;
+    appendLedger(live.cwd, "drafter_model_fallback_exhausted", { attempted: lease.attempted });
+    live.ui.notify("The dedicated drafter chain is exhausted; the drafting interview remains open. Restoring the original session model and thinking.", "warning");
+    await restoreDrafterModel();
+    return false;
+  } finally { lease.recovering = false; }
 }
 
 /**
@@ -943,7 +993,11 @@ async function startDrafting(ctx: ExtensionContext, target: "goal" | "list" | "l
   // From this point onward, every exit owns the gate it is about to claim.
   draftingTarget = target;
   try {
-    await beginDrafterModel(ctx);
+    const modelReady = await beginDrafterModel(ctx);
+    if (!modelReady) {
+      if (!draftingModelLease || draftingModelLease.controller.signal.aborted) draftingTarget = null;
+      return false;
+    }
   } catch (err) {
     // v0.35.44 (audit finding): beginDrafterModel sat OUTSIDE the try below,
     // so a throw left the orphaned drafting gate this function's own header
