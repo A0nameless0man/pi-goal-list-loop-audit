@@ -409,16 +409,26 @@ test("choosing session clears both role overrides without a separate thinking pr
   process.env.PI_CODING_AGENT_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "glla-session-pair-editor-"));
   try {
     for (const role of ["designer", "drafter", "auditor"]) {
-      fs.writeFileSync(GLOBAL_FILE, JSON.stringify({ [`${role}Model`]: "test/selected", [`${role}ThinkingLevel`]: "low" }));
+      fs.writeFileSync(GLOBAL_FILE, JSON.stringify({ [`${role}Model`]: "test/selected", [`${role}ThinkingLevel`]: "low", ...(role === "designer" ? { designerEnabled: true } : {}) }));
       const ctx = makeMockCtx(tmpCwd()) as any;
       ctx.model = { provider: "test", id: "session", reasoning: true, thinkingLevelMap: { max: "max" } };
       ctx.thinkingLevel = "max";
+      ctx.modelRegistry = {
+        getAvailable: () => [ctx.model], find: () => ctx.model, hasConfiguredAuth: () => true,
+      };
       ctx.ui.customImpl = async () => ({ kind: "session" });
       ctx.ui.selectImpl = async () => { throw new Error("session inherits its thinking without another choice"); };
       await handleSettingChoice(`${role}Model`, ctx as ExtensionContext);
       assert.equal(readGlobal()[`${role}Model`], undefined, role);
       assert.equal(readGlobal()[`${role}ThinkingLevel`], undefined, role);
       assert.ok(ctx.ui.matching("session model and thinking inherited together").length > 0, role);
+      if (role === "designer") {
+        const file = path.join(process.env.PI_CODING_AGENT_DIR!, "agents", "Designer.md");
+        assert.match(fs.readFileSync(file, "utf8"), /^thinking: max$/m);
+        ctx.thinkingLevel = "off";
+        await handleSettingChoice("designerModel", ctx as ExtensionContext);
+        assert.match(fs.readFileSync(file, "utf8"), /^thinking: off$/m);
+      }
     }
   } finally {
     restoreGlobal();

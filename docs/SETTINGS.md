@@ -89,12 +89,12 @@ This authority boundary applies before settings-value normalization.
 | `stateRoot` | `"workingDir"` | Where durable state lives; `"sessionDir"` is explicit opt-in. Global-only. |
 | `mainModelFallbacks` | `[]` | Ordered provider/model refs on main-model failure. Can include the current session model: the saved global chain is independent of the editing session. Runtime skips active and already-tried candidates. Global-only. |
 | `mainModelFallbackThinkingLevels` | unset (inherit primary) | Per-model thinking pins for main fallbacks, keyed by lowercase provider/model. Adding a model asks only for its supported level. Use Main agent → Fallback thinking to edit one saved model; existing choices survive chain edits. Inheritance restores the primary session dial. Global-only. |
-| `drafterModel` | unset (session) | Drafting-only primary model. Global-only. |
-| `drafterThinkingLevel` | unset (inherit) | Thinking level for the drafting agent. Global-only. |
+| `drafterModel` | unset (session) | Drafting-only primary model. Default inherits the session model AND thinking; selecting session clears both role overrides without a second thinking prompt. Global-only. |
+| `drafterThinkingLevel` | unset (inherit) | Thinking level for explicitly configured drafting models only; the implicit session route keeps the session dial. Global-only. |
 | `drafterModelFallbacks` | `[]` | Ordered drafting fallbacks; session model is final. Global-only. |
 | `designerEnabled` | unset (on-demand) | Explicit Designer enablement: `true` keeps the managed read-only Designer registered, `false` never registers it (model picks are kept), unset registers on demand when a goal/list item/task asks for Designer or a Designer model is set. Global-only. |
-| `designerModel` | unset (session) | Primary model for the Designer design-checkpoint role. Global-only. |
-| `designerThinkingLevel` | unset (inherit) | Thinking level for the Designer role; picked with the model on the Designer tab. Global-only. |
+| `designerModel` | unset (session) | Primary model for the Designer design-checkpoint role. Default inherits the session model AND thinking; selecting session clears both overrides without a second thinking prompt. Explicit models are selected first. Global-only. |
+| `designerThinkingLevel` | unset (inherit) | Thinking level for explicitly configured Designer models; picked with the model. When registration returns to the session route, it uses the current session thinking, not this override. Global-only. |
 | `designerModelFallbacks` | `[]` | Ordered Designer fallbacks, resolved at registration time: the first eligible ref is written into `Designer.md`, then session inherit. Global-only. |
 | `compactorModel` | unset (plan B) | Emergency-compactor primary; never the session model. Global-only. |
 | `compactorModelFallbacks` | `[]` | Ordered compactor fallbacks; no session last resort. Global-only. |
@@ -106,7 +106,7 @@ This authority boundary applies before settings-value normalization.
 | `forbiddenModels` | `[]` | Refs that must never be selected (case-insensitive substring). |
 | `blockForbiddenModelSwitches` | `true` | Revert forbidden switches (`false` = stand but ledger). |
 | `visionAssist` | `true` | Continuation prompts carry the prefer-native-vision directive. |
-| `auditorModel` | unset (fallbacks, then session) | Detached auditor primary (`"provider/id"` or bare id); selected model runs first, including when it matches the session. If unavailable, walk explicit fallbacks then the session model at the session's thinking level. With no pin, configured fallbacks precede the session last resort; with no chain, inherit session directly. |
+| `auditorModel` | unset (fallbacks, then session) | Detached auditor primary (`"provider/id"` or bare id); default is the session model AND thinking. Selecting session clears both overrides without a second thinking prompt. A selected model runs first, including when it matches the session. If unavailable, walk explicit fallbacks then the session model at the session's thinking level. With no pin, configured fallbacks precede the session last resort; with no chain, inherit session directly. |
 | `auditorModelFallbacks` | `[]` | Ordered auditor fallbacks; session model is final. Saving a non-empty chain offers the thinking pick. Global-only. |
 | `auditorAllowedExtensions` | `[]` | Extension specs the detached auditor may load; resolved fail-closed, `[]` = isolated. |
 | `auditorMirrorSessionExtensions` | `true` | Also load the session's own packages in the worker (GLLA itself never mirrored); `false` = curated allow-list only. |

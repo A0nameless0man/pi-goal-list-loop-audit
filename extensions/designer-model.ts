@@ -4,11 +4,11 @@
 // fallback chain live on provider failure — the Designer is spawned by
 // pi-subagents from a static Designer.md carrying ONE `model:` line. GLLA
 // can therefore only pre-select the first eligible ref when the agent file
-// is (re)written: primary → fallbacks → session last-fallback. The session
-// model is always the automatic final entry (when present, not forbidden,
-// and not already configured): an explicitly selected primary still wins,
-// and only a fully ineligible configured chain falls through to the
-// session pin. This module owns that selection so startup sync, settings
+// is (re)written. With no configured chain the DEFAULT is the session's
+// model AND thinking. With configuration: primary → explicit fallbacks →
+// session pair when the whole configured chain is ineligible. An explicit
+// selection always wins; the session route never inherits a stale role dial.
+// This module owns that selection so startup sync, settings
 // edits, and goal dispatch all resolve identically.
 
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
