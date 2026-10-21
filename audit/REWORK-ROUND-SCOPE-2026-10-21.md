@@ -143,6 +143,56 @@ reason `quit` in both ledgers). Three orphaned auditor workers from a deleted
 scratch directory (`/tmp/envprobe`, ~79h old) were reaped; they were burning
 CPU with no session left to own them.
 
+## Observed behaviour under the fix
+
+The parked claims were re-audited under the fixed code, and the rounds look
+different in the durable evidence.
+
+**clean-web** — the re-audit round (attempt `audit-mvhgobbj-c6t1vl-mvhgobc5-10fe4f8d`)
+made **64 tool calls, of which exactly ONE launched a test run**, and that one
+was a single test file with its own timeout:
+
+```
+bash: cd .../clean-web && timeout 300 bunx vitest run test/page-styles.test.ts 2>&1 | tail -20
+```
+
+The other 63 calls were narrow reads and greps of the files the objection
+named (`sed -n '124,140p' scripts/browser-test/audit-behavior.mjs`,
+`grep -n "createElement" src/content/ui.ts`, `head -40 …/REPORT.md`, …). The
+round's own opening line was *"I have the full audit history. The last
+disapproving round raised 4 items (1 MED + 3 LOW). Let me verify each
+narrowly."*
+
+Before the fix, the same project's rounds launched the whole browser-test
+harness (`scripts/browser-test/launch.mjs`,
+`scripts/browser-test/sweep-pol-pages.mjs`) — the full suite, as one bash
+call, which then hit the five-minute per-tool budget. The complete tool-call
+profile of the post-fix round is kept in
+`audit/rework-round-scope-2026-10-21/post-fix-round-tool-calls.txt`.
+
+**eve** — the re-audit exhausted its chain on **provider** failures, and the
+claim settled on the provider path rather than the no-verdict path:
+
+```
+auditor_candidate_exhausted   failureClass=provider
+auditor_fallback_exhausted    failureClass=provider
+goal_paused                   phase=retry-waiting
+```
+
+with the durable verdict log showing the underlying cause plainly:
+`429: {"message":"Provider returned error","code":429,…}` and
+`xingchen-agi/xing4.0-29b-a4b:free is temporarily rate-limited`. The claim is
+now on the bounded retry ladder, not in a loop that re-dispatches a whole
+audit.
+
+**The empty-response classification, in the durable record.** The pre-fix
+verdict log for clean-web shows the same transient blip destroying round after
+round — `Provider returned an empty response` at 18:52, 22:21 and 01:08 on
+20–21 October — each one a full round that had already run the project's
+whole harness, thrown away. After the fix the same string is classified
+`provider` (the rule the main lane has used since v0.38.104), so it takes
+the bounded ladder and the identical-failure park instead.
+
 ## What GLLA does not own — recorded, not fixed
 
 - **The configuration gap.** The global settings carry
