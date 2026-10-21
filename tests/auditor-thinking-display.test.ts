@@ -75,8 +75,7 @@ test("headless fallback-only auditors do not claim the session thinking cap is e
   }
 });
 
-test("headless /glla honors an explicit thinking setting and unknown models", async () => {
-  const cwd = tmpCwd();
+test("headless /glla honors an explicit thinking setting and unknown models", async () => {  const cwd = tmpCwd();
   fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify({ aggressiveMode: false, auditorThinkingLevel: "medium", auditorModel: "agnes/agnes-3.0-flash" }));
   const ctx = await boot(cwd);
   await pi.command("glla", "", ctx);
@@ -102,4 +101,26 @@ test("headless /glla honors an explicit thinking setting and unknown models", as
   );
   await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
   await pi.fire("session_shutdown", { reason: "test-end" }, ctx2);
+});
+
+test("headless /glla shows the session route ignores an explicitly configured auditor dial", async () => {
+  // v0.39.43: the session model is the auditor's default AND its last
+  // resort, so it runs at the SESSION's thinking level. An explicit
+  // `auditorThinkingLevel` is a choice about the CONFIGURED auditor models
+  // and no longer turns down the route that has to carry the decision.
+  const cwd = tmpCwd();
+  fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify({ aggressiveMode: false, auditorThinkingLevel: "medium" }));
+  const ctx: any = makeMockCtx(cwd);
+  ctx.hasUI = false;
+  ctx.thinkingLevel = "max";
+  ctx.model = { provider: "openrouter", id: "stealth/space-bunny-alpha" };
+  ctx.modelRegistry = { getAvailable: () => [] };
+  __testOnlyResetOwnerSession();
+  __testOnlyResetStaleFlag();
+  await pi.fire("session_start", { reason: "reload" }, ctx);
+  await pi.command("glla", "", ctx);
+  const text = headlessText(ctx);
+  // The session's dial (max), not the configured auditor dial (medium).
+  assert.match(text, /auditorThinkingEffective: max \(requested max \[session-model\]/);
+  await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
 });
