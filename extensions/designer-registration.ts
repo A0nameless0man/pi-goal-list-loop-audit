@@ -1,11 +1,31 @@
 // Designer.md is a launch-time projection, not a saved Designer model pick.
-// Refresh only this role: a full subagent sync would clear unrelated overrides.
+//
+// pi-subagents resolves a child from the agent definition file at launch, so
+// a session-inherited Designer must carry the CURRENT session model and
+// thinking when the child starts — never a snapshot taken at startup.
+// GLLA owns the definition file (it is the only writer of the managed copy),
+// so GLLA refreshes that projection at the boundaries where a launch can
+// happen: a model/thinking selection, a turn start, and the subagent tool
+// call that names the Designer role.
+//
+// The refresh never turns session inheritance into a stored pin: settings are
+// never written, explicit Designer model/thinking settings stay independent,
+// disabled and forbidden policy still win, and a user-owned definition file
+// is left alone.
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { resolveDesignerModel } from "./designer-model.js";
 import { resolveDesignerConfig, type Settings } from "./goal-settings.js";
 import {
   defaultAgentDir, designerFileState, ensureRequestedDesigner, removeManagedDesigner,
 } from "./goal-loop-subagents.js";
+
+/** The parts of the extension context the Designer resolution needs. */
+export interface DesignerSessionContext {
+  cwd: string;
+  model: ExtensionContext["model"];
+  modelRegistry: ExtensionContext["modelRegistry"];
+  thinkingLevel?: string;
+}
 
 /** A direct or declarative workflow request is explicit opt-in. Never infer
  * a role request from task prose, management actions, or executable scripts. */
@@ -15,34 +35,51 @@ export function requestsDesigner(input: unknown, depth = 0): boolean {
   const request = input as Record<string, unknown>;
   if (request.action !== undefined) return false;
   if (typeof request.agent === "string" && request.agent.toLowerCase() === "designer") return true;
-  return ["args", "tasks", "chain", "parallel"].some(key => requestsDesigner(request[key], depth + 1));
+  return ["tasks", "chain", "parallel"].some(key => requestsDesigner(request[key], depth + 1));
 }
 
-/** Keep an already registered on-demand Designer fresh without enabling it on
- * an unconfigured startup. Explicit settings/request can create it; disabled
- * or forbidden resolution removes only our managed definition. No settings
- * are written, and user-owned definitions remain entirely independent. */
-export function refreshDesignerRegistration(ctx: ExtensionContext, settings: Settings, requested = false): void {
+export type DesignerRegistrationOutcome =
+  /** The managed definition now carries the current session pair. */
+  | "registered"
+  /** Nothing is registered and nothing should be. */
+  | "absent"
+  /** The operator disabled Designer; the managed copy was removed. */
+  | "disabled"
+  /** The session model is forbidden and no eligible Designer model exists. */
+  | "blocked"
+  /** A user-owned definition file is present and was left untouched. */
+  | "user-owned";
+
+/** Keep the managed Designer definition current without enabling it on an
+ * unconfigured startup. An explicit request or explicit configuration can
+ * create it; disabled or forbidden policy removes only our managed copy.
+ * No settings are written, and a user-owned file stays independent. */
+export function refreshDesignerRegistration(
+  ctx: DesignerSessionContext,
+  settings: Settings,
+  requested = false,
+): DesignerRegistrationOutcome {
   try {
     const agentDir = defaultAgentDir();
     const registered = designerFileState(agentDir);
-    if (registered === "user-owned") return;
+    if (registered === "user-owned") return "user-owned";
     const config = resolveDesignerConfig(settings);
     if (config.enabled === false) {
       removeManagedDesigner(agentDir);
-      return;
+      return "disabled";
     }
-    if (!requested && !config.configured && registered !== "managed") return;
-    const resolution = resolveDesignerModel(ctx, settings);
+    if (!requested && !config.configured && registered !== "managed") return "absent";
+    const resolution = resolveDesignerModel(ctx as any, settings);
     if (resolution.blocked) {
       removeManagedDesigner(agentDir);
-      if (requested) ctx.ui.notify("Designer not registered: the session model is forbidden and no eligible Designer model is configured.", "warning");
-      return;
+      return "blocked";
     }
     if (!ensureRequestedDesigner({ agentDir, model: resolution.selectedRef, thinking: resolution.thinking })) {
-      ctx.ui.notify("Designer registration could not be refreshed for the current session.", "warning");
+      return "absent";
     }
-  } catch (error) {
-    ctx.ui.notify(`Designer registration refresh failed: ${error instanceof Error ? error.message : String(error)}`, "warning");
+    return "registered";
+  } catch {
+    // A failed refresh must never break the launch it was preparing.
+    return "absent";
   }
 }
