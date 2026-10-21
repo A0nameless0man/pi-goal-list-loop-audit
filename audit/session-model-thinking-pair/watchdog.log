@@ -1,0 +1,12 @@
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/subagent-hang-detection.test.ts:
+(pass) long frozen tracked child requests one bounded child-specific abort after the warning window [11901.11ms]
+
+tests/auditor-stall-watchdog.test.ts:
+(pass) stall: worker that never emits a first event is failed fast, not left for the wall [43578.72ms]
+
+ 2 pass
+ 35 filtered out
+ 0 fail
+Ran 2 tests across 2 files. [79.59s]

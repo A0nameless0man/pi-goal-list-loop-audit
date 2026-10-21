@@ -1,0 +1,9 @@
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/settings-editors.test.ts:
+(pass) choosing session clears both role overrides without a separate thinking prompt [7520.05ms]
+
+ 1 pass
+ 44 filtered out
+ 0 fail
+Ran 1 test across 1 file. [25.21s]
