@@ -393,6 +393,12 @@ function listQueue(): NonNullable<State["list"]> {
   return state.list ?? [];
 }
 
+interface DraftingSwitchThinking {
+  expectedLevel: string;
+  modelSelected: boolean;
+  manualLevel?: string;
+}
+
 interface DraftingModelLease {
   originalModel: any;
   originalThinkingLevel: string;
@@ -408,6 +414,8 @@ interface DraftingModelLease {
   recovering: boolean;
   switchInFlight?: Promise<boolean>;
   switchTargetRef?: string;
+  switchThinking?: DraftingSwitchThinking;
+  thinkingOverride?: string;
 }
 
 let draftingModelLease: DraftingModelLease | null = null;
@@ -459,7 +467,11 @@ function releaseDraftingLease(lease: DraftingModelLease): void {
 /** Restoration serializes behind a switch already accepted by the host.
  * A cancelled recovery may finish its host call, but cannot apply a dial
  * or send a new interview prompt afterward. */
-async function switchDraftingModel(lease: DraftingModelLease, model: any): Promise<boolean> {
+async function switchDraftingModel(
+  lease: DraftingModelLease, model: any, ctx: ExtensionContext,
+): Promise<DraftingSwitchThinking & { switched: boolean }> {
+  const thinking: DraftingSwitchThinking = { expectedLevel: currentThinkingLevel(ctx), modelSelected: false };
+  lease.switchThinking = thinking;
   lease.switchTargetRef = modelRef(model);
   const pending = (async () => {
     try {
@@ -469,13 +481,41 @@ async function switchDraftingModel(lease: DraftingModelLease, model: any): Promi
     } catch { return false; }
   })();
   lease.switchInFlight = pending;
-  try { return await pending; }
+  try {
+    const switched = await pending;
+    return { ...thinking, switched };
+  }
   finally {
     if (lease.switchInFlight === pending) {
       lease.switchInFlight = undefined;
       lease.switchTargetRef = undefined;
+      lease.switchThinking = undefined;
     }
   }
+}
+
+/** Native setModel applies its default dial before model_select. Other dial
+ * edits during the await belong to the user, not to the drafting lease. */
+export function observeDrafterThinkingSelection(ctx: ExtensionContext, level: string): void {
+  const lease = draftingModelLease;
+  const thinking = lease?.switchThinking;
+  if (!lease || !thinking || !draftingLeaseContext(lease) || isForeignCtx(ctx)) return;
+  if (!thinking.modelSelected && modelRef(ctx.model)?.toLowerCase() === lease.switchTargetRef?.toLowerCase()) {
+    thinking.expectedLevel = level;
+  } else {
+    thinking.manualLevel = level;
+  }
+}
+
+/** Recheck after the await, including hosts without thinking events. Retain
+ * the manual target in case setModel itself reset the dial in the meantime. */
+function preserveDrafterManualThinking(lease: DraftingModelLease, ctx: ExtensionContext, thinking: DraftingSwitchThinking): boolean {
+  const current = currentThinkingLevel(ctx);
+  const manual = thinking.manualLevel ?? (current !== thinking.expectedLevel ? current : undefined);
+  if (manual === undefined) return false;
+  lease.thinkingOverride = manual;
+  lease.activeThinkingLevel = current === manual ? current : applyDrafterThinkingLevel(ctx, manual);
+  return true;
 }
 
 /** A real user model selection supersedes the interview immediately. Own
@@ -485,7 +525,11 @@ export function observeDrafterModelSelection(ctx: ExtensionContext, ref: string)
   const lease = draftingModelLease;
   if (!lease || !draftingLeaseContext(lease) || isForeignCtx(ctx)) return;
   const key = ref.toLowerCase();
-  if (key === lease.activeRef.toLowerCase() || key === lease.switchTargetRef?.toLowerCase()) return;
+  if (key === lease.switchTargetRef?.toLowerCase()) {
+    if (lease.switchThinking) lease.switchThinking.modelSelected = true;
+    return;
+  }
+  if (key === lease.activeRef.toLowerCase()) return;
   appendLedger(ctx.cwd, "drafter_model_restore_skipped", { active: lease.activeRef, current: ref, reason: "model changed during drafting" });
   releaseDraftingLease(lease);
 }
@@ -528,16 +572,21 @@ async function beginDrafterModel(ctx: ExtensionContext): Promise<boolean> {
     return true;
   }
   const alreadyActive = beforeRef.toLowerCase() === selectedRef.toLowerCase();
-  const switched = alreadyActive || await switchDraftingModel(lease, selected.model);
+  const selection = alreadyActive
+    ? { switched: true, expectedLevel: currentThinkingLevel(ctx), modelSelected: false }
+    : await switchDraftingModel(lease, selected.model, ctx);
   const live = draftingLeaseContext(lease);
   if (draftingModelLease !== lease || lease.controller.signal.aborted || draftingTarget === null || !live
     || startSequence !== draftingStartSequence) return false;
-  if (!switched) {
+  if (!selection.switched) {
+    preserveDrafterManualThinking(lease, live, selection);
     appendLedger(live.cwd, "drafter_model_fallback", { configured: resolution.configuredRefs, selected: selectedRef, via: "session-model", reason: "setModel rejected" });
     live.ui.notify(`Drafter model ${selectedRef} could not be selected; drafting stays on the current session model.`, "warning");
     return true;
   }
-  lease.activeThinkingLevel = applyDrafterThinkingLevel(live, requestedThinkingLevel);
+  if (!preserveDrafterManualThinking(lease, live, selection)) {
+    lease.activeThinkingLevel = applyDrafterThinkingLevel(live, requestedThinkingLevel);
+  }
   appendLedger(live.cwd, "drafter_model_selected", { from: beforeRef, to: selectedRef, candidates: resolution.configuredRefs, ...(alreadyActive ? { alreadyActive: true } : {}) });
   if (!alreadyActive) live.ui.notify(`Drafting uses ${selectedRef} temporarily; the session model will be restored when drafting ends.`, "info");
   return true;
@@ -576,9 +625,13 @@ async function restoreDrafterModel(): Promise<void> {
       currentCtx.ui.notify("The original session model is now forbidden; select an allowed session model before starting another drafting interview.", "warning");
       return;
     }
-    const shouldRestoreThinking = currentThinkingLevel(currentCtx) === lease.activeThinkingLevel;
+    const beforeThinking = currentThinkingLevel(currentCtx);
+    if (beforeThinking !== lease.activeThinkingLevel) lease.thinkingOverride = beforeThinking;
     const alreadyActive = currentRef.toLowerCase() === originalRef.toLowerCase();
-    const restored = alreadyActive || await switchDraftingModel(lease, lease.originalModel);
+    const restoration = alreadyActive
+      ? { switched: true, expectedLevel: beforeThinking, modelSelected: false }
+      : await switchDraftingModel(lease, lease.originalModel, currentCtx);
+    const restored = restoration.switched;
     const live = draftingLeaseContext(lease);
     if (draftingModelLease !== lease || !live) return;
     if (restored && modelRef(live.model)?.toLowerCase() !== lease.activeRef.toLowerCase()) {
@@ -587,8 +640,10 @@ async function restoreDrafterModel(): Promise<void> {
       releaseDraftingLease(lease);
       return;
     }
-    const thinkingRestored = !shouldRestoreThinking || (restored
-      && applyDrafterThinkingLevel(live, lease.originalThinkingLevel) === lease.originalThinkingLevel);
+    preserveDrafterManualThinking(lease, live, restoration);
+    const thinkingTarget = lease.thinkingOverride ?? lease.originalThinkingLevel;
+    const thinkingRestored = restored && (currentThinkingLevel(live) === thinkingTarget
+      || applyDrafterThinkingLevel(live, thinkingTarget) === thinkingTarget);
     if (restored && thinkingRestored) {
       appendLedger(live.cwd, "drafter_model_restored", { to: originalRef, ...(alreadyActive ? { alreadyActive: true } : {}) });
       releaseDraftingLease(lease);
@@ -676,12 +731,19 @@ async function handleDrafterModelFailure(
       }
       const previous = lease.activeRef;
       const alreadyActive = pick.ref.toLowerCase() === previous.toLowerCase();
-      const switched = alreadyActive || await switchDraftingModel(lease, pick.model);
+      const selection = alreadyActive
+        ? { switched: true, expectedLevel: currentThinkingLevel(before), modelSelected: false }
+        : await switchDraftingModel(lease, pick.model, before);
       const live = liveOwner();
       if (!live) return false;
-      if (!switched) continue;
+      if (preserveDrafterManualThinking(lease, live, selection)) {
+        lease.controller.abort();
+        return false;
+      }
+      if (!selection.switched) continue;
       const candidate = candidates.get(pick.ref.toLowerCase())!;
-      const requested = resolveDrafterThinkingLevel(candidate, lease.originalThinkingLevel, lease.requestedThinkingLevel);
+      const requested = lease.thinkingOverride
+        ?? resolveDrafterThinkingLevel(candidate, lease.originalThinkingLevel, lease.requestedThinkingLevel);
       lease.activeThinkingLevel = applyDrafterThinkingLevel(live, requested);
       appendLedger(live.cwd, alreadyActive ? "drafter_model_retry" : "drafter_model_fallback", {
         from: previous, to: pick.ref, attempted: lease.attempted.slice(), delayMs,

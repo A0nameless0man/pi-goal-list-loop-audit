@@ -445,7 +445,7 @@ import {
   type LoopFlags,
 } from "../goal-loop.js";
 import { defineGoalRuntimeGlobal } from "./goal-runtime-globals.js";
-import { observeDrafterModelSelection } from "./goal-list-queue.js";
+import { observeDrafterModelSelection, observeDrafterThinkingSelection } from "./goal-list-queue.js";
 
 /** v0.35.x: queue a repair task without auto-activating over the paused
  * suspicious objective. The normal enqueue path keeps disk-first ordering,
@@ -3671,6 +3671,11 @@ async function handleHotLengthExhaustion(
     const backgroundContext = backgroundWaitPromptContext();
     if (backgroundContext) return { systemPrompt: `${event?.systemPrompt ?? ""}\n\n${backgroundContext}` };
   });
+  pi.on("thinking_level_select", (event, ctx) => {
+    if (isForeignCtx(ctx)) return;
+    observeDrafterThinkingSelection(ctx, event.level);
+  });
+
   pi.on("model_select", async (event: any, ctx: ExtensionContext) => {
     rememberCtx(ctx);
     if (tryAbsorbHostSuccessor(ctx, "model_select")) return;
