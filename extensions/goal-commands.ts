@@ -3384,8 +3384,12 @@ function auditorThinkingEffectiveLine(
   // SESSION's dial, not at the auditor's configured override. Show the dial
   // that will actually be used.
   const sessionIsTheAuditor = !effectiveSettings.auditorModel?.trim();
+  const explicitDial = effectiveSettings.auditorThinkingLevel !== undefined;
   const effectiveRequested = sessionIsTheAuditor ? sessionThinking : requested;
-  const effectiveSource = sessionIsTheAuditor ? "session-model" : requestedSource;
+  // The source label says WHY the session's dial is used: "session-inherit"
+  // when no dial was configured (unchanged), "session-model" when an explicit
+  // dial was configured and the session route deliberately does not use it.
+  const effectiveSource = sessionIsTheAuditor && explicitDial ? "session-model" : requestedSource;
   let meta: { reasoning?: boolean; thinkingLevelMap?: Record<string, string | null> } | undefined;
   try {
     const available = (ctx as unknown as { modelRegistry?: { getAvailable?: () => unknown[] } }).modelRegistry?.getAvailable?.() ?? [];
