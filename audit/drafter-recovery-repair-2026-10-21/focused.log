@@ -1,0 +1,79 @@
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/list-bare-draft.test.ts:
+(pass) v0.38.51: bare /list enters list drafting — agent list_add is gated [2393.26ms]
+(pass) v0.38.51: /list show still renders the queue (viewer preserved) [795.02ms]
+(pass) v0.38.51: stale bare /list latches no drafting gate — a later list_add lands [918.49ms]
+(pass) drafter provider error reaches the original session model AND thinking through agent_end [5218.86ms]
+(pass) drafter recovery retains original thinking across configured alternatives, then exhausts without extra prompts [12.11ms]
+(pass) drafter rejected restoration retains its lease until a later restoration succeeds [7.51ms]
+(pass) implicit session drafting has one bounded same-model retry, not an empty chain or endless replay [54.18ms]
+(pass) cancelling an interview during its retry wait aborts recovery before any delayed selection or prompt [387.83ms]
+(pass) a manual model selection during retry delay supersedes the old drafter and restoration [203.40ms]
+(pass) host replacement (shutdown=true) cannot receive the old drafter's model, dial or prompt [316.23ms]
+(pass) host replacement (shutdown=false) cannot receive the old drafter's model, dial or prompt [481.38ms]
+(pass) cancellation serializes restoration behind an already-started model switch [202.28ms]
+(pass) a newer drafting command survives cancellation of an older in-flight model selection [989.73ms]
+(pass) restoration preserves a deliberate thinking-only change by the user [303.68ms]
+(pass) a manual thinking change during retry backoff is not overwritten by recovery or restoration [795.86ms]
+(pass) a forbidden session introduced during retry delay is not selected or restored until policy permits it [218.57ms]
+(pass) concurrent drafting failures cannot spend a candidate or inject a recovery prompt twice [481.12ms]
+(pass) thinking restoration remains retryable when a host accepts the model but rejects its original dial [605.22ms]
+
+tests/plan-mode.test.ts:
+(pass) v0.35.33: /goal plan routes as a sub with the seed as rest [0.55ms]
+(pass) v0.35.33: plain objectives are NOT captured by the plan verb [0.34ms]
+(pass) v0.35.33: draftingTemplateFile swaps prompts per target × depth [0.07ms]
+(pass) v0.35.33: both plan prompt files exist, carry the drafting markers, and mandate Confirm-gated proposals [1.90ms]
+(pass) v0.35.44: source pins — the draftingDepth dead-state global is GONE (audit fix) [83.13ms]
+(pass) v0.35.33: source pins — all three verbs dispatch with depth plan [4.68ms]
+(pass) v0.35.33: /list plan is gated as a mutating subcommand on stale handles [0.20ms]
+(pass) v0.35.33: completions advertise the plan verb on all three commands [1.34ms]
+(pass) v0.35.45: the plan-mode seeded hint separates the plan note from the label [1637.80ms]
+
+tests/draft-template-failure.test.ts:
+(pass) drafting gate is claimed only after prompt construction [0.29ms]
+(pass) the post-claim model failure still clears drafting state before rethrow [0.10ms]
+
+tests/draft-staging.test.ts:
+(pass) v0.38.53: proposal stages stale and interview gates before Confirm [0.34ms]
+(pass) v0.38.53: list batch conflict handling follows confirmation and precedes enqueue [0.13ms]
+(pass) v0.38.53: single list confirmation precedes post-confirm conflict handling [0.12ms]
+(pass) v0.38.53: prompt construction precedes the drafting gate, then model lease and steering [0.06ms]
+
+tests/model-switch.test.ts:
+(pass) v0.34.57: persistState carries lastModelRef on the state line for a fresh process to restore [205.65ms]
+(pass) v0.34.57: a fresh process with a changed default model ledgeres turn-boundary drift (cross-session detection) [9.00ms]
+(pass) v0.34.57: modelSwitch() builds the canonical ledger payload [0.18ms]
+(pass) v0.34.57: isForbiddenModel matches refs, case-insensitively; v0.34.115: empty default forbids nothing [0.10ms]
+(pass) v0.34.57: the model_select hook ledgeres every provider/model change [1.24ms]
+(pass) v0.34.57: the turn-boundary check ledgeres drift that arrives without a model_select event [50.27ms]
+(pass) v0.34.57: the forbidden gate blocks a forbidden selection, emits forbidden_model_switch, and reverts [25.55ms]
+(pass) v0.34.57: blockForbiddenModelSwitches off allows the switch but records the violation [2.74ms]
+(pass) v0.34.93: isForbiddenModel flags sonnet/opus/gpt-5.5 refs the gate must skip [0.11ms]
+(pass) v0.34.93: empty / undefined ref is never forbidden (the empty-list semantic); v0.34.115: default is empty [0.08ms]
+(pass) v0.34.93: a forbidden candidate is silently skipped by the recovery gate (the recovery-envelope gate skips the candidate without rotation or verdict change) [0.10ms]
+(pass) v0.34.57: turn-boundary drift into a forbidden model records the violation without blocking [3.95ms]
+(pass) v0.34.57: /glla switchlog renders the last N entries of the model-switch trail [67.91ms]
+(pass) model selection preserves visible resumable loop work (pending recovery=true) [301.23ms]
+(pass) model selection preserves visible resumable loop work (pending recovery=false) [102.00ms]
+
+tests/designer-drafter-policy.test.ts:
+(pass) long-running judgment policy is default-decide and bans band-aid-vs-proper questions [1.77ms]
+(pass) drafting gathers constraints upfront and active execution defers local choices [73.80ms]
+(pass) explicit Designer declarations are consumed without changing ordinary design prose [0.36ms]
+(pass) task plans preserve Designer routing and verification contracts and expose them on tasks [0.24ms]
+(pass) explicitly selected Designer is a managed read-only role without requiring a model pin [3.90ms]
+(pass) drafter resolution walks its own ordered chain and falls back to the session [5.40ms]
+(pass) drafter resolution always retains one current-session last resort [0.21ms]
+(pass) drafter session default and automatic recovery keep the session thinking, explicit models keep their own [0.30ms]
+(pass) drafter resolution skips forbidden candidates without inspecting provider text [1.12ms]
+(pass) audit 2026-09-06: drafter session-last-resort refuses a forbidden session model [6.26ms]
+(pass) drafter keeps a configured current primary so its fallback remains reachable [0.40ms]
+(pass) settings expose drafting-only primary and fallback controls [8.29ms]
+(pass) drafting recovery stays on the dedicated chain and uses the existing interview [3.47ms]
+(pass) continuation prompt names the explicit Designer hand-off syntax [0.29ms]
+
+ 62 pass
+ 0 fail
+Ran 62 tests across 6 files. [23.63s]

@@ -14,6 +14,8 @@ Reviewed implementation revision: `b36d84063` (the source/settings changes from 
 
 **Durable direction:** walk all eligible candidates, including the session pair, recompute thinking for each route, and retain the restoration lease until restoration succeeds or a real user model change supersedes it. Recheck lifecycle/ownership after any awaited recovery delay.
 
+**Implementation candidate:** the first queued repair now passes the original drafter reproduction and expanded lifecycle regressions. Independent approval is pending; see [repair evidence](../drafter-recovery-repair-2026-10-21/README.md). Findings 2–6 remain separate open work.
+
 ### 2. P1 — Selecting session can reveal an old global auditor pin instead of inheriting the session
 
 **Locations:** `extensions/loops/goal-settings-ui.ts:237`, `extensions/loops/goal-settings-ui.ts:1705`.

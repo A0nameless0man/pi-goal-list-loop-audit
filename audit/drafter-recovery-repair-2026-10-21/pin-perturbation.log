@@ -1,0 +1,1 @@
+PASS: cleanup guard tolerates a harmless local rename and rejects removal of exception cleanup, on disposable strings.

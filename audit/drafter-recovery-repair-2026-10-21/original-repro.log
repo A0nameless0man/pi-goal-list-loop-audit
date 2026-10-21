@@ -1,0 +1,10 @@
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+audit/glla-command-review-2026-10-21/repro.test.ts:
+drafter runtime recovery: {"recovery":true,"model":"session","thinking":"max","selectedModels":["selected","session"]}
+(pass) runtime drafter failure must attempt the session fallback and retain restoration [5359.85ms]
+
+ 1 pass
+ 5 filtered out
+ 0 fail
+Ran 1 test across 1 file. [6.83s]
