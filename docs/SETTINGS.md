@@ -106,11 +106,11 @@ This authority boundary applies before settings-value normalization.
 | `forbiddenModels` | `[]` | Refs that must never be selected (case-insensitive substring). |
 | `blockForbiddenModelSwitches` | `true` | Revert forbidden switches (`false` = stand but ledger). |
 | `visionAssist` | `true` | Continuation prompts carry the prefer-native-vision directive. |
-| `auditorModel` | unset (fallbacks, then session) | Detached auditor primary (`"provider/id"` or bare id). With no pin, configured fallbacks precede the session last resort; with no chain, inherit session directly. |
+| `auditorModel` | unset (fallbacks, then session) | Detached auditor primary (`"provider/id"` or bare id); selected model runs first, including when it matches the session. If unavailable, walk explicit fallbacks then the session model at the session's thinking level. With no pin, configured fallbacks precede the session last resort; with no chain, inherit session directly. |
 | `auditorModelFallbacks` | `[]` | Ordered auditor fallbacks; session model is final. Saving a non-empty chain offers the thinking pick. Global-only. |
 | `auditorAllowedExtensions` | `[]` | Extension specs the detached auditor may load; resolved fail-closed, `[]` = isolated. |
 | `auditorMirrorSessionExtensions` | `true` | Also load the session's own packages in the worker (GLLA itself never mirrored); `false` = curated allow-list only. |
-| `auditorSameSessionSwap` | `true` | Walk the fallback chain when the auditor is the session model. |
+| `auditorSameSessionSwap` | ignored (legacy) | Compatibility-only; explicit auditor selection always wins, even when it matches the session model. No longer shown in the menu. |
 | `auditorThinkingLevel` | unset (inherit) | Detached auditor reasoning level; picked with the model. Applies to the CONFIGURED auditor models. The session model — the auditor's default and its last resort — always runs at the session's own thinking level, so a configured override never turns down the route that has to carry the final decision. |
 | `auditorToolTimeoutMs` | `300000` | Base budget per auditor tool call (30s–6h). Global-only. |
 | `auditorStallMs` | `600000` | Base silence budget for the detached auditor (1m–24h). Global-only. |
