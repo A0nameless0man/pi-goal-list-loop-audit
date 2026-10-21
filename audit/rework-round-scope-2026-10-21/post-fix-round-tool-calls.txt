@@ -1,0 +1,70 @@
+# clean-web rework round AFTER the fix (attempt audit-mvhgobbj-c6t1vl-mvhgobc5-10fe4f8d)
+# phase=thinking elapsedMs=2369006 toolCalls=64
+# whole-suite / browser-harness launches: 1
+  SUITE: bash {"command":"…ean-web && timeout 300 bunx vitest run test/page-styles.test.ts 2>&1 | tail -20"}
+
+# every tool call in the round:
+    1. bash: {"command":"…('time').strftime('%H:%M',__import__('time').localtime(os.path.getmtime(f))))\n\""}
+    2. bash: {"command":"…ary.json plan/measurements/2026-10-20-pol-sweep-marker/behavior 2>&1 | head -50"}
+    3. read: {"path":"…ser-extensions-shared/extensions/standalones/clean-web/test/page-styles.test.ts"}
+    4. bash: {"command":"…hared/extensions/standalones/clean-web && sed -n '20,70p' src/content/styles.ts"}
+    5. bash: {"command":"…ol-sweep-marker/behavior/pol2-marker-zoom.png')\nprint(im.size)\n\" 2>&1 | tail -2"}
+    6. read: {"path":"…web/plan/measurements/2026-10-20-pol-sweep-marker/behavior/pol2-marker-zoom.png"}
+    7. bash: {"command":"… range(20,32):\n    print(x, [px[x,y] for y in (390,400,410)])\n\" 2>&1 | tail -20"}
+    8. bash: {"command":"…'n=',len(f['markers']),[ (m['x'],m['yFrom'],m['yTo']) for m in f['markers']])\n\""}
+    9. bash: {"command":"…an/measurements/2026-10-19-pol-sweep-final/behavior/marker-scan.json | head -60"}
+   10. read: {"path":"…s/standalones/clean-web/plan/measurements/2026-10-20-pol-sweep-marker/REPORT.md","limit":100,"offset":1}
+   11. bash: {"command":"…=\" && git show a8c6804c68 -- scripts/browser-test/audit-behavior.mjs | head -80"}
+   12. bash: {"command":"…(p.get('url'), p.get('rewritten'), p.get('softenedImages'), p.get('drained'))\n\""}
+   13. bash: {"command":"…/clean-web && git show 3f0add6e92 -- NOTE-margin-marker-invisible-2026-10-20.md"}
+   14. bash: {"command":"…arker pixel columns\\|4 marker\\|x=60\" NOTE-margin-marker-invisible-2026-10-20.md"}
+   15. bash: {"command":"… difflib.unified_diff(g, [x for x in r], lineterm='', n=0):\n    print(line)\nEOF"}
+   16. bash: {"command":"…,'missing from report:',len(missing))\nfor m in missing: print('MISSING:',m)\nEOF"}
+   17. bash: {"command":"…ft bg x-3',px[max(0,x-3),mid],'right bg x+2',px[min(im.size[0]-1,x+2),mid])\nEOF"}
+   18. bash: {"command":"… ===\"; git show 9da39367c3 -- scripts/browser-test/probe-marker.mjs | head -100"}
+   19. bash: {"command":"…ndalones/clean-web && sed -n '320,365p' scripts/browser-test/audit-behavior.mjs"}
+   20. bash: {"command":"…ean-web && timeout 300 bunx vitest run test/page-styles.test.ts 2>&1 | tail -20"}
+   21. bash: {"command":"… grep -n \"createElement\\|classList.add\\|className\" src/content/ui.ts | head -40"}
+   22. bash: {"command":"…d/extensions/standalones/clean-web && grep -rn \"createElement\" src/content/*.ts"}
+   23. bash: {"command":"…('rewritten'), 'hides=', r.get('hides'), 'softened=',r.get('softenedImages'))\n\""}
+   24. bash: {"command":"…\"; grep -o \".\\{60\\}0\\.5em.\\{60\\}\" .output/chrome-mv3/content-scripts/content.js"}
+   25. bash: {"command":"… \"0\\.5em\" .output/chrome-mv3/content-scripts/content.js | head -3 | cut -c1-300"}
+   26. bash: {"command":"… 'gatepass=',r.get('coverage',{}).get('pass'), 'drained=',r.get('drained'))\nEOF"}
+   27. bash: {"command":"…arker:',n,'/',len(glob.glob(f'plan/measurements/{d}/behavior/*-page.png')))\nEOF"}
+   28. bash: {"command":"…  frag=x[:40]\n        print('   ', repr(x[:70]), 'in report:', frag in rep)\nEOF"}
+   29. bash: {"command":"…])\nprint('withOrig', r.get('withOriginals'), 'rewritten', r.get('rewritten'))\n\""}
+   30. read: {"path":"…clean-web/plan/measurements/2026-10-20-pol-sweep-marker/behavior/pol2-popup.png"}
+   31. bash: {"command":"…/summary.json plan/measurements/2026-10-20-pol-sweep-badge/quality/summary.json"}
+   32. bash: {"command":"…6-10-20-pol-sweep-marker/quality/ plan/measurements/2026-10-20-pol-sweep-badge/"}
+   33. bash: {"command":"… sweep.json ===\" && cat plan/measurements/2026-10-20-pol-sweep-badge/sweep.json"}
+   34. bash: {"command":"…idth\" --format=\"%h %ad %s\" --date=format:\"%m-%d %H:%M\" -- src/content/styles.ts"}
+   35. bash: {"command":"… rows',len(g),'missing',len(missing))\nfor m in missing: print('MISSING:',m)\nEOF"}
+   36. bash: {"command":"…2026-10-20-pol-sweep-marker/behavior']:\n    print(d.split('/')[-2], agg(d))\nEOF"}
+   37. bash: {"command":"…nt/ui.ts && echo \"=== debug 205-220 ===\" && sed -n '205,220p' src/content/ui.ts"}
+   38. bash: {"command":"…uality rewrites', q['totals']['rewrites'], 'damage', q['totals']['damage'])\nEOF"}
+   39. bash: {"command":"…json'))\nprint({k:v for k,v in r.items() if k!='pages'})\n\" 2>/dev/null | head -5"}
+   40. bash: {"command":"…es/clean-web && timeout 300 npx tsc --noEmit 2>&1 | tail -5; echo \"TSC_EXIT=$?\""}
+   41. bash: {"command":"… test/ && ls -la test/zz* && git log --oneline -2 -- test/zz-probe-leak.test.ts"}
+   42. bash: {"command":"… \"=== is the tsc error pre-existing? check at 3f0add6e92 ===\" && git stash list"}
+   43. bash: {"command":"… tsc --noEmit > /tmp/tsc-out.txt 2>&1; echo \"TSC_EXIT=$?\"; cat /tmp/tsc-out.txt"}
+   44. bash: {"command":"…',dict(c),'total',sum(c.values()))\nfor k,v in where.items():\n    print(k,v)\nEOF"}
+   45. bash: {"command":"…dalones/clean-web && sed -n '60,80p' NOTE-margin-marker-invisible-2026-10-20.md"}
+   46. bash: {"command":"…p'))\nprint('badge pol statusLine:', (r.get('popup') or {}).get('statusLine'))\n\""}
+   47. bash: {"command":"…n',r.get('rewritten'),'samples',len(r.get('originals',{}).get('samples',[])))\n\""}
+   48. bash: {"command":"…probe-leak.test.ts && echo \"=== memory ===\" && cat test/zz-probe-memory.test.ts"}
+   49. read: {"path":"…/clean-web/plan/measurements/2026-10-20-pol-sweep-marker/behavior/pol2-page.png"}
+   50. bash: {"command":"…t('hover') or {}).get('pass') if isinstance(r.get('hover'),dict) else None)\nEOF"}
+   51. bash: {"command":"…rames\\|clickable nodes\" plan/measurements/2026-10-20-pol-sweep-marker/REPORT.md"}
+   52. bash: {"command":"…invisible-2026-10-20.md plan/measurements/2026-10-20-pol-sweep-marker/REPORT.md"}
+   53. bash: {"command":"…eb && sed -n '124,140p' plan/measurements/2026-10-20-pol-sweep-marker/REPORT.md"}
+   54. bash: {"command":"…eb && sed -n '200,230p' plan/measurements/2026-10-20-pol-sweep-marker/REPORT.md"}
+   55. bash: {"command":"…/measurements/2026-10-20-pol-sweep-marker/behavior/pol3-page.png 2>&1 | head -3"}
+   56. bash: {"command":"…log head ---\"; head -20 plan/measurements/2026-10-20-pol-sweep-marker/sweep.log"}
+   57. bash: {"command":"…^;]*cw-mark-width[^;]*\" .output/chrome-mv3/content-scripts/content.js | head -3"}
+   58. bash: {"command":"…n/measurements/2026-10-20-pol-sweep-marker/behavior/*.log 2>/dev/null | head -3"}
+   59. bash: {"command":"…ndalones/clean-web && sed -n '690,710p' scripts/browser-test/audit-behavior.mjs"}
+   60. bash: {"command":"…lones/clean-web && grep -rn \"perMinute\" src/ entrypoints/ 2>/dev/null | head -8"}
+   61. bash: {"command":"…-rn \"sendThreshold\\|preset\" src/background/*.ts src/*.ts 2>/dev/null | head -10"}
+   62. bash: {"command":"…json'))\nprint(list(r.keys()))\nprint({k:v for k,v in r.items() if k!='pages'})\n\""}
+   63. bash: {"command":"…R_MINUTE\" src/*.ts | head -3; grep -rn \"DEFAULT_PER_MINUTE =\" -A2 src/budget.ts"}
+   64. bash: {"command":"…tandalones/clean-web && git show 27ff069428 -- src/content/styles.ts | head -60"}
