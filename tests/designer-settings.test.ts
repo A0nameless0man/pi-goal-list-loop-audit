@@ -237,6 +237,35 @@ test("migration: junk dedicated values do not block the legacy pin, and project-
   }
 });
 
+test("sync: implicit session pairs do not authorize Designer; explicit intent and ownership govern its lifecycle", () => {
+  const agentDir = tmpDir("glla-designer-implicit-pair-");
+  const file = path.join(agentDir, "agents", "Designer.md");
+  const pair = { model: "test/session", thinking: "max" };
+  const sync = (configured: boolean, requested = false, disabled = false) => syncSubagentModelOverrides({
+    agentDir, strategy: "inherit-parent", designerRequested: requested,
+    designer: { configured, disabled, ...pair },
+  });
+
+  assert.equal(sync(false).written.includes("Designer"), false);
+  assert.equal(fs.existsSync(file), false, "resolved model and thinking alone remain opt-in");
+  assert.ok(sync(false, true).written.includes("Designer"), "an explicit request registers the same session pair");
+  assert.match(fs.readFileSync(file, "utf8"), /^model: test\/session$/m);
+  assert.match(fs.readFileSync(file, "utf8"), /^thinking: max$/m);
+  assert.ok(sync(false).removed.includes("Designer"), "unconfigured sync removes only the old managed registration");
+  assert.equal(fs.existsSync(file), false);
+  assert.ok(sync(true).written.includes("Designer"), "explicit enablement/configuration can inherit the session pair");
+  assert.ok(sync(true, true, true).removed.includes("Designer"), "disabled wins over request and configuration");
+  assert.equal(fs.existsSync(file), false);
+
+  const userContent = "---\nname: Designer\n---\n\nMy own Designer definition.\n";
+  fs.writeFileSync(file, userContent);
+  for (const [configured, requested, disabled] of [[false, false, false], [true, true, false], [true, true, true]] as const) {
+    const result = sync(configured, requested, disabled);
+    assert.ok(result.skipped.some(entry => entry.name === "Designer"));
+    assert.equal(fs.readFileSync(file, "utf8"), userContent, "no lifecycle state can overwrite or remove a user-owned file");
+  }
+});
+
 test("sync: dedicated Designer config registers, disables, and never touches a user-owned file", () => {
   const agentDir = tmpDir("glla-designer-sync-");
   const file = path.join(agentDir, "agents", "Designer.md");

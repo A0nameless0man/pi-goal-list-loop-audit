@@ -22,6 +22,7 @@ async function fixture() {
   const cwd = tmpCwd();
   seedState(cwd, {});
   const ctx = makeMockCtx(cwd, { sessionManager: { name: 'manual-resume' } });
+  Object.assign(ctx, { thinkingLevel: 'max' });
   await pi.fire('session_start', { reason: 'resume' }, ctx);
   const primary = `${ctx.model!.provider}/${ctx.model!.id}`;
   state.mainModelRecovery = { primary, active: primary, attempted: [primary], attempts: 0,
@@ -71,6 +72,9 @@ test('Designer stays off on startup and is registered only when a live goal expl
   await pi.command('goal', 'resume', ctx);
   await tick(100);
   assert.equal(fs.existsSync(designerFile), true, 'explicit role is made available at dispatch, not silently skipped');
+  const definition = fs.readFileSync(designerFile, 'utf8');
+  assert.ok(definition.includes(`model: ${ctx.model!.provider}/${ctx.model!.id}\n`), 'explicit activation inherits the resolved session model');
+  assert.match(definition, /^thinking: max$/m, 'explicit activation inherits live session thinking');
   assert.ok(pi.sent.some(m => m.message.content?.includes('DESIGNER ROLE REQUESTED')));
 });
 
