@@ -1,17 +1,16 @@
 // Designer.md is a launch-time projection, not a saved Designer model pick.
 //
-// pi-subagents resolves a child from the agent definition file at launch, so
-// a session-inherited Designer must carry the CURRENT session model and
-// thinking when the child starts — never a snapshot taken at startup.
-// GLLA owns the definition file (it is the only writer of the managed copy),
-// so GLLA refreshes that projection at the boundaries where a launch can
-// happen: a model/thinking selection, a turn start, and the subagent tool
-// call that names the Designer role.
+// pi-subagents resolves a child from the agent definition file when the child
+// starts, so a session-inherited Designer must carry the CURRENT session model
+// and thinking at that moment — never a snapshot taken at startup. GLLA owns
+// the managed copy of that file, so GLLA refreshes the projection at the
+// boundaries where a launch can happen: a model/thinking selection, a turn
+// start, and the subagent tool call that names the Designer role.
 //
 // The refresh never turns session inheritance into a stored pin: settings are
-// never written, explicit Designer model/thinking settings stay independent,
-// disabled and forbidden policy still win, and a user-owned definition file
-// is left alone.
+// never written, explicitly selected Designer model/thinking stay independent,
+// disabled and forbidden policy still win, and a user-owned definition file is
+// left alone.
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { resolveDesignerModel } from "./designer-model.js";
 import { resolveDesignerConfig, type Settings } from "./goal-settings.js";
@@ -25,6 +24,19 @@ export interface DesignerSessionContext {
   model: ExtensionContext["model"];
   modelRegistry: ExtensionContext["modelRegistry"];
   thinkingLevel?: string;
+}
+
+/** Snapshot the live session dial without copying the whole context. */
+export function designerSessionContext(
+  ctx: ExtensionContext,
+  overrides: { model?: ExtensionContext["model"]; thinkingLevel?: string } = {},
+): DesignerSessionContext {
+  return {
+    cwd: ctx.cwd,
+    model: overrides.model !== undefined ? overrides.model : ctx.model,
+    modelRegistry: ctx.modelRegistry,
+    thinkingLevel: overrides.thinkingLevel !== undefined ? overrides.thinkingLevel : ctx.thinkingLevel,
+  };
 }
 
 /** A direct or declarative workflow request is explicit opt-in. Never infer
