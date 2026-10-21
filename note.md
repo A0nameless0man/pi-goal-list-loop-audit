@@ -4,10 +4,8 @@
 
 # Next
 
-## the arbitarary time limit might lead to stuck or not sure what is wrong 
-/home/dracon/Pictures/Screenshots/Screenshot_20261020_135742.png
-
-
+## i think we remove the footer and just make our display more informative if needed
+/home/dracon/Pictures/Screenshots/Screenshot_20261021_102654.png
 
 ##
 
