@@ -41,6 +41,7 @@ import {
   splitModelRef,
   MAX_AUDITOR_CANDIDATE_REFS,
   type MainModelFailureKind,
+  isEmptyProviderResponse,
 } from "./main-model-recovery.js";
 import { isAuditorAccountFailure } from "../scripts/auditor-provider-failure.mjs";
 import { ModelSelector, type ModelFallbackEvent } from "./model-selector.js";
@@ -1412,6 +1413,13 @@ interface AuditorRequest {
    * convergence diagnosis read the wrong cause. Optional: an older request (or
    * an older worker) keeps today's default. Part of the request hash. */
   challengeSkip?: "light-tier" | "rework-streak";
+  /** v0.39.43: this dispatch is a REWORK round — the claim was disapproved
+   * before, so the round's job is to re-check the open objections rather
+   * than to re-verify the whole change. Present ONLY on rework dispatches,
+   * so every other dispatch keeps its byte-identical request hash (the
+   * v0.38.81 convention). The worker scopes the falsification pass to the
+   * open objections when it is set. */
+  reworkRound?: boolean;
 }
 
 interface AuditorToolCall {
@@ -1856,7 +1864,23 @@ function failedResultClass(error: string | undefined): AuditorInfrastructureClas
   // wording. Keep status-bearing failures on the generic provider retry
   // path; status-free worker exits and missing verdicts stay no-verdict
   // infrastructure failures.
-  return isAuditorAccountFailure(error) || /(?:^|\b)(?:HTTP\s*)?(?:401|403|408|409|429|5\d\d)\b/i.test(error ?? "")
+  //
+  // v0.39.43: an EMPTY provider response is a transient glitch, not a missing
+  // verdict. The main lane already knows this (v0.38.104 `isEmptyProviderResponse`):
+  // field 2026-09-27 (darklord) had seven empty responses park our own repo
+  // goal for 300m on the blind wall ladder, so the main lane gives them the
+  // eager quantum instead. The auditor lane had no such rule, so the same
+  // string fell through to "no-verdict" — and "no-verdict" is the one auditor
+  // failure class with NO identical-failure brake: it parks the claim and
+  // immediately re-dispatches a FRESH full audit round, re-running the
+  // project's whole verification from scratch. A transient provider blip thus
+  // destroyed an expensive round and the loop re-paid the entire cost, which
+  // is what made the projects' audits churn their test suites and saturate
+  // the host (browser-extensions-shared/clean-web, eve, youtube-filter).
+  // Classifying it as a provider failure puts it under the bounded retry
+  // ladder AND the identical-failure park. Local failures — a dead worker, a
+  // malformed result, a missing marker — keep the no-verdict treatment.
+  return isAuditorAccountFailure(error) || isEmptyProviderResponse(error) || /(?:^|\b)(?:HTTP\s*)?(?:401|403|408|409|429|5\d\d)\b/i.test(error ?? "")
     ? "provider"
     : "no-verdict";
 }
@@ -2131,6 +2155,11 @@ async function runDetachedGoalCompletionAuditorInner(args: {
    * only by the public wrapper (stamped onto the result); the worker
    * never sees it — a spot-check IS a full audit. */
   spotCheck?: boolean;
+  /** v0.39.43: this dispatch is a REWORK round — the claim was disapproved
+   * before. The round re-checks the open objections instead of re-verifying
+   * the whole change, and the falsification pass is scoped to those
+   * objections too. Part of the request hash (present only when true). */
+  reworkRound?: boolean;
   /** v0.36.0: extension specs allow-listed for the detached auditor
    * (settings key auditorAllowedExtensions). Raw specs (npm:/git:/relative)
    * are resolved to concrete install paths HERE, inside the process layer,
@@ -2299,6 +2328,11 @@ async function runDetachedGoalCompletionAuditorInner(args: {
       recoveryIdentity: completionAuditRecoveryIdentity(args.goal),
       ...(args.auditTier ? { auditTier: args.auditTier } : {}),
       ...(args.spotCheck ? { spotCheck: true } : {}),
+      // v0.39.43: a rework round re-checks the OPEN OBJECTIONS; it must not
+      // re-verify the whole change (nor pay for a second broad falsification
+      // pass over it). The flag is what lets the worker scope the challenge
+      // round; it is present only on rework dispatches.
+      ...(args.reworkRound ? { reworkRound: true } : {}),
       // v0.36.0: only present when non-empty so historical requests hash
       // byte-identically to pre-feature workers.
       ...(allowedExtensions.length ? { allowedExtensions } : {}),

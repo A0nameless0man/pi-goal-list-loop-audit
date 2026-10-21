@@ -1,4 +1,5 @@
 import { effectiveToolTimeoutMs } from "../goal-loop-auditor-process.js";
+import { isReworkRound } from "../goal-loop-auditor.js";
 import { auditReworkNotice } from "../audit-rework-handoff.js";
 import { archiveCurrentGoal, refuseUnfinishedCompletion } from "./goal-orchestrator.js";
 /**
@@ -1511,6 +1512,11 @@ async function retryStoredCompletionAudit(origin: CompletionAuditOrigin = "provi
           auditTier: tierDecision.tier,
           strictChallenge: settings.auditorStrictChallenge,
           ...(tierDecision.spotCheck ? { spotCheck: true } : {}),
+          // v0.39.43: a rework round re-checks the OPEN OBJECTIONS instead of
+          // re-verifying the whole change; the flag scopes the falsification
+          // pass too. One shared predicate, so the two parallel branches
+          // cannot disagree about it.
+          ...(isReworkRound(auditGoal) ? { reworkRound: true } : {}),
           model: candidate.model,
           // Unset follows the parent session dial, matching the Auditor
           // settings row; max is the safe detached default when a headless

@@ -16,6 +16,7 @@ import path from "node:path";
 import { buildAuditorPiSpawnSpec, renameWithWindowsRetry } from "./goal-auditor-launch.mjs";
 import { isAuditorAccountFailure } from "./auditor-provider-failure.mjs";
 import { accumulateStderrDiagnostic } from "./auditor-stderr-diagnostic.mjs";
+import { buildChallengePrompt, buildContinuationPrompt, CHALLENGE_SEPARATOR, CONTINUATION_SEPARATOR } from "./auditor-round-prompts.mjs";
 import { terminateContainedChild } from "./contained-child.mjs";
 
 const PROTOCOL_VERSION = 1;
@@ -185,10 +186,8 @@ function normalizeErrorText(...values) {
 // makes composition safe: round-2 output is appended, so a challenge
 // disapproval flips the verdict while a re-confirm preserves it — and the
 // shield keeps reading round-1's evidence block (first match wins).
-const CHALLENGE_SEPARATOR = "\n\n--- auditor challenge round (falsification pass) ---\n\n";
 // v0.38.99: marks the resume point after a cancelled tool call, so the report
 // stream shows where the abort happened instead of reading as one run.
-const CONTINUATION_SEPARATOR = "\n\n--- auditor continuation (tool call cancelled at its budget) ---\n\n";
 
 // Mirror of parseAuditorVerdict's final-line gate (goal-loop-shield.ts).
 // The worker needs the round-1 verdict to decide whether to challenge;
@@ -210,24 +209,6 @@ function finalLineVerdict(output) {
   return "none";
 }
 
-function buildChallengePrompt(originalPrompt, round1Output) {
-  return [
-    "AUDITOR CHALLENGE ROUND (falsification pass).",
-    "",
-    "A first-pass auditor already APPROVED the completion below. Approvals can be wrong — your job is to try to prove this one wrong. Re-verify the load-bearing claims with your own tool calls; do not trust the first report's assertions without checking them.",
-    "",
-    "ORIGINAL AUDIT BRIEF (verbatim):",
-    originalPrompt,
-    "",
-    "FIRST-PASS REPORT (verbatim):",
-    round1Output,
-    "",
-    "RULES:",
-    "- If you find ANY genuine gap between the completion claim and the evidence (missing artifact, failing check, untested contract item, hallucinated file, evidence that does not actually show what the report claims), list the concrete gaps, then end your report with a single final line exactly: <disapproved/>",
-    "- If the completion genuinely holds up after your adversarial re-check, end with a single final line exactly: <approved/>",
-    "- The final non-empty line is the ONLY authoritative verdict location. Do not emit verdict markers anywhere else.",
-  ].join("\n");
-}
 
 async function regular(file) {
   const stat = await lstat(file);
@@ -630,28 +611,6 @@ async function main() {
   // The brief the auditor resumes with. `--no-session` is the default spawn,
   // so there is no persisted session to resume — the continuation carries its
   // own context exactly like the challenge round does (buildChallengePrompt).
-  const buildContinuationPrompt = (cancelled) => [
-    "AUDITOR CONTINUATION AFTER A CANCELLED TOOL CALL.",
-    "",
-    "Your previous turn was cut short: a tool call exceeded its time budget and was cancelled. Everything you had already verified in that turn is still valid and listed below — do not redo it.",
-    "",
-    "ORIGINAL AUDIT BRIEF (verbatim):",
-    request.prompt,
-    "",
-    "TOOL CALLS YOU COMPLETED BEFORE THE CANCELLATION:",
-    toolCalls.length > 0
-      ? toolCalls.map((call) => `- ${call.name}: ${call.argsPrefix}`).join("\n")
-      : "(none)",
-    "",
-    "CANCELLED TOOL CALL:",
-    `- ${cancelled.name}: ${cancelled.argsPrefix} (cancelled after ${toolTimeoutLabel(cancelled.budgetMs)})`,
-    "",
-    "RULES:",
-    "- The cancelled call produced NO usable result. Treat that specific piece of verification as UNKNOWN — say so plainly; never assert what it would have shown.",
-    "- Re-run that one check yourself with a bounded, cheaper command (target the single test, or a short timeout) if you need its result to decide.",
-    "- Everything else you already established stands. Do not restart the whole audit from scratch.",
-    "- End with a single final line exactly: <approved/> or <disapproved/> as your evidence supports. That final non-empty line is the ONLY authoritative verdict location.",
-  ].join("\n");
 
   // Cancel the open tool and let the audit continue. The RPC `abort` cancels
   // the current operation; the turn then settles without a usable tool result
@@ -824,7 +783,7 @@ async function main() {
     streamError = undefined;
     await detachRoundChild();
     await progress("challenging").catch(() => {});
-    await startRound(buildChallengePrompt(request.prompt, round1Output), "challenging");
+    await startRound(buildChallengePrompt(request.prompt, round1Output, request.reworkRound === true), "challenging");
   };
 
   const startRound = async (roundPrompt, initialPhase) => {
@@ -1074,7 +1033,7 @@ async function main() {
             continuationDeadlineTimer = undefined;
           }
           const cancelled = cancelledToolCalls.at(-1);
-          const continuationPrompt = buildContinuationPrompt(cancelled);
+          const continuationPrompt = buildContinuationPrompt({ originalPrompt: request.prompt, completedToolCalls: toolCalls, cancelled, timeoutLabel: toolTimeoutLabel(cancelled.budgetMs) });
           outputParts.push(CONTINUATION_SEPARATOR);
           streamError = undefined;
           drainActiveTools();

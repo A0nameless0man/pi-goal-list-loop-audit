@@ -59,6 +59,15 @@ export function isVisualGoal(goal: Goal): boolean {
 // Result type
 // =================================================================
 
+/** v0.39.43: a REWORK round is a claim that was disapproved before. One
+ * definition, shared by the prompt builder and by BOTH dispatch sites, so
+ * the two parallel branches cannot disagree about whether a round is a
+ * rework round (they have drifted before — see the drift risk on the
+ * completion-audit paths). */
+export function isReworkRound(goal: Pick<Goal, "auditHistory"> | undefined): boolean {
+  return (goal?.auditHistory ?? []).filter((v) => v.disapproved === true).length > 0;
+}
+
 export interface GoalAuditorResult {
   approved: boolean;
   disapproved: boolean;
@@ -244,6 +253,8 @@ export function buildGoalAuditorPrompt(goal: Goal, completionSummary: string | n
       `REWORK ROUND — this claim was disapproved ${priorDisapprovals} time${priorDisapprovals === 1 ? "" : "s"} before.`,
       "- Your primary question is whether the PRIOR objections are now closed. Re-verify those first; they are the reason you are here.",
       "- The prior objections are listed in the goal markdown's audit history below.",
+      "- VERIFY THE OPEN OBJECTIONS, NOT THE WHOLE CHANGE. Do not re-run the project's full verification suite, its whole test run, or its end-to-end harness to re-establish what the prior round already established. Check each open objection with the narrowest command that produces evidence for it (the single test, the single file, the single command the objection names).",
+      "- The prior round's evidence still stands. If a prior objection is closed, say so and quote the narrow check that closes it. Re-verify only what the objection requires.",
       "- A genuinely new defect in the change is still valid and still blocks. But a new objection must clear the same CHANGE SCOPE bar above — a fresh finding is not a licence to re-audit the repository.",
     ] : []),
     "Return a concise audit report. The final line MUST be exactly one of:",

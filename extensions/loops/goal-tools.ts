@@ -1,6 +1,7 @@
 import { classifyInterruption, type InterruptionReason } from "../interruption-policy.js";
 import { assessDraftReadiness, draftReadinessMessage } from "../draft-readiness.js";
 import { effectiveToolTimeoutMs } from "../goal-loop-auditor-process.js";
+import { isReworkRound } from "../goal-loop-auditor.js";
 import { deliverTerminalSummary } from "../terminal-summary-delivery.js";
 import { archiveCurrentGoal, refuseUnfinishedCompletion } from "./goal-orchestrator.js";
 /**
@@ -1157,6 +1158,11 @@ function registerAgentTools(pi: any): void {
           auditTier: tierDecision.tier,
           strictChallenge: settings.auditorStrictChallenge,
           ...(tierDecision.spotCheck ? { spotCheck: true } : {}),
+          // v0.39.43: a rework round re-checks the OPEN OBJECTIONS instead of
+          // re-verifying the whole change; the flag scopes the falsification
+          // pass too. One shared predicate, so the two parallel branches
+          // cannot disagree about it.
+          ...(isReworkRound(auditGoal) ? { reworkRound: true } : {}),
           model: candidate.model,
           // Unset follows the parent session dial, matching the Auditor
           // settings row; max is the safe detached default when a headless
