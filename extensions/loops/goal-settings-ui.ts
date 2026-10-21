@@ -593,7 +593,7 @@ export function resolveAuditorModel(
   ctx: ExtensionContext,
   ref?: string,
   fallbackRefs?: string | readonly string[],
-  sameSessionSwap = true,
+  _legacySameSessionSwap?: boolean,
 ): { model: any; error?: string; via?: string; fallbackModels?: AuditorModelCandidate[] } {
   const sessionModel = ctx.model as any;
   const currentRef = modelRef(sessionModel);
@@ -672,16 +672,6 @@ export function resolveAuditorModel(
   const candidates: AuditorModelCandidate[] = [];
   const attempted: string[] = [];
   const seenModels = new Set<string>();
-  // A typed primary may be a bare model id while ModelSelector's current
-  // model ref is provider-qualified. Match through the registry so the
-  // same-session swap gate remains correct for both forms.
-  const selectorCurrentRef = currentRef
-    ? configuredRefs.find((candidate) => modelRef(tryRef(candidate).model)?.toLowerCase() === currentRef.toLowerCase()) ?? currentRef
-    : undefined;
-  const primaryMatchesSession = !!primaryRef
-    && !!currentRef
-    && (primaryRef.toLowerCase() === currentRef.toLowerCase()
-      || modelRef(tryRef(primaryRef).model)?.toLowerCase() === currentRef.toLowerCase());
   const addCandidate = (candidateRef: string, model: any, via: string): void => {
     const key = modelRef(model)?.toLowerCase() ?? candidateRef.toLowerCase();
     // Enforce policy at the resolved-model boundary too: bare aliases may
@@ -691,24 +681,13 @@ export function resolveAuditorModel(
     seenModels.add(key);
     candidates.push({ ref: candidateRef, model, via, ...(key === currentRef?.toLowerCase() ? { isSessionModel: true } : {}) });
   };
-  // Unlike main recovery, the auditor may deliberately use the session model
-  // when same-model swapping is disabled. Seed that configured primary before
-  // asking the selector to walk the remaining chain.
-  if (
-    !sameSessionSwap
-    && primaryRef
-    && currentRef
-    && primaryMatchesSession
-    && !forbidden(primaryRef)
-    && sessionModel
-  ) {
-    addCandidate(primaryRef, sessionModel, "setting");
-    attempted.push(primaryRef);
-  }
+  // A configured auditor is an explicit choice, even when it is the
+  // session's own model. Isolation is provided by the detached worker,
+  // not by silently skipping a selected model to manufacture diversity.
   for (;;) {
     const selected = selector.selectNextValid(
       { kind: "auditor" },
-      sameSessionSwap ? selectorCurrentRef : undefined,
+      undefined,
       attempted,
     );
     for (const visited of selector.lastVisitedRefs) {
@@ -719,18 +698,8 @@ export function resolveAuditorModel(
     addCandidate(selected.ref, selected.model, via);
     if (!attempted.some((entry) => entry.toLowerCase() === selected.ref.toLowerCase())) attempted.push(selected.ref);
   }
-  if (sessionModel && currentRef) addCandidate(currentRef, sessionModel, candidates.length > 0 ? "session-fallback" : "session");
+  if (sessionModel && currentRef) addCandidate(currentRef, sessionModel, "session-fallback");
 
-  const currentPinned = sameSessionSwap && primaryMatchesSession ? primaryRef : undefined;
-  if (currentPinned && currentRef) {
-    const replacement = candidates.find((candidate) => candidate.via === "fallback-pin" && candidate.ref?.toLowerCase() !== currentRef.toLowerCase());
-    appendLedger(ctx.cwd, "auditor_model_same_as_session", { model: currentRef, fallback: replacement?.ref ?? null });
-    if (replacement?.ref) {
-      ctx.ui.notify(`Session model IS the pinned auditor (${currentRef}) — auditor auto-swapped to ${replacement.ref} so the verifier differs.`, "info");
-    } else {
-      ctx.ui.notify(`The session model IS the pinned auditor (${currentRef}) — select a different /glla → Auditor fallback model so the verifier can differ.`, "warning");
-    }
-  }
   if (candidates.length > 0) {
     const first = candidates[0]!;
     if (first.via === "session-fallback") {
@@ -1872,14 +1841,6 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
             : "Auditor allowed extensions cleared — session packages are still mirrored. Turn mirroring off for full isolation.",
         "info",
       );
-      return;
-    }
-    case "auditorSameSessionSwap": {
-      const v = await ctx.ui.select("Same-model swap — when the pinned auditor IS the session model, walk the ordered fallback chain (a same-family model shares the executor's blind spots)", [
-        "on — the verifier differs from the executor (default)",
-        "off — same-model audits stand; isolation + evidence contract still apply",
-      ]);
-      if (v) saveSettings("global", ctx, { auditorSameSessionSwap: v.startsWith("off") ? false : undefined });
       return;
     }
     case "auditorMirrorSessionExtensions": {

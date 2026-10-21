@@ -544,14 +544,6 @@ export function buildSettingsRows(
       description: "on: the detached auditor also loads the session's own packages so a session-inherited auditor ref resolves in the worker (GLLA itself is never mirrored) — off: only Allowed extensions above, possibly fully isolated",
     },
     {
-      id: "auditorSameSessionSwap",
-      section: "auditor",
-      label: "Same-model swap",
-      valueText: show("auditorSameSessionSwap", "on"),
-      sourceText: src("auditorSameSessionSwap"),
-      description: "when the pinned auditor IS the session model, walk the ordered fallback chain (verifier ≠ executor) — off = same-model audits stand",
-    },
-    {
       id: "auditorSilent",
       section: "auditor",
       label: "Silent auditor stream",
