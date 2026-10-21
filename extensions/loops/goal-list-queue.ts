@@ -374,6 +374,7 @@ import {
 import { defineGoalRuntimeGlobal } from "./goal-runtime-globals.js";
 import {
   resolveDrafterModel,
+  resolveDrafterThinkingLevel,
   type DrafterModelCandidate,
 } from "../drafter-model.js";
 import { ModelSelector } from "../model-selector.js";
@@ -451,9 +452,7 @@ async function beginDrafterModel(ctx: ExtensionContext): Promise<void> {
   const beforeRef = modelRef(originalModel);
   if (!beforeRef) return;
   const originalThinkingLevel = currentThinkingLevel(ctx);
-  const requestedThinkingLevel = selected.via === "session-last-resort"
-    ? originalThinkingLevel
-    : String(settings.drafterThinkingLevel ?? originalThinkingLevel);
+  const requestedThinkingLevel = resolveDrafterThinkingLevel(selected, originalThinkingLevel, settings.drafterThinkingLevel);
   if (selected.via === "session-last-resort") {
     const activeThinkingLevel = applyDrafterThinkingLevel(ctx, requestedThinkingLevel);
     draftingModelLease = {

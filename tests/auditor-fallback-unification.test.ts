@@ -213,6 +213,28 @@ test("resolved selected auditor is actually launched before fallback", async () 
   });
 });
 
+test("a selected auditor that times out has bounded attempts then uses the session thinking pair", async () => {
+  await withFakeContext(async ({ ctx, session, primary }) => {
+    const resolved = resolveAuditorModel(ctx, "test/primary");
+    const calls: Array<{ model: any; thinking: string }> = [];
+    const outcome = await runAuditorFallbackWithPolicy([
+      { model: resolved.model, via: resolved.via! }, ...resolved.fallbackModels!,
+    ], async candidate => {
+      calls.push({ model: candidate.model, thinking: resolveCandidateThinkingLevel(candidate, {
+        auditorThinkingLevel: "low", sessionThinkingLevel: "high",
+      }) });
+      return candidate.model === primary
+        ? result({ error: "Auditor stalled after 600000ms inactivity", infrastructureClass: "timeout" })
+        : result({ approved: true });
+    }, { sleep: async () => {}, shouldRetry: () => true });
+    assert.equal(outcome.result.approved, true);
+    assert.deepEqual(calls, [
+      { model: primary, thinking: "low" }, { model: primary, thinking: "low" },
+      { model: session, thinking: "high" },
+    ]);
+  });
+});
+
 test("auditor keeps all ten fallback slots after a pinned primary", async () => {
   await withFakeContext(({ ctx, session }) => {
     const fallbackRefs = Array.from({ length: 10 }, (_, index) => `test/fallback-${index + 1}`);

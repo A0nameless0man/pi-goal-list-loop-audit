@@ -20,6 +20,12 @@ export interface DrafterModelCandidate {
   via: "configured" | "session-last-resort";
 }
 
+/** The implicit session route inherits its thinking as well as its model.
+ * Role-specific thinking only applies to explicitly configured models. */
+export function resolveDrafterThinkingLevel(candidate: DrafterModelCandidate, sessionThinking: string, configuredThinking?: string): string {
+  return candidate.via === "session-last-resort" ? sessionThinking : configuredThinking ?? sessionThinking;
+}
+
 export interface DrafterModelResolution {
   configuredRefs: string[];
   candidates: DrafterModelCandidate[];

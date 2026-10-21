@@ -197,6 +197,34 @@ test("inherited drafter and auditor model rows identify the session category", (
   assert.equal(byId.get("auditorModel")?.valueText, "session model · high");
 });
 
+test("session defaults show the live thinking pair, not stale role thinking pins or fallback labels", () => {
+  const rows = buildSettingsRows({
+    drafterThinkingLevel: "low", designerThinkingLevel: "low", auditorThinkingLevel: "low",
+  } as Settings, EMPTY_PROV, {
+    sessionModel: "provider/session", sessionThinkingLevel: "max",
+    designerResolved: { selectedRef: "provider/session", blocked: false, via: "session", thinking: "max" },
+  });
+  const byId = new Map(rows.map(row => [row.id, row]));
+  for (const role of ["drafter", "designer", "auditor"]) {
+    assert.equal(byId.get(`${role}Model`)?.valueText, "session model · max", role);
+  }
+  assert.match(byId.get("designerEffective")!.valueText, /provider\/session · max · inherits session model \+ thinking/);
+  for (const id of ["designerModelFallbacks", "auditorModelFallbacks"]) {
+    assert.match(byId.get(id)!.valueText, /provider\/session · max \(session default\)/);
+    assert.doesNotMatch(byId.get(id)!.valueText, /last resort/);
+  }
+});
+
+test("fallback rows use session thinking, not the selected model's different dial", () => {
+  const rows = buildSettingsRows({
+    designerModel: "provider/designer", designerThinkingLevel: "low",
+    auditorModel: "provider/auditor", auditorThinkingLevel: "medium",
+  } as Settings, EMPTY_PROV, { sessionModel: "provider/session", sessionThinkingLevel: "max" });
+  for (const id of ["designerModelFallbacks", "auditorModelFallbacks"]) {
+    assert.match(rows.find(row => row.id === id)!.valueText, /provider\/session · max \(session fallback\)/);
+  }
+});
+
 test("fallback-only auditor configuration does not masquerade as session inheritance", () => {
   const rows = buildSettingsRows(
     { auditorModelFallbacks: ["provider/backup"], auditorSameSessionSwap: false } as Settings,

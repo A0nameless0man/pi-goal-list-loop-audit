@@ -167,6 +167,44 @@ test("resolveDesignerModel: selected primary wins over session; session is not d
   assert.deepEqual(alreadyConfigured.configuredRefs, ["anthropic/session"]);
 });
 
+test("Designer session default and unavailable-selection recovery inherit model AND live thinking", () => {
+  const cwd = tmpDir("glla-designer-session-thinking-");
+  const ctx = fakeCtx(cwd, [], { provider: "test", id: "session" });
+  // The live session need not appear in registry availability (extension
+  // auth may only be available through the already-running session).
+  ctx.thinkingLevel = "max";
+  for (const settings of [
+    { designerThinkingLevel: "low" },
+    { designerModel: "test/missing", designerThinkingLevel: "low" },
+  ] as Settings[]) {
+    const resolved = resolveDesignerModel(ctx, settings);
+    assert.equal(resolved.selectedRef, "test/session");
+    assert.equal(resolved.thinking, "max");
+    assert.equal(resolved.via, settings.designerModel ? "session-fallback" : "session");
+    const agentDir = tmpDir("glla-designer-pair-sync-");
+    syncSubagentModelOverrides({
+      agentDir, strategy: "inherit-parent", designerRequested: true,
+      designer: { configured: false, model: resolved.selectedRef, thinking: resolved.thinking },
+    });
+    const content = fs.readFileSync(path.join(agentDir, "agents", "Designer.md"), "utf8");
+    assert.match(content, /^model: test\/session$/m);
+    assert.match(content, /^thinking: max$/m);
+    assert.doesNotMatch(content, /^thinking: low$/m);
+  }
+  ctx.thinkingLevel = "off";
+  assert.equal(resolveDesignerModel(ctx, { designerThinkingLevel: "high" } as Settings).thinking, "off", "resolve each registration from the current dial");
+});
+
+test("Designer explicitly selected models keep configured thinking and otherwise inherit the session dial", () => {
+  const ctx = fakeCtx(tmpDir("glla-designer-pin-thinking-"), [{ provider: "test", id: "selected" }], { provider: "test", id: "session" });
+  ctx.thinkingLevel = "medium";
+  const pinned = resolveDesignerModel(ctx, { designerModel: "test/selected", designerThinkingLevel: "low" } as Settings);
+  assert.equal(pinned.selectedRef, "test/selected");
+  assert.equal(pinned.via, "configured");
+  assert.equal(pinned.thinking, "low");
+  assert.equal(resolveDesignerModel(ctx, { designerModel: "test/selected" } as Settings).thinking, "medium");
+});
+
 test("migration: junk dedicated values do not block the legacy pin, and project-scoped legacy pins are dropped", () => {
   const prevAgentDir = process.env.PI_CODING_AGENT_DIR;
   const agentDir = tmpDir("glla-designer-migration3-");

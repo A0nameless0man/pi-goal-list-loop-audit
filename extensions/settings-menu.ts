@@ -760,7 +760,7 @@ export function buildSettingsRows(
     // resolutions.
     valueText: (() => {
       const strip = (r: string) => r.replace(/ \([^)]*\)$/, "").replace(/^\((.*)\)$/, "$1");
-      const parts = OVERRIDABLE_AGENT_TYPES.map((name) => name === "Designer" ? designerEffective : resolveEffectiveSubagentModel(name, settings, subagent.sessionModel)).map(strip);
+      const parts = OVERRIDABLE_AGENT_TYPES.map((name) => name === "Designer" ? designerEffective.split(" · ")[0]! : resolveEffectiveSubagentModel(name, settings, subagent.sessionModel)).map(strip);
       return parts.every((p) => p === parts[0]) ? parts[0]! : parts.join(" · ");
     })(),
     sourceText: "runtime",

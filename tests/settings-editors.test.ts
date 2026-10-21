@@ -404,6 +404,29 @@ test("v0.36.0: the singular auditor fallback setting migrates to the ordered cha
   }
 });
 
+test("choosing session clears both role overrides without a separate thinking prompt", async () => {
+  const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
+  process.env.PI_CODING_AGENT_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "glla-session-pair-editor-"));
+  try {
+    for (const role of ["designer", "drafter", "auditor"]) {
+      fs.writeFileSync(GLOBAL_FILE, JSON.stringify({ [`${role}Model`]: "test/selected", [`${role}ThinkingLevel`]: "low" }));
+      const ctx = makeMockCtx(tmpCwd()) as any;
+      ctx.model = { provider: "test", id: "session", reasoning: true, thinkingLevelMap: { max: "max" } };
+      ctx.thinkingLevel = "max";
+      ctx.ui.customImpl = async () => ({ kind: "session" });
+      ctx.ui.selectImpl = async () => { throw new Error("session inherits its thinking without another choice"); };
+      await handleSettingChoice(`${role}Model`, ctx as ExtensionContext);
+      assert.equal(readGlobal()[`${role}Model`], undefined, role);
+      assert.equal(readGlobal()[`${role}ThinkingLevel`], undefined, role);
+      assert.ok(ctx.ui.matching("session model and thinking inherited together").length > 0, role);
+    }
+  } finally {
+    restoreGlobal();
+    if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+    else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
+  }
+});
+
 test("drafter agent picker immediately offers model-specific thinking and persists both choices", async () => {
   try {
     restoreGlobal();
