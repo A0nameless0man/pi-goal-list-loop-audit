@@ -165,3 +165,154 @@ test("v0.38.51: stale bare /list latches no drafting gate — a later list_add l
   assert.match(added.content[0]!.text, /item\(s\) added|item.*active/i, "a stale bare /list left no drafting gate behind");
   await pi.command("list", "cancel", fresh);
 });
+
+// Meaningful regressions: these run the real drafting lease and host event
+// handlers. Only the recovery clock is injectable; no provider is contacted.
+test("drafter provider error reaches the original session model AND thinking through agent_end", async () => {
+  await withDrafter({ drafterModel: "test/selected", drafterThinkingLevel: "low" }, async ({ ctx, selected, session }) => {
+    assert.equal(ctx.model, selected);
+    assert.equal(ctx.thinkingLevel, "low");
+    await pi.fire("agent_end", { messages: [{ role: "assistant", content: [], stopReason: "error", errorMessage: "503 upstream unavailable" }] }, ctx);
+    assert.equal(ctx.model, session);
+    assert.equal(ctx.thinkingLevel, "max");
+    assert.equal(recoveryPrompts(), 1);
+    assert.deepEqual(pi.modelSelections, [selected, session]);
+    await restoreDraft();
+    assert.equal(ctx.thinkingLevel, "max");
+  });
+});
+
+test("drafter recovery retains original thinking across configured alternatives, then exhausts without extra prompts", async () => {
+  await withDrafter({ drafterModel: "test/selected", drafterModelFallbacks: ["test/backup"], drafterThinkingLevel: "low" }, async ({ ctx, selected, backup, session }) => {
+    assert.equal(await recoverDraft(ctx, immediateRetry), true);
+    assert.equal(ctx.model, backup);
+    assert.equal(ctx.thinkingLevel, "low");
+    assert.equal(await recoverDraft(ctx, immediateRetry), true);
+    assert.equal(ctx.model, session);
+    assert.equal(ctx.thinkingLevel, "max");
+    assert.equal(await recoverDraft(ctx, immediateRetry), false);
+    assert.equal(await recoverDraft(ctx, immediateRetry), false);
+    assert.equal(recoveryPrompts(), 2);
+    assert.deepEqual(pi.modelSelections, [selected, backup, session]);
+  });
+});
+
+test("drafter rejected restoration retains its lease until a later restoration succeeds", async () => {
+  await withDrafter({ drafterModel: "test/selected", drafterThinkingLevel: "low" }, async ({ ctx, selected, session, api }) => {
+    const select = api.setModel;
+    let accept = false;
+    api.setModel = async (model: unknown) => model === session && !accept ? false : select(model);
+    assert.equal(await recoverDraft(ctx, immediateRetry), false);
+    assert.equal(ctx.model, selected);
+    assert.equal(ctx.thinkingLevel, "low");
+    // A new interview must not overwrite pending restoration with a lease
+    // that incorrectly calls the failed drafter its original session.
+    const prompts = pi.userMessages.length;
+    await pi.command("list", "", ctx);
+    assert.equal(pi.userMessages.length, prompts);
+    accept = true;
+    await restoreDraft();
+    assert.equal(ctx.model, session);
+    assert.equal(ctx.thinkingLevel, "max");
+    const selections = pi.modelSelections.length;
+    await restoreDraft();
+    assert.equal(pi.modelSelections.length, selections, "successful restoration releases the lease");
+  });
+});
+
+test("implicit session drafting has one bounded same-model retry, not an empty chain or endless replay", async () => {
+  await withDrafter({ drafterThinkingLevel: "low" }, async ({ ctx, session }) => {
+    assert.equal(ctx.model, session);
+    assert.equal(ctx.thinkingLevel, "max");
+    assert.equal(await recoverDraft(ctx, immediateRetry), true);
+    assert.equal(await recoverDraft(ctx, immediateRetry), false);
+    assert.equal(await recoverDraft(ctx, immediateRetry), false);
+    assert.equal(recoveryPrompts(), 1);
+    assert.equal(pi.modelSelections.length, 0, "same-model retry does not change the user's model");
+  });
+});
+
+test("cancelling an interview during its retry wait aborts recovery before any delayed selection or prompt", async () => {
+  await withDrafter({ drafterModel: "test/selected", drafterThinkingLevel: "low" }, async ({ ctx, selected, session }) => {
+    let waiting: AbortSignal | undefined;
+    const recovery = recoverDraft(ctx, { wait: async (_ms, signal) => {
+      waiting = signal;
+      return waitForDrafterRetry(60_000, signal);
+    } });
+    assert.ok(waiting);
+    await pi.command("goal", "start explicit cancellation — done when: pinned", ctx);
+    assert.equal(await recovery, false);
+    assert.equal(waiting!.aborted, true);
+    assert.equal(ctx.model, session);
+    assert.equal(ctx.thinkingLevel, "max");
+    assert.equal(recoveryPrompts(), 0);
+    assert.deepEqual(pi.modelSelections, [selected, session], "only the explicit cancellation restores the session");
+  });
+});
+
+test("a manual model selection during retry delay supersedes the old drafter and restoration", async () => {
+  await withDrafter({ drafterModel: "test/selected", drafterThinkingLevel: "low" }, async ({ ctx, manual, api }) => {
+    let resume!: (ready: boolean) => void;
+    const recovery = recoverDraft(ctx, { wait: () => new Promise(resolve => { resume = resolve; }) });
+    await api.setModel(manual);
+    (ctx as any).thinkingLevel = "medium";
+    resume(true);
+    assert.equal(await recovery, false);
+    await restoreDraft();
+    assert.equal(ctx.model, manual);
+    assert.equal(ctx.thinkingLevel, "medium");
+    assert.equal(recoveryPrompts(), 0);
+  });
+});
+
+test("a host replacement during a pending retry cannot receive the old interview's model, dial or prompt", async () => {
+  await withDrafter({ drafterModel: "test/selected", drafterThinkingLevel: "low" }, async ({ ctx, manual, api }) => {
+    let waiting: AbortSignal | undefined;
+    const recovery = recoverDraft(ctx, { wait: async (_ms, signal) => {
+      waiting = signal;
+      return waitForDrafterRetry(60_000, signal);
+    } });
+    const replacement = makeMockCtx(ctx.cwd, { sessionManager: { name: "replacement-host" } }) as any;
+    replacement.model = manual;
+    replacement.thinkingLevel = "medium";
+    api.getThinkingLevel = () => replacement.thinkingLevel;
+    api.setThinkingLevel = (level: string) => { replacement.thinkingLevel = level; };
+    api.setModel = async (model: unknown) => { replacement.model = model; pi.modelSelections.push(model); return true; };
+    await pi.fire("session_start", { reason: "reload" }, replacement);
+    assert.equal(await recovery, false);
+    assert.equal(waiting!.aborted, true);
+    assert.equal(replacement.model, manual);
+    assert.equal(replacement.thinkingLevel, "medium");
+    assert.equal(recoveryPrompts(), 0);
+    await pi.fire("session_shutdown", { reason: "test-end" }, replacement);
+  });
+});
+
+test("cancellation serializes restoration behind an already-started model switch", async () => {
+  await withDrafter({ drafterModel: "test/selected", drafterModelFallbacks: ["test/backup"], drafterThinkingLevel: "low" }, async ({ ctx, backup, session, api }) => {
+    const select = api.setModel;
+    let finishSwitch!: () => void;
+    api.setModel = (model: unknown) => model === backup
+      ? new Promise<boolean>(resolve => { finishSwitch = () => { (ctx as any).model = backup; pi.modelSelections.push(backup); resolve(true); }; })
+      : select(model);
+    const recovery = recoverDraft(ctx, immediateRetry);
+    await Promise.resolve();
+    assert.ok(finishSwitch);
+    const cancellation = pi.command("goal", "start cancel delayed switch — done when: pinned", ctx);
+    finishSwitch();
+    await cancellation;
+    assert.equal(await recovery, false);
+    assert.equal(ctx.model, session);
+    assert.equal(ctx.thinkingLevel, "max");
+    assert.equal(recoveryPrompts(), 0);
+  });
+});
+
+test("restoration preserves a deliberate thinking-only change by the user", async () => {
+  await withDrafter({ drafterModel: "test/selected", drafterThinkingLevel: "low" }, async ({ ctx, session }) => {
+    (ctx as any).thinkingLevel = "medium";
+    await restoreDraft();
+    assert.equal(ctx.model, session);
+    assert.equal(ctx.thinkingLevel, "medium");
+  });
+});
