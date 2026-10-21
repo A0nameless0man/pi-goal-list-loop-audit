@@ -411,6 +411,7 @@ interface DraftingModelLease {
 }
 
 let draftingModelLease: DraftingModelLease | null = null;
+let draftingStartSequence = 0;
 let draftingModelRestoreInFlight: { lease: DraftingModelLease; promise: Promise<void> } | null = null;
 const DRAFTER_RECOVERY_PROMPT = "The drafting model turn failed. Resume the existing drafting interview from the conversation, keep the user's intent, ask at most one focused decision question if truly necessary, and continue toward the appropriate propose_* tool. Do not restart the interview or implement work.";
 
@@ -1016,11 +1017,13 @@ async function startDrafting(ctx: ExtensionContext, target: "goal" | "list" | "l
     if (pre) tmpl += `\n\n${pre}`;
   }
   // From this point onward, every exit owns the gate it is about to claim.
+  const startSequence = ++draftingStartSequence;
   draftingTarget = target;
   try {
     const modelReady = await beginDrafterModel(ctx);
-    if (!modelReady) {
-      if (!draftingModelLease || draftingModelLease.controller.signal.aborted) draftingTarget = null;
+    if (!modelReady || startSequence !== draftingStartSequence) {
+      if (startSequence === draftingStartSequence
+        && (!draftingModelLease || draftingModelLease.controller.signal.aborted)) draftingTarget = null;
       return false;
     }
   } catch (err) {
