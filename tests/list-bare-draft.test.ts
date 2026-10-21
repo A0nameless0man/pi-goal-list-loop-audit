@@ -336,3 +336,47 @@ test("restoration preserves a deliberate thinking-only change by the user", asyn
     assert.equal(ctx.thinkingLevel, "medium");
   });
 });
+
+test("a forbidden session introduced during retry delay is not selected or restored until policy permits it", async () => {
+  await withDrafter({ drafterModel: "test/selected", drafterThinkingLevel: "low" }, async ({ ctx, selected, session }) => {
+    let resume!: (ready: boolean) => void;
+    const recovery = recoverDraft(ctx, { wait: () => new Promise(resolve => { resume = resolve; }) });
+    const file = globalSettingsPath();
+    const settings = JSON.parse(fs.readFileSync(file, "utf8"));
+    fs.writeFileSync(file, JSON.stringify({ ...settings, forbiddenModels: ["test/session"] }));
+    resume(true);
+    assert.equal(await recovery, false);
+    assert.equal(ctx.model, selected);
+    assert.deepEqual(pi.modelSelections, [selected]);
+    assert.equal(recoveryPrompts(), 0);
+    fs.writeFileSync(file, JSON.stringify(settings));
+    await restoreDraft();
+    assert.equal(ctx.model, session);
+    assert.equal(ctx.thinkingLevel, "max");
+  });
+});
+
+test("concurrent drafting failures cannot spend a candidate or inject a recovery prompt twice", async () => {
+  await withDrafter({ drafterModel: "test/selected", drafterThinkingLevel: "low" }, async ({ ctx, selected, session }) => {
+    let resume!: (ready: boolean) => void;
+    const recovery = recoverDraft(ctx, { wait: () => new Promise(resolve => { resume = resolve; }) });
+    assert.equal(await recoverDraft(ctx, immediateRetry), false);
+    resume(true);
+    assert.equal(await recovery, true);
+    assert.equal(recoveryPrompts(), 1);
+    assert.deepEqual(pi.modelSelections, [selected, session]);
+  });
+});
+
+test("thinking restoration remains retryable when a host accepts the model but rejects its original dial", async () => {
+  await withDrafter({ drafterModel: "test/selected", drafterThinkingLevel: "low" }, async ({ ctx, session, api }) => {
+    const setThinking = api.setThinkingLevel;
+    api.setThinkingLevel = () => {};
+    await restoreDraft();
+    assert.equal(ctx.model, session);
+    assert.equal(ctx.thinkingLevel, "low");
+    api.setThinkingLevel = setThinking;
+    await restoreDraft();
+    assert.equal(ctx.thinkingLevel, "max");
+  });
+});
