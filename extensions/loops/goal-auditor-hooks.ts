@@ -404,7 +404,7 @@ import {
   type LoopFlags,
 } from "../goal-loop.js";
 import { defineGoalRuntimeGlobal } from "./goal-runtime-globals.js";
-import { resolveAuditorThinkingLevel } from "../auditor-thinking.js";
+import { isSessionModelTail, resolveAuditorThinkingLevel } from "../auditor-thinking.js";
 
 
 type PendingCompletion = NonNullable<Goal["pendingCompletion"]>;
@@ -1477,7 +1477,13 @@ async function retryStoredCompletionAudit(origin: CompletionAuditOrigin = "provi
     ({ result, retriedOnce, fallbackUsed } = await runDetachedCompletionWithFallback(
       auditorCandidates,
       (candidate) => {
-        const requestedThinking = settings.auditorThinkingLevel ?? liveCtx.thinkingLevel ?? "max";
+        // v0.39.43: the SESSION model — the auditor's default and its last
+        // resort — runs at the SESSION's thinking level. The auditor's
+        // configured dial is a choice about the configured auditor models.
+        const sessionThinking = liveCtx.thinkingLevel ?? "max";
+        const requestedThinking = isSessionModelTail(candidate)
+          ? sessionThinking
+          : (settings.auditorThinkingLevel ?? sessionThinking);
         const effectiveThinking = resolveAuditorThinkingLevel(candidate.model, requestedThinking);
         appendLedger(liveCtx.cwd, "auditor_thinking_selected", {
           goalId, attemptId: claim.attemptId, model: modelRef(candidate.model),

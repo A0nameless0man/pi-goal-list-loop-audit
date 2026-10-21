@@ -310,7 +310,7 @@ import { persistApprovalRender, replayUndeliveredApprovalRenders } from "../appr
 import { HUMAN_HANDOFF_GUIDANCE, humanCheckTime } from "../human-handoff.js";
 import { auditReworkNotice } from "../audit-rework-handoff.js";
 import { Text } from "@earendil-works/pi-tui";
-import { resolveAuditorThinkingLevel } from "../auditor-thinking.js";
+import { isSessionModelTail, resolveAuditorThinkingLevel } from "../auditor-thinking.js";
 import {
   defaultAgentDir,
   resolveEffectiveSubagentModel,
@@ -1126,7 +1126,13 @@ function registerAgentTools(pi: any): void {
       // the user at the kept resumable session.
       let inspectionSessionPath: string | undefined;
       const runAudit = (candidate: AuditorModelCandidate) => {
-        const requestedThinking = settings.auditorThinkingLevel ?? ctx.thinkingLevel ?? "max";
+        // v0.39.43: the SESSION model — the auditor's default and its last
+        // resort — runs at the SESSION's thinking level. The auditor's
+        // configured dial is a choice about the configured auditor models.
+        const sessionThinking = ctx.thinkingLevel ?? "max";
+        const requestedThinking = isSessionModelTail(candidate)
+          ? sessionThinking
+          : (settings.auditorThinkingLevel ?? sessionThinking);
         const effectiveThinking = resolveAuditorThinkingLevel(candidate.model, requestedThinking);
         appendLedger(ctx.cwd, "auditor_thinking_selected", {
           goalId: auditGoalId, attemptId: auditAttemptId, model: modelRef(candidate.model),
