@@ -47,6 +47,7 @@ import {
 } from "./goal-loop-backoff.ts";
 import { resolveDesignerConfig, type Settings } from "./goal-settings.ts";
 import { MAX_MAIN_MODEL_FALLBACKS } from "./main-model-recovery.ts";
+import { resolveSupportedThinkingLevel } from "./auditor-thinking.js";
 import { resolveEffectiveSubagentModel, OVERRIDABLE_AGENT_TYPES } from "./goal-loop-subagents.ts";
 
 // =================================================================
@@ -125,8 +126,6 @@ export interface MenuSubagentContext {
    * (computed by the caller via resolveDesignerModel). */
   designerResolved?: { selectedRef?: string; blocked: boolean; via?: "configured" | "session" | "session-fallback"; thinking?: string };
 }
-
-import { resolveSupportedThinkingLevel } from "./auditor-thinking.js";
 
 function modelThinkingText(
   ref: string,
