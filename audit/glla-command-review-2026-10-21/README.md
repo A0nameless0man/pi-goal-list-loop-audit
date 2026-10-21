@@ -26,6 +26,8 @@ The session picker saves `{ auditorModel: undefined, auditorThinkingLevel: undef
 
 **Durable direction:** represent explicit project-level session inheritance instead of conflating it with removing a project override. Do not silently clear unrelated global settings for all projects as a workaround.
 
+**Implementation candidate:** project-local `auditorModel: null` now explicitly inherits the live session pair, keeps configured backups, and leaves global settings intact. Required behavioral checks pass; independent approval is pending. See [layer repair evidence](../auditor-session-layers-2026-10-21/README.md).
+
 ### 3. P2 — Default session resolution accidentally enables the on-demand Designer on startup
 
 **Locations:** `extensions/goal-loop-subagents.ts:282`, `extensions/loops/goal-activation.ts:2199`.
