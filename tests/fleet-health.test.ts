@@ -164,13 +164,18 @@ test('/glla fleet command does not dispatch work or change sibling artifacts', a
 
 test('a saved retry is not an armed timer in fleet output', async () => {
   const f = setup();
+  const realNow = Date.now, observedAt = realNow();
+  // This case protects evidence provenance, not scan throughput. Keep the
+  // observation clock fixed so scheduler delays between I/O steps do not
+  // turn it into a total-time-budget test (covered independently above).
+  Date.now = () => observedAt;
   try {
-    const value = { ...f.snapshot, mainModelRecovery: { kind: 'goal', reason: 'quota', owner: { kind: 'goal', id: 'fleet-fixture' }, retryAt: new Date(Date.now() + 60000).toISOString() } };
+    const value = { ...f.snapshot, mainModelRecovery: { kind: 'goal', reason: 'quota', owner: { kind: 'goal', id: 'fleet-fixture' }, retryAt: new Date(observedAt + 60000).toISOString() } };
     const p = f.project('retry', JSON.stringify({ type: 'state', at: '2026-01-01T00:00:00Z', value }));
     const report = await inspectFleetHealth([p]);
     assert.equal(report.projects[0]!.status!.execution, 'unconfirmed');
     assert.doesNotMatch(formatFleetHealth(report).join('\n'), /retry-armed/);
-  } finally { f.cleanup(); }
+  } finally { Date.now = realNow; f.cleanup(); }
 });
 
 test('bounds raised above the safety ceiling are clamped and reported, never silently ignored', async () => {
