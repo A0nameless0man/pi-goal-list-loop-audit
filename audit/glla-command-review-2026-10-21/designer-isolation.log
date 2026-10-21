@@ -1,0 +1,30 @@
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/manual-resume-failback.test.ts:
+(pass) selected decision resumes real work despite an unfinished preferred-primary probe [1214.41ms]
+(pass) cancelled decision picker preserves the pause and the verification contract [70.64ms]
+63 | });
+64 | 
+65 | test('Designer stays off on startup and is registered only when a live goal explicitly selects it', async () => {
+66 |   const { pi, cwd, ctx } = await fixture();
+67 |   const designerFile = path.join(process.env.PI_CODING_AGENT_DIR!, 'agents', 'Designer.md');
+68 |   assert.equal(fs.existsSync(designerFile), false, 'plain startup does not enable Designer');
+              ^
+AssertionError: plain startup does not enable Designer
+
+true !== false
+
+ generatedMessage: false,
+     actual: true,
+   expected: false,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/manual-resume-failback.test.ts:68:10
+      at processTicksAndRejections (native:7:39)
+(fail) Designer stays off on startup and is registered only when a live goal explicitly selects it [86.92ms]
+(pass) no-objective resume retires a stale probe marker without inventing a goal or claiming provider health [100.08ms]
+
+ 3 pass
+ 1 fail
+Ran 4 tests across 1 file. [7.36s]

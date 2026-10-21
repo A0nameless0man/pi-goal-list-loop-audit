@@ -1,0 +1,162 @@
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+../../../../../tmp/glla-command-audit/repro.test.ts:
+session picker effective result: {"auditorModel":"audit/selected","auditorThinkingLevel":"low","notifications":[{"message":"Auditor agent: session model and thinking inherited together (overrides cleared).","type":"info"}]}
+47 |   ctx.ui.customImpl = async () => ({kind: 'session'});
+48 |   try {
+49 |     await handleSettingChoice('auditorModel', ctx);
+50 |     const settings = loadSettings(cwd);
+51 |     console.log('session picker effective result:', JSON.stringify({auditorModel: settings.auditorModel, auditorThinkingLevel: settings.auditorThinkingLevel, notifications: ctx.ui.notifies}));
+52 |     assert.equal(settings.auditorModel, undefined, 'session selection must actually inherit, not unmask the global auditor pin');
+                ^
+AssertionError: session selection must actually inherit, not unmask the global auditor pin
++ actual - expected
+
++ 'audit/selected'
+- undefined
+
+ generatedMessage: false,
+     actual: "audit/selected",
+   expected: undefined,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-command-audit/repro.test.ts:52:12
+      at processTicksAndRejections (native:7:39)
+(fail) session selection must not resurrect global auditor settings hidden by project overrides [117.37ms]
+drafter runtime recovery: {"recovery":false,"model":"selected","thinking":"low","selectedModels":["selected"]}
+59 |   try {
+60 |     await pi.command('list', '', ctx);
+61 |     const recovery = await (globalThis as any).handleDrafterModelFailure(ctx, '503 upstream unavailable');
+62 |     await (globalThis as any).restoreDrafterModel();
+63 |     console.log('drafter runtime recovery:', JSON.stringify({recovery, model: ctx.model.id, thinking: ctx.thinkingLevel, selectedModels: pi.modelSelections.map((m: any) => m.id)}));
+64 |     assert.equal(ctx.model, session, 'a failed dedicated drafter must not strand the main session on its failed model');
+                ^
+AssertionError: a failed dedicated drafter must not strand the main session on its failed model
++ actual - expected
+
+  {
++   id: 'selected',
+-   id: 'session',
+    provider: 'audit',
+    reasoning: true,
+-   thinkingLevelMap: {
+-     max: 'max',
+-     xhigh: 'xhigh'
+-   }
+  }
+
+ generatedMessage: false,
+     actual: {
+  provider: "audit",
+  id: "selected",
+  reasoning: true,
+},
+   expected: {
+  provider: "audit",
+  id: "session",
+  reasoning: true,
+  thinkingLevelMap: [Object ...],
+},
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-command-audit/repro.test.ts:64:12
+      at processTicksAndRejections (native:7:39)
+(fail) runtime drafter failure must attempt the session fallback and retain restoration [186.84ms]
+Designer frontmatter after model switch: 
+name: Designer
+description: 'Read-only design specialist for turning an explicit design request into an architecture, affected-file map, risks, trade-offs, and a verification plan before implementation.'
+tools: read, bash, grep, find, ls
+systemPromptMode: replace
+inheritProjectContext: true
+inheritSkills: false
+model: audit/session
+thinking: max
+x-managed-by: pi-goal-list-loop-audit
+x-glla-note: model pinned to audit/session by glla subagentModelOverrides, thinking max by subagentThinkingOverrides. Remove the file or clear the /glla Designer pin to restore the upstream model behavior.
+
+75 |     ctx.model = other;
+76 |     ctx.thinkingLevel = 'low';
+77 |     await pi.fire('model_select', {model: other, previousModel: session, source: 'set'}, ctx);
+78 |     const after = fs.readFileSync(file, 'utf8');
+79 |     console.log('Designer frontmatter after model switch:', after.split('---')[1]);
+80 |     assert.match(after, /^model: audit\/other$/m, 'session-default Designer must not stay pinned to the previous session');
+                ^
+AssertionError: session-default Designer must not stay pinned to the previous session
+ generatedMessage: false,
+     actual: "---\nname: Designer\ndescription: 'Read-only design specialist for turning an explicit design request into an architecture, affected-file map, risks, trade-offs, and a verification plan before implementation.'\ntools: read, bash, grep, find, ls\nsystemPromptMode: replace\ninheritProjectContext: true\ninheritSkills: false\nmodel: audit/session\nthinking: max\nx-managed-by: pi-goal-list-loop-audit\nx-glla-note: model pinned to audit/session by glla subagentModelOverrides, thinking max by subagentThinkingOverrides. Remove the file or clear the /glla Designer pin to restore the upstream model behavior.\n---\n\n# DESIGNER ROLE — READ-ONLY DESIGN CHECKPOINT\nYou are the Designer subagent. Do not edit, create, delete, or move files and do not run commands that change repository state.\n\nFor the assigned objective:\n1. Inspect the relevant repository files and existing conventions.\n2. Return a concise implementation design: current behavior, proposed shape, affected files, interfaces/data flow, risks, trade-offs, and concrete verification steps.\n3. Call out assumptions and unresolved user decisions as explicit questions with a recommended default.\n4. Prefer durable, maintainable fixes over cosmetic workarounds. The parent agent owns implementation and decides whether to apply the design.\n\nUse only read, bash, grep, find, and ls. End with a short DESIGN CHECKPOINT summary the parent agent can turn into a task or plan.\n",
+   expected: /^model: audit\/other$/m,
+   operator: "match",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-command-audit/repro.test.ts:80:12
+      at processTicksAndRejections (native:7:39)
+(fail) session-backed Designer must update when the session model and thinking change [98.06ms]
+unconfigured Designer registered on startup: true
+86 |   const {ctx} = fixture();
+87 |   try {
+88 |     await pi.fire('session_start', {reason: 'startup'}, ctx);
+89 |     const file = path.join(process.env.PI_CODING_AGENT_DIR!, 'agents', 'Designer.md');
+90 |     console.log('unconfigured Designer registered on startup:', fs.existsSync(file));
+91 |     assert.equal(fs.existsSync(file), false, 'a resolved session default is not consent to enable Designer');
+                ^
+AssertionError: a resolved session default is not consent to enable Designer
+
+true !== false
+
+ generatedMessage: false,
+     actual: true,
+   expected: false,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-command-audit/repro.test.ts:91:12
+      at processTicksAndRejections (native:7:39)
+(fail) on-demand Designer must stay unregistered until explicitly requested [100.69ms]
+thinking display/runtime: {"runtime":"high","display":"audit/selected · max (requested xhigh)"}
+100 |     sessionModel: 'audit/session', sessionThinkingLevel: 'max',
+101 |     thinkingLevelsByRef: {'audit/selected': ['off', 'minimal', 'low', 'medium', 'high', 'max']},
+102 |   });
+103 |   const display = rows.find(row => row.id === 'auditorModel')!.valueText;
+104 |   console.log('thinking display/runtime:', JSON.stringify({runtime, display}));
+105 |   assert.match(display, new RegExp(` · ${runtime}(?: |$)`), 'menu must show runtime high, not maximum thinking');
+               ^
+AssertionError: menu must show runtime high, not maximum thinking
+ generatedMessage: false,
+     actual: "audit/selected · max (requested xhigh)",
+   expected: / · high(?: |$)/,
+   operator: "match",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-command-audit/repro.test.ts:105:10
+      at fn (node:test:215:18)
+(fail) thinking display must not raise an unsupported request above the runtime level [10.82ms]
+tenth fallback results: {"designer":"audit/session","drafter":"audit/session","configuredDesignerRefs":["audit/missing-primary","audit/missing-0","audit/missing-1","audit/missing-2","audit/missing-3","audit/missing-4","audit/missing-5","audit/missing-6","audit/missing-7","audit/missing-8"]}
+109 |   const {ctx, other} = fixture();
+110 |   const fallbacks = [...Array.from({length: 9}, (_, i) => `audit/missing-${i}`), 'audit/other'];
+111 |   const designer = resolveDesignerModel(ctx, {designerModel: 'audit/missing-primary', designerModelFallbacks: fallbacks});
+112 |   const drafter = resolveDrafterModel(ctx, {drafterModel: 'audit/missing-primary', drafterModelFallbacks: fallbacks});
+113 |   console.log('tenth fallback results:', JSON.stringify({designer: designer.selectedRef, drafter: drafter.selected?.ref, configuredDesignerRefs: designer.configuredRefs}));
+114 |   assert.equal(designer.selectedRef, 'audit/other', 'the tenth configured fallback must not be truncated by the primary');
+               ^
+AssertionError: the tenth configured fallback must not be truncated by the primary
++ actual - expected
+
++ 'audit/session'
+- 'audit/other'
+         ^
+
+ generatedMessage: false,
+     actual: "audit/session",
+   expected: "audit/other",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /tmp/glla-command-audit/repro.test.ts:114:10
+      at fn (node:test:215:18)
+(fail) ten configured fallback slots must remain available after a Designer or Drafter primary [8.83ms]
+
+ 0 pass
+ 6 fail
+Ran 6 tests across 1 file. [5.50s]
