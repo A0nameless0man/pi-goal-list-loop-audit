@@ -22,6 +22,8 @@ import { globalSettingsPath, loadSettings, projectSettingsPath, saveSettings, se
 import { makeMockCtx, tmpCwd } from "./harness/mock-pi.js";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { readGoalRuntimeSource } from "./harness/goal-source.js";
+import { resolveAuditorModel } from "../extensions/loops/goal-settings-ui.js";
+import { resolveCandidateThinkingLevel } from "../extensions/auditor-thinking.js";
 
 const GOAL_SRC = readGoalRuntimeSource();
 const GLOBAL_FILE = globalSettingsPath();
@@ -354,7 +356,7 @@ test("v0.34.118: backup and forbidden editors enforce mutual exclusion even in h
   }
 });
 
-test("T4: input editor — auditorModel set / cleared on empty", async () => {
+test("T4: input editor — auditorModel pin / explicit session on empty", async () => {
   try {
     const ctx = makeMockCtx(tmpCwd());
     ctx.ui.inputImpl = async () => "openai/gpt-5";
@@ -363,10 +365,80 @@ test("T4: input editor — auditorModel set / cleared on empty", async () => {
 
     ctx.ui.inputImpl = async () => "   ";
     await handleSettingChoice("auditorModel", ctx as unknown as ExtensionContext);
-    assert.ok(!("auditorModel" in readGlobal()), "empty input removes the override");
+    assert.equal(loadSettings(ctx.cwd).auditorModel, null, "empty input explicitly inherits the session instead of exposing a lower-layer pin");
+    assert.equal(loadSettings(ctx.cwd).auditorThinkingLevel, undefined);
+    assert.equal(readGlobal().auditorModel, "openai/gpt-5", "the global pin still serves other projects");
   } finally {
     restoreGlobal();
   }
+});
+
+// Absence inherits a lower settings layer; explicit session must instead
+// mask its model AND dial without mutating that layer or losing backups.
+for (const scenario of [
+  { name: "both project overrides", project: { auditorModel: "audit/project", auditorThinkingLevel: "medium" } },
+  { name: "project model plus global thinking", project: { auditorModel: "audit/project" } },
+  { name: "project thinking plus global model", project: { auditorThinkingLevel: "medium" } },
+  { name: "only global pins", project: {} },
+]) test(`auditor session selection masks ${scenario.name} and preserves other projects and backups`, async () => {
+  try {
+    const cwd = tmpCwd();
+    const otherProject = tmpCwd();
+    const session = { provider: "live", id: "current", reasoning: true, thinkingLevelMap: { max: "max" } };
+    const backups = ["audit/backup1", "audit/backup2"];
+    const models = [session, ...["global", "project", "backup1", "backup2", "global-backup"].map(id => ({ provider: "audit", id, reasoning: true }))];
+    const ctx = Object.assign(makeMockCtx(cwd), {
+      model: session, thinkingLevel: "max",
+      modelRegistry: {
+        getAvailable: () => models,
+        hasConfiguredAuth: () => true,
+        find: (provider: string, id: string) => models.find(model => model.provider === provider && model.id === id),
+      },
+    });
+    const global = { auditorModel: "audit/global", auditorThinkingLevel: "low", auditorModelFallbacks: ["audit/global-backup"], autoAcceptDrafts: false, mainModelSameModelRetries: 3 };
+    fs.mkdirSync(path.dirname(GLOBAL_FILE), { recursive: true });
+    fs.writeFileSync(GLOBAL_FILE, JSON.stringify(global, null, 2));
+    const globalBytes = fs.readFileSync(GLOBAL_FILE, "utf8");
+    const project = { ...scenario.project, auditorModelFallbacks: backups, subagentFallbacks: { scout: ["audit/project"] }, progressEvery: 7 };
+    fs.mkdirSync(path.dirname(projectSettingsPath(cwd)), { recursive: true });
+    fs.writeFileSync(projectSettingsPath(cwd), JSON.stringify(project));
+    ctx.ui.customStubMode = true;
+    ctx.ui.customImpl = async () => ({ kind: "session" });
+    await handleSettingChoice("auditorModel", ctx);
+
+    assert.equal(fs.readFileSync(GLOBAL_FILE, "utf8"), globalBytes, "global settings are byte-for-byte unchanged");
+    const persisted = JSON.parse(fs.readFileSync(projectSettingsPath(cwd), "utf8"));
+    const { auditorThinkingLevel: _removed, ...expectedProject } = project as Record<string, unknown>;
+    assert.deepEqual(persisted, { ...expectedProject, auditorModel: null }, "only the project model/thinking selection changes");
+    const settings = loadSettings(cwd);
+    assert.equal(settings.auditorModel, null);
+    assert.equal(settings.auditorThinkingLevel, undefined);
+    assert.deepEqual(settings.auditorModelFallbacks, backups);
+    const resolved = resolveAuditorModel(ctx, settings.auditorModel, settings.auditorModelFallbacks);
+    assert.equal(resolved.model, session);
+    assert.equal(resolved.via, "session");
+    assert.equal(resolveCandidateThinkingLevel(resolved, { auditorThinkingLevel: settings.auditorThinkingLevel, sessionThinkingLevel: ctx.thinkingLevel }), "max");
+    assert.deepEqual(resolved.fallbackModels?.map(candidate => candidate.ref), backups);
+    assert.equal(loadSettings(otherProject).auditorModel, "audit/global");
+    assert.equal(loadSettings(otherProject).auditorThinkingLevel, "low");
+    assert.deepEqual(loadSettings(otherProject).auditorModelFallbacks, global.auditorModelFallbacks);
+
+    // It is a live choice, not a pin to whatever ref/dial was current on save.
+    const replacement = { ...session, id: "replacement" };
+    Object.assign(ctx, { model: replacement, thinkingLevel: "medium" });
+    const later = resolveAuditorModel(ctx, loadSettings(cwd).auditorModel, settings.auditorModelFallbacks);
+    assert.equal(later.model, replacement);
+    assert.equal(resolveCandidateThinkingLevel(later, { sessionThinkingLevel: ctx.thinkingLevel }), "medium");
+
+    // A subsequent explicit pin replaces the tombstone in the same project.
+    ctx.ui.customImpl = async () => ({ kind: "model", ref: "audit/project" });
+    ctx.ui.selectImpl = async () => "high";
+    await handleSettingChoice("auditorModel", ctx);
+    assert.equal(loadSettings(cwd).auditorModel, "audit/project");
+    assert.equal(loadSettings(cwd).auditorThinkingLevel, "high");
+    assert.equal(fs.readFileSync(GLOBAL_FILE, "utf8"), globalBytes);
+    assert.deepEqual(loadSettings(cwd).auditorModelFallbacks, backups);
+  } finally { restoreGlobal(); }
 });
 
 test("v0.36.0: auditor fallback editor preserves ordered refs, caps at ten, and clears", async () => {
