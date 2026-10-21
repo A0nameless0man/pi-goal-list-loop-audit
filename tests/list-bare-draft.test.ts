@@ -272,6 +272,11 @@ test("a host replacement during a pending retry cannot receive the old interview
       waiting = signal;
       return waitForDrafterRetry(60_000, signal);
     } });
+    // A real reload announces shutdown before replacing the host API.
+    // Cancellation must settle its delay before that replacement is bound.
+    await pi.fire("session_shutdown", { reason: "reload" }, ctx);
+    assert.equal(waiting!.aborted, true);
+    await restoreDraft();
     const replacement = makeMockCtx(ctx.cwd, { sessionManager: { name: "replacement-host" } }) as any;
     replacement.model = manual;
     replacement.thinkingLevel = "medium";
