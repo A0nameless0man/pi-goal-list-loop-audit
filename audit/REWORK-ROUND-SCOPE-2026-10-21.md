@@ -193,6 +193,49 @@ whole harness, thrown away. After the fix the same string is classified
 `provider` (the rule the main lane has used since v0.38.104), so it takes
 the bounded ladder and the identical-failure park instead.
 
+## The auditor's dial on the session route — recorded from the field
+
+The operator's report alongside the audit-stall investigation: *"the auditor
+should inherit session model with its thinking as the default option or last
+option unless we specify something else in which case we would try that but
+if not working then we fall back and use session right at the thinking I use
+for the session — so i have max on the session now but auditor is set
+xhigh."*
+
+The MODEL half of that was already true and is unchanged:
+
+- With nothing configured the auditor runs the session model
+  (`resolveAuditorModel` → `via: "session"`).
+- With a configured chain the session model is appended LAST as the
+  `session-fallback` — "The session model is still the final last resort"
+  (`extensions/goal-settings.ts`).
+
+The DIAL half was not. Every candidate resolved one requested level:
+
+```ts
+const requestedThinking = settings.auditorThinkingLevel ?? liveCtx.thinkingLevel ?? "max";
+```
+
+so with `auditorThinkingLevel: "xhigh"` the session-model fallback — the
+route that has to carry the decision when everything else failed — ran at
+`xhigh` instead of the session's `max`. `resolveAuditorThinkingLevel` then
+resolves DOWNWARD if the model does not advertise that level, so the session
+route could end up a further notch below the level the operator chose for
+it.
+
+The fix splits the two decisions. `auditorThinkingLevel` is a choice about
+the CONFIGURED auditor models, so those keep it. The session model is not one
+of them — it is the session's own model, reached as the auditor's default or
+its last resort — so it runs at the session's own dial. With nothing
+configured, every candidate still inherits the live session dial, exactly as
+before.
+
+The rule is one shared function (`resolveCandidateThinkingLevel` in
+`extensions/auditor-thinking.ts`) used by all three dispatch branches — the
+completion path, the stored-claim retry path and the project (respec) path —
+so they cannot drift, and the read-only `/glla status` line shows the dial
+that will actually be used.
+
 ## What GLLA does not own — recorded, not fixed
 
 - **The configuration gap.** The global settings carry
