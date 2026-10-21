@@ -3899,7 +3899,7 @@ test("v0.34.22: complete_goal returns while a detached auditor finishes and arch
     await waitUntil(() => ((ctx.ui.widgets["pi-glla"] as string[] | undefined) ?? []).some(line => line.includes("· auditing ·")));
     const repaintedWidget = (ctx.ui.widgets["pi-glla"] as string[] | undefined) ?? [];
     assert.ok(repaintedWidget.some((line) => line.includes("· auditing ·")), "the post-tool repaint restores the durable auditing state");
-    assert.ok(repaintedWidget.some((line) => line.includes("worker activity not confirmed") || line.includes("execution unconfirmed")), "the post-tool repaint restores the auditing surface without inventing a live detached worker (UI-STATUS honesty: no fresh worker event, no worker claim)");
+    assert.ok(repaintedWidget.some((line) => line.includes("worker activity not confirmed") || line.includes("execution unconfirmed")), `the post-tool repaint restores the auditing surface without inventing a live detached worker (UI-STATUS honesty: no fresh worker event, no worker claim): ${JSON.stringify(repaintedWidget)}`);
     fs.writeFileSync(releaseFile, "release verdict");
     await waitUntil(() => (readState(cwd).goal as { status?: string } | null) === null);
     assert.ok(fs.readFileSync(path.join(cwd, ".pi-glla", "active.jsonl"), "utf8").includes('"goal_archived"'), "approval archived and closed the goal");
