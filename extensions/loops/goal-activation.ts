@@ -235,6 +235,7 @@ import {
   type Settings,
 } from "../goal-settings.js";
 import { resolveDesignerModel } from "../designer-model.js";
+import { refreshDesignerRegistration, requestsDesigner } from "../designer-registration.js";
 import {
   curateAuditReviewSources,
   normalizeObjective,
@@ -3580,12 +3581,19 @@ async function handleHotLengthExhaustion(
     if (tryAbsorbHostSuccessor(ctx, "tool_call")) return;
     if (sessionHandoffPending || extensionApiStale || staleTerminalDone || zombieStoodDown || isForeignCtx(ctx)) return;
     const configuredToolName = String(event?.toolName ?? event?.name ?? "");
-    const options = loadSettings(ctx.cwd).toolOverrides?.perToolConfig?.[configuredToolName];
+    const toolSettings = loadSettings(ctx.cwd);
+    const options = toolSettings.toolOverrides?.perToolConfig?.[configuredToolName];
     if (options !== undefined && warnIfStaleAtEntry(ctx, "tool configuration")) return;
     const configFailure = applyToolConfig(configuredToolName, event?.input, options, () => pi.getAllTools());
     if (configFailure) {
       ctx.ui.notify(configFailure.reason, "warning");
       return configFailure;
+    }
+    // The companion discovers agent definitions after this hook. Refresh at
+    // launch entry even outside goals and even if a model/thinking event was
+    // missed (restore, extension-driven changes, or a fresh turn context).
+    if (configuredToolName === "subagent" && event?.input?.action === undefined) {
+      refreshDesignerRegistration(ctx, toolSettings, requestsDesigner(event?.input));
     }
     if (draftingTarget !== null) {
       draftingHandoff.invalidate();
@@ -3634,6 +3642,7 @@ async function handleHotLengthExhaustion(
     }
     if (sessionHandoffPending || extensionApiStale || staleTerminalDone || zombieStoodDown || isForeignCtx(ctx)) return;
     ensureAgentToolsReady(ctx, true);
+    refreshDesignerRegistration(ctx, loadSettings(ctx.cwd));
     // v0.34.57: turn-boundary model drift (bug #1.14) — the session is about
     // to run a turn on a model different from the last observed one. Ledger
     // only: the turn already started, there is nothing to block.
@@ -3674,6 +3683,7 @@ async function handleHotLengthExhaustion(
   pi.on("thinking_level_select", (event, ctx) => {
     if (isForeignCtx(ctx)) return;
     observeDrafterThinkingSelection(ctx, event.level);
+    refreshDesignerRegistration({ ...ctx, thinkingLevel: event.level }, loadSettings(ctx.cwd));
   });
 
   pi.on("model_select", async (event: any, ctx: ExtensionContext) => {
@@ -3689,6 +3699,7 @@ async function handleHotLengthExhaustion(
     const source = typeof event?.source === "string" ? event.source : undefined;
     const reason = mainModelSwitchInFlight ? "recovery" : source === "restore" ? "restore" : source === "cycle" ? "cycle" : "manual";
     const blocked = observeModelChange(ctx, from, to, reason, source);
+    if (!blocked) refreshDesignerRegistration({ ...ctx, model: event?.model ?? ctx.model }, loadSettings(ctx.cwd));
     if (!blocked && !mainModelSwitchInFlight && to && (source === "set" || source === "cycle")) {
       observeDrafterModelSelection(ctx, to);
     }

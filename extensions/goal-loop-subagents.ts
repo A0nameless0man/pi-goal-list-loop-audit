@@ -362,6 +362,12 @@ export function designerFileState(agentDir: string): "managed" | "user-owned" | 
   }
 }
 
+/** Remove only GLLA's generated Designer projection, never a user-owned file. */
+export function removeManagedDesigner(agentDir: string): void {
+  const file = path.join(agentDir, "agents", "Designer.md");
+  if (fs.existsSync(file) && hasManagedMarker(fs.readFileSync(file, "utf8"))) fs.unlinkSync(file);
+}
+
 /** Register only an explicitly selected live Designer checkpoint. No other
  * agent definition is changed; user-owned files are never overwritten. */
 export function ensureRequestedDesigner(opts: { agentDir: string; model?: string; thinking?: string }): boolean {
