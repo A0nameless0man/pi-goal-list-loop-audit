@@ -1,0 +1,195 @@
+# Rework round scope and transient provider failures — 21 October 2026
+
+Scope: the final (goal-completion) audit in the four projects that carried
+on-disk evidence of struggle:
+`browser-extensions-shared/extensions/standalones/clean-web`, `eve`,
+`browser-extensions-shared/extensions/standalones/youtube-filter` and
+`dracon-platform`.
+
+## What was observed
+
+| Project | Symptom | Evidence |
+| --- | --- | --- |
+| clean-web | Goal stuck in `status=auditing`, `phase=running`; the auditor re-ran the project's browser-test harness round after round | `.pi-glla/active.jsonl`: `audit_tier_decided tier="full" reasons=["rework history (2 prior disapprovals)"]` → `audit_started` → `audit_prior_worker_cancelled` → `audit_recovery_started`; `.pi-glla/audits.jsonl`: `Provider returned an empty response` ×3, `Streaming response failed: [451] …` ×8, `429 … Rate limit` ×1, `Provider finish_reason: content_filter` ×1 |
+| eve | Goal stuck in `status=auditing`, `phase=running`; the same single-model chain | `.pi-glla/audits.jsonl`: `Provider returned an empty response` ×3, `Auditor stalled — tool bash exceeded its 5m timeout during the challenge round` ×1, `… 10m timeout …` ×1, `auditor produced no verdict marker` ×1 |
+| youtube-filter | Claim parked (`status=paused`, `phase=recovery-pending`) with 13 leftover audit-job scratch directories; one retention sweep reaped 12 at once | `.pi-glla/active.jsonl`: `audit_recovery_pending` (reason `session_shutdown:quit`) → `audit_worker_cancelled` (reason `quit`); `audit_jobs_retention_sweep reaped=12` |
+| dracon-platform | Chain exhaustion; its last audit record is a settlement, and no goal is active now | `.pi-glla/active.jsonl`: `auditor_candidate_exhausted`, `auditor_fallback_exhausted`; `.pi-glla/audits.jsonl`: `Provider returned an empty response` ×7, `Auditor stalled — tool bash exceeded its 5m timeout` ×4, `Auditor approved, but verification is incomplete — a tool call was cancelled at its time budget` ×8, `regression_shield: approved but report's evidence does not address` ×3 |
+
+Three of the four carried the same signature: **`Provider returned an empty
+response`**, counted in the durable verdict log (3 × clean-web, 3 × eve,
+7 × dracon-platform). That is a provider-side blip, not a verdict.
+
+The host effect was the operator's own observation: clean-web and
+youtube-filter were "spamming tests, choking the system and itself". The
+mechanism is visible in the process tree — the audit's verification tool call
+IS the project's test suite:
+
+```
+bash -c cd .../clean-web && timeout 400 npx vitest run test/content-flow.test.ts   (29s old)
+  └─ pi                                     (the auditor's own pi child)
+      └─ node .../pi-goal-list-loop-audit/scripts/goal-auditor-worker.mjs
+          └─ pi                              (the operator's session, blocked in complete_goal)
+```
+
+so each audit round ran the project's tests, and the round's result was then
+discarded by a transient blip.
+
+## Root cause
+
+Two independent defects, one loop.
+
+**1. The auditor lane had no rule for an empty provider response.**
+`failedResultClass()` in `extensions/goal-loop-auditor-process.ts` classified
+`Provider returned an empty response` as **`no-verdict`**: the string carries
+no HTTP status, is not an account failure, and matches none of the
+no-verdict branch's own patterns.
+
+`no-verdict` is the **only** auditor failure class with no identical-failure
+brake. The no-verdict branch in `extensions/loops/goal-auditor-hooks.ts` parks
+the claim and re-dispatches a **fresh full audit round** immediately, and it
+never passes through `trackAuditorIdenticalFailure()`. The provider branch
+does, and it also takes the bounded retry ladder. So a transient provider blip
+was routed to the one path that re-pays the whole cost of a round, at once.
+
+The main lane has known this since v0.38.104, in the source comment:
+
+> Field 2026-09-27 (darklord): `Provider returned an empty response` matched
+> no quota signal and no deterministic-client marker, so it fell to the blind
+> ladder — 15m, then 30m, then 60m. The goal sat at 0/29 tasks with "last
+> host activity 49m 21s ago" and looked completely unretried … 7 empty
+> responses parked our own repo goal 300m.
+
+The auditor lane never got that rule.
+
+**2. A rework round had no scope bound.** The rework brief tells the auditor
+its primary question is whether the PRIOR objections are closed, but nothing
+forbids re-running the project's whole verification to answer it. The
+observed rework round did exactly that — the round's own output reads *"Now
+I have the prior round-2 objections. Let me verify each is closed, starting
+with the blocking one (scan-marker single-file mode)"* — and its tool calls
+were `scripts/browser-test/launch.mjs` and
+`scripts/browser-test/sweep-pol-pages.mjs`. Each round therefore cost the
+project's full browser-test harness. The tier escalated to `full`
+(`rework history (2 prior disapprovals)`), which adds the falsification
+pass; v0.38.103 already skips that pass once a goal has been reworked twice
+"because against an already-iterated goal it MANUFACTURES a fresh objection
+every round by construction", so the amplifier was bounded — but the round
+itself still re-verified the whole change.
+
+Together: an expensive round, re-run each time, destroyed by a blip that the
+lane could not recognise as transient. The loop saturated the host, which made
+the next blip more likely, which made the next round slower. The auditor also
+left four scratch test files behind in clean-web (`test/zz-empty.test.ts`,
+`test/zz-empty-node.test.ts`, `test/zz-probe-memory.test.ts`,
+`test/zz-probe-leak.test.ts`).
+
+## The fix
+
+### An empty provider response is a transient provider failure (auditor lane)
+
+`failedResultClass()` now recognises it, reusing the main lane's existing
+`isEmptyProviderResponse()` — one shared rule, not a second invented one:
+
+```ts
+return isAuditorAccountFailure(error) || isEmptyProviderResponse(error) || /…HTTP…/.test(error ?? "")
+  ? "provider"
+  : "no-verdict";
+```
+
+A provider-class failure takes the bounded retry ladder **and** the
+identical-failure park, so a transient blip no longer re-dispatches a whole
+audit. Local failures keep the no-verdict treatment unchanged: a dead worker,
+a malformed result and a missing marker are not provider blips
+(`tests/rework-round-scope.test.ts`).
+
+### A rework round verifies the open objections, not the whole change
+
+The rework brief now carries a scope bound (shared with the falsification
+pass, so both briefs say the same thing):
+
+> VERIFY THE OPEN OBJECTIONS, NOT THE WHOLE CHANGE. Do not re-run the
+> project's full verification suite, its whole test run, or its end-to-end
+> harness … Check each open objection with the narrowest command that
+> produces evidence for it.
+
+A rework round's falsification pass is scoped the same way, and the bound
+does **not** narrow what may block: a new defect inside the changed paths
+still blocks, because the CHANGE SCOPE contract in the original brief still
+applies. The tier decision is unchanged — the scrutiny level is the same, only
+the verification *scope* is bounded.
+
+### The briefs are a testable contract, and the two branches cannot drift
+
+Both round briefs — the falsification pass and the continuation after a
+cancelled tool call — moved into `scripts/auditor-round-prompts.mjs`, pure
+and exported. The contract they carry (a cancelled tool call still ends the
+round with a verdict; a rework round does not re-verify everything) was
+previously invisible to the suite: the worker built those briefs inline and
+nothing could assert them.
+
+The rework-round flag is derived from **one** shared predicate,
+`isReworkRound()`, used by both parallel dispatch paths
+(`extensions/loops/goal-auditor-hooks.ts` and `extensions/loops/goal-tools.ts`),
+so the complete_goal path and the stored-claim retry path cannot disagree
+about what a rework round is. The flag is present on the request only for
+rework dispatches, so every other request keeps its byte-identical hash.
+
+### What stopped the live churn
+
+The two projects that were actively looping had their sessions stopped
+gracefully; GLLA's `session_shutdown` handling parked the claim durably and
+cancelled the detached worker (`audit_recovery_pending` → `audit_worker_cancelled`,
+reason `quit` in both ledgers). Three orphaned auditor workers from a deleted
+scratch directory (`/tmp/envprobe`, ~79h old) were reaped; they were burning
+CPU with no session left to own them.
+
+## What GLLA does not own — recorded, not fixed
+
+- **The configuration gap.** The global settings carry
+  `defaultProvider: openrouter` and `defaultModel: minimax/minimax-m3.1-flash:free`
+  — a free-tier route — and `auditorModelFallbacks` is unset, so the auditor's
+  candidate chain resolves to exactly **one** model,
+  `openrouter/minimax/minimax-m3.1-flash:free`, in all four projects
+  (`pendingCompletion.auditorCandidateRefs`). Paid routes are enabled and
+  unused by the auditor (`opencode-go/deepseek-v4-flash:max`, `*luna*:max`).
+  GLLA already has the setting to widen the chain
+  (`auditorModelFallbacks`); the fix is a deployment choice, not a product
+  defect, and it is out of this goal's scope.
+- **The provider walls.** `429 … Rate limit`, `Streaming response failed:
+  [451] …` and `Provider finish_reason: content_filter` are upstream
+  responses. The v0.39.42 fix already makes the auditor fall through to the
+  permitted session model on an account wall; a free-tier route that returns
+  empty or filtered content is a provider-side condition.
+- **The auditor reaching for tools it does not have.** youtube-filter's log
+  shows `Auditor attempted unsupported tool: command` (×1) and `… : write`
+  (×3). The tool floor refuses them correctly (the attempt becomes a
+  no-verdict infrastructure failure), but a model that keeps reaching for
+  `write` in a read-only audit is a prompt-level observation worth a separate
+  look.
+
+## Known open items
+
+- `tests/behavioral-orchestrator.test.ts` (the suite's whale) and
+  `tests/respec-builder-audit-runtime.test.ts` remain intermittently
+  load-sensitive: they assert a durable effect that lands a moment after the
+  read. The fix pattern is established and applied at several sites (capture
+  the scenario values once; wait for the effect the assertion is about), but
+  it is not complete in those two files.
+- The two scratch test files the auditor left in clean-web
+  (`test/zz-empty.test.ts`, `test/zz-empty-node.test.ts`, plus
+  `test/zz-probe-memory.test.ts`, `test/zz-probe-leak.test.ts`) are the
+  auditor's own probes, untracked in that repository. They are not GLLA's to
+  delete, and they must be removed before that project's suite runs clean.
+
+## Evidence
+
+| Artifact | What it shows |
+| --- | --- |
+| `extensions/goal-loop-auditor-process.ts` | `failedResultClass` now recognises an empty provider response; the rework-round flag on the request. |
+| `extensions/goal-loop-auditor.ts` | The rework brief's scope bound, and the shared `isReworkRound()` predicate. |
+| `scripts/auditor-round-prompts.mjs` | Both round briefs, now pure and exported. |
+| `scripts/goal-auditor-worker.mjs` | Uses the shared briefs; passes the rework flag to the falsification pass. |
+| `extensions/loops/goal-auditor-hooks.ts`, `extensions/loops/goal-tools.ts` | Both dispatch paths pass the shared rework-round flag. |
+| `tests/rework-round-scope.test.ts` | 9 tests: the rework scope bound, the falsification-pass scope, the cancelled-tool verdict demand, the empty-response classification, the class-gated no-verdict branch, the two-branch agreement, and the request flag. |
+| `.pi-glla/audits.jsonl` (each project) | The durable verdict log: the error signatures quoted above. |
+| `.pi-glla/active.jsonl` (each project) | The dispatch/park/recovery trail quoted above. |

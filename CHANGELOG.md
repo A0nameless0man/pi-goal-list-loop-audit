@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+## 0.39.43 — a rework round verifies the open objections, and a transient blip no longer discards it (2026-10-21)
+
+### Rework rounds and transient provider failures
+
+- An EMPTY provider response is now classified as a transient provider
+  failure in the auditor lane, on the same rule the main lane has used since
+  v0.38.104 ("an empty response is a transient glitch, not a wall"). The
+  auditor lane had no such rule, so a transient blip fell to "no-verdict" —
+  the one auditor failure class with no identical-failure brake, which parks
+  the claim and immediately re-dispatches a FRESH full audit round. Each blip
+  therefore destroyed an expensive round and the loop re-paid the whole cost.
+  Local failures — a dead worker, a malformed result, a missing marker —
+  keep the no-verdict treatment.
+- A rework round's brief now bounds its verification to the OPEN OBJECTIONS:
+  it checks each objection with the narrowest command that produces evidence,
+  instead of re-running the project's whole verification suite, its full test
+  run or its end-to-end harness. A rework round's falsification pass is
+  scoped the same way. A new defect inside the changed paths still blocks.
+- The two round briefs — the falsification pass and the continuation after a
+  cancelled tool call — now live in one shared module
+  (`scripts/auditor-round-prompts.mjs`), so the contract they carry (a
+  cancelled tool call still ends the round with a verdict; a rework round does
+  not re-verify everything) is directly assertable.
+- The rework-round flag is derived from one shared predicate used by both
+  parallel dispatch paths, so the complete_goal path and the stored-claim
+  retry path cannot disagree about what a rework round is.
+
 ## 0.39.42 — completion audit recovery and a load-aware release gate (2026-10-20)
 
 ### Release inventory
