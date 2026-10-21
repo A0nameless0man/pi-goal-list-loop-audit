@@ -445,6 +445,7 @@ import {
   type LoopFlags,
 } from "../goal-loop.js";
 import { defineGoalRuntimeGlobal } from "./goal-runtime-globals.js";
+import { observeDrafterModelSelection } from "./goal-list-queue.js";
 
 /** v0.35.x: queue a repair task without auto-activating over the paused
  * suspicious objective. The normal enqueue path keeps disk-first ordering,
@@ -3683,6 +3684,9 @@ async function handleHotLengthExhaustion(
     const source = typeof event?.source === "string" ? event.source : undefined;
     const reason = mainModelSwitchInFlight ? "recovery" : source === "restore" ? "restore" : source === "cycle" ? "cycle" : "manual";
     const blocked = observeModelChange(ctx, from, to, reason, source);
+    if (!blocked && !mainModelSwitchInFlight && to && (source === "set" || source === "cycle")) {
+      observeDrafterModelSelection(ctx, to);
+    }
     if (blocked && event?.previousModel) {
       // The forbidden gate wants the selection undone. Revert to the
       // previous model — the resulting model_select is a plain switch

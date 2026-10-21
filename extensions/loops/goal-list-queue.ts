@@ -407,6 +407,7 @@ interface DraftingModelLease {
   controller: AbortController;
   recovering: boolean;
   switchInFlight?: Promise<boolean>;
+  switchTargetRef?: string;
 }
 
 let draftingModelLease: DraftingModelLease | null = null;
@@ -458,6 +459,7 @@ function releaseDraftingLease(lease: DraftingModelLease): void {
  * A cancelled recovery may finish its host call, but cannot apply a dial
  * or send a new interview prompt afterward. */
 async function switchDraftingModel(lease: DraftingModelLease, model: any): Promise<boolean> {
+  lease.switchTargetRef = modelRef(model);
   const pending = (async () => {
     try {
       const switched = await lease.api.setModel(model);
@@ -467,7 +469,24 @@ async function switchDraftingModel(lease: DraftingModelLease, model: any): Promi
   })();
   lease.switchInFlight = pending;
   try { return await pending; }
-  finally { if (lease.switchInFlight === pending) lease.switchInFlight = undefined; }
+  finally {
+    if (lease.switchInFlight === pending) {
+      lease.switchInFlight = undefined;
+      lease.switchTargetRef = undefined;
+    }
+  }
+}
+
+/** A real user model selection supersedes the interview immediately. Own
+ * setModel events are identified by their in-flight target, not mistaken
+ * for manual selections just because the host labels them source=set. */
+export function observeDrafterModelSelection(ctx: ExtensionContext, ref: string): void {
+  const lease = draftingModelLease;
+  if (!lease || !draftingLeaseContext(lease) || isForeignCtx(ctx)) return;
+  const key = ref.toLowerCase();
+  if (key === lease.activeRef.toLowerCase() || key === lease.switchTargetRef?.toLowerCase()) return;
+  appendLedger(ctx.cwd, "drafter_model_restore_skipped", { active: lease.activeRef, current: ref, reason: "model changed during drafting" });
+  releaseDraftingLease(lease);
 }
 
 /** Select the drafting-only model and retain a generation-fenced restore lease. */
@@ -646,6 +665,12 @@ async function handleDrafterModelFailure(
       const before = liveOwner();
       if (!before) return false;
       if (isForbiddenModel(pick.ref, loadSettings(lease.cwd).forbiddenModels)) continue;
+      if (currentThinkingLevel(before) !== lease.activeThinkingLevel) {
+        // Preserve a deliberate thinking-only change made during backoff.
+        // Keep the lease so cancellation can still restore its model.
+        lease.controller.abort();
+        return false;
+      }
       const previous = lease.activeRef;
       const alreadyActive = pick.ref.toLowerCase() === previous.toLowerCase();
       const switched = alreadyActive || await switchDraftingModel(lease, pick.model);
