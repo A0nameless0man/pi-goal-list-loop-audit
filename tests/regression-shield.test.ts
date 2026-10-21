@@ -539,26 +539,30 @@ test("mechanical checks stay async and kill descendant processes on timeout", as
   const scriptPath = path.join(dir, "spawn-child.cjs");
   const startedPath = path.join(dir, "started");
   const survivorPath = path.join(dir, "survived");
+  const releasePath = path.join(dir, "release-child");
   const childCode = [
     "const fs = require('node:fs');",
-    `setTimeout(() => fs.writeFileSync(${JSON.stringify(survivorPath)}, 'survived'), 1500);`,
+    `fs.writeFileSync(${JSON.stringify(startedPath)}, 'started');`,
+    // Do not race a fixed 1500ms child delay against the load-scaled kill
+    // budget. Only a child that survives cancellation can observe this gate.
+    `setInterval(() => { if (fs.existsSync(${JSON.stringify(releasePath)})) fs.writeFileSync(${JSON.stringify(survivorPath)}, 'survived'); }, 20);`,
   ].join("\n");
   fs.writeFileSync(scriptPath, [
     "const fs = require('node:fs');",
     "const { spawn } = require('node:child_process');",
-    `fs.writeFileSync(${JSON.stringify(startedPath)}, 'started');`,
     `spawn(process.execPath, ['-e', ${JSON.stringify(childCode)}], { stdio: 'ignore' });`,
     "setTimeout(() => {}, 10000);",
   ].join("\n"));
   try {
     let timerFired = false;
     const timer = setTimeout(() => { timerFired = true; }, 20);
-    const result = await runMechanicalPreAuditChecks(dir, ["node " + scriptPath], 500);
+    const result = await runMechanicalPreAuditChecks(dir, ["node " + scriptPath], 5000);
     clearTimeout(timer);
     assert.equal(timerFired, true, "the pre-audit must not block the event loop");
     assert.equal(result.passed, false);
     assert.match(result.output ?? "", /process tree terminated/);
-    assert.equal(fs.existsSync(startedPath), true, "the fixture started before timeout");
+    assert.equal(fs.existsSync(startedPath), true, "the descendant actually started before timeout");
+    fs.writeFileSync(releasePath, "release after termination");
     await new Promise((resolve) => setTimeout(resolve, 1800));
     assert.equal(fs.existsSync(survivorPath), false, "descendants are killed with the process group");
   } finally {

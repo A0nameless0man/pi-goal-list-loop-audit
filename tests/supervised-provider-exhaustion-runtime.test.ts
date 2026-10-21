@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import type { ExtensionContext } from '@earendil-works/pi-coding-agent';
 import { withPressureSession, providerError } from './harness/context-pressure.js';
 import { tick } from './harness/mock-pi.js';
+import { hangDeadlineMs } from './harness/host-budget.js';
 import { __testOnlyResetProcessState } from '../extensions/loops/goal.js';
 import { state, persistStateLine } from '../extensions/goal-state.js';
 import { readState } from '../extensions/goal-loop-core.js';
@@ -19,13 +20,14 @@ afterEach(() => __testOnlyResetProcessState());
 // 2101 simulated failures per mode. This is a real integration stress test:
 // every iteration fires a live agent_end, persists durable recovery state and
 // runs the recovery probe, so the wall-clock cost is minutes on a loaded host.
-// The runner's default 60s per-test cap is a suite-hygiene ceiling, not an
-// assertion: give this test its own budget instead of weakening it. Every
-// behavioral assertion is unchanged.
+// The per-test wall-clock cap is a hang guard, not a throughput assertion.
+// Apply the same measured host budget as other integration waits so a healthy
+// 2101-cycle run is not abandoned mid-fixture on a contended host. All cycles,
+// durable state assertions and the independent no-output watchdog remain.
 const STRESS_TEST_TIMEOUT_MS = 300_000;
 
 for (const mode of ['goal', 'list', 'loop'] as const) {
-  test(`${mode}: 2101 provider exhaustion failures preserve work then continue`, { timeout: STRESS_TEST_TIMEOUT_MS }, async () => {
+  test(`${mode}: 2101 provider exhaustion failures preserve work then continue`, { timeout: hangDeadlineMs(STRESS_TEST_TIMEOUT_MS) }, async () => {
     await withPressureSession(async (pi, ctx, cwd) => {
       fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, JSON.stringify({ autoResume: true, aggressiveMode: false, mainModelFallbacks: [], hourlyRetryProbe: false }));
       ctx.getContextUsage = () => ({ tokens: 1000, contextWindow: 272000, percent: 1 });
@@ -52,10 +54,9 @@ for (const mode of ['goal', 'list', 'loop'] as const) {
           clearMainModelRecoveryTimer();
           await probeMainModelRecovery(ctx as unknown as ExtensionContext);
           assert.equal(mode === 'loop' ? state.loop?.active : state.goal?.status === 'active', true);
-          // The per-test budget is 300s, but the suite's no-output watchdog
-          // is 180s. Emit bounded progress ONLY after real durable assertions
-          // pass; a stuck event/probe must still go silent and be terminated.
-          // Do not use a timer heartbeat, raise limits or reduce 2101 cycles.
+          // Emit bounded progress ONLY after real durable assertions pass.
+          // The suite's independent silence watchdog still terminates a stuck
+          // event/probe; never substitute timer output or reduce 2101 cycles.
           if (n === 0 || (n + 1) % 250 === 0 || n === 2100) {
             console.error(`[provider-exhaustion] ${mode}: ${n + 1}/2101 durable failure/probe cycles verified`);
           }
