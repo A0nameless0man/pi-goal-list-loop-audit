@@ -3900,9 +3900,13 @@ test("v0.34.22: complete_goal returns while a detached auditor finishes and arch
     const repaintedWidget = (ctx.ui.widgets["pi-glla"] as string[] | undefined) ?? [];
     assert.ok(repaintedWidget.some((line) => line.includes("· auditing ·")), "the post-tool repaint restores the durable auditing state");
     // Repaint may beat even the worker's boot observation. The durable
-    // starting phase says "no worker event yet"; once boot is observed the
-    // live projection says "execution unconfirmed". Neither proves execution.
-    assert.ok(repaintedWidget.some((line) => /worker activity not confirmed|execution unconfirmed|no worker event yet/.test(line)), `the post-tool repaint must explicitly withhold worker execution evidence: ${JSON.stringify(repaintedWidget)}`);
+    // starting phase can render the compact queued card ("no activity yet")
+    // or "no worker event yet"; after boot the live projection says
+    // "execution unconfirmed". All explicitly withhold execution evidence.
+    const startingWithoutActivity = repaintedWidget.some(line => line.includes("Audit starting"))
+      && repaintedWidget.some(line => line.includes("no activity yet"))
+      && repaintedWidget.some(line => line.includes("worker starting"));
+    assert.ok(startingWithoutActivity || repaintedWidget.some((line) => /worker activity not confirmed|execution unconfirmed|no worker event yet/.test(line)), `the post-tool repaint must explicitly withhold worker execution evidence: ${JSON.stringify(repaintedWidget)}`);
     fs.writeFileSync(releaseFile, "release verdict");
     await waitUntil(() => (readState(cwd).goal as { status?: string } | null) === null);
     assert.ok(fs.readFileSync(path.join(cwd, ".pi-glla", "active.jsonl"), "utf8").includes('"goal_archived"'), "approval archived and closed the goal");
