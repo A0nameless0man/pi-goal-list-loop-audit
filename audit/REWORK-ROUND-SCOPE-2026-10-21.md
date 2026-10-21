@@ -260,6 +260,22 @@ that will actually be used.
   `write` in a read-only audit is a prompt-level observation worth a separate
   look.
 
+## The stall watchdog no longer kills a slow run
+
+The release gate was terminated by its own stall watchdog while a legitimate
+slow test file was running: 218 seconds of silence against a 195-second
+limit, on a host running at load 30-45. A silent suite is not automatically a
+HUNG suite — the suite's whale takes over a minute standalone and minutes
+under load — so the watchdog now measures how slow the host is right now and
+extends the window when the host is measurably contended, instead of
+reporting a busy machine as a broken suite. The extension is bounded
+(at most three extensions, capped at 15 minutes), so a genuinely wedged
+suite still dies in minutes; the field cases the bound exists for were 37
+minutes of silence and a 26-hour orphan.
+
+The decision is a pure function (`stallDecision` in `scripts/run-tests.mjs`),
+pinned by a unit test.
+
 ## Known open items
 
 - `tests/behavioral-orchestrator.test.ts` (the suite's whale) and

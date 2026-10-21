@@ -3,6 +3,7 @@ import * as assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { isSessionModelTail, resolveAuditorThinkingLevel, resolveCandidateThinkingLevel } from "../extensions/auditor-thinking.js";
+import { stallDecision } from "../scripts/run-tests.mjs";
 
 const model = (over: Record<string, unknown> = {}): any => ({ reasoning: true, ...over });
 
@@ -111,4 +112,25 @@ test("all three dispatch branches size the session tail's dial the same way", ()
   }
   const respec = fs.readFileSync(path.join(root, "extensions", "respec-builder-runtime.ts"), "utf8");
   assert.match(respec, /resolveCandidateThinkingLevel\(candidate, \{/, "the project lane uses the shared rule");
+});
+
+// v0.39.43: the stall watchdog must not kill a run that is merely slow. The
+// gate was terminated by a false stall while a legitimate slow test file ran
+// (218s of silence against a 195s limit) on a loaded host.
+test("the stall watchdog asks whether the host is slow before killing a silent suite", () => {
+  const base = 180_000;
+  // Not yet silent: wait.
+  assert.equal(stallDecision({ silentMs: 10_000, limitMs: base, extensions: 0, factor: 1 }).action, "wait");
+  // Silent on a CONTENDED host: extend rather than kill.
+  const extended = stallDecision({ silentMs: 200_000, limitMs: base, extensions: 0, factor: 3 });
+  assert.equal(extended.action, "extend");
+  assert.equal(extended.limitMs, 180_000 * 3, "the window grows with the measured slowdown");
+  // The extension is bounded: a wedged suite still dies.
+  assert.equal(stallDecision({ silentMs: 200_000, limitMs: base, extensions: 3, factor: 3 }).action, "kill");
+  // An IDLE host that goes silent is hung: kill it.
+  assert.equal(stallDecision({ silentMs: 200_000, limitMs: base, extensions: 0, factor: 1 }).action, "kill");
+  // The window never grows without bound.
+  const capped = stallDecision({ silentMs: 900_000, limitMs: base, extensions: 0, factor: 8, maxTimeoutMs: 900_000 });
+  assert.equal(capped.action, "extend");
+  assert.ok((capped.limitMs ?? 0) <= 900_000, "the extended window is capped");
 });

@@ -27,6 +27,12 @@
 - The rework-round flag is derived from one shared predicate used by both
   parallel dispatch paths, so the complete_goal path and the stored-claim
   retry path cannot disagree about what a rework round is.
+- The suite's stall watchdog no longer kills a run that is merely slow. A
+  silent suite is not automatically a hung suite: one test file can run for
+  minutes without emitting a line. Before killing, the watchdog measures how
+  slow the host is right now, and extends the window when the host is
+  measurably contended. The extension is bounded, so a genuinely wedged suite
+  still dies.
 - The session model — the auditor's default when nothing is configured, and
   its final last resort when a configured chain has failed — now runs at the
   SESSION's thinking level. `auditorThinkingLevel` is a choice about the

@@ -112,6 +112,24 @@ export function isStalled({ silentMs, limitMs }) {
   return Number.isFinite(silentMs) && Number.isFinite(limitMs) && silentMs >= limitMs;
 }
 
+/**
+ * Pure: what should the stall watchdog do about a silent suite?
+ *
+ * A silent suite is not automatically a HUNG suite. One test file can
+ * legitimately run for minutes without emitting a line, and killing the run
+ * there reports a busy machine as a broken suite. So before killing, ask how
+ * slow the host is RIGHT NOW: a contended host explains the silence, so
+ * extend the window instead. The extension is bounded, so a genuinely wedged
+ * suite still dies.
+ */
+export function stallDecision({ silentMs, limitMs, extensions, factor, maxExtensions = MAX_STALL_EXTENSIONS, maxTimeoutMs = MAX_STALL_TIMEOUT_MS }) {
+  if (!isStalled({ silentMs, limitMs })) return { action: "wait" };
+  if (Number.isFinite(factor) && factor > 1.2 && extensions < maxExtensions) {
+    return { action: "extend", limitMs: Math.min(limitMs * Math.min(factor, 4), maxTimeoutMs) };
+  }
+  return { action: "kill" };
+}
+
 /** Pure arg builder (unit-tested in tests/test-split.test.ts). */
 export function buildRunnerArgs(argv, slowFiles, nodeOnlyFiles = NODE_ONLY_TEST_FILES, options = {}) {
   const flags = serialFlags(options.timeoutMs ?? DEFAULT_TEST_TIMEOUT_MS);
@@ -179,7 +197,7 @@ function main() {
   const factor = contentionFactor();
   const timeoutMs = Math.min(MAX_TEST_TIMEOUT_MS, Math.ceil(DEFAULT_TEST_TIMEOUT_MS * factor));
   const { mode, bunArgs } = buildRunnerArgs(process.argv.slice(2), SLOW_TEST_FILES, undefined, { timeoutMs });
-  const stallLimit = stallTimeoutMs();
+  let stallLimit = stallTimeoutMs();
   let stallExtensions = 0;
   const beat = heartbeatMs();
   const startedAt = Date.now();
@@ -244,19 +262,19 @@ function main() {
   const watch = setInterval(() => {
     const silentMs = Date.now() - lastOutputAt;
     const elapsed = Date.now() - startedAt;
-    if (!stallFired && isStalled({ silentMs, limitMs: stallLimit })) {
-      // v0.39.43: a silent suite is not automatically a HUNG suite. One test
-      // file can legitimately run for minutes without emitting a line (the
-      // suite's whale takes over a minute standalone, and minutes under host
-      // load), and killing the run there reports a busy machine as a broken
-      // suite. Before killing, ask the host how slow it is RIGHT NOW: a
-      // contended host explains the silence, so extend the window instead.
-      // The extension is bounded, so a genuinely wedged suite still dies.
-      const factor = contentionFactor({ force: true, maxAgeMs: 0 });
-      if (factor > 1.2 && stallExtensions < MAX_STALL_EXTENSIONS) {
+    if (!stallFired) {
+      const decision = stallDecision({
+        silentMs, limitMs: stallLimit, extensions: stallExtensions,
+        factor: contentionFactor({ force: true, maxAgeMs: 0 }),
+      });
+      if (decision.action === "extend") {
         stallExtensions += 1;
-        stallLimit = Math.min(stallLimit * Math.min(factor, 4), MAX_STALL_TIMEOUT_MS);
-        log(`stall window extended to ${Math.round(stallLimit / 1000)}s — the host is ${factor.toFixed(1)}x slower than idle (extension ${stallExtensions}/${MAX_STALL_EXTENSIONS})`);
+        stallLimit = decision.limitMs;
+        log(`stall window extended to ${Math.round(stallLimit / 1000)}s — the host is contended (extension ${stallExtensions}/${MAX_STALL_EXTENSIONS})`);
+        return;
+      }
+      if (decision.action === "wait") {
+        log(`progress: ${Math.round(elapsed / 1000)}s elapsed · ${Math.round(silentMs / 1000)}s since last output · ${(bytes / 1024).toFixed(0)} KiB of suite output`);
         return;
       }
       stallFired = true;

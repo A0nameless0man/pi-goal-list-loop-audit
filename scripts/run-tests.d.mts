@@ -20,3 +20,14 @@ export declare function buildRunnerArgs(
 ): { mode: string; bunArgs: string[] };
 
 export declare function runBlocking(args: string[]): number;
+
+export declare const MAX_STALL_TIMEOUT_MS: number;
+export declare const MAX_STALL_EXTENSIONS: number;
+export declare function stallDecision(input: {
+  silentMs: number;
+  limitMs: number;
+  extensions: number;
+  factor: number;
+  maxExtensions?: number;
+  maxTimeoutMs?: number;
+}): { action: "wait" | "extend" | "kill"; limitMs?: number };
