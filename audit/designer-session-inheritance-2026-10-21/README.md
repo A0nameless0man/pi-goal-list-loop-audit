@@ -123,7 +123,14 @@ Results:
   file are open items owned elsewhere (`/tmp/glla-designer-lifecycle-repro.log`).
 - Runtime inventory regenerated; `npm run check:inventory` and `git diff --check`: exit 0.
 
-Full-suite execution is not claimed.
+Full-suite execution is not claimed. A partial full-suite run
+(`timeout 3000 npm test`, stopped after 172 of 455 test files, ~46 minutes) reported
+three failures, all in files unrelated to the Designer and all load-induced: two in
+`tests/respec-builder-audit-runtime.test.ts` (auditor stall timing) and one in
+`tests/test-runner-isolation.test.ts` (a 30-second child-spawn budget). Each of the three
+passes when its file is run alone on an idle machine (34 pass / 0 fail and 1 pass / 0 fail
+respectively), and the same project-runtime file also fails on the pre-repair tree with
+*different* cases, so the failures are load-sensitive and not caused by this repair.
 
 Tested source SHA-256:
 
