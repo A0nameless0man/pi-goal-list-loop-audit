@@ -451,7 +451,9 @@ async function beginDrafterModel(ctx: ExtensionContext): Promise<void> {
   const beforeRef = modelRef(originalModel);
   if (!beforeRef) return;
   const originalThinkingLevel = currentThinkingLevel(ctx);
-  const requestedThinkingLevel = String(settings.drafterThinkingLevel ?? originalThinkingLevel);
+  const requestedThinkingLevel = selected.via === "session-last-resort"
+    ? originalThinkingLevel
+    : String(settings.drafterThinkingLevel ?? originalThinkingLevel);
   if (selected.via === "session-last-resort") {
     const activeThinkingLevel = applyDrafterThinkingLevel(ctx, requestedThinkingLevel);
     draftingModelLease = {

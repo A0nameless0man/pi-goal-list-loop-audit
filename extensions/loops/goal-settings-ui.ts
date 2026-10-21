@@ -752,7 +752,7 @@ async function openSettingsUI(ctx: ExtensionContext, initialSection?: SettingsSe
       designerFileState: designerFileState(defaultAgentDir()),
       designerResolved: (() => {
         const resolution = resolveDesignerModel(ctx, settings, { reportBlocked: false });
-        return { selectedRef: resolution.selectedRef, blocked: resolution.blocked };
+        return resolution;
       })(),
     });
     const id = await promptSettingsMenu(ctx, rows, initialSection, initialSelectedId);
@@ -1066,7 +1066,7 @@ function resyncDesignerRegistration(ctx: ExtensionContext, designerRequested = f
         configured: config.configured,
         disabled: config.enabled === false || resolution.blocked,
         model: resolution.selectedRef,
-        thinking: config.thinking,
+        thinking: resolution.thinking,
       },
     });
     if (resolution.blocked && config.enabled !== false) {
@@ -1479,13 +1479,19 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
     case "designerModel": {
       const pick = await promptModelRef(ctx, "Designer agent — read-only design checkpoint only", "provider/model-id — empty keeps the current session model", { excludeRefs: normalizeModelRefs(loadSettings(ctx.cwd).forbiddenModels) });
       if (pick === undefined) return;
+      if (pick.kind === "session") {
+        saveSettings("global", ctx, { designerModel: undefined, designerThinkingLevel: undefined });
+        resyncDesignerRegistration(ctx);
+        ctx.ui.notify("Designer agent: session model and thinking inherited together (overrides cleared).", "info");
+        return;
+      }
       const pickedModel = resolvePickedModel(ctx, pick);
       const currentThinking = loadSettings(ctx.cwd).designerThinkingLevel;
       const levels = auditorThinkingLevels(pickedModel);
       let pickedThinking: ConfiguredThinkingLevel | undefined;
       let inheritThinking = false;
       if (levels.length <= 1) {
-        ctx.ui.notify(`Designer agent: ${pick.kind === "session" ? "session model (override cleared)" : pick.ref} — this model exposes no thinking levels (the checkpoint runs with thinking off).`, "info");
+        ctx.ui.notify(`Designer agent: ${pick.ref} — this model exposes no thinking levels (the checkpoint runs with thinking off).`, "info");
       } else {
         const inherited = ctx.thinkingLevel ?? "high";
         const preferred = currentThinking ?? inherited;
@@ -1501,12 +1507,12 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
         else if (thinking) pickedThinking = thinking.split(" ")[0] as ConfiguredThinkingLevel;
       }
       saveSettings("global", ctx, {
-        designerModel: pick.kind === "session" ? undefined : pick.ref,
+        designerModel: pick.ref,
         ...(inheritThinking ? { designerThinkingLevel: undefined } : pickedThinking ? { designerThinkingLevel: pickedThinking } : {}),
       });
       resyncDesignerRegistration(ctx);
       ctx.ui.notify(
-        `Designer agent: ${pick.kind === "session" ? "session model (override cleared)" : pick.ref}${inheritThinking ? " · thinking inherited from the session" : pickedThinking ? ` · thinking ${pickedThinking}` : ""} — main, drafter, and auditor agents are unchanged.`,
+        `Designer agent: ${pick.ref}${inheritThinking ? " · thinking inherited from the session" : pickedThinking ? ` · thinking ${pickedThinking}` : ""} — main, drafter, and auditor agents are unchanged.`,
         "info",
       );
       return;
@@ -1534,13 +1540,18 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
     case "drafterModel": {
       const pick = await promptModelRef(ctx, "Drafter agent — temporary agent for drafting only", "provider/model-id — empty keeps the current session model", { excludeRefs: normalizeModelRefs(loadSettings(ctx.cwd).forbiddenModels) });
       if (pick === undefined) return;
+      if (pick.kind === "session") {
+        saveSettings("global", ctx, { drafterModel: undefined, drafterThinkingLevel: undefined });
+        ctx.ui.notify("Drafter agent: session model and thinking inherited together (overrides cleared).", "info");
+        return;
+      }
       const pickedModel = resolvePickedModel(ctx, pick);
       const currentThinking = loadSettings(ctx.cwd).drafterThinkingLevel;
       const levels = auditorThinkingLevels(pickedModel);
       let pickedThinking: ConfiguredThinkingLevel | undefined;
       let inheritThinking = false;
       if (levels.length <= 1) {
-        ctx.ui.notify(`Drafter agent: ${pick.kind === "session" ? "session model (override cleared)" : pick.ref} — this model exposes no thinking levels (drafting runs with thinking off).`, "info");
+        ctx.ui.notify(`Drafter agent: ${pick.ref} — this model exposes no thinking levels (drafting runs with thinking off).`, "info");
       } else {
         const inherited = ctx.thinkingLevel ?? "high";
         const preferred = currentThinking ?? inherited;
@@ -1556,11 +1567,11 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
         else if (thinking) pickedThinking = thinking.split(" ")[0] as ConfiguredThinkingLevel;
       }
       saveSettings("global", ctx, {
-        drafterModel: pick.kind === "session" ? undefined : pick.ref,
+        drafterModel: pick.ref,
         ...(inheritThinking ? { drafterThinkingLevel: undefined } : pickedThinking ? { drafterThinkingLevel: pickedThinking } : {}),
       });
       ctx.ui.notify(
-        `Drafter agent: ${pick.kind === "session" ? "session model (override cleared)" : pick.ref}${inheritThinking ? " · thinking inherited from the session" : pickedThinking ? ` · thinking ${pickedThinking}` : ""} — main and auditor agents are unchanged.`,
+        `Drafter agent: ${pick.ref}${inheritThinking ? " · thinking inherited from the session" : pickedThinking ? ` · thinking ${pickedThinking}` : ""} — main and auditor agents are unchanged.`,
         "info",
       );
       return;
@@ -1690,7 +1701,12 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
       // resolver will actually honor.
       const pick = await promptModelRef(ctx, "Auditor model override", "provider/model-id — empty keeps the pi session model", { excludeRefs: loadSettings(ctx.cwd).forbiddenModels });
       if (pick === undefined) return;
-      saveSettings("global", ctx, { auditorModel: pick.kind === "session" ? undefined : pick.ref });
+      if (pick.kind === "session") {
+        saveSettings("global", ctx, { auditorModel: undefined, auditorThinkingLevel: undefined });
+        ctx.ui.notify("Auditor agent: session model and thinking inherited together (overrides cleared).", "info");
+        return;
+      }
+      saveSettings("global", ctx, { auditorModel: pick.ref });
       // v0.31.4: thinking is chosen WITH the model (user: "we are setting
       // the thinking when we select the model now or we should") — there is
       // no standalone thinking row to forget about. Esc keeps the level.
@@ -1709,7 +1725,7 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
         // must not inherit a dead override — clear it so the next
         // reasoning model starts from session inheritance, not a stale pin.
         if (curThinking !== undefined) saveSettings("global", ctx, { auditorThinkingLevel: undefined });
-        ctx.ui.notify(`Auditor model: ${pick.kind === "session" ? "session model (override cleared)" : pick.ref} — this model exposes no thinking levels (auditor runs with thinking off)${curThinking !== undefined ? "; cleared the stale thinking override" : ""}.`, "info");
+        ctx.ui.notify(`Auditor model: ${pick.ref} — this model exposes no thinking levels (auditor runs with thinking off)${curThinking !== undefined ? "; cleared the stale thinking override" : ""}.`, "info");
         return;
       }
       // Audit 2026-09-07 (MEDIUM, finding 386): parity with the drafter
@@ -1729,7 +1745,7 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
       const inheritThinking = t?.startsWith("session —") ?? false;
       if (inheritThinking) saveSettings("global", ctx, { auditorThinkingLevel: undefined });
       else if (t) saveSettings("global", ctx, { auditorThinkingLevel: t.split(" ")[0] as Settings["auditorThinkingLevel"] });
-      ctx.ui.notify(`Auditor model: ${pick.kind === "session" ? "session model (override cleared)" : pick.ref}${inheritThinking ? " · thinking inherited from the session" : t ? ` · thinking ${t.split(" ")[0]}` : ""}`, "info");
+      ctx.ui.notify(`Auditor model: ${pick.ref}${inheritThinking ? " · thinking inherited from the session" : t ? ` · thinking ${t.split(" ")[0]}` : ""}`, "info");
       return;
     }
     case "auditorModelFallbacks": {

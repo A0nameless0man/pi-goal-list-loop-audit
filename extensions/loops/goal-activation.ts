@@ -2197,7 +2197,7 @@ export function registerGoalRuntime(pi: ExtensionAPI, ownership: ProcessOwnerBou
           configured: designerConfig.configured,
           disabled: designerConfig.enabled === false || designerResolution.blocked,
           model: designerResolution.selectedRef,
-          thinking: designerConfig.thinking,
+          thinking: designerResolution.thinking,
         },
       });
       for (const skip of sync.skipped) {

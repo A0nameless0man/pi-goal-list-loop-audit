@@ -1741,7 +1741,7 @@ export function sendContinuation(goalId: string): void {
         const designerResolution = resolveDesignerModel(ctx as any, settings);
         if (designerResolution.blocked) {
           ctx.ui.notify("Designer not registered: the session model is forbidden and no eligible Designer model is configured; the requested design checkpoint remains in the prompt for an inline fallback.", "warning");
-        } else if (!ensureRequestedDesigner({ agentDir: defaultAgentDir(), model: designerResolution.selectedRef, thinking: designerConfig.thinking })) {
+        } else if (!ensureRequestedDesigner({ agentDir: defaultAgentDir(), model: designerResolution.selectedRef, thinking: designerResolution.thinking })) {
           ctx.ui.notify("Selected Designer could not be registered; the requested design checkpoint remains in the prompt for an inline fallback.", "warning");
         }
       }

@@ -123,7 +123,7 @@ export interface MenuSubagentContext {
   designerFileState?: "managed" | "user-owned" | "absent";
   /** Eligibility-resolved Designer model for the next registration
    * (computed by the caller via resolveDesignerModel). */
-  designerResolved?: { selectedRef?: string; blocked: boolean };
+  designerResolved?: { selectedRef?: string; blocked: boolean; via?: "configured" | "session" | "session-fallback"; thinking?: string };
 }
 
 function modelThinkingText(
@@ -186,22 +186,22 @@ export function buildSettingsRows(
   // The actual session ref remains visible in the read-only mainAgent row and
   // in the auditor fallback row's final-resort slot.
   const drafterRef = settings.drafterModel?.trim() ? settings.drafterModel : "session model";
-  const drafterThinking = settings.drafterThinkingLevel ?? sessionThinking;
+  const drafterThinking = settings.drafterModel?.trim() || settings.drafterModelFallbacks?.length
+    ? settings.drafterThinkingLevel ?? sessionThinking : sessionThinking;
   const designerConfig = resolveDesignerConfig(settings);
   const designerRef = designerConfig.model?.trim() ? designerConfig.model : "session model";
-  const designerThinking = designerConfig.thinking ?? sessionThinking;
+  const designerThinking = designerConfig.model?.trim() || designerConfig.fallbacks.length
+    ? designerConfig.thinking ?? sessionThinking : sessionThinking;
   const designerChain = [designerConfig.model, ...designerConfig.fallbacks].filter((ref): ref is string => !!ref?.trim());
   const designerEffective = designerConfig.enabled === false
     ? "off — Designer will not register"
     : subagent.designerResolved?.blocked
       ? "blocked — session model is forbidden and no eligible Designer model is configured"
       : subagent.designerResolved?.selectedRef
-        ? `${subagent.designerResolved.selectedRef} · first eligible of the configured chain`
-        : subagent.designerResolved
-          ? `${sessionRef} (inherits session)`
-          : designerChain.length
-            ? `${designerChain.join(" → ")} → session inherit (last resort)`
-            : `${sessionRef} (inherits session)`;
+        ? `${subagent.designerResolved.selectedRef} · ${subagent.designerResolved.thinking ?? designerThinking} · ${subagent.designerResolved.via === "session" ? "inherits session model + thinking" : subagent.designerResolved.via === "session-fallback" ? "session model + thinking (configured chain unavailable)" : "first eligible of the configured chain"}`
+        : designerChain.length
+          ? `${designerChain.join(" → ")} → session model + thinking (last resort)`
+          : `${sessionRef} · ${sessionThinking} (inherits session model + thinking)`;
   // v0.38.10: the compactor never runs on the session model (it is the
   // stuck one) — unset means registry plan B, not a session lease.
   const compactorRef = settings.compactorModel?.trim() ? settings.compactorModel : "registry plan B";
@@ -210,7 +210,8 @@ export function buildSettingsRows(
   // An unset auditor level follows the live parent dial. This keeps the
   // detached verifier at the same effective reasoning level as the main
   // agent (including max) without preventing an explicit auditor override.
-  const auditorThinking = settings.auditorThinkingLevel ?? sessionThinking;
+  const auditorThinking = settings.auditorModel?.trim() || settings.auditorModelFallbacks?.length
+    ? settings.auditorThinkingLevel ?? sessionThinking : sessionThinking;
   // v0.37.0: compact ms duration for the auditor timeout rows ("5m" / "90s").
   const fmtTimeoutMs = (ms?: number): string => {
     if (typeof ms !== "number" || !Number.isFinite(ms) || ms < 0) return "?";
@@ -449,7 +450,7 @@ export function buildSettingsRows(
       label: "Designer agent",
       valueText: modelThinkingText(designerRef, designerThinking, subagent),
       sourceText: src("designerModel"),
-      description: "read-only design-checkpoint agent (goal/list/task items marked Agent: Designer); thinking is picked with the model; unset inherits the session model",
+      description: "read-only design-checkpoint agent (goal/list/task items marked Agent: Designer); defaults to the session model AND thinking; an explicit model is tried first with its chosen thinking",
     },
     {
       id: "designerModelFallbacks",
@@ -457,7 +458,7 @@ export function buildSettingsRows(
       label: `Designer fallback models (up to ${MAX_MAIN_MODEL_FALLBACKS})`,
       valueText: designerConfig.fallbacks.length
         ? `${designerConfig.fallbacks.length}/${MAX_MAIN_MODEL_FALLBACKS} · ${designerConfig.fallbacks.map((ref, index) => `${index + 1}. ${modelThinkingText(ref, designerThinking, subagent)}`).join(" → ")}`
-        : `0/${MAX_MAIN_MODEL_FALLBACKS} · ${designerRef} · ${designerThinking} (session inherit last resort)`,
+        : `0/${MAX_MAIN_MODEL_FALLBACKS} · ${sessionRef} · ${sessionThinking} (${designerConfig.model ? "session fallback" : "session default"})`,
       sourceText: src("designerModelFallbacks"),
       description: "ordered and deselectable: Designer primary → fallback 1 → fallback 2…; the first eligible ref is written into Designer.md at registration, then session inherit",
     },
@@ -510,7 +511,7 @@ export function buildSettingsRows(
       label: "Auditor agent",
       valueText: modelThinkingText(auditorRef, auditorThinking, subagent),
       sourceText: src("auditorModel"),
-      description: "provider/model override for the isolated auditor agent; unset primary tries configured fallbacks before the session last resort. Thinking defaults to the parent session; duplicate refs do not create independent backups.",
+      description: "provider/model override for the isolated auditor agent; defaults to the session model AND thinking. Unset primary with explicit fallbacks tries those before session. Explicit model selection runs first; duplicate refs do not create independent backups.",
     },
     {
       id: "auditorModelFallbacks",
@@ -518,7 +519,7 @@ export function buildSettingsRows(
       label: `Fallback models (up to ${MAX_MAIN_MODEL_FALLBACKS})`,
       valueText: settings.auditorModelFallbacks?.length
         ? `${settings.auditorModelFallbacks.length}/${MAX_MAIN_MODEL_FALLBACKS} · ${settings.auditorModelFallbacks.map((ref, index) => `${index + 1}. ${modelThinkingText(ref, auditorThinking, subagent)}`).join(" → ")}`
-        : `0/${MAX_MAIN_MODEL_FALLBACKS} · ${sessionRef} · ${auditorThinking} (last resort)`,
+        : `0/${MAX_MAIN_MODEL_FALLBACKS} · ${sessionRef} · ${sessionThinking} (${settings.auditorModel?.trim() ? "session fallback" : "session default"})`,
       sourceText: src("auditorModelFallbacks"),
       description: "ordered and deselectable: auditor primary → fallback 1 → fallback 2…; every recoverable auditor failure advances one eligible candidate at a time, then returns to the session model",
     },
