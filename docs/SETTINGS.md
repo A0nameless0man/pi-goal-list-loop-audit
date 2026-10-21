@@ -111,7 +111,7 @@ This authority boundary applies before settings-value normalization.
 | `auditorAllowedExtensions` | `[]` | Extension specs the detached auditor may load; resolved fail-closed, `[]` = isolated. |
 | `auditorMirrorSessionExtensions` | `true` | Also load the session's own packages in the worker (GLLA itself never mirrored); `false` = curated allow-list only. |
 | `auditorSameSessionSwap` | `true` | Walk the fallback chain when the auditor is the session model. |
-| `auditorThinkingLevel` | unset (inherit) | Detached auditor reasoning level; picked with the model. |
+| `auditorThinkingLevel` | unset (inherit) | Detached auditor reasoning level; picked with the model. Applies to the CONFIGURED auditor models. The session model — the auditor's default and its last resort — always runs at the session's own thinking level, so a configured override never turns down the route that has to carry the final decision. |
 | `auditorToolTimeoutMs` | `300000` | Base budget per auditor tool call (30s–6h). Global-only. |
 | `auditorStallMs` | `600000` | Base silence budget for the detached auditor (1m–24h). Global-only. |
 | `auditJobRetentionMs` | `900000` | How long proven-dead audit job dirs are kept (0–7d, 0 = reap now). Global-only. |

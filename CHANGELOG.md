@@ -5,7 +5,6 @@
 ## 0.39.43 — a rework round verifies the open objections, and a transient blip no longer discards it (2026-10-21)
 
 ### Rework rounds and transient provider failures
-
 - An EMPTY provider response is now classified as a transient provider
   failure in the auditor lane, on the same rule the main lane has used since
   v0.38.104 ("an empty response is a transient glitch, not a wall"). The
@@ -28,6 +27,15 @@
 - The rework-round flag is derived from one shared predicate used by both
   parallel dispatch paths, so the complete_goal path and the stored-claim
   retry path cannot disagree about what a rework round is.
+- The session model — the auditor's default when nothing is configured, and
+  its final last resort when a configured chain has failed — now runs at the
+  SESSION's thinking level. `auditorThinkingLevel` is a choice about the
+  CONFIGURED auditor models; it no longer turns down the session route that
+  has to carry the final decision. With no configured dial, every candidate
+  still inherits the live session dial as before. The rule is shared by the
+  completion path, the stored-claim retry path and the project (respec)
+  path, and the read-only `/glla status` line shows the dial that will
+  actually be used.
 
 ## 0.39.42 — completion audit recovery and a load-aware release gate (2026-10-20)
 
