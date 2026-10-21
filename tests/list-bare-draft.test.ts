@@ -103,6 +103,44 @@ async function withDrafter(
   }
 }
 
+function barrier(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>(done => { resolve = done; });
+  return { promise, resolve };
+}
+
+async function selectThinking(ctx: MockCtx, level: string): Promise<void> {
+  const previousLevel = ctx.thinkingLevel;
+  (ctx as any).thinkingLevel = level;
+  await pi.fire("thinking_level_select", { level, previousLevel }, ctx);
+}
+
+/** Auth can delay before model_select; an extension callback can delay after
+ * it. Native switches set their default thinking before emitting model_select. */
+function holdNextSwitch(ctx: MockCtx, api: any, target: unknown, reset?: string, afterSelection = false) {
+  const entered = barrier();
+  const finish = barrier();
+  const select = api.setModel;
+  let used = false;
+  api.setModel = async (model: unknown) => {
+    if (model !== target || used) return select(model);
+    used = true;
+    if (!afterSelection) { entered.resolve(); await finish.promise; }
+    if (reset === undefined) {
+      await select(model);
+    } else {
+      const previousModel = ctx.model;
+      (ctx as any).model = model;
+      pi.modelSelections.push(model);
+      await selectThinking(ctx, reset);
+      await pi.fire("model_select", { model, previousModel, source: "set" }, ctx);
+    }
+    if (afterSelection) { entered.resolve(); await finish.promise; }
+    return true;
+  };
+  return { entered: entered.promise, finish: finish.resolve };
+}
+
 // ────────────────────────────────────────────────────────────────────
 // Bare /list drafts from context like bare /goal
 // ────────────────────────────────────────────────────────────────────
@@ -406,6 +444,78 @@ test("concurrent drafting failures cannot spend a candidate or inject a recovery
     assert.equal(await recovery, true);
     assert.equal(recoveryPrompts(), 1);
     assert.deepEqual(pi.modelSelections, [selected, session]);
+  });
+});
+
+// These protect dial ownership across the awaited host switch itself, not
+// just during backoff. Native automatic resets must still permit role/session
+// thinking; an intervening manual edit must win on either side of model_select.
+for (const mode of ["restore", "recover"] as const) {
+  for (const afterSelection of [false, true]) test(`${mode}: manual dial during setModel survives a native reset (after model_select=${afterSelection})`, async () => {
+    await withDrafter({ drafterModel: "test/selected", drafterThinkingLevel: "low" }, async ({ ctx, session, api }) => {
+      const pending = holdNextSwitch(ctx, api, session, "high", afterSelection);
+      const operation = mode === "restore" ? restoreDraft() : recoverDraft(ctx, immediateRetry);
+      await pending.entered;
+      await selectThinking(ctx, "medium");
+      pending.finish();
+      const result = await operation;
+      if (mode === "recover") assert.equal(result, false, "manual ownership stops the obsolete recovery prompt");
+      assert.equal(ctx.model, session);
+      assert.equal(ctx.thinkingLevel, "medium");
+      assert.equal(recoveryPrompts(), 0);
+      await restoreDraft();
+      assert.equal(ctx.thinkingLevel, "medium", "later restoration also respects the manual target");
+    });
+  });
+
+  test(`${mode}: post-await comparison preserves a manual dial on hosts without thinking events`, async () => {
+    await withDrafter({ drafterModel: "test/selected", drafterThinkingLevel: "low" }, async ({ ctx, session, api }) => {
+      const pending = holdNextSwitch(ctx, api, session);
+      const operation = mode === "restore" ? restoreDraft() : recoverDraft(ctx, immediateRetry);
+      await pending.entered;
+      (ctx as any).thinkingLevel = "medium";
+      pending.finish();
+      await operation;
+      assert.equal(ctx.thinkingLevel, "medium");
+      assert.equal(recoveryPrompts(), 0);
+      await restoreDraft();
+      assert.equal(ctx.thinkingLevel, "medium");
+    });
+  });
+}
+
+test("host automatic thinking defaults do not prevent configured or original-session thinking", async () => {
+  await withDrafter({ drafterModel: "test/selected", drafterModelFallbacks: ["test/backup"], drafterThinkingLevel: "low" }, async ({ ctx, backup, session, api }) => {
+    const backupSwitch = holdNextSwitch(ctx, api, backup, "high");
+    const backupRecovery = recoverDraft(ctx, immediateRetry);
+    await backupSwitch.entered;
+    backupSwitch.finish();
+    assert.equal(await backupRecovery, true);
+    assert.equal(ctx.model, backup);
+    assert.equal(ctx.thinkingLevel, "low");
+    const sessionSwitch = holdNextSwitch(ctx, api, session, "high");
+    const restoration = restoreDraft();
+    await sessionSwitch.entered;
+    sessionSwitch.finish();
+    await restoration;
+    assert.equal(ctx.model, session);
+    assert.equal(ctx.thinkingLevel, "max");
+  });
+});
+
+test("cancellation behind a pending recovery preserves manual thinking even if the accepted switch resets it", async () => {
+  await withDrafter({ drafterModel: "test/selected", drafterModelFallbacks: ["test/backup"], drafterThinkingLevel: "low" }, async ({ ctx, backup, session, api }) => {
+    const pending = holdNextSwitch(ctx, api, backup, "high");
+    const recovery = recoverDraft(ctx, immediateRetry);
+    await pending.entered;
+    await selectThinking(ctx, "medium");
+    const restoration = restoreDraft();
+    pending.finish();
+    await restoration;
+    assert.equal(await recovery, false);
+    assert.equal(ctx.model, session);
+    assert.equal(ctx.thinkingLevel, "medium");
+    assert.equal(recoveryPrompts(), 0);
   });
 });
 
