@@ -483,6 +483,13 @@ async function switchDraftingModel(
   lease.switchInFlight = pending;
   try {
     const switched = await pending;
+    const live = draftingLeaseContext(lease);
+    if (switched && draftingModelLease === lease && live
+      && currentThinkingLevel(live) === thinking.expectedLevel) {
+      // Record the host-owned default, including when cancellation is
+      // already waiting to restore behind this accepted switch.
+      lease.activeThinkingLevel = thinking.expectedLevel;
+    }
     return { ...thinking, switched };
   }
   finally {
@@ -504,6 +511,7 @@ export function observeDrafterThinkingSelection(ctx: ExtensionContext, level: st
     thinking.expectedLevel = level;
   } else {
     thinking.manualLevel = level;
+    lease.thinkingOverride = level;
   }
 }
 
