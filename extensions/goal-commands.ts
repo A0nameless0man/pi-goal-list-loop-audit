@@ -3379,6 +3379,13 @@ function auditorThinkingEffectiveLine(
   }
   const ref = effectiveSettings.auditorModel?.trim() || (sessionModel === "(unknown)" ? "" : sessionModel);
   if (!ref) return `auditorThinkingEffective: ${requested} (requested ${requested} [${requestedSource}]; no auditor model resolved)`;
+  // v0.39.43: with no auditor model pinned, the auditor runs the SESSION
+  // model — as its default and as its last resort — so it runs at the
+  // SESSION's dial, not at the auditor's configured override. Show the dial
+  // that will actually be used.
+  const sessionIsTheAuditor = !effectiveSettings.auditorModel?.trim();
+  const effectiveRequested = sessionIsTheAuditor ? sessionThinking : requested;
+  const effectiveSource = sessionIsTheAuditor ? "session-model" : requestedSource;
   let meta: { reasoning?: boolean; thinkingLevelMap?: Record<string, string | null> } | undefined;
   try {
     const available = (ctx as unknown as { modelRegistry?: { getAvailable?: () => unknown[] } }).modelRegistry?.getAvailable?.() ?? [];
@@ -3386,10 +3393,10 @@ function auditorThinkingEffectiveLine(
   } catch {
     meta = undefined;
   }
-  if (!meta) return `auditorThinkingEffective: ${requested} (requested ${requested} [${requestedSource}]; ${ref} capabilities unknown)`;
-  const effective = resolveAuditorThinkingLevel(meta, requested);
-  const why = effective === requested ? "as requested" : `capped by ${ref} support`;
-  return `auditorThinkingEffective: ${effective} (requested ${requested} [${requestedSource}]; ${why})`;
+  if (!meta) return `auditorThinkingEffective: ${effectiveRequested} (requested ${effectiveRequested} [${effectiveSource}]; ${ref} capabilities unknown)`;
+  const effective = resolveAuditorThinkingLevel(meta, effectiveRequested);
+  const why = effective === effectiveRequested ? "as requested" : `capped by ${ref} support`;
+  return `auditorThinkingEffective: ${effective} (requested ${effectiveRequested} [${effectiveSource}]; ${why})`;
 }
 
 async function cmdSettings(args: string, ctx: ExtensionContext): Promise<void> {
