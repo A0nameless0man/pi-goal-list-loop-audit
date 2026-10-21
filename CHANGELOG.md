@@ -2,7 +2,15 @@
 
 ## Unreleased
 
-## 0.39.41 — completion audit recovery and a load-aware release gate (2026-10-20)
+## 0.39.42 — completion audit recovery and a load-aware release gate (2026-10-20)
+
+### Release inventory
+
+- The generated runtime inventory is regenerated against the released tree.
+  The 0.39.41 release candidate was withdrawn before publication: its own
+  gate rejected a stale generated line count, and the remote tag is
+  protected, so it could not be moved to the corrected commit. This release
+  carries the identical content with the inventory regenerated.
 
 ### Completion audit recovery
 

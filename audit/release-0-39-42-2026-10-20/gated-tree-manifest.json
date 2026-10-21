@@ -1,7 +1,7 @@
 {
   "ref": "HEAD",
   "fileCount": 687,
-  "aggregate": "93e7e9b7f936c1e370de7da4e5220af0217f06ad7271d581156e1855577b8a51",
+  "aggregate": "92eff627d36d31ec74a4e2c2f8c693779378c391afb90b8e2dc2d24240c7ed0d",
   "files": {
     ".github/workflows/publish.yml": "a3fdb5c44a085c58ac3634a79733de5464e4e4848f214706ec6dbb791bbb9e88",
     "CHANGELOG.md": "f168ea3941947adb4d0f60423fc6601095a941c21555dcb3e115c9b5a1d2bd59",
@@ -23,7 +23,7 @@
     "docs/RECOVERY.md": "369a15610d93c3f3d92fa4d13c9c7798aa415de5a6ca0c2de1e83f5f4bd504dc",
     "docs/RELEASING.md": "625124d1a227441ecfd950fc491c8de435be144511c3f29c1331c5c587ae2c3c",
     "docs/RELIABILITY-AND-MEASUREMENT.md": "7f061e3289c2a31541c7571c7ff4591415821bc237521809701a668ee58b31fe",
-    "docs/RUNTIME-INVENTORY.md": "80405f6d33a0f6e81dab714e8aaf4edb2b930b5b21a4497bde3c98b848980b6a",
+    "docs/RUNTIME-INVENTORY.md": "9429f5b344f53da7dccfcf2c6e7cc56f42253a9d14e407bad631d346f590ac3f",
     "docs/SETTINGS.md": "1c8c736e6d18da99392f8ac546271cca398949975d3ec166a849e9dad3b03154",
     "docs/UI-STATUS.md": "41fd1709d1f6de834ab6babf60a03f01548b02d26e89c9cfe9965db2fdf94b50",
     "docs/VISION-ASSIST.md": "e8fe719aff65597cd8491d1c06d141cb431f80bc0d2672c6fbbbc511841ce054",
