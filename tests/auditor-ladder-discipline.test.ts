@@ -17,6 +17,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { resolveAuditorModel } from "../extensions/loops/goal-settings-ui.ts";
+import { resolveCandidateThinkingLevel } from "../extensions/auditor-thinking.ts";
 
 // Field 2026-09-29: this file pointed the mock ctx at the repo root with
 // ledger recording on, so every suite run appended ~13 model_fallback_select
@@ -87,11 +88,15 @@ test("v0.38.103 same-session-swap does not change the ordering contract", () => 
   }
 });
 
-test("v0.38.103 an auditor pinned to the session model is the session model, with no invented ladder", () => {
+test("an explicit auditor pin to the session identity keeps its configured dial without an invented ladder", () => {
   const r = resolveAuditorModel(ctx(), "openrouter/space-bunny-alpha", undefined, true);
   assert.equal(r.model.id, "space-bunny-alpha");
-  assert.equal(r.via, "session");
-  assert.deepEqual(r.fallbackModels ?? [], []);
+  assert.deepEqual(r.fallbackModels ?? [], [], "same identity must not become a duplicate attempt");
+  // Identity equality does not turn an explicit pin into implicit inheritance.
+  // Exercise the consumer of route provenance instead of pinning its spelling.
+  const candidate = { ...r, model: { ...r.model, reasoning: true } };
+  assert.equal(resolveCandidateThinkingLevel(candidate, { auditorThinkingLevel: "low", sessionThinkingLevel: "high" }), "low");
+  assert.equal(resolveCandidateThinkingLevel(candidate, { sessionThinkingLevel: "high" }), "high");
 });
 
 test("v0.38.103 with no session model and nothing configured, the error stays actionable", () => {
