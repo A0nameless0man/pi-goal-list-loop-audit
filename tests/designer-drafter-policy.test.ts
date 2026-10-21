@@ -17,7 +17,7 @@ import {
   buildAgentOverrideMd,
   syncSubagentModelOverrides,
 } from "../extensions/goal-loop-subagents.ts";
-import { resolveDrafterModel } from "../extensions/drafter-model.ts";
+import { resolveDrafterModel, resolveDrafterThinkingLevel } from "../extensions/drafter-model.ts";
 import { continuationPrompt } from "../extensions/goal-continuation.ts";
 import { buildSettingsRows } from "../extensions/settings-menu.ts";
 import type { Settings } from "../extensions/goal-settings.ts";
@@ -145,6 +145,19 @@ test("drafter resolution always retains one current-session last resort", () => 
   assert.deepEqual(resolved.candidates.map((candidate) => candidate.ref), ["test/session"]);
   assert.equal(resolved.candidates[0]?.via, "session-last-resort");
   assert.equal(resolved.selected?.model, session);
+});
+
+test("drafter session default and automatic recovery keep the session thinking, explicit models keep their own", () => {
+  const { ctx } = fakeContext();
+  for (const settings of [{}, { drafterModel: "test/missing" }]) {
+    const selected = resolveDrafterModel(ctx, settings).selected!;
+    assert.equal(selected.model, ctx.model);
+    assert.equal(resolveDrafterThinkingLevel(selected, "max", "low"), "max");
+    assert.equal(resolveDrafterThinkingLevel(selected, "off", "high"), "off");
+  }
+  const selected = resolveDrafterModel(ctx, { drafterModel: "test/backup" }).selected!;
+  assert.equal(resolveDrafterThinkingLevel(selected, "max", "low"), "low");
+  assert.equal(resolveDrafterThinkingLevel(selected, "high"), "high");
 });
 
 test("drafter resolution skips forbidden candidates without inspecting provider text", () => {

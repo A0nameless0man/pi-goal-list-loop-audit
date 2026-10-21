@@ -17,13 +17,13 @@ export const MAX_DRAFTER_FALLBACKS = MAX_MAIN_MODEL_FALLBACKS;
 export interface DrafterModelCandidate {
   ref: string;
   model: any;
-  via: "configured" | "session-last-resort";
+  via: "configured" | "session" | "session-last-resort";
 }
 
 /** The implicit session route inherits its thinking as well as its model.
  * Role-specific thinking only applies to explicitly configured models. */
 export function resolveDrafterThinkingLevel(candidate: DrafterModelCandidate, sessionThinking: string, configuredThinking?: string): string {
-  return candidate.via === "session-last-resort" ? sessionThinking : configuredThinking ?? sessionThinking;
+  return candidate.via === "configured" ? configuredThinking ?? sessionThinking : sessionThinking;
 }
 
 export interface DrafterModelResolution {
@@ -97,7 +97,7 @@ export function resolveDrafterModel(ctx: ExtensionContext, settings: Pick<Settin
     attempted.push(configuredPrimary);
   }
 
-  for (;;) {
+  while (configuredRefs.length > 0) {
     const selected = selector.selectNextValid({ kind: "drafter" }, currentRef, attempted);
     if (!("model" in selected) || typeof selected.ref !== "string") break;
     attempted.push(selected.ref);
@@ -110,7 +110,7 @@ export function resolveDrafterModel(ctx: ExtensionContext, settings: Pick<Settin
     if (forbidden(currentRef)) {
       appendLedger(ctx.cwd, "forbidden_model_switch", { scope: "drafter", ref: currentRef, via: "session-last-resort", blocked: true });
     } else {
-      candidates.push({ ref: currentRef, model: ctx.model, via: "session-last-resort" });
+      candidates.push({ ref: currentRef, model: ctx.model, via: configuredRefs.length ? "session-last-resort" : "session" });
     }
   }
   return { configuredRefs, candidates, selected: candidates[0] };
