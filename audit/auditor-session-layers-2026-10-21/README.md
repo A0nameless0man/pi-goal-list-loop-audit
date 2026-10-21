@@ -25,7 +25,27 @@ Each case checks the effective session model/max dial, byte-for-byte unchanged g
 
 Existing raw-key-deletion checks were replaced with the intentional behavior: session inheritance without a second thinking prompt, while other projects retain their pins. This is not a relaxed deletion check: old project deletion would expose the global model/dial and fail the effective-pair assertions. The fixtures tolerate unrelated project settings and unused registry models; neither changes the required session behavior. Null persistence is an intentional documented settings protocol, not an incidental formatting assertion.
 
-## Current-revision verification
+## Corrected headless display after first disapproval
+
+The first completion claim was disapproved for a valid display regression: `auditorThinkingEffectiveLine` treated explicit `auditorModel: null` with retained backups as ordinary fallback-only configuration and incorrectly reported that fallbacks precede the session. Runtime selection and the required checks already passed, but that read-only display did not match them.
+
+The formatter now excludes explicit null from the fallback-only pending branch and names the live session ref in known-capability explicit-session output. A new real headless `/glla` test combines a global model/low pin, project null, a retained backup capped below max, and a known live session/max pair. It verifies the live model and effective max, rejects pending/fallback-first text, and checks the backup list remains intact. The ordinary absent-primary fallback-only regression is unchanged and still passes.
+
+### Corrected-revision verification
+
+- `timeout 240 bun test --parallel=1 --max-concurrency=1 --timeout=120000 tests/settings-editors.test.ts tests/auditor-thinking.test.ts tests/auditor-thinking-display.test.ts` — **63 passed, 0 failed**, exit 0, 7.10 seconds. `corrected-required-tests.log`.
+- `timeout 240 npm run check` — **passed**, exit 0, no diagnostics. `corrected-typecheck.log`.
+- Runtime inventory regenerated; `npm run check:inventory` and `git diff --check` — **passed**.
+- A fresh-context reviewer found no issues/blockers in the narrow correction; `corrected-review.md`. Review is independently static; command execution is explicitly supervisor-run.
+
+Corrected display source binding (additional to the unchanged settings-layer sources recorded below):
+
+```text
+4408bbc696cac0a3cb86e7353544185d96337070f6fb4546f0263d5cd148824e  extensions/goal-commands.ts
+ac054bc8ad49c32615a9f798eddead733b581eee0eabab7ef508b3a4d242d467  tests/auditor-thinking-display.test.ts
+```
+
+## Initial-submission verification (historical)
 
 - `timeout 240 bun test --parallel=1 --max-concurrency=1 --timeout=120000 tests/settings-editors.test.ts tests/auditor-thinking.test.ts tests/auditor-thinking-display.test.ts` — **62 passed, 0 failed**, exit 0, 9.83 seconds. `required-tests.log`.
 - `timeout 240 npm run check` — **passed**, exit 0, no diagnostics. `typecheck.log`.
@@ -34,7 +54,7 @@ Existing raw-key-deletion checks were replaced with the intentional behavior: se
 
 No live provider requests, installed-session reload, release publication, upstream edits or history rewrite were performed. Full release validation remains with the final queued release-preparation item.
 
-## Source binding
+## Initial settings-layer source binding
 
 Observed checkpoint: `f92aca464`. The daemon may subsequently commit documentation/evidence without changing these tested source hashes.
 
