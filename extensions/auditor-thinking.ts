@@ -1,8 +1,10 @@
+const THINKING_LEVELS = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const;
+
 /** Resolve the auditor dial against each selected candidate, not just the primary.
  * Old settings keep their meaning: unset inherits the session dial. Unsupported
  * levels fall downwards; a non-reasoning model always gets off. */
 export function resolveAuditorThinkingLevel(model: { reasoning?: boolean; thinkingLevelMap?: Record<string, string | null> } | undefined, requested: string): string {
-  const levels = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
+  const levels = THINKING_LEVELS;
   if (!model?.reasoning) return 'off';
   const supported = levels.filter(level => {
     const mapped = model.thinkingLevelMap?.[level];
@@ -14,7 +16,7 @@ export function resolveAuditorThinkingLevel(model: { reasoning?: boolean; thinki
 /** Shared by dispatch and capability-aware displays. Never raise an unsupported
  * request to a higher supported level, even when max exists without xhigh. */
 export function resolveSupportedThinkingLevel(supported: readonly string[], requested: string): string {
-  const levels = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
+  const levels: readonly string[] = THINKING_LEVELS;
   const ceiling = levels.indexOf(requested);
   for (let index = ceiling < 0 ? levels.indexOf('high') : ceiling; index >= 0; index--) {
     if (supported.includes(levels[index]!)) return levels[index]!;

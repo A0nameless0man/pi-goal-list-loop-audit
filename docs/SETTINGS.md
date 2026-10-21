@@ -177,6 +177,13 @@ session may leave only one eligible model; different provider wrappers can also
 share the same upstream account/quota. Configured counts are not a guarantee of
 independent capacity, authentication or provider availability.
 
+Capability-aware thinking displays use the same downward resolution as dispatch:
+unsupported requests never select a higher supported level (for example, unsupported
+`xhigh` becomes `high`, not `max`, even if the model supports `max`). Non-reasoning
+models display `off`. Configured role thinking remains separate from inherited
+session thinking. Headless auditor output keeps the effective level pending when
+capabilities are unknown.
+
 ## Designer
 
 The read-only Designer role (goal/list items and tasks marked `Agent: Designer`) is configured on its own `/glla` **Designer** tab — enablement, the Designer agent (model + thinking, picked together like the Drafter), ordered fallback models, the effective resolution, and whether the managed `Designer.md` is currently registered in the pi agent dir. The generic Designer pins that used to live on the Subagents tab (`subagentModelOverrides.Designer`, `subagentThinkingOverrides.Designer`, `subagentFallbacks.Designer`) are migrated into the dedicated `designer*` keys on load: dedicated values win (an explicit `designerModelFallbacks: []` beats a legacy chain), the legacy entries are removed, and other roles' pins are untouched. Because `Designer.md` lives in the global agent dir, the dedicated keys are global-only; a legacy project-scoped Designer pin no longer applies.

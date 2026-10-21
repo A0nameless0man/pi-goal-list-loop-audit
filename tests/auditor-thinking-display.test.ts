@@ -11,6 +11,7 @@ import * as fs from "node:fs";
 import activate, { __testOnlyResetOwnerSession, __testOnlyResetStaleFlag } from "../extensions/loops/goal.js";
 import { MockPi, makeMockCtx, tmpCwd } from "./harness/mock-pi.js";
 import { loadSettings, saveSettings } from "../extensions/goal-settings.js";
+import { resolveAuditorThinkingLevel } from "../extensions/auditor-thinking.js";
 
 const GLOBAL_SETTINGS_PATH = process.env.GLLA_GLOBAL_SETTINGS_PATH!;
 const pi = new MockPi();
@@ -57,6 +58,26 @@ test("headless /glla shows the effective auditor thinking level with its why", a
   const text = headlessText(ctx);
   assert.match(text, /auditorThinkingEffective: high \(requested max \[session-inherit\]; capped by agnes\/agnes-3\.0-flash support\)/);
   await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
+});
+
+test("headless auditor display agrees with dispatch for xhigh without support and non-reasoning models", async () => {
+  for (const reasoning of [true, false]) {
+    const cwd = tmpCwd();
+    const model = { ...FLASH, reasoning, thinkingLevelMap: { xhigh: null, max: "max" } };
+    fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify({ aggressiveMode: false,
+      auditorModel: `${model.provider}/${model.id}`, auditorThinkingLevel: "xhigh" }));
+    const ctx = await boot(cwd);
+    ctx.modelRegistry = { getAvailable: () => [model] };
+    try {
+      await pi.command("glla", "", ctx);
+      const expected = resolveAuditorThinkingLevel(model, "xhigh");
+      assert.equal(expected, reasoning ? "high" : "off");
+      assert.match(headlessText(ctx), new RegExp(`auditorThinkingEffective: ${expected} `));
+      assert.doesNotMatch(headlessText(ctx), /auditorThinkingEffective: max /);
+    } finally {
+      await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
+    }
+  }
 });
 
 test("headless fallback-only auditors do not claim the session thinking cap is effective", async () => {
