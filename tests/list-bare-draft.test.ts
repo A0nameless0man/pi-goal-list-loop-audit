@@ -17,6 +17,9 @@
 
 import { test, afterEach } from "node:test";
 import * as assert from "node:assert/strict";
+import * as fs from "node:fs";
+import { globalSettingsPath, type Settings } from "../extensions/goal-settings.js";
+import { waitForDrafterRetry } from "../extensions/drafter-recovery.js";
 
 import activate, { __testOnlyResetStaleFlag, __testOnlyResetOwnerSession } from "../extensions/loops/goal.js";
 import { readState } from "../extensions/goal-loop-core.js";
@@ -41,6 +44,57 @@ async function freshSession(cwd: string, reason: string): Promise<MockCtx> {
   const ctx = ownerCtx(cwd);
   await pi.fire("session_start", { reason }, ctx);
   return ctx;
+}
+
+type RetryRuntime = { wait?: typeof waitForDrafterRetry };
+const recoverDraft = (ctx: MockCtx, runtime: RetryRuntime = {}) =>
+  (globalThis as unknown as { handleDrafterModelFailure: (ctx: MockCtx, error: string, runtime: RetryRuntime) => Promise<boolean> })
+    .handleDrafterModelFailure(ctx, "503 upstream unavailable", runtime);
+const restoreDraft = () =>
+  (globalThis as unknown as { restoreDrafterModel: () => Promise<void> }).restoreDrafterModel();
+const immediateRetry: RetryRuntime = { wait: async (_ms, signal) => !signal.aborted };
+const recoveryPrompts = () => pi.userMessages.filter(message => message.message.includes("The drafting model turn failed.")).length;
+
+async function withDrafter(
+  settings: Partial<Settings>,
+  run: (fixture: { ctx: MockCtx; session: any; selected: any; backup: any; manual: any; api: any }) => Promise<void>,
+): Promise<void> {
+  const file = globalSettingsPath();
+  const saved = fs.readFileSync(file, "utf8");
+  const originalApi = { setModel: pi.api.setModel, getThinkingLevel: pi.api.getThinkingLevel, setThinkingLevel: pi.api.setThinkingLevel };
+  const session = { provider: "test", id: "session", reasoning: true, thinkingLevelMap: { max: "max", xhigh: "xhigh" } };
+  const selected = { provider: "test", id: "selected", reasoning: true };
+  const backup = { provider: "test", id: "backup", reasoning: true };
+  const manual = { provider: "test", id: "manual", reasoning: true };
+  const cwd = tmpCwd();
+  seedState(cwd, {});
+  const ctx = ownerCtx(cwd) as any;
+  ctx.model = session;
+  ctx.thinkingLevel = "max";
+  ctx.modelRegistry = {
+    getAvailable: () => [session, selected, backup, manual],
+    hasConfiguredAuth: () => true,
+    find: (provider: string, id: string) => [session, selected, backup, manual].find(model => model.provider === provider && model.id === id),
+  };
+  const api = pi.api as any;
+  api.getThinkingLevel = () => ctx.thinkingLevel;
+  api.setThinkingLevel = (level: string) => { ctx.thinkingLevel = level; };
+  api.setModel = async (model: unknown) => { pi.modelSelections.push(model); ctx.model = model; return true; };
+  fs.writeFileSync(file, JSON.stringify({ aggressiveMode: false, ...settings }));
+  pi.modelSelections.length = 0;
+  pi.userMessages.length = 0;
+  try {
+    __testOnlyResetStaleFlag();
+    __testOnlyResetOwnerSession();
+    await pi.fire("session_start", { reason: "startup" }, ctx);
+    await pi.command("list", "", ctx);
+    await run({ ctx, session, selected, backup, manual, api });
+  } finally {
+    await restoreDraft();
+    await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
+    Object.assign(api, originalApi);
+    fs.writeFileSync(file, saved);
+  }
 }
 
 // ────────────────────────────────────────────────────────────────────
