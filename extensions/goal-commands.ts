@@ -3372,7 +3372,8 @@ function auditorThinkingEffectiveLine(
 ): string {
   const requested = effectiveSettings.auditorThinkingLevel ?? sessionThinking;
   const requestedSource = effectiveSettings.auditorThinkingLevel !== undefined ? thinkingSource : "session-inherit";
-  if (!effectiveSettings.auditorModel?.trim() && normalizeMainModelFallbackRefs(effectiveSettings.auditorModelFallbacks).length) {
+  if (effectiveSettings.auditorModel !== null && !effectiveSettings.auditorModel?.trim()
+    && normalizeMainModelFallbackRefs(effectiveSettings.auditorModelFallbacks).length) {
     // This read-only surface must not invoke the ledger-writing resolver or
     // label the session's capabilities as effective for a configured backup.
     return `auditorThinkingEffective: pending (requested ${requested} [${requestedSource}]; configured fallbacks precede session; per-model support checked at dispatch)`;
