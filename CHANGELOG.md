@@ -61,6 +61,12 @@
 - A refusal to promote a queued repair item now restores its sidecar file and
   reports the refusal to its caller, which stops instead of retrying the same
   promotion.
+- A goal update whose JSONL/markdown projection fails keeps the update when the
+  durable goal-state transaction already landed, because that snapshot is the
+  commit point a restart adopts and the contract-amendment path reads it to
+  report a committed-but-incomplete change. It had rolled the transaction back,
+  which discarded a real commit and broke that report. The live goal now matches
+  what a restart recovers; an update with no landed transaction is still not kept.
 
 ## 0.39.44 — session inheritance and role fallback repairs (2026-10-21)
 
