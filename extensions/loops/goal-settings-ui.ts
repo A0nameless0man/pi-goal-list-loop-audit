@@ -1168,7 +1168,7 @@ export function saveSubagentPinLayer(
     // "Session — inherit" must not uncover the same role's global pin.
     // Preserve every other role and concrete-level edits' ownership routing.
     for (const layer of ["global", "project"] as const) {
-      const pins = { ...(layer === "project" ? projectMap : loadGlobalSettings().subagentThinkingOverrides ?? {}) };
+      const pins = { ...(layer === "project" ? projectLayer.subagentThinkingOverrides ?? {} : loadGlobalSettings().subagentThinkingOverrides ?? {}) };
       if (!Object.prototype.hasOwnProperty.call(pins, role)) continue;
       delete pins[role];
       persistSettings(layer, cwd, { subagentThinkingOverrides: Object.keys(pins).length ? pins : undefined });
