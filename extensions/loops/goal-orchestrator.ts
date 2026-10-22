@@ -132,7 +132,7 @@ import {
 isGoalRevisionCurrent,
   nextHourlyPromptMs,
   nextHourlyProbeMs,
-  clearLoadHold,
+  releaseLoadHoldDurably,
   type ModelSwitchRecord,
   type ListItem,
 } from "../goal-loop-core.js";
@@ -790,10 +790,12 @@ function createGoal(objective: string, ctx: ExtensionContext, policy: "goal" | "
   // item activation, or an accepted draft — IS the explicit decision a
   // load hold waits for. Release before the new work's first continuation
   // would otherwise be frozen.
-  if (clearLoadHold(state)) {
-    persistState(ctx);
-    appendLedger(ctx.cwd, "load_hold_released", { via: `goal-created:${policy}` });
-  }
+  // v0.39.45 (audit 2026-10-22): this release used to be a RAM-only delete
+  // that was journaled as if it had landed — the same drift the 2026-10-19
+  // repair fixed for the other release sites. releaseLoadHoldDurably
+  // restores the gate when the snapshot cannot be written and claims
+  // nothing.
+  releaseLoadHoldDurably(state, ctx, `goal-created:${policy}`);
   // Extract verification contract if present in objective.
   const { objective: roleCleaned, agentRole } = extractAgentRole(objective);
   const { objective: cleanObj, verificationContract } = extractVerificationContract(roleCleaned);
@@ -1017,7 +1019,11 @@ function setGoal(goal: Goal, ctx: ExtensionContext, via = "user"): boolean {
   const mdLanded = goalMarkdownLanded(ctx.cwd, nextGoal);
   if (stateLanded && mdLanded) clearGoalStateTransaction(ctx.cwd);
   else ctx.ui.notify("Goal created but its durable projection is incomplete — fix .pi-glla storage and resume to reconcile.", "warning");
-  appendLedger(ctx.cwd, "goal_created", { goalId: goal.id, objective: goal.objective, policy: goal.policy, via });
+  appendLedger(ctx.cwd, "goal_created", { goalId: goal.id, objective: goal.objective, policy: goal.policy, via, persisted: stateLanded });
+  // v0.39.45 (audit 2026-10-22): the row above carries `persisted: false`
+  // when the state line did not land — the goal is then held by the goal
+  // transaction, not by the durable projection, and the row must not claim
+  // otherwise.
   // v0.39.x audit: durability is the return contract — callers (notably the
   // complete_goal newObjective gate) must be able to detect ledger failure.
   return stateLanded && mdLanded;
@@ -1035,6 +1041,9 @@ function updateGoal(patch: Partial<Goal>, ctx: ExtensionContext): boolean {
   }
   const file = goalMdPath(ctx.cwd, next.id);
   const nextGoal: Goal = { ...next, activePath: path.relative(ctx.cwd, file) || file };
+  // The goal the live session showed before this update — the rollback
+  // target when the durable write cannot land.
+  const previousGoal = state.goal;
   // v0.35.72: the transaction snapshot closes the crash window between the
   // markdown projection and the append-only state ledger. A later restart
   // adopts it only when it is newer than the last committed state line.
@@ -1047,11 +1056,25 @@ function updateGoal(patch: Partial<Goal>, ctx: ExtensionContext): boolean {
   if (statusChanged) clearToolActivityState();
   const stateLanded = persistState(ctx);
   const mdLanded = goalMarkdownLanded(ctx.cwd, nextGoal);
-  if (stateLanded && mdLanded) clearGoalStateTransaction(ctx.cwd);
-  else ctx.ui.notify("Goal update was not fully persisted — the durable projection is incomplete. Fix .pi-glla storage and retry.", "warning");
-  // v0.39.x audit: durability is the return contract — a ledger failure
-  // must not report success to gates that depend on it.
-  return stateLanded && mdLanded;
+  if (stateLanded && mdLanded) {
+    clearGoalStateTransaction(ctx.cwd);
+    // v0.39.x audit: durability is the return contract — a ledger failure
+    // must not report success to gates that depend on it.
+    return true;
+  }
+  // v0.39.45 (audit 2026-10-22): a failed state write must not leave the
+  // live session holding a goal the durable projection never recorded
+  // (AGENTS.md: never let live state drift from its durable projection).
+  // Roll the update back completely — RAM, the markdown projection and the
+  // pending transaction — so a restart resumes exactly what the live
+  // session shows and the caller can retry the update.
+  if (!stateLanded) {
+    state.goal = previousGoal;
+    writeGoalMd(ctx.cwd, previousGoal);
+    clearGoalStateTransaction(ctx.cwd);
+  }
+  ctx.ui.notify("Goal update was not fully persisted — the durable projection is incomplete. Fix .pi-glla storage and retry.", "warning");
+  return false;
 }
 
 // v0.29.6: stacked-state auto-arbitration (user directive: "auto archive /

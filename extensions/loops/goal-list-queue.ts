@@ -817,7 +817,16 @@ function queueRepairAheadOfListItem(ctx: ExtensionContext, item: ListItem, asses
     }
     const rest = current.filter((queued) => queued.id !== repaired.id);
     replaceState({ ...state, list: [repaired, ...rest] });
-    persistState(ctx);
+    // v0.39.45 (audit 2026-10-22): the durable projection of the queue is
+    // the `list` array in the state ledger line. A persist that does not
+    // land must not be journaled as a promotion the snapshot contradicts —
+    // restore the RAM order and record the unpersisted promotion instead.
+    if (persistState(ctx) !== true) {
+      replaceState({ ...state, list: current });
+      appendLedger(ctx.cwd, "faulty_objective_repair_recovery_unpersisted", { goalId: repaired.id, targetId: item.id, source: "list-activation", queueOrder: repaired.queueOrder });
+      ctx.ui.notify("Could not persist the repair promotion durably — the queued order is unchanged. Fix .pi-glla storage and retry.", "warning");
+      return;
+    }
     appendLedger(ctx.cwd, "faulty_objective_repair_target_recovered", { goalId: repaired.id, targetId: item.id, source: "list-activation", queueOrder: repaired.queueOrder });
     return;
   }
@@ -836,7 +845,15 @@ function queueRepairAheadOfListItem(ctx: ExtensionContext, item: ListItem, asses
     return;
   }
   replaceState({ ...state, list: [repair, ...current] });
-  persistState(ctx);
+  // v0.39.45 (audit 2026-10-22): same durable-projection contract as the
+  // recovery path above — a promotion that did not land is not journaled
+  // as one.
+  if (persistState(ctx) !== true) {
+    replaceState({ ...state, list: current });
+    appendLedger(ctx.cwd, "faulty_objective_repair_promoted_unpersisted", { goalId: repair.id, targetId: item.id, position: 1, source: "list-activation", reasons: assessment.reasons, queueOrder: repair.queueOrder });
+    ctx.ui.notify("Could not persist the repair promotion durably — the queued order is unchanged. Fix .pi-glla storage and retry.", "warning");
+    return;
+  }
   appendLedger(ctx.cwd, "faulty_objective_repair_promoted", { goalId: repair.id, targetId: item.id, position: 1, source: "list-activation", reasons: assessment.reasons, queueOrder: repair.queueOrder });
 }
 
