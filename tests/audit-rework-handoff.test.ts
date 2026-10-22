@@ -180,6 +180,29 @@ test('a truncated objections field says it is truncated instead of reading as co
   assert.doesNotMatch(completeField, /…/, 'a field that fits completely must not be marked as truncated');
 });
 
+test('queued rework is saved and waiting, never presented as started work', () => {
+  const queued = { now: NOW, generation: 1, evidence: { ownerKey: 'goal:rework-owner', generation: 1, observedAt: NOW, session: 'open' as const, turnQueued: true } };
+  for (const width of [40, 80, 120]) {
+    for (const maxWidgetLines of [4, 8]) {
+      const rows = buildWidgetLines(fixture(), undefined, NOW, undefined, width, { uiStatusContext: queued, compactAuditCard: true, maxWidgetLines })!;
+      const text = rows.join('\n');
+      assert.match(text, /QUEUED/);
+      if (maxWidgetLines === 8) assert.match(text, /saved/i);
+      assert.match(text, /you:.*no action needed/i);
+      assert.match(text, /waiting/i);
+      assert.doesNotMatch(text, /agent owns rework|send "continue"|agent is working/i);
+      assert.match(text, /agent:/i, 'saved objections remain available before the turn starts');
+      assert.match(text, /\/glla status/);
+      assert.ok(rows.length <= maxWidgetLines, text);
+      assert.ok(rows.every(line => visibleWidth(line) <= width), text);
+    }
+  }
+  const active = { ...queued, evidence: { ...queued.evidence, turnQueued: false, turnActive: true } };
+  const text = buildWidgetLines(fixture(), undefined, NOW, undefined, 120, { uiStatusContext: active })!.join('\n');
+  assert.match(text, /you:.*agent owns rework/i);
+  assert.doesNotMatch(text, /saved; waiting|waiting for queued turn|send "continue"/i);
+});
+
 test('observed work and manual holds retain honest ownership rather than always requesting a restart', () => {
   const state = fixture();
   const live = { now: NOW, generation: 1, evidence: { ownerKey: 'goal:rework-owner', generation: 1, observedAt: NOW, session: 'open' as const, turnActive: true } };

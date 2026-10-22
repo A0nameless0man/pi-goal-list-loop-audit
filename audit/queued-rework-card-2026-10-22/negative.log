@@ -1,0 +1,49 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=288s heartbeat=30s
+[run-tests] host is 1.6x slower than an idle host — per-test budget raised to 192s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+.pi/queued-card-proof/tests/audit-rework-handoff.test.ts:
+(pass) notice selects actionable objections, assigns them to the agent, and leaves evidence in the full report [35.99ms]
+(pass) only final required corrections count, never quoted evidence bullets or an earlier verdict [9.48ms]
+(pass) required-fixes headings inside evidence or fenced quotes cannot replace the actual objections [1.34ms]
+(pass) a prose mention of the evidence tag cannot erase the required-fixes section [0.16ms]
+(pass) a required fix that asks for an evidence block is still projected [0.11ms]
+(pass) a real evidence block is still removed from the projection [0.09ms]
+(pass) cold-restore consent still hides audit objections on the new compact path [43.51ms]
+(pass) legacy escaped-line reports preserve objections without rewriting the stored input [4.21ms]
+(pass) unknown reports are not summarized from arbitrary evidence or invented objections [0.30ms]
+(pass) handoffs stay bounded and redact provider payloads even inside required fixes [17.67ms]
+(pass) compact rejection card offers recovery when start is unconfirmed, not a raw report or a false work claim [59.64ms]
+(pass) short terminal budgets retain the person's recovery action before report/task detail [9.78ms]
+(pass) a truncated objections field says it is truncated instead of reading as complete [15.84ms]
+187 |       const rows = buildWidgetLines(fixture(), undefined, NOW, undefined, width, { uiStatusContext: queued, compactAuditCard: true, maxWidgetLines })!;
+188 |       const text = rows.join('\n');
+189 |       assert.match(text, /QUEUED/);
+190 |       if (maxWidgetLines === 8) assert.match(text, /saved/i);
+191 |       assert.match(text, /you:.*no action needed/i);
+192 |       assert.match(text, /waiting/i);
+                   ^
+AssertionError: The input did not match the regular expression /waiting/i. Input:
+
+'● QUEUED · list item working\n' +
+  '├─ agent: Prove the parallel scout ru\x1B[0m…\x1B[0m\n' +
+  '├─ you: no action needed; agent owns …\n' +
+  '└─ more: /glla status'
+
+ generatedMessage: true,
+     actual: "● QUEUED · list item working\n├─ agent: Prove the parallel scout ru\u001b[0m…\u001b[0m\n├─ you: no action needed; agent owns …\n└─ more: /glla status",
+   expected: /waiting/i,
+   operator: "match",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/.pi/queued-card-proof/tests/audit-rework-handoff.test.ts:192:14
+      at fn (node:test:215:18)
+(fail) queued rework is saved and waiting, never presented as started work [5.20ms]
+(pass) observed work and manual holds retain honest ownership rather than always requesting a restart [4.65ms]
+
+ 14 pass
+ 1 fail
+Ran 15 tests across 1 file. [3.75s]
+[run-tests] failure diagnostics retained at /tmp/glla-test-processes-kCIJru/failure.json
+[run-tests] cleanup evidence retained at /tmp/glla-test-processes-kCIJru
+[run-tests] finished in 4s (exit 1)

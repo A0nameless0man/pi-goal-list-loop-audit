@@ -1667,11 +1667,15 @@ export function buildUiStatusCard(state: State, status: UiStatus, now: number, t
   const attention = g && g.status === 'active' ? activeAttention(g) : undefined;
   if (compact && attention?.rework && status.execution !== 'blocked' && status.execution !== 'dormant') {
     const rework = attention.rework;
-    rows.push(row('├─ ', `review: changes requested${rework.count ? ` · ${rework.count} corrections` : ''}`, 'warning'));
+    const queued = status.execution === 'queued';
+    const review = queued ? 'changes requested · saved; waiting for turn' : 'changes requested';
+    rows.push(row('├─ ', `review: ${review}${rework.count ? ` · ${rework.count} corrections` : ''}`, 'warning'));
     const budget = Math.max(1, width - WIDGET_HORIZONTAL_MARGIN - 3);
     const task = rework.items.join(' · ') || `Read the saved report before resubmitting${rework.redacted ? ' (provider diagnostic redacted)' : ''}`;
     wrap(`agent: ${task}`, budget, 2).forEach((line, i) => rows.push(row(i ? '│  ' : '├─ ', line, 'dim', true)));
-    const action = status.execution === 'unconfirmed' ? 'send "continue" here' : 'no action needed; agent owns rework';
+    const action = status.execution === 'unconfirmed' ? 'send "continue" here'
+      : queued ? 'no action needed; waiting for queued turn'
+      : 'no action needed; agent owns rework';
     wrap(`you: ${action}`, budget, 2).forEach((line, i) => rows.push(row(i ? '│  ' : '├─ ', line, 'dim', true)));
     rows.push(row('└─ ', 'details: /glla status'));
     return rows;

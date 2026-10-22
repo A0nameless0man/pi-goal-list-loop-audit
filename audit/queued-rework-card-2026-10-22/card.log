@@ -1,0 +1,51 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=324s heartbeat=30s
+[run-tests] host is 1.8x slower than an idle host — per-test budget raised to 216s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/ui-status-surfaces.test.ts:
+(pass) compact and detailed production adapters agree with the footer [57.61ms]
+(pass) saved audit is unconfirmed on both paths, never called dead or automatically applying [1.22ms]
+(pass) actual prerequisite precedes evidence and remains visible at narrow width [13.96ms]
+(pass) narrow footers reserve required commands before secondary context [6.65ms]
+(pass) persistence-hold footer preserves the inspection command after prerequisite prose [15.69ms]
+(pass) screenshot-shaped blocked glance keeps action first and diagnostics in detailed status [14.48ms]
+(pass) cohesive active card retains primary and fallback model context [1.20ms]
+(pass) terminal cards remove redundant phase and irrelevant worker uncertainty [42.04ms]
+(pass) simultaneous holds and workflow issues remain cohesive and bounded [3.10ms]
+(pass) narrow styled cards preserve uncertainty and clip ANSI by terminal cells [0.94ms]
+(pass) semantic warning color never replaces the text state [0.31ms]
+
+tests/audit-rework-handoff.test.ts:
+(pass) notice selects actionable objections, assigns them to the agent, and leaves evidence in the full report [11.10ms]
+(pass) only final required corrections count, never quoted evidence bullets or an earlier verdict [0.35ms]
+(pass) required-fixes headings inside evidence or fenced quotes cannot replace the actual objections [1.07ms]
+(pass) a prose mention of the evidence tag cannot erase the required-fixes section [0.21ms]
+(pass) a required fix that asks for an evidence block is still projected [0.11ms]
+(pass) a real evidence block is still removed from the projection [0.08ms]
+(pass) cold-restore consent still hides audit objections on the new compact path [4.03ms]
+(pass) legacy escaped-line reports preserve objections without rewriting the stored input [0.27ms]
+(pass) unknown reports are not summarized from arbitrary evidence or invented objections [0.28ms]
+(pass) handoffs stay bounded and redact provider payloads even inside required fixes [18.50ms]
+(pass) compact rejection card offers recovery when start is unconfirmed, not a raw report or a false work claim [22.81ms]
+(pass) short terminal budgets retain the person's recovery action before report/task detail [1.71ms]
+(pass) a truncated objections field says it is truncated instead of reading as complete [31.13ms]
+(pass) queued rework is saved and waiting, never presented as started work [50.53ms]
+(pass) observed work and manual holds retain honest ownership rather than always requesting a restart [12.03ms]
+
+tests/ui-status-projection.test.ts:
+(pass) scheduled external assessment requires current-owner heartbeat registration [217.89ms]
+(pass) unconfirmed saved checks keep a human time in compact and detailed cards [41.16ms]
+(pass) background activity is attributed to the owned dependency, not parent chat [0.44ms]
+(pass) saved active or auditing state never proves execution [0.93ms]
+(pass) saved deadline differs from attributed armed timer [0.62ms]
+(pass) replaced owner, generation, stale or future snapshots do not establish liveness [0.11ms]
+(pass) manual decision and supervisor holds outrank provider timers [0.12ms]
+(pass) silence does not prove death; independently observed closure does [0.40ms]
+(pass) in-budget tool is a wait and queued is not running [2.32ms]
+(pass) hourly-only timer does not advertise a regular saved deadline [0.10ms]
+(pass) terminal state outranks old observations; workflow issue survives independently [0.13ms]
+
+ 37 pass
+ 0 fail
+Ran 37 tests across 3 files. [6.17s]
+[run-tests] finished in 7s (exit 0)
