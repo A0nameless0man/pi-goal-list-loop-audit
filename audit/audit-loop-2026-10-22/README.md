@@ -59,3 +59,7 @@ Two older open decisions were also raised and answered on 2026-10-22:
 - [x] DECIDED: Queue a compatibility/release note explaining the corrected `pendingCompletion.leftOut` string schema; retain the runtime-correct schema.
 
 All three selected follow-ups are queued behind this audit. None was silently implemented as a FIX.
+
+### Rehearsal correction (2026-10-22)
+
+The existing canary finding above required a second correction: the first fix used the nonexistent `github.default_branch` context, which can resolve empty and restore dispatch-ref checkout. This is the same finding, not a new duplicate. The repository event context `github.event.repository.default_branch` is now used — fixed in 250a79b973417966cbd0ae55fa51cd1cc34fc6e6. The release-contract test rejects the old undefined property and accepts harmless expression whitespace; 17 tests pass with zero failures.

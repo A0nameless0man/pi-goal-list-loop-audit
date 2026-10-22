@@ -1149,3 +1149,7 @@ written here; nothing already listed was re-reported. Append-only.
 ## DECIDE findings (2026-10-22 pass)
 
 - [x] DECIDED: Decline unverifiable saved audit verdicts after a host crash and rerun the audit; chosen by user and queued with list_add (2026-10-22). Cost: a crash requires another audit attempt; benefit: recovery no longer accepts a verdict without its lost per-attempt authentication key. Target: extensions/goal-loop-auditor-process.ts:2109-2119. Live-path authentication remains protected by 51fc9a99f. No recovery behavior changed in this audit pass.
+
+### Rehearsal correction (2026-10-22)
+
+The existing canary finding above required a second correction: the first fix used the nonexistent `github.default_branch` context, which can resolve empty and restore dispatch-ref checkout. This is the same finding, not a new duplicate. The repository event context `github.event.repository.default_branch` is now used — fixed in 250a79b973417966cbd0ae55fa51cd1cc34fc6e6. The release-contract test rejects the old undefined property and accepts harmless expression whitespace; 17 tests pass with zero failures.
