@@ -25,6 +25,12 @@
   consistency check only (it is unkeyed, so anything that can write the job dir
   could recompute it); the auditor child runs with bash inside the audited
   project, so a forged `result.json` could previously end an audit.
+- Crash recovery now also fails closed: a saved verdict cannot settle a claim
+  without the launching process's in-memory key and a matching signature. After
+  that key is lost, recovery preserves the completion claim, implementation and
+  audit artifacts for a fresh audit instead of trusting a hash-consistent result.
+  Cold restore still holds execution for consent; an authorized resume reruns the
+  audit. Same-process recovery with a retained key still accepts valid signatures.
 - The auditor extension fence now keeps only specs inside the operator's own
   trees (the audited project and the pi agent dir). It used to keep any
   absolute existing path, so a tampered job dir could name an extension file

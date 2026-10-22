@@ -1,0 +1,45 @@
+diff --git a/extensions/goal-loop-auditor-process.ts b/extensions/goal-loop-auditor-process.ts
+index c997973ae..b73218de7 100644
+--- a/extensions/goal-loop-auditor-process.ts
++++ b/extensions/goal-loop-auditor-process.ts
+@@ -1522,6 +1522,12 @@ export function newVerdictKey(): string {
+  * authenticate a saved verdict — it declines and the audit re-runs. */
+ const verdictKeys = new Map<string, string>();
+ 
++/** Test-only: model an authenticated same-process launch for recovery fixtures.
++ * This does not persist or expose a live launch's key. */
++export function __testOnlyRememberVerdictKey(attemptId: string, key: string): void {
++  verdictKeys.set(attemptId, key);
++}
++
+ /** Test-only: forget a launch's verdict key. */
+ export function __testOnlyForgetVerdictKey(attemptId: string): void {
+   verdictKeys.delete(attemptId);
+@@ -2130,21 +2136,13 @@ export function readCompletedCompletionAudit(cwd: string, goal: Goal, strictChal
+     let progress: AuditorProgressFile | undefined;
+     try { progress = JSON.parse(readFileSync(path.join(dir, "progress.json"), "utf8")); } catch { /* result-only legacy job */ }
+     if (progress && (progress.protocolVersion !== PROTOCOL_VERSION || progress.attemptId !== name || progress.requestHash !== hash)) return reject("progress-mismatch");
+-    // v0.39.45 (audit 2026-10-22): the live verdict path requires an
+-    // AUTHENTICATED result (see the parent's poll loop). The crash-recovery
+-    // path cannot: the per-attempt verdict key lived in the dead parent's
+-    // memory and was never persisted (it must not be — anything in the
+-    // state root can be written by the auditor child, which runs with bash
+-    // inside the audited project). A reader that did not launch the attempt
+-    // therefore has no key and cannot authenticate a saved verdict. What
+-    // happens here is an operator-direction call (recorded as a DECIDE
+-    // finding in the 2026-10-22 audit): either this path keeps applying a
+-    // hash-consistent saved verdict (the audit does not re-run, and a
+-    // hostile auditor that survives a parent crash can forge that saved
+-    // verdict) or it declines the saved verdict and the audit re-runs.
++    // Request hashes only bind identity; they are not authentication.
++    // A fresh process has lost the launching parent's nonpersisted key:
++    // leave its claim and artifacts intact for a new authenticated audit.
+     const savedKey = verdictKeys.get(name);
+-    if (savedKey && typeof result.verdictMac === "string"
+-      && result.verdictMac !== verdictMacFor(result as unknown as Record<string, unknown>, savedKey)) {
++    if (!savedKey) return reject("verdict-key-unavailable");
++    if (typeof result.verdictMac !== "string"
++      || result.verdictMac !== verdictMacFor(result as unknown as Record<string, unknown>, savedKey)) {
+       return reject("verdict-mac");
+     }
+     const validated = validateCompletedAuditorResult({

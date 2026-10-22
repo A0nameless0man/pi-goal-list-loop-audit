@@ -1,0 +1,319 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=211s heartbeat=30s
+[run-tests] host is 1.2x slower than an idle host — per-test budget raised to 141s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+.pi/audit-recovery-proof/tests/completed-audit-recovery.test.ts:
+(pass) legacy parked claim without phase consumes saved approved on the first restore [376.15ms]
+(pass) legacy parked claim without phase consumes saved disapproved on the first restore [181.54ms]
+(pass) healthy host heartbeat reconciles an unarmed orphan: approved [418.62ms]
+(pass) healthy host heartbeat reconciles an unarmed orphan: disapproved [464.59ms]
+(pass) healthy host heartbeat reconciles an unarmed orphan: missing [367.60ms]
+(pass) heartbeat orphan recovery respects in-flight [704.83ms]
+(pass) heartbeat orphan recovery respects recent [395.31ms]
+(pass) heartbeat orphan recovery respects frozen [342.16ms]
+(pass) heartbeat orphan recovery respects cold-held [291.34ms]
+197 |     if (verdict === "approved") assert.ok(snapshots.some(p => p.round === 2), "real worker round identity survives transport snapshots");
+198 |     assert.ok(readCompletedCompletionAudit(cwd, g), "cached launching key authenticates the real worker");
+199 |     const savedDir = path.join(cwd, ".pi-glla", "audit-jobs", "saved-claim-real-worker");
+200 |     const savedBytes = fs.readFileSync(path.join(savedDir, "result.json"), "utf8");
+201 |     __testOnlyForgetVerdictKey("saved-claim-real-worker");
+202 |     assert.equal(readCompletedCompletionAudit(cwd, g), null, "a signed verdict is not trustworthy without its key");
+                 ^
+AssertionError: a signed verdict is not trustworthy without its key
++ actual - expected
+
++ {
++   durationMs: 794,
++   jobAttemptId: 'saved-claim-real-worker',
++   result: {
++     approved: true,
++     challenge: 'confirmed',
++     disapproved: false,
++     goalRevision: {
++       goalId: 'test-1792692815695-t8783p',
++       revision: 0
++     },
++     model: 'test/model',
++     output: '<evidence>\n' +
++       'artifact exists\n' +
++       '</evidence>\n' +
++       '<approved/>\n' +
++       '\n' +
++       '--- auditor challenge round (falsification pass) ---\n' +
++       '\n' +
++       '<evidence>\n' +
++       'artifact exists\n' +
++       '</evidence>\n' +
++       '<approved/>',
++     regressionShieldPassed: true,
++     thinkingLevel: 'off'
++   },
++   startedAt: 1792692815786
++ }
+- null
+
+ generatedMessage: false,
+     actual: {
+  result: [Object ...],
+  jobAttemptId: "saved-claim-real-worker",
+  startedAt: 1792692815786,
+  durationMs: 794,
+},
+   expected: null,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/.pi/audit-recovery-proof/tests/completed-audit-recovery.test.ts:202:12
+      at processTicksAndRejections (native:7:39)
+(fail) finished real worker, lost parent: saved approved is declined and authorized resume re-audits [2523.20ms]
+197 |     if (verdict === "approved") assert.ok(snapshots.some(p => p.round === 2), "real worker round identity survives transport snapshots");
+198 |     assert.ok(readCompletedCompletionAudit(cwd, g), "cached launching key authenticates the real worker");
+199 |     const savedDir = path.join(cwd, ".pi-glla", "audit-jobs", "saved-claim-real-worker");
+200 |     const savedBytes = fs.readFileSync(path.join(savedDir, "result.json"), "utf8");
+201 |     __testOnlyForgetVerdictKey("saved-claim-real-worker");
+202 |     assert.equal(readCompletedCompletionAudit(cwd, g), null, "a signed verdict is not trustworthy without its key");
+                 ^
+AssertionError: a signed verdict is not trustworthy without its key
++ actual - expected
+
++ {
++   durationMs: 277,
++   jobAttemptId: 'saved-claim-real-worker',
++   result: {
++     approved: false,
++     challenge: 'not-applicable',
++     disapproved: true,
++     goalRevision: {
++       goalId: 'test-1792692818179-llxp50',
++       revision: 0
++     },
++     impossible: false,
++     impossibleReason: undefined,
++     model: 'test/model',
++     output: '<evidence>\nartifact exists\n</evidence>\n<disapproved/>',
++     thinkingLevel: 'off'
++   },
++   startedAt: 1792692818179
++ }
+- null
+
+ generatedMessage: false,
+     actual: {
+  result: [Object ...],
+  jobAttemptId: "saved-claim-real-worker",
+  startedAt: 1792692818179,
+  durationMs: 277,
+},
+   expected: null,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/.pi/audit-recovery-proof/tests/completed-audit-recovery.test.ts:202:12
+      at processTicksAndRejections (native:7:39)
+(fail) finished real worker, lost parent: saved disapproved is declined and authorized resume re-audits [1178.53ms]
+(pass) manual resume consumes a completed parked claim instead of launching another auditor [388.12ms]
+(pass) agent resume consumes a completed parked claim instead of launching another auditor [407.06ms]
+(pass) silent file-backed successor applies a finished verdict from the dead generation [613.67ms]
+284 |     const cwd = tmpCwd(), g = goal(); seedState(cwd, { goal: g });
+285 |     const saved = job(cwd, g, { output: `artifact inspected\n<${verdict}/>` });
+286 |     const beforeGoal = JSON.stringify(g), beforeDisk = JSON.stringify(readState(cwd).goal);
+287 |     const beforeResult = fs.readFileSync(path.join(saved.dir, 'result.json'), 'utf8');
+288 |     __testOnlyForgetVerdictKey(saved.request.attemptId);
+289 |     assert.equal(readCompletedCompletionAudit(cwd, g), null);
+                 ^
+AssertionError: Expected values to be strictly equal:
++ actual - expected
+
++ {
++   durationMs: 2000.83251953125,
++   jobAttemptId: 'saved-claim-physical',
++   result: {
++     approved: true,
++     challenge: 'confirmed',
++     disapproved: false,
++     goalRevision: {
++       goalId: 'test-1792692820767-jaya6u',
++       revision: 0
++     },
++     model: 'test/model',
++     output: 'artifact inspected\n<approved/>',
++     regressionShieldMissing: [
++       'artifact exists'
++     ],
++     regressionShieldPassed: false,
++     thinkingLevel: 'off'
++   },
++   startedAt: 1792692818767
++ }
+- null
+
+ generatedMessage: true,
+     actual: {
+  result: [Object ...],
+  jobAttemptId: "saved-claim-physical",
+  startedAt: 1792692818767,
+  durationMs: 2000.83251953125,
+},
+   expected: null,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/.pi/audit-recovery-proof/tests/completed-audit-recovery.test.ts:289:12
+      at fn (node:test:215:18)
+(fail) lost key declines saved approved without changing claim or artifacts [16.51ms]
+284 |     const cwd = tmpCwd(), g = goal(); seedState(cwd, { goal: g });
+285 |     const saved = job(cwd, g, { output: `artifact inspected\n<${verdict}/>` });
+286 |     const beforeGoal = JSON.stringify(g), beforeDisk = JSON.stringify(readState(cwd).goal);
+287 |     const beforeResult = fs.readFileSync(path.join(saved.dir, 'result.json'), 'utf8');
+288 |     __testOnlyForgetVerdictKey(saved.request.attemptId);
+289 |     assert.equal(readCompletedCompletionAudit(cwd, g), null);
+                 ^
+AssertionError: Expected values to be strictly equal:
++ actual - expected
+
++ {
++   durationMs: 2000.832763671875,
++   jobAttemptId: 'saved-claim-physical',
++   result: {
++     approved: false,
++     challenge: 'confirmed',
++     disapproved: true,
++     goalRevision: {
++       goalId: 'test-1792692820783-tc5llc',
++       revision: 0
++     },
++     impossible: false,
++     impossibleReason: undefined,
++     model: 'test/model',
++     output: 'artifact inspected\n<disapproved/>',
++     thinkingLevel: 'off'
++   },
++   startedAt: 1792692818784
++ }
+- null
+
+ generatedMessage: true,
+     actual: {
+  result: [Object ...],
+  jobAttemptId: "saved-claim-physical",
+  startedAt: 1792692818784,
+  durationMs: 2000.832763671875,
+},
+   expected: null,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/.pi/audit-recovery-proof/tests/completed-audit-recovery.test.ts:289:12
+      at fn (node:test:215:18)
+(fail) lost key declines saved disapproved without changing claim or artifacts [3.33ms]
+289 |     assert.equal(readCompletedCompletionAudit(cwd, g), null);
+290 |     assert.equal(JSON.stringify(g), beforeGoal);
+291 |     assert.equal(JSON.stringify(readState(cwd).goal), beforeDisk);
+292 |     assert.equal(fs.readFileSync(path.join(saved.dir, 'result.json'), 'utf8'), beforeResult);
+293 |     assert.equal(fs.existsSync(archivedGoalPath(cwd, g.id)), false);
+294 |     assert.equal(events(cwd).at(-1)?.value.gate, 'verdict-key-unavailable');
+                 ^
+AssertionError: Expected values to be strictly equal:
++ actual - expected
+
++ 'no-verdict'
+- 'verdict-key-unavailable'
+
+ generatedMessage: true,
+     actual: "no-verdict",
+   expected: "verdict-key-unavailable",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/.pi/audit-recovery-proof/tests/completed-audit-recovery.test.ts:294:12
+      at fn (node:test:215:18)
+(fail) lost key declines saved impossible without changing claim or artifacts [64.17ms]
+302 |     const result = JSON.parse(fs.readFileSync(path.join(saved.dir, 'result.json'), 'utf8'));
+303 |     if (tamper === 'missing-mac') delete result.verdictMac;
+304 |     if (tamper === 'wrong-mac') result.verdictMac = 'forged';
+305 |     if (tamper === 'changed-output') result.output = 'forged objections\n<disapproved/>';
+306 |     fs.writeFileSync(path.join(saved.dir, 'result.json'), JSON.stringify(result));
+307 |     assert.equal(readCompletedCompletionAudit(cwd, g), null);
+                 ^
+AssertionError: Expected values to be strictly equal:
++ actual - expected
+
++ {
++   durationMs: 2007.833984375,
++   jobAttemptId: 'saved-claim-physical',
++   result: {
++     approved: true,
++     challenge: 'confirmed',
++     disapproved: false,
++     goalRevision: {
++       goalId: 'test-1792692820851-aah6po',
++       revision: 0
++     },
++     model: 'test/model',
++     output: '<evidence>\nartifact exists\n</evidence>\n<approved/>',
++     regressionShieldPassed: true,
++     thinkingLevel: 'off'
++   },
++   startedAt: 1792692818851
++ }
+- null
+
+ generatedMessage: true,
+     actual: {
+  result: [Object ...],
+  jobAttemptId: "saved-claim-physical",
+  startedAt: 1792692818851,
+  durationMs: 2007.833984375,
+},
+   expected: null,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/.pi/audit-recovery-proof/tests/completed-audit-recovery.test.ts:307:12
+      at fn (node:test:215:18)
+(fail) cached key rejects missing-mac rather than trusting request hashes [22.65ms]
+(pass) cached key rejects wrong-mac rather than trusting request hashes [13.33ms]
+(pass) cached key rejects changed-output rather than trusting request hashes [23.16ms]
+(pass) legacy completed jobs bind the original goal, contract, and claim without new metadata [30.51ms]
+(pass) newer unfinished candidate prevents replay of an older completed result [20.83ms]
+(pass) saved result refuses unsafe recovery: revision [6.56ms]
+(pass) saved result refuses unsafe recovery: claim [2.87ms]
+(pass) saved result refuses unsafe recovery: structured-claim [11.87ms]
+(pass) saved result refuses unsafe recovery: hash [7.83ms]
+(pass) saved result refuses unsafe recovery: result-identity [6.69ms]
+(pass) saved result refuses unsafe recovery: cancelled-tool [9.75ms]
+(pass) saved result refuses unsafe recovery: strict-challenge [11.26ms]
+(pass) saved result refuses unsafe recovery: unsupported-tool [4.95ms]
+(pass) corrupt final progress identity refuses recovery without consuming the claim [15.45ms]
+(pass) saved approval still enforces the audit-tool floor and regression shield [1.81ms]
+(pass) second audit pass remains visible through thinking, tools, and report generation [17.36ms]
+(pass) days-old auditing orphan with a saved verdict recovers via heartbeat (SEO field case) [460.65ms]
+(pass) workerless in-flight claim with a saved verdict reconciles without launching [469.90ms]
+(pass) S5: workerless in-flight claim parks under the stale latch via stale-latch-workerless [427.47ms]
+(pass) workerless in-flight claim without a verdict parks via workerless-in-flight [304.25ms]
+(pass) auditorWorkerLiveForAttempt: only a matching live worker counts [135.14ms]
+(pass) unreadable saved transcript returns null but ledgers the reason [4.84ms]
+(pass) workerProcessMatches darwin branch reads identity via ps [2058.68ms]
+(pass) auditing claim stuck in starting with no worker parks for recovery via heartbeat [328.19ms]
+(pass) S7: stranded recovery measures real activity, not the heartbeat's own refire notes [288.02ms]
+(pass) workerless park releases only the interrupted candidate (legacy clean-web cursor) [320.64ms]
+(pass) reconcile names its rejecting gate in the ledger [33.76ms]
+(pass) durable fallback survives recovery: contextFree=false, retryStarted=false [342.19ms]
+(pass) durable fallback survives recovery: contextFree=false, retryStarted=true [226.53ms]
+(pass) durable fallback survives recovery: contextFree=true, retryStarted=false [228.60ms]
+(pass) durable fallback survives recovery: contextFree=true, retryStarted=true [320.62ms]
+
+6 tests failed:
+(fail) finished real worker, lost parent: saved approved is declined and authorized resume re-audits [2523.20ms]
+(fail) finished real worker, lost parent: saved disapproved is declined and authorized resume re-audits [1178.53ms]
+(fail) lost key declines saved approved without changing claim or artifacts [16.51ms]
+(fail) lost key declines saved disapproved without changing claim or artifacts [3.33ms]
+(fail) lost key declines saved impossible without changing claim or artifacts [64.17ms]
+(fail) cached key rejects missing-mac rather than trusting request hashes [22.65ms]
+
+ 42 pass
+ 6 fail
+Ran 48 tests across 1 file. [16.53s]
+[run-tests] failure diagnostics retained at /tmp/glla-test-processes-ZzHwBC/failure.json
+[run-tests] cleanup evidence retained at /tmp/glla-test-processes-ZzHwBC
+[run-tests] finished in 18s (exit 1)

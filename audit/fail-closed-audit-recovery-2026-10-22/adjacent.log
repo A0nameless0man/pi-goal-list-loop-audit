@@ -1,0 +1,53 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=253s heartbeat=30s
+[run-tests] host is 1.4x slower than an idle host — per-test budget raised to 169s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/respec-builder-audit-runtime.test.ts:
+(pass) a stale audit wake does not resolve a model or launch a worker [5441.57ms]
+(pass) a time bound cancels an in-flight worker and retains unfinished requirements [128.72ms]
+(pass) real detached protocol approval archives the intended project before terminal handoff [3178.26ms]
+(pass) real detached disapproval carries findings into a durable unfinished next cycle [1481.73ms]
+(pass) a semantic approval rejected by the regression shield reports needs work [127.40ms]
+(pass) completed job is recovered after reloading an unsettled claim without another spawn [589.88ms]
+(pass) pausing during an actual worker run prevents late approval from settling the project [157.32ms]
+(pass) archive failure preserves approval evidence for settlement retry instead of launching another audit [859.22ms]
+(pass) concurrent wake paths dispatch only one worker for the exact durable claim [483.45ms]
+(pass) respec uses the shared bounded retry/fallback policy and journals its candidate cursor [680.33ms]
+(pass) an exhausted token bound holds the project before spawning an auditor or claiming completion [80.70ms]
+(pass) actual project lifecycle reaches detached verification through agent_end [2054.88ms]
+(pass) actual project lifecycle reaches detached verification through /glla resume of a stalled audit [2478.32ms]
+(pass) terminal summary delivery failure preserves a replayable durable summary [377.84ms]
+(pass) a failed builder journal commit restores the complete prior RAM state [3.53ms]
+(pass) a supervisor freeze prevents a new project audit dispatch [1.44ms]
+(pass) rapid pause/resume discards the cancelled worker result and rearms the saved claim [915.34ms]
+(pass) an undelivered project summary survives replacement by a new project [290.57ms]
+(pass) freezing supervision between auditor attempts prevents retry and fallback dispatch [356.83ms]
+(pass) a corrupt summary outbox prevents terminal handoff and retains approved job evidence [236.50ms]
+(pass) project audit preserves live tool deadline and attempt clock through the real worker bridge [513.56ms]
+[run-tests] progress: 30s elapsed · 5s since last output · 2 KiB of suite output
+(pass) project adapter survives 2105 paced infrastructure episodes then a real worker recovers [7952.23ms]
+(pass) project retry admission rolls back on refusal and honors freeze, stop, bounds and ownership [6.85ms]
+(pass) real project restore cold obeys consent, due and exact timer ownership [282.86ms]
+(pass) real project restore pre-due obeys consent, due and exact timer ownership [116.03ms]
+(pass) real project restore overdue obeys consent, due and exact timer ownership [106.73ms]
+(pass) real project restore legacy obeys consent, due and exact timer ownership [66.62ms]
+(pass) real project restore legacy-cold obeys consent, due and exact timer ownership [53.20ms]
+(pass) real project restore user-stop obeys consent, due and exact timer ownership [141.61ms]
+(pass) legacy infrastructure-held project resumes, reloads a paced timeout retry, and honors /loop pause [3265.53ms]
+(pass) legacy infrastructure-held project resumes, reloads a paced timeout retry, and honors /loop cancel [2340.63ms]
+(pass) exhausted finite worker chain resets only at the next due admitted episode [2740.15ms]
+(pass) real stalled detached workers automatically journal a paced timeout episode [870.13ms]
+(pass) project retry causes survive actual journal reload and production recovery UI without credentials [6.62ms]
+
+tests/audit-recovery-persistence.test.ts:
+(pass) context-free audit recovery returns false and leaves restart state auditing when append fails [220.20ms]
+
+tests/load-hold-release.test.ts:
+(pass) no hold means nothing is released and nothing is claimed [11.92ms]
+(pass) a hold that lands durably is released, journalled and announced [17.94ms]
+(pass) a hold whose release cannot land stays held and is not claimed [0.20ms]
+
+ 38 pass
+ 0 fail
+Ran 38 tests across 3 files. [45.84s]
+[run-tests] finished in 46s (exit 0)

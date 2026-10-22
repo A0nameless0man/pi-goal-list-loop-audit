@@ -11,7 +11,7 @@ import { __testOnlyHeartbeatTick } from "../extensions/goal-heartbeat.js";
 import { __testOnlyResetAuditorSurface } from "../extensions/loops/goal-auditor-surface.js";
 import { archivedGoalPath, readState, type Goal, type State } from "../extensions/goal-loop-core.js";
 import { buildWidgetLines, buildStatusText } from "../extensions/goal-loop-display.js";
-import { auditorWorkerLiveForAttempt, completionAuditRecoveryIdentity, requestHash, readCompletedCompletionAudit, runDetachedGoalCompletionAuditor, buildGoalAuditorPrompt, workerProcessMatches } from "../extensions/goal-loop-auditor-process.js";
+import { __testOnlyRememberVerdictKey, __testOnlyForgetVerdictKey, newVerdictKey, verdictMacFor, auditorWorkerLiveForAttempt, completionAuditRecoveryIdentity, requestHash, readCompletedCompletionAudit, runDetachedGoalCompletionAuditor, buildGoalAuditorPrompt, workerProcessMatches } from "../extensions/goal-loop-auditor-process.js";
 import { MockPi, makeMockCtx, invalidateHostSession, seedGoal, seedState, tick, tmpCwd } from "./harness/mock-pi.js";
 import { untilMs } from "./harness/host-budget.js";
 
@@ -48,6 +48,13 @@ function goal(): Goal {
     pendingCompletion: { at: new Date(Date.now() - 5000).toISOString(), phase: "running", attemptId: "saved-claim", completionSummary: "artifact delivered", verificationSummary: "artifact exists" },
   }) as unknown as Goal;
 }
+// These fixtures model session/owner recovery within the launching process:
+// its key is retained. Actual process loss is exercised with a real worker below.
+const fixtureKey = newVerdictKey();
+const fixtureAttempts = new Set<string>();
+function writeResult(dir: string, result: Record<string, unknown>): void {
+  fs.writeFileSync(path.join(dir, "result.json"), JSON.stringify({ ...result, verdictMac: verdictMacFor(result, fixtureKey) }));
+}
 function job(cwd: string, g: Goal, options: { name?: string; at?: number; output?: string; legacy?: boolean; result?: boolean; extra?: Record<string, unknown> } = {}) {
   const name = options.name ?? "saved-claim-physical";
   const dir = path.join(cwd, ".pi-glla", "audit-jobs", name);
@@ -64,7 +71,9 @@ function job(cwd: string, g: Goal, options: { name?: string; at?: number; output
     toolCalls: [{ name: "read", argsPrefix: "artifact", finishedAt: Date.now() - 1000 }], challenge: "confirmed", ...options.extra,
   };
   fs.writeFileSync(path.join(dir, "request.json"), JSON.stringify(request));
-  if (options.result !== false) fs.writeFileSync(path.join(dir, "result.json"), JSON.stringify(result));
+  __testOnlyRememberVerdictKey(name, fixtureKey);
+  fixtureAttempts.add(name);
+  if (options.result !== false) writeResult(dir, result);
   return { dir, request, result };
 }
 function events(cwd: string) {
@@ -75,7 +84,11 @@ async function boot(pi: MockPi, cwd: string) {
   const ctx = makeMockCtx(cwd, { sessionManager: { name: `completed-result-${Math.random()}` } });
   await pi.fire("session_start", { reason: "startup" }, ctx); await tick(120); return ctx;
 }
-afterEach(() => { __testOnlyResetAuditorSurface(); __testOnlyResetOwnerSession(); __testOnlyResetStaleFlag(); });
+afterEach(() => {
+  for (const name of fixtureAttempts) __testOnlyForgetVerdictKey(name);
+  fixtureAttempts.clear();
+  __testOnlyResetAuditorSurface(); __testOnlyResetOwnerSession(); __testOnlyResetStaleFlag();
+});
 
 for (const verdict of ["approved", "disapproved"] as const) {
   test(`legacy parked claim without phase consumes saved ${verdict} on the first restore`, async () => {
@@ -163,11 +176,15 @@ for (const guard of ["in-flight", "recent", "frozen", "cold-held"] as const) {
   });
 }
 
-// Real detached worker publishes its result; deliberately omit the parent
-// application, then restore from durable state in a new session.
+// Real detached worker publishes a signed result. Lose the launching key,
+// omit settlement and restore: only a fresh authenticated audit may settle it.
 for (const verdict of ["approved", "disapproved"] as const) {
-  test(`finished real worker, lost parent: restart applies ${verdict} exactly once without re-auditing`, async () => {
-    const cwd = tmpCwd(), g = goal(); seedState(cwd, { goal: g });
+  test(`finished real worker, lost parent: saved ${verdict} is declined and authorized resume re-audits`, async () => {
+    const cwd = tmpCwd(), g = goal();
+    g.taskList = { version: 1, tasks: [{ id: '1', title: 'Preserved implementation', status: 'complete' }] };
+    const queued = [{ id: 'follow-up', objective: 'Keep queued work', addedAt: new Date().toISOString() }];
+    seedState(cwd, { goal: g, list: queued });
+    fs.writeFileSync(path.join(cwd, 'artifact'), 'preserved implementation bytes');
     const fakePi = path.join(cwd, "fake-pi.mjs");
     fs.writeFileSync(fakePi, `#!/usr/bin/env node\nlet input=''; process.stdin.on('data',chunk=>{ input+=chunk; if(!input.includes('\\n'))return; const emit=e=>process.stdout.write(JSON.stringify(e)+'\\n'); emit({type:'tool_execution_start',toolName:'read',toolCallId:'one',args:{path:'artifact'}}); emit({type:'tool_execution_end',toolName:'read',toolCallId:'one'}); emit({type:'message_update',assistantMessageEvent:{type:'text_delta',delta:'<evidence>\\nartifact exists\\n</evidence>\\n<${verdict}/>'}}); emit({type:'agent_settled'}); });`, { mode: 0o700 });
     const snapshots: Array<{ round?: 1 | 2; phase: string }> = [];
@@ -178,22 +195,52 @@ for (const verdict of ["approved", "disapproved"] as const) {
     });
     assert.equal(result[verdict], true, result.error ?? "worker verdict");
     if (verdict === "approved") assert.ok(snapshots.some(p => p.round === 2), "real worker round identity survives transport snapshots");
-    assert.ok(readCompletedCompletionAudit(cwd, g), "the result is durable before any parent applies it");
+    assert.ok(readCompletedCompletionAudit(cwd, g), "cached launching key authenticates the real worker");
+    const savedDir = path.join(cwd, ".pi-glla", "audit-jobs", "saved-claim-real-worker");
+    const savedBytes = fs.readFileSync(path.join(savedDir, "result.json"), "utf8");
+    __testOnlyForgetVerdictKey("saved-claim-real-worker");
+    assert.equal(readCompletedCompletionAudit(cwd, g), null, "a signed verdict is not trustworthy without its key");
+    assert.ok(events(cwd).some(e => e.type === "completed_audit_recovery_rejected" && e.value.gate === "verdict-key-unavailable"));
     const pi = new MockPi(); activate(pi.api); let ctx = await boot(pi, cwd);
+    const previousBinary = process.env.GLLA_PI_BINARY;
     try {
-      assert.equal(readState(cwd).goal?.pendingCompletion, undefined, "the orphaned claim is consumed");
-      assert.equal(events(cwd).filter(e => e.type === "audit_completed_result_recovered").length, 1);
-      assert.equal(events(cwd).filter(e => e.type === "audit_started").length, 0, "no replacement worker launches");
-      if (verdict === "approved") assert.ok(fs.existsSync(archivedGoalPath(cwd, g.id)), `approval passes the normal archive settlement: ${JSON.stringify({ state: readState(cwd), notices: ctx.ui.notifies })}`);
-      else {
-        assert.equal(readState(cwd).goal?.auditHistory?.at(-1)?.disapproved, true, "disapproval reaches the normal history/rework path");
-        assert.equal(readState(cwd).goal?.status, "paused", "cold restore holds rework for consent");
-        assert.equal(pi.sent.length, 0, "recovering a verdict is not permission to dispatch executor work");
-      }
+      const restored = readState(cwd).goal!;
+      assert.equal(restored.status, "paused", "cold restore holds execution for consent");
+      assert.equal(restored.pendingCompletion?.completionSummary, g.pendingCompletion!.completionSummary);
+      assert.equal(restored.pendingCompletion?.verificationSummary, g.pendingCompletion!.verificationSummary);
+      assert.equal(restored.objective, g.objective);
+      assert.deepEqual(restored.taskList, g.taskList);
+      assert.deepEqual(readState(cwd).list, queued);
+      assert.equal(fs.readFileSync(path.join(cwd, 'artifact'), 'utf8'), 'preserved implementation bytes');
+      assert.equal(restored.auditHistory?.length ?? 0, 0);
+      assert.equal(fs.existsSync(archivedGoalPath(cwd, g.id)), false);
+      assert.equal(fs.readFileSync(path.join(savedDir, "result.json"), "utf8"), savedBytes);
+      assert.equal(pi.sent.length, 0, "declining a saved verdict does not authorize executor dispatch");
       await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
       ctx = await boot(pi, cwd);
-      assert.equal(events(cwd).filter(e => e.type === "audit_completed_result_recovered").length, 1, "repeated restore cannot replay the verdict");
-    } finally { await pi.fire("session_shutdown", { reason: "test-end" }, ctx); }
+      assert.equal(events(cwd).filter(e => e.type === "audit_completed_result_recovered").length, 0);
+      assert.equal(events(cwd).filter(e => e.type === "audit_started").length, 0);
+      // The replacement returns the OPPOSITE verdict: only fresh evidence wins.
+      const freshVerdict = verdict === "approved" ? "disapproved" : "approved";
+      fs.writeFileSync(fakePi, fs.readFileSync(fakePi, "utf8").replace(`<${verdict}/>`, `<${freshVerdict}/>`));
+      process.env.GLLA_PI_BINARY = fakePi;
+      if (verdict === "approved") await pi.command("goal", "resume", ctx);
+      else await pi.runTool("resume_goal", { reason: "rerun the preserved completion audit" }, ctx);
+      const deadline = untilMs(30_000);
+      while (readState(cwd).goal?.pendingCompletion && Date.now() < deadline) await tick(50);
+      assert.equal(readState(cwd).goal?.pendingCompletion, undefined, JSON.stringify({ state: readState(cwd), notices: ctx.ui.notifies }));
+      assert.equal(events(cwd).filter(e => e.type === "audit_started").length, 1, "authorized resume launches a fresh audit");
+      assert.equal(events(cwd).filter(e => e.type === "audit_completed_result_recovered").length, 0);
+      if (freshVerdict === "approved") assert.ok(fs.existsSync(archivedGoalPath(cwd, g.id)));
+      else assert.equal(readState(cwd).goal?.auditHistory?.at(-1)?.disapproved, true);
+      assert.equal(fs.readFileSync(path.join(savedDir, "result.json"), "utf8"), savedBytes, "prior artifacts survive re-audit");
+      assert.equal(fs.readFileSync(path.join(cwd, 'artifact'), 'utf8'), 'preserved implementation bytes');
+    } finally {
+      if (previousBinary === undefined) delete process.env.GLLA_PI_BINARY;
+      else process.env.GLLA_PI_BINARY = previousBinary;
+      __testOnlyForgetVerdictKey("saved-claim-real-worker");
+      await pi.fire("session_shutdown", { reason: "test-end" }, ctx);
+    }
   });
 }
 
@@ -232,6 +279,37 @@ test("silent file-backed successor applies a finished verdict from the dead gene
   } finally { await pi.fire("session_shutdown", { reason: "test-end" }, successor); }
 });
 
+for (const verdict of ['approved', 'disapproved', 'impossible'] as const) {
+  test(`lost key declines saved ${verdict} without changing claim or artifacts`, () => {
+    const cwd = tmpCwd(), g = goal(); seedState(cwd, { goal: g });
+    const saved = job(cwd, g, { output: `artifact inspected\n<${verdict}/>` });
+    const beforeGoal = JSON.stringify(g), beforeDisk = JSON.stringify(readState(cwd).goal);
+    const beforeResult = fs.readFileSync(path.join(saved.dir, 'result.json'), 'utf8');
+    __testOnlyForgetVerdictKey(saved.request.attemptId);
+    assert.equal(readCompletedCompletionAudit(cwd, g), null);
+    assert.equal(JSON.stringify(g), beforeGoal);
+    assert.equal(JSON.stringify(readState(cwd).goal), beforeDisk);
+    assert.equal(fs.readFileSync(path.join(saved.dir, 'result.json'), 'utf8'), beforeResult);
+    assert.equal(fs.existsSync(archivedGoalPath(cwd, g.id)), false);
+    assert.equal(events(cwd).at(-1)?.value.gate, 'verdict-key-unavailable');
+  });
+}
+
+for (const tamper of ['missing-mac', 'wrong-mac', 'changed-output'] as const) {
+  test(`cached key rejects ${tamper} rather than trusting request hashes`, () => {
+    const cwd = tmpCwd(), g = goal(); seedState(cwd, { goal: g });
+    const saved = job(cwd, g);
+    const result = JSON.parse(fs.readFileSync(path.join(saved.dir, 'result.json'), 'utf8'));
+    if (tamper === 'missing-mac') delete result.verdictMac;
+    if (tamper === 'wrong-mac') result.verdictMac = 'forged';
+    if (tamper === 'changed-output') result.output = 'forged objections\n<disapproved/>';
+    fs.writeFileSync(path.join(saved.dir, 'result.json'), JSON.stringify(result));
+    assert.equal(readCompletedCompletionAudit(cwd, g), null);
+    assert.equal(events(cwd).at(-1)?.value.gate, 'verdict-mac');
+    assert.equal(g.pendingCompletion?.attemptId, 'saved-claim');
+  });
+}
+
 test("legacy completed jobs bind the original goal, contract, and claim without new metadata", () => {
   const cwd = tmpCwd(), g = goal(); job(cwd, g, { legacy: true, output: "missing artifact\n<disapproved/>" });
   assert.equal(readCompletedCompletionAudit(cwd, g)?.result.disapproved, true);
@@ -256,7 +334,7 @@ for (const change of ["revision", "claim", "structured-claim", "hash", "result-i
     if (change === "cancelled-tool") Object.assign(saved.result, { verificationIncomplete: true });
     if (change === "strict-challenge") saved.result.challenge = "skipped: failure";
     if (change === "unsupported-tool") saved.result.toolCalls[0]!.name = "write";
-    fs.writeFileSync(path.join(saved.dir, "result.json"), JSON.stringify(saved.result));
+    writeResult(saved.dir, saved.result);
     assert.equal(readCompletedCompletionAudit(cwd, g, change === "strict-challenge"), null);
   });
 }
@@ -271,7 +349,7 @@ test("corrupt final progress identity refuses recovery without consuming the cla
 test("saved approval still enforces the audit-tool floor and regression shield", () => {
   const cwd = tmpCwd(), g = goal(); const saved = job(cwd, g, { extra: { toolCalls: [] } });
   assert.equal(readCompletedCompletionAudit(cwd, g)?.result.approved, false);
-  fs.writeFileSync(path.join(saved.dir, "result.json"), JSON.stringify({ ...saved.result, toolCalls: [{ name: "read", argsPrefix: "artifact", finishedAt: 1 }], output: "looks good\n<approved/>" }));
+  writeResult(saved.dir, { ...saved.result, toolCalls: [{ name: "read", argsPrefix: "artifact", finishedAt: 1 }], output: "looks good\n<approved/>" });
   assert.equal(readCompletedCompletionAudit(cwd, g)?.result.regressionShieldPassed, false);
 });
 
