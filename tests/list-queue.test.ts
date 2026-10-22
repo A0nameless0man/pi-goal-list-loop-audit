@@ -151,7 +151,13 @@ test("v0.28.28: goal provenance — setGoal threads `via` into the record + goal
   const TOOLS = fs.readFileSync("extensions/loops/goal-tools.ts", "utf-8");
   assert.match(SRC, /function setGoal\(goal: Goal, ctx: ExtensionContext, via = "user"\): boolean/);
   assert.match(SRC, /goal\.createdVia = via;/);
-  assert.match(SRC, /"goal_created", \{ goalId: goal\.id, objective: goal\.objective, policy: goal\.policy, via \}/);
+  // The provenance pin: `via` must be threaded into the goal_created row.
+  // The row also carries `persisted` (v0.39.45: the journal states whether
+  // the state line landed), so the shape is asserted field by field instead
+  // of as one exact literal — a dropped `via` or a dropped `persisted` still
+  // fails, while an added field does not.
+  assert.match(SRC, /"goal_created", \{[^}]*\bvia\b[^}]*\}/, "the goal_created row carries `via`");
+  assert.match(SRC, /"goal_created", \{[^}]*persisted: stateLanded[^}]*\}/, "the goal_created row states whether the state line landed");
   assert.match(QUEUE, /setGoal\(goal, ctx, "list-cascade"\)/);
   assert.match(TOOLS, /setGoal\(goal, liveCtx, autoAccept \? "draft-autoaccepted" : "draft-confirmed"\)/);
   const CORE = fs.readFileSync("extensions/goal-loop-core.ts", "utf-8");
