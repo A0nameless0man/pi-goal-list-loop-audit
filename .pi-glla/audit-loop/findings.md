@@ -1153,3 +1153,9 @@ written here; nothing already listed was re-reported. Append-only.
 ### Rehearsal correction (2026-10-22)
 
 The existing canary finding above required a second correction: the first fix used the nonexistent `github.default_branch` context, which can resolve empty and restore dispatch-ref checkout. This is the same finding, not a new duplicate. The repository event context `github.event.repository.default_branch` is now used — fixed in 250a79b973417966cbd0ae55fa51cd1cc34fc6e6. The release-contract test rejects the old undefined property and accepts harmless expression whitespace; 17 tests pass with zero failures.
+
+### Corrective parallel scout assessment (same pass)
+
+- [ ] FIX: MEDIUM: selecting session inheritance for a subagent thinking pin removes only its owning scope, so a project pin deletion reveals the same role's global pin instead of inheriting the session (extensions/loops/goal-settings-ui.ts:1225; extensions/goal-settings.ts:943-946).
+
+Existing queue-promotion finding reopened: snapshot refusal restores RAM but leaves the new or rewritten repair sidecar recoverable; the activation caller also retries despite refusal (extensions/loops/goal-list-queue.ts:826-855,951-961). This is the surviving rollback half of the existing finding, not a duplicate FIX row. Repair and verification pending.
