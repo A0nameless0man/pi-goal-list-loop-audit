@@ -1164,7 +1164,18 @@ export function saveSubagentPinLayer(
   if (typeof probe === "function" && probe(ctx, "settings save")) {
     throw new Error("settings save refused: the session handle went stale during the edit (a replacement session owns the state root)");
   }
-  persistSettings(scope, cwd, { [key]: Object.keys(layerMap).length > 0 ? layerMap : undefined } as Partial<Settings>);
+  if (key === "subagentThinkingOverrides" && value === undefined) {
+    // "Session — inherit" must not uncover the same role's global pin.
+    // Preserve every other role and concrete-level edits' ownership routing.
+    for (const layer of ["global", "project"] as const) {
+      const pins = { ...(layer === "project" ? projectMap : loadGlobalSettings().subagentThinkingOverrides ?? {}) };
+      if (!Object.prototype.hasOwnProperty.call(pins, role)) continue;
+      delete pins[role];
+      persistSettings(layer, cwd, { subagentThinkingOverrides: Object.keys(pins).length ? pins : undefined });
+    }
+  } else {
+    persistSettings(scope, cwd, { [key]: Object.keys(layerMap).length > 0 ? layerMap : undefined } as Partial<Settings>);
+  }
   return { scope };
 }
 
@@ -1223,7 +1234,7 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
         }
       }
       const { scope } = saveSubagentPinLayer(ctx, "subagentThinkingOverrides", agentType, level);
-      const where = scope === "project" ? "project settings" : "global settings";
+      const where = level === undefined ? "all settings scopes" : scope === "project" ? "project settings" : "global settings";
       const stillPinned = loadSettings(ctx.cwd).subagentThinkingOverrides?.[agentType];
       ctx.ui.notify(`${agentType} thinking ${stillPinned ? `pinned to ${stillPinned}` : "cleared — inherits session"} (${where}) — applies to NEW pi sessions.`, "info");
       return;
