@@ -1,0 +1,673 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=202s heartbeat=30s
+[run-tests] host is 1.1x slower than an idle host — per-test budget raised to 135s
+bun test v1.3.3 (274e01c7)
+
+tests/settings-menu-complete.test.ts:
+(pass) every row carries every required column field [44.00ms]
+(pass) role-specific tabs keep each agent's model, thinking, and fallback controls together [1.00ms]
+(pass) v0.39.38: the module header names all 9 registry sections (no stale count) [1.00ms]
+(pass) every row's section is one of the 9 known section ids (no orphans) [1.00ms]
+(pass) main-agent tab starts with the runtime agent; drafter and subagent chains have their own tabs [2.00ms]
+(pass) main fallback row explains ordered, deselectable selection [16.00ms]
+(pass) auditor and Designer displays resolve unsupported thinking exactly as dispatch does [7.00ms]
+(pass) the main fallback chain shows the level dispatch actually applies (pi's clamp precedence)
+(pass) session category displays use session capabilities and ignore stale configured role thinking [7.00ms]
+(pass) role rows show each selected model with requested/effective thinking [1.00ms]
+(pass) v0.36.0: unset auditor thinking mirrors the parent session and the fallback row uses the main shape [1.00ms]
+(pass) inherited drafter and auditor model rows identify the session category [6.00ms]
+(pass) session defaults show the live thinking pair, not stale role thinking pins or fallback labels [1.00ms]
+(pass) fallback rows use session thinking, not the selected model's different dial [1.00ms]
+(pass) fallback-only auditor configuration does not masquerade as session inheritance
+(pass) all embedded subagent types expose editable fallback-chain rows [14.00ms]
+(pass) key rows from v0.27.0 settings menu are all present (menu coverage contract) [5.00ms]
+(pass) descriptions and values carry no version-tag chrome (v0.34.25) [2.00ms]
+(pass) rows map 1:1 to dispatchable ids (every id can drive a handler) [75.00ms]
+(pass) main fallback row shows the persisted numbered try order and truthful runtime semantics [1.00ms]
+(pass) auditorAllowedExtensions valueText is a count — never joined absolute paths (screen-size crash) [2.00ms]
+(pass) valueText derives from settings (effective values surface for each row)
+(pass) default fallbacks surface when settings + provenance both missing [2.00ms]
+(pass) default fallbacks follow the effective aggressive matrix (explicit off → base values) [1.00ms]
+(pass) effective resolution names the real session model for inherit-parent
+(pass) provenance flows into sourceText (project/global/default tags) [4.00ms]
+(pass) haiku mention is dropped from any valueText / description / sourceText [11.00ms]
+(pass) headless `/glla` fallback keeps stall brakes and the v0.34.127 sync list [6.00ms]
+(pass) the legacy flat-row startsWith logic is removed (no more `──` section headers in code) [4.00ms]
+(pass) /glla tooloverride still routes headlessly (regression: subsystems unchanged) [1.00ms]
+(pass) postaudit and reviewer routes both open the reviewer menu (back-compat)
+(pass) stateRoot: one global-only row with the workingDir default [1.00ms]
+(pass) v0.28.20: no bracket/paren chrome — VALUE and SOURCE render bare [1.00ms]
+(pass) audit-2026-09-06: settings TUI tabs row is truncated to terminal width [5.00ms]
+(pass) audit 2026-09-06: normalizeLoadedSettings resets junk numerics/enums/strings to unset [3.00ms]
+(pass) settings provenance reports normalized effective values, not rejected raw junk [1987.03ms]
+(pass) audit 2026-09-06: legacy reviewer block migrates to postaudit [1.00ms]
+(pass) audit 2026-09-07 (LOW, findings 392-394): quiet copy names the count line at every surface
+(pass) settings table fits narrow terminals with details both hidden and visible [43.00ms]
+
+tests/behavioral-orchestrator.test.ts:
+(pass) T3a: active goal + human load (startup) + default settings → HELD for explicit resume [140.00ms]
+(pass) v0.34.18: blank startup waits for the transcript before autoresume, while explicit resume and loaded history still work [851.01ms]
+(pass) v0.34.121: blank startup closes a legacy terminal slot when its archive exists [10.00ms]
+(pass) T3c (v0.28.21): interrupted goal HELDS by default — the 0.28.3 exemption is superseded; autoresume=on auto-resumes [491.01ms]
+(pass) T3b (v0.28.21): active goal + reload → HELD by default; autoresume=on → auto-resumes [640.01ms]
+(pass) v0.35.x: list cancel archives the active item, does not relabel it as active, and preserves its audit history [708.01ms]
+(pass) v0.36.0: /goal cancel archives a standalone goal with a compact six-label recap [195.00ms]
+(pass) v0.36.0: /list next archives the skipped active item with a compact recap [708.01ms]
+(pass) v0.36.1: bare /goal start uses one clear active-branch request [292.00ms]
+(pass) v0.36.1: bare /list start activates the hydrated queue head [322.01ms]
+(pass) v0.36.1: bare /loop start infers only a target and uses the metricless path [214.00ms]
+(pass) v0.36.0: aborted detached audit can complete without audit only after archive success [1056.02ms]
+(pass) v0.34.119: /glla cancel archives the active list item and drops the waiting objective queue [224.00ms]
+(pass) v0.34.121: /glla cancel stops an active loop before touching an unrelated waiting queue [34.00ms]
+(pass) v0.34.119: /glla cancel also aborts an auditing list objective and clears its waiting queue [563.01ms]
+(pass) v0.35.0 (v0.38.12 last-wins): /goal start replaces without dialog; plain /goal still offers update/cancel [500.01ms]
+(pass) v0.35.x: same-mode list conflict updates the whole objective, never individual tasks [447.01ms]
+(pass) v0.35.x: auditing list conflict cancels the stale audit before whole-objective update [29.00ms]
+(pass) v0.35.x: list_activate uses the same whole-objective conflict update [21.00ms]
+(pass) C7: declined list conflict update preserves work without retrying the editor [33.00ms]
+(pass) v0.35.0: a cross-mode replacement confirms before replacing a live loop [967.02ms]
+Switched to a new branch 'pi-glla-loop/20261022170915-refusal-target'
+cat: /definitely-not-here-xyz: No such file or directory
+Switched to branch 'main'
+(pass) v0.35.4: a refused branch-mode loop start restores the original branch [1665.03ms]
+(pass) v0.35.0: a direct /loop start also confirms before replacing a live goal [393.01ms]
+(pass) C2: an explicit /goal start stops the active loop instead of stacking two live things [213.00ms]
+(pass) v0.34.121: one confirmed /glla wipe clears recovery and dispatch artifacts too [247.00ms]
+(pass) v0.35.x: /list tweak amends a paused list item without activating it or changing waiting entries [313.01ms]
+(pass) field 2026-09-16 (VidPro park): /goal tweak amends a paused goal without waking it [488.01ms]
+(pass) field 2026-09-16: /goal tweak with no goal names the real path [384.01ms]
+(pass) field 2026-09-16 (VidPro replay): tweak chatter adopts the discussed objective, never the chatter [652.01ms]
+(pass) audit 2026-09-16: inferred tweak rejection leaves objective and ledger unchanged [621.01ms]
+(pass) field 2026-09-16: tweak chatter with no discussed objective guides and changes nothing [435.01ms]
+(pass) field 2026-09-16: plain-/goal update with an explicit contract stays verbatim (explicit intent wins) [445.01ms]
+(pass) field 2026-09-16: chatter typed into the bare-tweak dialog guides, never adopts [348.01ms]
+(pass) field 2026-09-16: a typed paragraph drafts as one thing, never an import-or-nothing [1334.02ms]
+(pass) audit 2026-09-16: bare list keeps separately contracted objectives in separate queue records [1576.03ms]
+(pass) field 2026-09-16 (loop sweep): /loop refine on a held loop queues the hint and resumes [600.01ms]
+(pass) audit 2026-09-23: failed loop dispatch preserves every one-shot directive [700.01ms]
+(pass) audit 2026-09-16: held-loop refine respects wrong-branch guard [741.01ms]
+(pass) field 2026-09-16 (loop sweep): held-loop refine over an active goal queues but stays held [338.01ms]
+(pass) field 2026-09-16 (loop sweep): refine on a user-stopped loop refuses with the honest path [176.00ms]
+(pass) field 2026-09-16 (loop sweep): refine on a measure-broken loop points at the agent repair path [284.00ms]
+(pass) field 2026-09-16 (loop sweep): refine on an active loop keeps today's behavior [399.01ms]
+(pass) T3d: active loop + human load → HELD_ON_RESTORE (loop deactivated loudly, not silently dropped) [153.00ms]
+(pass) v0.35.x: a successor auto-resumes lifecycle-held loops intact but preserves deliberate stops [1375.02ms]
+(pass) v0.29.14: live audit loop on open-count/min migrates to closed-count/max on load (discovery no longer reads as regression) [421.01ms]
+(pass) v0.29.18: live audit loop on the audit-every-iteration target migrates to FIX-FIRST on load [403.01ms]
+[run-tests] progress: 30s elapsed · 0s since last output · 8 KiB of suite output
+(pass) v0.34.16: lifecycle handoff resumes same-process replacement but quit does not bypass restore consent [8172.14ms]
+(pass) stale list work survives invalidation and resumes only through a fresh file-backed session [2594.04ms]
+(pass) v0.34.49: fresh MAIN session_start resets stale state and rejects the old dispatch generation [1215.02ms]
+(pass) v0.34.49: a handoff is one-shot and only matching predecessor identity can resume [1281.02ms]
+(pass) v0.34.23: host replacement with a new SessionManager is not rejected as foreign [847.01ms]
+(pass) v0.34.20: registered tools use the replacement invocation context without session_shutdown [509.01ms]
+(pass) T3e (v0.28.21): no active goal + queued list + reload → NOT activated by default; autoresume=on → head activates [576.01ms]
+(pass) v0.34.24: continuation dispatch waits for owner start proof and clears its sidecar [258.00ms]
+(pass) v0.34.36: compaction releases a timed-out dispatch for one fresh resync attempt [2884.05ms]
+(pass) v0.34.36: a loop missing start proof stops durably and /loop resume re-arms it exactly once [941.02ms]
+(pass) v0.34.48: /list resume releases an unacknowledged dispatch exactly once [821.01ms]
+(pass) v0.34.24: missing start proof stands down durably and explicit resume sends one fresh attempt [874.01ms]
+(pass) v0.34.88: a transient no-turn-start miss self-heals with exactly ONE verbatim retry [516.01ms]
+(pass) v0.34.88: a genuine stall fires unacknowledged after the retry backoff — exactly one retry, then re-sends stop [749.01ms]
+(pass) v0.34.88: a goal paused inside the watchdog window is never blind-retried [948.02ms]
+(pass) T5: mutating tools refuse a foreign (subagent) session ctx [60.00ms]
+(pass) T5: guard coverage pin — every mutating tool routes through foreignToolGuard [12.00ms]
+(pass) v0.36.3: live activity is scoped across lost results, host replacement, timestamps, timers, and pending dispatch [62.00ms]
+(pass) v0.36.4: /glla resume behaviorally re-kicks an ACTIVE-but-idle goal [255.00ms]
+(pass) T2: a stale send on agent_end continuation → goal ACTIVE + interrupt marker + loud notify [1027.02ms]
+(pass) T2b: stale before compaction → no late rebind, refire, or misleading active UI [952.02ms]
+(pass) v0.35.x: stale terminal keeps a recovery probe and self-heals without reload [685.01ms]
+(pass) v0.34.48: host-session loss without replacement session_start parks durably and rejects late callbacks [2906.05ms]
+(pass) v0.35.x: host loss keeps durable auditor disapproval feedback visible [209.00ms]
+[run-tests] progress: 60s elapsed · 1s since last output · 11 KiB of suite output
+(pass) v0.35.x: full auditor reports and required-fixes tails survive lifecycle boundaries [5365.09ms]
+(pass) S3: a mid-session absorb publishes the owner file, so the shutdown handoff still validates [929.02ms]
+(pass) v0.34.25: silent swap — live file-backed successor is absorbed via a tool call and the work auto-resumes [611.01ms]
+(pass) v0.34.25: silent swap — in-memory (subagent) ctx is still refused and the park stays honest [523.01ms]
+(pass) v0.34.25: the field ordering — stale before compaction, then the successor's compact event absorbs in place [763.01ms]
+(pass) v0.34.25: dead owner + ephemeral ctx cannot claim the plane (subagent lockout fix) [450.01ms]
+(pass) S4: a transient lastCtx probe glitch fails one tool call closed without dropping the context [230.00ms]
+(pass) v0.34.27: stale host recovery absorbs the first replacement contact across lifecycle and stream boundaries [5258.09ms]
+(pass) v0.34.27: plain startup from a dead file-backed successor is not rejected as a subagent [487.01ms]
+(pass) v0.38.68 reviewer P1: compact-defer settles without kicking a turn into the hot window [1048.02ms]
+(pass) manual pause+resume between exhaustion episodes restarts the relentless cycle [2168.04ms]
+(pass) v0.34.26: repeated output-token truncation pauses the goal durably with re-scope guidance and a fresh resume budget [1942.03ms]
+(pass) v0.34.26: output-token-limit provider errors pause with the named wall, not generic provider-error text [578.01ms]
+(pass) goal draft rejects whitespace-only objectives before Confirm or activation [133.00ms]
+(pass) task-list Confirm discloses milestone verification commands [216.00ms]
+(pass) T1a: stale Confirm in propose_goal_draft → NOT-a-rejection guidance, no goal created [61.00ms]
+(pass) T1b: stale /goal start → goal persisted to .pi-glla with honest notify [157.00ms]
+(pass) drafting state is not left behind by a stale seed, and old confirmations cannot mutate a replacement session [1045.02ms]
+(pass) auto-accept escape hatch: ALWAYS choice persists project autoAcceptDrafts and accepts the draft [212.00ms]
+(pass) escape hatch: a later draft skips the dialog entirely once autoAcceptDrafts landed [148.00ms]
+(pass) source pin: all five draft-class dialogs route through confirmDraft with the 3-choice ALWAYS option [148.00ms]
+(pass) quota error turns enter durable main-model recovery instead of a resend storm [1094.02ms]
+(pass) main-model recovery external notices are deduplicated per provider episode [752.01ms]
+(pass) request-rate prose uses the generic fallback chain [1275.02ms]
+(pass) explicit 429-shaped errors use the generic fallback chain [1985.03ms]
+(pass) a successful core retry clears generic provider recovery and resumes the parked goal [1033.02ms]
+[run-tests] progress: 90s elapsed · 2s since last output · 14 KiB of suite output
+(pass) v0.35.x: a successful main-model recovery gives a parked audit its one automatic retry [3953.07ms]
+(pass) a user-aborted agent_end does not falsely clear main-model recovery [512.01ms]
+(pass) recoverable error turns enter generic recovery before stall accounting [389.01ms]
+(pass) explicit prompt-policy rejection pauses the owning goal without retrying [707.01ms]
+(pass) carryover pause (default): new goal over stale paused goal+list+held loop → ONE summary, goal archived, list+loop kept [229.00ms]
+(pass) carryover=clear: new goal drops the queue, dismisses the held loop, archives the paused goal [208.00ms]
+(pass) v0.35.4: a recovered sidecar is hydrated before list mutations [191.00ms]
+(pass) /loop cancel: first-class alias stops the loop (stopReason recorded) [448.01ms]
+(pass) /loop finish persists and notifies the complete six-label recap [239.00ms]
+(pass) one-active-thing tool guards: list_activate + propose_loop_draft + propose_goal_draft refuse over the wrong active kind [52.00ms]
+(pass) one-active-thing: /goal resume guard remains; the load-time combo is auto-arbitrated (v0.29.6) [500.01ms]
+(pass) v0.29.6: stacked state at load is AUTO-ARBITRATED — most recent activity keeps the slot, loser archived (supersedes the 0.28.21 picker) [829.01ms]
+(pass) carryover via /list next (pause): summary fires BEFORE the stale item activates; paused goal archived, held loop kept [376.01ms]
+(pass) carryover via /list next (clear): the stale queue is dropped BEFORE activation — nothing activates [278.00ms]
+(pass) carryover=resume: legacy silent stacking — no summary, queue + held loop untouched [300.01ms]
+(pass) /list audit: queues a collect-only audit item with the restart-safe marker [244.00ms]
+(pass) /goal decide: content pick → decision sent to the agent + goal resumes [700.01ms]
+(pass) /goal decide: Escape (undefined) → goal stays paused, nothing sent [463.01ms]
+(pass) /goal decide: command option (/goal cancel) runs the command, not a message [491.01ms]
+(pass) /goal decide: no pending decision → notify, no picker [308.01ms]
+(pass) /goal status + /goal pause: no goal id in user-facing text (v0.28.24) [229.00ms]
+(pass) goal-start notify has no (id: …) suffix (v0.28.24 source pin) [135.00ms]
+(pass) v0.34.21 lifecycle: completion audit from a replaced generation leaves the stored claim intact [1832.03ms]
+(pass) v0.34.119: impossible completion counts reach the durable auditor claim before the worker starts [8981.15ms]
+(pass) v0.34.22: complete_goal returns while a detached auditor finishes and archives approval [5466.09ms]
+(pass) v0.35.x: provider-wall diagnostics stay durable while completion surfaces remain sanitized and deduplicated [1305.02ms]
+(pass) v0.35.x: /glla audits full sanitizes active and global reports [17.00ms]
+(pass) v0.35.x: bare 403 main recovery sanitizes live surfaces while retaining diagnostics [373.01ms]
+[run-tests] progress: 120s elapsed · 2s since last output · 16 KiB of suite output
+(pass) v0.35.x: bare 403 completion diagnostics stay durable while completion surfaces remain sanitized [7932.13ms]
+(pass) v0.34.119: auditor-approved list completion archives the item and activates exactly the next queue item [1292.02ms]
+(pass) v0.36.2: approved standalone completion automatically activates a pre-queued list head [929.02ms]
+(pass) v0.34.91: detached approval notify carries the agent's completion recap, not process boilerplate [1870.03ms]
+(pass) v0.34.87: complete_goal on a paused item names the pause + resume verb, not a flat 'No active goal' [182.00ms]
+(pass) v0.34.22: detached disapproval resumes the goal with a durable report [1925.03ms]
+(pass) v0.35.x: a detached approval blocked by the regression shield is not relabeled [1373.02ms]
+(pass) v0.34.22: an old detached result cannot archive after session replacement [1095.02ms]
+(pass) v0.34.21 lifecycle: cold startup holds a recovered claim until explicit resume [172.00ms]
+(pass) v0.35.x: validated session handoff auto-retries a parked completion audit [3303.06ms]
+(pass) v0.35.x: explicit Auto-resume retries a parked claim on cold startup [1418.02ms]
+(pass) v0.35.x: manual /list resume retries a parked list completion claim directly [1296.02ms]
+(pass) v0.35.x: one automatic parked-audit retry is durable across repeated lifecycle events [310.01ms]
+(pass) v0.35.x: stale host replacement session_start auto-recovers the parked audit [3128.05ms]
+(pass) v0.35.x: healthy same-session heartbeat recovers a parked completion audit without manual resume [3511.06ms]
+[run-tests] progress: 150s elapsed · 3s since last output · 18 KiB of suite output
+(pass) v0.36.0: exhausted no-verdict auditor chain enters the shared ladder with an automatic retry timer [6910.12ms]
+(pass) bounded recovery: initial aggressive completion preserves its horizon and exhausted chain [7418.12ms]
+(pass) v0.35.x: stale host loss releases an in-flight completion audit without a verdict [8930.15ms]
+(pass) v0.34.29: audit fan-out honors autoAcceptDrafts without opening confirmation [50.00ms]
+(pass) v0.34.129: fan-out dedupe does not drop a finding whose prefix appears inside another queue item [22.00ms]
+(pass) v0.34.129: fan-out reports cap-deferred findings separately from true queue dedupes [53.00ms]
+(pass) v0.34.20 lifecycle: fan-out confirmation from the old generation cannot queue into its replacement [49.00ms]
+(pass) v0.34.20 lifecycle: loop measurement abandons the old generation after replacement [82.00ms]
+(pass) v0.34.25: a resolved auditor model failure advances to the session fallback without a verdict [38.00ms]
+(pass) v0.35.x: zero-stream zombie auto-aborts and parks a list item without a retry storm [692.01ms]
+(pass) v0.35.x: zero-stream loop termination preserves and notifies its recap [101.00ms]
+(pass) v0.35.4: zombie watchdog stands down while a subagent wait is in flight [507.01ms]
+(pass) v0.35.64: a stale subagent probe no longer shields unrelated parent cleanup [633.01ms]
+(pass) v0.35.4: context-starved warning is one-shot per refusal episode [322.01ms]
+(pass) audit-2026-09-06: measure test-run dialogs disclose the pre-confirm exec [50.00ms]
+(pass) tweak carries its revision bump inside the durable patch (no phantom revision) [423.01ms]
+(pass) resetContinuationDispatchState clears the in-memory pending ref (S2 audit) [1.00ms]
+
+tests/settings-editors.test.ts:
+(pass) T4: select editor — stateRoot writes the global workingDir/sessionDir choice [45.00ms]
+(pass) T4: select editor — autoResume writes on/off/default with the right key [25.00ms]
+(pass) T4: select editor — auditorInspection is opt-in on (writes true), off clears to default [34.00ms]
+(pass) removed request-rate fallback setting has no editor or persistence path [6.00ms]
+(pass) T4: select editor — aggressiveMode writes the boolean + notifies [35.00ms]
+(pass) T4: select editor — contextCheckpointProjection writes true, off removes the key (v0.38.54) [73.00ms]
+(pass) T4: select editor — carryover writes clear/resume, pause removes the key (v0.34.25) [69.00ms]
+(pass) T4: select options stay concise — rationale lives in the title, not the option rows (v0.34.25) [11.00ms]
+(pass) a project subagent pin shadows only its own role, not every global pin [1.00ms]
+(pass) a dead project pin entry falls through to the live global role
+(pass) main recovery settings are global-only and project copies cannot create a UI/runtime mismatch [31.00ms]
+(pass) scope-aware settings editing updates a project override instead of a hidden global baseline [199.00ms]
+(pass) forbidden-model editing excludes drafter and auditor fallback chains [80.00ms]
+(pass) a subagent pin edit writes only its own role into the owning layer [6.00ms]
+(pass) the auditor fallback editor excludes the EFFECTIVE primary, not the global one [17.00ms]
+(pass) forbidden-model editing also protects the pinned role primaries and dedupes case-insensitively [11.00ms]
+(pass) numeric settings reject malformed integer prefixes instead of truncating them [8.00ms]
+(pass) RPC custom stub falls back to typed main-backup editing instead of silently canceling [5.00ms]
+(pass) main failback policy and primary-probe cadence are global settings [83.00ms]
+(pass) T4: input editor — main model backups preserve order and retry cadence [47.00ms]
+(pass) main backup editor refuses the 11th typed model and keeps the first ten in order [3.00ms]
+(pass) main-model fallback reload preserves explicit order and does not reintroduce a cleared key [12.00ms]
+(pass) v0.34.118: backup and forbidden editors enforce mutual exclusion even in headless input mode [8.00ms]
+(pass) T4: input editor — auditorModel pin / explicit session on empty [11.00ms]
+(pass) auditor session selection masks both project overrides and preserves other projects and backups [59.00ms]
+(pass) auditor session selection masks project model plus global thinking and preserves other projects and backups [92.00ms]
+(pass) auditor session selection masks project thinking plus global model and preserves other projects and backups [33.00ms]
+(pass) auditor session selection masks only global pins and preserves other projects and backups [31.00ms]
+(pass) v0.36.0: auditor fallback editor preserves ordered refs, caps at ten, and clears [89.00ms]
+(pass) v0.36.0: the singular auditor fallback setting migrates to the ordered chain [12.00ms]
+(pass) choosing session inherits both role settings without a separate thinking prompt [108.00ms]
+(pass) drafter agent picker immediately offers model-specific thinking and persists both choices [8.00ms]
+(pass) Designer tab: model picker persists dedicated model+thinking and registers Designer.md; disabling unregisters it [14.00ms]
+(pass) T4: input editor validation — auditCap rejects garbage loudly, accepts integers, clears on empty [13.00ms]
+(pass) v0.35.64: subagent hang action accepts warning-only/long thresholds and rejects unsafe values [10.00ms]
+(pass) v0.35.x: zero-stream retry budget persists and rejects values outside 0..10 [11.00ms]
+(pass) v0.39.38: stuckMaxInterventions editor accepts 0 with documented meaning, matching the file loader [10.00ms]
+(pass) v0.35.x: hand-edited zero-stream retry budgets normalize to the safe default [1.00ms]
+(pass) T4: a dismissed editor (Esc → undefined) writes NOTHING [2.00ms]
+(pass) settings editor failures notify loudly and return to the menu [1.00ms]
+(pass) T4: the switch has no confirm-class editors (select + input only) [1.00ms]
+(pass) v0.28.34: notify folds a default IN — auto-detect notify-send/osascript, 'off' silences, custom overrides [7.00ms]
+(pass) audit-2026-09-06: headless /glla fallback shows compactor + display-richness rows [1.00ms]
+(pass) audit 2026-09-06: docs/SETTINGS.md covers every SETTINGS_KEYS entry [1.00ms]
+(pass) audit 2026-09-07 (LOW, finding 400): typing the displayed `auto` in the notify editor round-trips to unset, not a literal shell command [21.00ms]
+(pass) audit 2026-09-25: decisionPauseBudget is visible on every operator surface [15.00ms]
+(pass) audit 2026-09-26: subagent thinking editor pins, inherits, and rejects garbage [5.00ms]
+(pass) audit 2026-09-26: headless /glla fallback covers every SETTINGS_KEYS entry [1.00ms]
+(pass) v0.38.104: the audit-dir retention row renders a legal 0 instead of the unknown-value '?' [6.00ms]
+(pass) v0.38.104: the main-recovery row does not promise a 24h stop the default mode removes [1.00ms]
+(pass) v0.38.104: every 'Global-only.' annotation in docs/SETTINGS.md is true in code [1.00ms]
+(pass) v0.39.38: the Global-only paragraph lists every GLOBAL_ONLY_KEYS member [2.00ms]
+(pass) v0.38.104: the superseded DESIGN.md table does not mark files that do not exist as shipped
+(pass) v0.38.104: the auditor model path carries no dead settings placeholders [2.00ms]
+(pass) subagent thinking inherit clears both role pins and preserves other roles [17.00ms]
+(pass) auditor dial inherit clears the pin in every layer, not only the owning one [25.00ms]
+(pass) a retired recovery knob is reported as ignored instead of vanishing
+
+tests/list-queue.test.ts:
+(pass) readState restores an empty list when no state exists
+(pass) readState restores list from the latest state event [45.00ms]
+(pass) latest state event wins for the list [1.00ms]
+(pass) list events (list_added etc.) do not corrupt state restore [16.00ms]
+(pass) state event without a list field restores as empty list (v0.1.0 compat) [15.00ms]
+(pass) takeAt: head is the FIFO default
+(pass) takeAt: middle item
+(pass) takeAt: last item
+(pass) takeAt: out of range returns null
+(pass) v0.28.28: unsolicited enqueue (reviewer) does not auto-start the head unless autoResume is on [10.00ms]
+(pass) v0.29.4: auto-accepted drafts START (supersedes the 0.28.28 autoResume hold) [7.00ms]
+149 |   const SRC = fs.readFileSync("extensions/loops/goal-orchestrator.ts", "utf-8");
+150 |   const QUEUE = fs.readFileSync("extensions/loops/goal-list-queue.ts", "utf-8");
+151 |   const TOOLS = fs.readFileSync("extensions/loops/goal-tools.ts", "utf-8");
+152 |   assert.match(SRC, /function setGoal\(goal: Goal, ctx: ExtensionContext, via = "user"\): boolean/);
+153 |   assert.match(SRC, /goal\.createdVia = via;/);
+154 |   assert.match(SRC, /"goal_created", \{ goalId: goal\.id, objective: goal\.objective, policy: goal\.policy, via \}/);
+               ^
+AssertionError: The input did not match the regular expression /"goal_created", \{ goalId: goal\.id, objective: goal\.objective, policy: goal\.policy, via \}/. Input:
+
+'/**\n' +
+  ' * pi-goal-list-loop-audit — v0.1.0\n' +
+  ' * extensions/loops/goal-orchestrator.ts — goal lifecycle + settlement.\n' +
+  ' *\n' +
+  ' * The goal loop. The agent continues working, and on complete_goal,\n' +
+  ' * an isolated auditor verifies the work.\n' +
+  ' *\n' +
+  ' * Design: see docs/DESIGN.md.\n' +
+  ' *\n' +
+  ' * Command surface (v0.39.x — five top-level slash commands, registered\n' +
+  ' * in goal-activation.ts with bodies in goal-commands.ts; completion claims\n' +
+  ' * are verified by the DETACHED auditor via goal-loop-auditor-process.ts):\n' +
+  ' *   /goal start|plan|audit|verify|status|timeline|pause|resume|cancel|decide|tweak|archive (+ draft)\n' +
+  ' *   /list add|show|start|resume|pause|tweak|next|remove|rm|clear|depth|cancel|plan|audit|import\n' +
+  ' *   /loop start|respec|plan|audit|status|blockers|recheck|resume|refine|polish|stop|cancel|pause|finish (+ draft)\n' +
+  ' *   /glla <settings table> | version|status|fleet|progress|log|resume|pause|cancel|wipe|stats|audits|agents|switchlog|tooloverride|fallbacks|owner|takeover|postaudit|bug\n' +
+  ' *   /review <goal-id> [off|on|auto|aggressive]\n' +
+  ' */\n' +
+  '\n' +
+  'import { randomUUID } from "node:crypto";\n' +
+  'import * as fs from "node:fs";\n' +
+  'import { persistApprovalRender } from "../approval-render-store.js";\n' +
+  'import { collectOpenTasks, formatOpenTaskRefusal } from "../task-batch.js";\n' +
+  'import * as os from "node:os";\n' +
+  'import * as path from "node:path";\n' +
+  '\n' +
+  'import { defineTool, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";\n' +
+  'import { Type } from "typebox";\n' +
+  '\n' +
+  '// v0.34.109 (decomposition step 1): the state singleton and the persistence\n' +
+  '// core moved to goal-state.ts — the SINGLE owner of the mutable state object\n' +
+  '// (positioning doc invariant #2). Property reads on the imported binding are\n' +
+  '// fine; wholesale replacement goes through replaceState().\n' +
+  'import { state, replaceState, persistStateLine } from "../goal-state.js";\n' +
+  '\n' +
+  'import {\n' +
+  '  type FindingGroup,\n' +
+  '  type GateRow,\n' +
+  '  type Goal,\n' +
+  '  type Policy,\n' +
+  '  type State,\n' +
+  '  type MainModelRecovery,\n' +
+  '  type Status,\n' +
+  '  type ModeCommand,\n' +
+  '  modeCommand,\n' +
+  '  workCommand,\n' +
+  '  workCommandRoot,\n' +
+  '  appendLedger,\n' +
+  '  archiveDir,\n' +
+  '  archivedGoalPath,\n' +
+  '  buildTaskList,\n' +
+  '  buildTaskSummary,\n' +
+  '  auditFeedbackExcerpt,\n' +
+  '  auditVerdictLabel,\n' +
+  '  DEFAULT_AUDIT_FEEDBACK_CHARS,\n' +
+  '  DEFAULT_STALL_ESCALATION_REFIRES,\n' +
+  '  DEFAULT_TOKEN_LIMIT,\n' +
+  '  classifyImpossibleReason,\n' +
+  '  extractPendingTasks,\n' +
+  '  isFullAuditObjective,\n' +
+  '  resolveEffectiveAggressiveSettings,\n' +
+  '  appendAuditLog,\n' +
+  '  formatAuditLog,\n' +
+  '  formatGoalAuditHistory,\n' +
+  '  runWithInfraRetry,\n' +
+  '  isRetriableInfraError,\n' +
+  '  readAuditLog,\n' +
+  '  bumpGoalRevision,\n' +
+  '  stripThinkBlocks,\n' +
+  '  type AuditLogEntry,\n' +
+  '  crossRecommendMode,\n' +
+  '  formatListDepth,\n' +
+  '  extractAgentRole,\n' +
+  '  parseListItemDeclaration,\n' +
+  '  shouldEscalateStall,\n' +
+  '  isStaleApiError,\n' +
+  '  parseListImport,\n' +
+  '\n' +
+  '  routeGoalArgs,\n' +
+  '  routeListText,\n' +
+  '  listMutationBlocked,\n' +
+  '  LIST_DRAFTING_BLOCK_MESSAGE,\n' +
+  '  LIST_MUTATING_SUBCOMMANDS,\n' +
+  '  SETTINGS_MUTATING_ACTIONS,\n' +
+  '  sumNewAssistantTokens,\n' +
+  '  takeAt,\n' +
+  '  countTrailingDisapprovals,\n' +
+  '  goalArgsNeedDrafting,\n' +
+  '  buildSeedGrillMessage,\n' +
+  '  askUserQuestionAnswered,\n' +
+  '  draftProposalBlock,\n' +
+  '  type TaskProposal,\n' +
+  '  validateTaskProposal,\n' +
+  '  ensureDirs,\n' +
+  '  findNextPendingTask,\n' +
+  '  goalMdPath,\n' +
+  '  newGoalId,\n' +
+  '  nowIso,\n' +
+  '  compactDisplayText,\n' +
+  '  normalizeProviderErrorText,\n' +
+  '  providerErrorPresentation,\n' +
+  '  sanitizeDisplayText,\n' +
+  '  piGlaDir,\n' +
+  '  supervisorPaused,\n' +
+  '  normalizeDraftContract,\n' +
+  '  draftContractItemCount,\n' +
+  '  extractVerificationContract,\n' +
+  '  classifySessionCtx,\n' +
+  '  readState,\n' +
+  '  healCorruptedGoalPolicy,\n' +
+  '  renderGoalMarkdown,\n' +
+  '  shouldAutoResumeOnSessionStart,\n' +
+  '  statusLabel,\n' +
+  '  writeGoalMd,\n' +
+  '  writeGoalStateTransaction,\n' +
+  '  clearGoalStateTransaction,\n' +
+  '  writeArchiveIntent,\n' +
+  '  updateArchiveIntentPhase,\n' +
+  '  finalizeArchiveIntent,\n' +
+  '  clearArchiveIntent,\n' +
+  '  writeQueueItemFile,\n' +
+  '  readQueueFromDisk,\n' +
+  '  deleteQueueItemFileResult,\n' +
+  '  missingGllaTools,\n' +
+  '  runPersistStep,\n' +
+  '  isSafePersistedId,\n' +
+  '  stateRootPending,\n' +
+  '  isPersistenceDegraded,\n' +
+  '  lastPersistenceFailure,\n' +
+  '  modelSwitch,\n' +
+  '  isForbiddenModel,\n' +
+  'isGoalRevisionCurrent,\n' +
+  '  nextHourlyPromptMs,\n' +
+  '  nextHourlyProbeMs,\n' +
+  '  releaseLoadHoldDurably,\n' +
+  '  type ModelSwitchRecord,\n' +
+  '  type ListItem,\n' +
+  '} from "../goal-loop-core.js";\n' +
+  'import {\n' +
+  '  createContinuationDispatch,\n' +
+  '  dispatchMatchesOwner,\n' +
+  '  dispatchPromptMatches,\n' +
+  '  dispatchTimedOut,\n' +
+  '  dispatchRecordPath,\n' +
+  '  clearDispatchRecord,\n' +
+  '  persistDispatchRecord,\n' +
+  '  readDispatchRecord,\n' +
+  '  transitionDispatch,\n' +
+  '  type ContinuationDispatch,\n' +
+  '} from "../goal-loop-dispatch.js";\n' +
+  'import {\n' +
+  '  createGoalContinuation,\n' +
+  '  scheduleContinuation,\n' +
+  '  sendContinuation,\n' +
+  '  sendStallEscalation,\n' +
+  '  sendLengthContinue,\n' +
+  '  dispatchStartAcknowledged,\n' +
+  '  dispatchAccepted,\n' +
+  '  dispatchFailed,\n' +
+  '  dispatchPrepare,\n' +
+  '  releaseContinuationDispatchStandDown,\n' +
+  '  clearContinuationTimer,\n' +
+  '  clearContinuationStartWatchdog,\n' +
+  '  clearQueueStuckProbe,\n' +
+  '  accountSendRearm,\n' +
+  '  sendRearmDelayMs,\n' +
+  '  armQueueStuckProbe,\n' +
+  '  buildPostCompactResync,\n' +
+  '  continuationTimerPending,\n' +
+  '  continuationTimerRef,\n' +
+  '  continuationStartTimerRef,\n' +
+  '  pendingContinuationDispatchRef,\n' +
+  '  setPendingContinuationDispatchRef,\n' +
+  '  continuationDispatchStoodDownRef,\n' +
+  '  setContinuationDispatchStoodDownRef,\n' +
+  '  lastContinuationSentAtRef,\n' +
+  '  setLastContinuationSentAtRef,\n' +
+  '  lastContinuationSentPayloadRef,\n' +
+  '  setLastContinuationSentPayloadRef,\n' +
+  '  setContinuationRearmStreak,\n' +
+  '  setContinuationRearmSince,\n' +
+  '  resetContinuationDispatchState,\n' +
+  '  type ContinuationFlags,\n' +
+  '  type ContinuationDeps,\n' +
+  '} from "../goal-continuation.js";\n' +
+  'export { __testOnlySetContinuationStartTimeout, __testOnlySetContinuationRetryBackoff } from "../goal-continuation.js";\n' +
+  'import {\n' +
+  '  LENGTH_CONTINUE_MAX,\n' +
+  '  LENGTH_CONTINUE_TEXT,\n' +
+  '  isContextStarvedLengthStop,\n' +
+  '  resetLengthContinue,\n' +
+  '  tickLengthContinue,\n' +
+  '} from "../length-continue.js";\n' +
+  'import { scheduleProviderRetry, cancelProviderRetry, type ProviderRetryScheduleOptions } from "../quota-retry.js";\n' +
+  'import {\n' +
+  '  classifyMainModelFailure,\n' +
+  '  isMainModelFallbackFailure,\n' +
+  '  requiresMainModelRecovery,\n' +
+  '  mainModelAutoRetryUntil,\n' +
+  '  mainModelFailureDelayMs,\n' +
+  '  mainModelRetryDelayMs,\n' +
+  '  MAIN_MODEL_AUTO_RETRY_HORIZON_MS,\n' +
+  '  modelRef,\n' +
+  '  nextUntriedModelRef,\n' +
+  '  normalizeMainModelSameModelRetries,\n' +
+  '  normalizeModelRefs,\n' +
+  '  sameModelRetriesRemain,\n' +
+  '  sendStormEscalateMs,\n' +
+  '  splitModelRef,\n' +
+  '  type MainModelFailure,\n' +
+  '} from "../main-model-recovery.js";\n' +
+  'import {\n' +
+  '  globalSettingsPath,\n' +
+  '  loadGlobalSettings,\n' +
+  '  loadSettings,\n' +
+  '  projectSettingsPath,\n' +
+  '  saveSettings,\n' +
+  '  settingsProvenance,\n' +
+  '  type Settings,\n' +
+  '} from "../goal-settings.js";\n' +
+  'import {\n' +
+  '  curateAuditReviewSources,\n' +
+  '  normalizeObjective,\n' +
+  '  resolveReviewerConfig,\n' +
+  '  reviewerMenuOptions,\n' +
+  '  runReviewer,\n' +
+  '  type ReviewerConfig,\n' +
+  '} from "../reviewer.js";\n' +
+  'import {\n' +
+  '  discoverGllaProjects,\n' +
+  '  filterPremature,\n' +
+  '  formatRollupJson,\n' +
+  '  formatRollupTable,\n' +
+  '  rollupProject,\n' +
+  '  type ProjectRollup,\n' +
+  '} from "../goal-loop-stats.js";\n' +
+  'import {\n' +
+  '  cancelDetachedGoalCompletionAuditor,\n' +
+  '  newDetachedAuditJobAttemptId,\n' +
+  '  runDetachedGoalCompletionAuditor,\n' +
+  '  type AuditorProgress,\n' +
+  '} from "../goal-loop-auditor-process.js";\n' +
+  'import {\n' +
+  '  REPETITION,\n' +
+  '  isActuallyStuck,\n' +
+  '  loopInterventionDirective,\n' +
+  '  continueVariant,\n' +
+  '  textFingerprint,\n' +
+  '  pushCapped as pushRepetitionCapped,\n' +
+  '} from "../goal-loop-repetition.js";\n' +
+  'import { buildStatusText, buildWidgetLines, truncateCells, type AuditDisplayProgress } from "../goal-loop-display.js";\n' +
+  'import {\n' +
+  '  buildLoopCompletionSummary,\n' +
+  '  buildRichArchiveSection,\n' +
+  '  compactLoopCompletionSummary,\n' +
+  '  compactTerminalCompletionSummary,\n' +
+  '  isTerminalLoopStopReason,\n' +
+  '  resolveCompletionSummary,\n' +
+  '} from "../completion-summary.js";\n' +
+  'import {\n' +
+  '  defaultAgentDir,\n' +
+  '  resolveEffectiveSubagentModel,\n' +
+  '  syncSubagentModelOverrides,\n' +
+  '  type SubagentModelStrategy,\n' +
+  '} from "../goal-loop-subagents.js";\n' +
+  'import {\n' +
+  '  buildSettingsRows,\n' +
+  '  SettingsMenuComponent,\n' +
+  '  type SettingsRow,\n' +
+  '  type SettingsSectionId,\n' +
+  '} from "../settings-menu.js";\n' +
+  'import {\n' +
+  '  VISION_ASSIST_GUIDANCE,\n' +
+  '  routeVisionCheck,\n' +
+  '  visionAssistLedger,\n' +
+  '} from "../vision-assist.js";\n' +
+  'import {\n' +
+  '  buildModelPickItems,\n' +
+  '  ModelPickerComponent,\n' +
+  '  type ModelPickItem,\n' +
+  '} from "../model-picker.js";\n' +
+  "import { shouldCompactBetweenTasks } from '../goal-compactor.js';\n" +
+  "import { shouldRecoverContextPressure, isExplicitPromptOverflow, compactFirstEligible } from '../context-pressure-recovery.js';\n" +
+  "import { claimPressureAttempt, clearPressureAttempt, resetPressureBudget, setPressureExclusion } from '../context-pressure-attempt.js';\n" +
+  'import { consumeRecoveryResume, sameModelRef } from "../goal-recovery.js"; // decomposition step 3 (v0.34.111)\n' +
+  'import {\n' +
+  '  createGoalHeartbeat,\n' +
+  '  endSubagentHangProbe,\n' +
+  '  markSubagentHangProgress,\n' +
+  '  startHeartbeat,\n' +
+  '  signalSupervisionEvent,\n' +
+  '  upsertSubagentHangProbe,\n' +
+  '  type HeartbeatDeps,\n' +
+  '  type HeartbeatFlags,\n' +
+  '} from "../goal-heartbeat.js"; // decomposition step 4 (v0.34.112)\n' +
+  'import {\n' +
+  '  clearMainModelRecoveryTimer,\n' +
+  '  createGoalRecovery,\n' +
+  '  isCompletionAuditRecoveryPending,\n' +
+  '  mainModelRecoveryActive,\n' +
+  '  mainModelRecoveryKind,\n' +
+  '  mainModelRecoveryReason,\n' +
+  '  mainModelRecoverySucceeded,\n' +
+  '  mainModelFallbackRefs,\n' +
+  '  mainModelSameModelRetryActive,\n' +
+  '  manuallyResumeMainModelRecovery,\n' +
+  '  markCompletionAuditRecoveryPending,\n' +
+  '  parkMainModelAfterFailure,\n' +
+  '  probeMainModelRecovery,\n' +
+  '  recoverMainModelFromSendStorm,\n' +
+  '  resolveMainModel,\n' +
+  '  scheduleHourlyProbe,\n' +
+  '  scheduleMainModelRecoveryTimer,\n' +
+  '  setMainModelRecoveryPause,\n' +
+  '  tryMainModelFallback,\n' +
+  '  withMainModelRecoveryWindow,\n' +
+  '  type RecoveryDeps,\n' +
+  '  type RecoveryFlags,\n' +
+  '} from "../goal-recovery.js"; // decomposition step 3 (v0.34.111) — clusters B (main-model recovery) + C (completion-audit recovery)\n' +
+  'import {\n' +
+  '  ConfirmDraftComponent,\n' +
+  '} from "../confirm-draft.js";\n' +
+  'import {\n' +
+  '  applyMeasurement,\n' +
+  '  applyMetriclessTick,\n' +
+  '  applyRefinement,\n' +
+  '  loopBranchName,\n' +
+  '  parseLoopStartArgs,\n' +
+  '  loopFinishStopReason,\n' +
+  '  isLoopWriteTool,\n' +
+  '  parseMetric,\n' +
+  '  LOOP_DEFAULTS,\n' +
+  '  resolveSpecFiles,\n' +
+  '  respecTarget,\n' +
+  '  topOpenAuditFinding,\n' +
+  '  specFileHash,\n' +
+  '  countCheckedSpecItems,\n' +
+  '  auditMeasureCmd,\n' +
+  '  auditTarget,\n' +
+  '  AUDIT_PLATEAU_MAX_REPRIEVES,\n' +
+  '  countOpenAuditFindings,\n' +
+  '  AUDIT_FINDINGS_REL,\n' +
+  '  projectAuditTarget,\n' +
+  '  LIST_AUDIT_COLLECT_MARKER,\n' +
+  '  GOAL_AUDIT_ONESHOT_MARKER,\n' +
+  '  LOOP_AUDIT_MARKER,\n' +
+  '  listAuditCollectTarget,\n' +
+  '  parseAuditFindingsForFanout,\n' +
+  '  listAuditFanoutItemText,\n' +
+  '  type AuditFindingLine,\n' +
+  '  type LoopTickOutco'... 72811 more characters
+
+ generatedMessage: true,
+     actual: "/**\n * pi-goal-list-loop-audit — v0.1.0\n * extensions/loops/goal-orchestrator.ts — goal lifecycle + settlement.\n *\n * The goal loop. The agent continues working, and on complete_goal,\n * an isolated auditor verifies the work.\n *\n * Design: see docs/DESIGN.md.\n *\n * Command surface (v0.39.x — five top-level slash commands, registered\n * in goal-activation.ts with bodies in goal-commands.ts; completion claims\n * are verified by the DETACHED auditor via goal-loop-auditor-process.ts):\n *   /goal start|plan|audit|verify|status|timeline|pause|resume|cancel|decide|tweak|archive (+ draft)\n *   /list add|show|start|resume|pause|tweak|next|remove|rm|clear|depth|cancel|plan|audit|import\n *   /loop start|respec|plan|audit|status|blockers|recheck|resume|refine|polish|stop|cancel|pause|finish (+ draft)\n *   /glla <settings table> | version|status|fleet|progress|log|resume|pause|cancel|wipe|stats|audits|agents|switchlog|tooloverride|fallbacks|owner|takeover|postaudit|bug\n *   /review <goal-id> [off|on|auto|aggressive]\n */\n\nimport { randomUUID } from \"node:crypto\";\nimport * as fs from \"node:fs\";\nimport { persistApprovalRender } from \"../approval-render-store.js\";\nimport { collectOpenTasks, formatOpenTaskRefusal } from \"../task-batch.js\";\nimport * as os from \"node:os\";\nimport * as path from \"node:path\";\n\nimport { defineTool, type ExtensionAPI, type ExtensionContext } from \"@earendil-works/pi-coding-agent\";\nimport { Type } from \"typebox\";\n\n// v0.34.109 (decomposition step 1): the state singleton and the persistence\n// core moved to goal-state.ts — the SINGLE owner of the mutable state object\n// (positioning doc invariant #2). Property reads on the imported binding are\n// fine; wholesale replacement goes through replaceState().\nimport { state, replaceState, persistStateLine } from \"../goal-state.js\";\n\nimport {\n  type FindingGroup,\n  type GateRow,\n  type Goal,\n  type Policy,\n  type State,\n  type MainModelRecovery,\n  type Status,\n  type ModeCommand,\n  modeCommand,\n  workCommand,\n  workCommandRoot,\n  appendLedger,\n  archiveDir,\n  archivedGoalPath,\n  buildTaskList,\n  buildTaskSummary,\n  auditFeedbackExcerpt,\n  auditVerdictLabel,\n  DEFAULT_AUDIT_FEEDBACK_CHARS,\n  DEFAULT_STALL_ESCALATION_REFIRES,\n  DEFAULT_TOKEN_LIMIT,\n  classifyImpossibleReason,\n  extractPendingTasks,\n  isFullAuditObjective,\n  resolveEffectiveAggressiveSettings,\n  appendAuditLog,\n  formatAuditLog,\n  formatGoalAuditHistory,\n  runWithInfraRetry,\n  isRetriableInfraError,\n  readAuditLog,\n  bumpGoalRevision,\n  stripThinkBlocks,\n  type AuditLogEntry,\n  crossRecommendMode,\n  formatListDepth,\n  extractAgentRole,\n  parseListItemDeclaration,\n  shouldEscalateStall,\n  isStaleApiError,\n  parseListImport,\n\n  routeGoalArgs,\n  routeListText,\n  listMutationBlocked,\n  LIST_DRAFTING_BLOCK_MESSAGE,\n  LIST_MUTATING_SUBCOMMANDS,\n  SETTINGS_MUTATING_ACTIONS,\n  sumNewAssistantTokens,\n  takeAt,\n  countTrailingDisapprovals,\n  goalArgsNeedDrafting,\n  buildSeedGrillMessage,\n  askUserQuestionAnswered,\n  draftProposalBlock,\n  type TaskProposal,\n  validateTaskProposal,\n  ensureDirs,\n  findNextPendingTask,\n  goalMdPath,\n  newGoalId,\n  nowIso,\n  compactDisplayText,\n  normalizeProviderErrorText,\n  providerErrorPresentation,\n  sanitizeDisplayText,\n  piGlaDir,\n  supervisorPaused,\n  normalizeDraftContract,\n  draftContractItemCount,\n  extractVerificationContract,\n  classifySessionCtx,\n  readState,\n  healCorruptedGoalPolicy,\n  renderGoalMarkdown,\n  shouldAutoResumeOnSessionStart,\n  statusLabel,\n  writeGoalMd,\n  writeGoalStateTransaction,\n  clearGoalStateTransaction,\n  writeArchiveIntent,\n  updateArchiveIntentPhase,\n  finalizeArchiveIntent,\n  clearArchiveIntent,\n  writeQueueItemFile,\n  readQueueFromDisk,\n  deleteQueueItemFileResult,\n  missingGllaTools,\n  runPersistStep,\n  isSafePersistedId,\n  stateRootPending,\n  isPersistenceDegraded,\n  lastPersistenceFailure,\n  modelSwitch,\n  isForbiddenModel,\nisGoalRevisionCurrent,\n  nextHourlyPromptMs,\n  nextHourlyProbeMs,\n  releaseLoadHoldDurably,\n  type ModelSwitchRecord,\n  type ListItem,\n} from \"../goal-loop-core.js\";\nimport {\n  createContinuationDispatch,\n  dispatchMatchesOwner,\n  dispatchPromptMatches,\n  dispatchTimedOut,\n  dispatchRecordPath,\n  clearDispatchRecord,\n  persistDispatchRecord,\n  readDispatchRecord,\n  transitionDispatch,\n  type ContinuationDispatch,\n} from \"../goal-loop-dispatch.js\";\nimport {\n  createGoalContinuation,\n  scheduleContinuation,\n  sendContinuation,\n  sendStallEscalation,\n  sendLengthContinue,\n  dispatchStartAcknowledged,\n  dispatchAccepted,\n  dispatchFailed,\n  dispatchPrepare,\n  releaseContinuationDispatchStandDown,\n  clearContinuationTimer,\n  clearContinuationStartWatchdog,\n  clearQueueStuckProbe,\n  accountSendRearm,\n  sendRearmDelayMs,\n  armQueueStuckProbe,\n  buildPostCompactResync,\n  continuationTimerPending,\n  continuationTimerRef,\n  continuationStartTimerRef,\n  pendingContinuationDispatchRef,\n  setPendingContinuationDispatchRef,\n  continuationDispatchStoodDownRef,\n  setContinuationDispatchStoodDownRef,\n  lastContinuationSentAtRef,\n  setLastContinuationSentAtRef,\n  lastContinuationSentPayloadRef,\n  setLastContinuationSentPayloadRef,\n  setContinuationRearmStreak,\n  setContinuationRearmSince,\n  resetContinuationDispatchState,\n  type ContinuationFlags,\n  type ContinuationDeps,\n} from \"../goal-continuation.js\";\nexport { __testOnlySetContinuationStartTimeout, __testOnlySetContinuationRetryBackoff } from \"../goal-continuation.js\";\nimport {\n  LENGTH_CONTINUE_MAX,\n  LENGTH_CONTINUE_TEXT,\n  isContextStarvedLengthStop,\n  resetLengthContinue,\n  tickLengthContinue,\n} from \"../length-continue.js\";\nimport { scheduleProviderRetry, cancelProviderRetry, type ProviderRetryScheduleOptions } from \"../quota-retry.js\";\nimport {\n  classifyMainModelFailure,\n  isMainModelFallbackFailure,\n  requiresMainModelRecovery,\n  mainModelAutoRetryUntil,\n  mainModelFailureDelayMs,\n  mainModelRetryDelayMs,\n  MAIN_MODEL_AUTO_RETRY_HORIZON_MS,\n  modelRef,\n  nextUntriedModelRef,\n  normalizeMainModelSameModelRetries,\n  normalizeModelRefs,\n  sameModelRetriesRemain,\n  sendStormEscalateMs,\n  splitModelRef,\n  type MainModelFailure,\n} from \"../main-model-recovery.js\";\nimport {\n  globalSettingsPath,\n  loadGlobalSettings,\n  loadSettings,\n  projectSettingsPath,\n  saveSettings,\n  settingsProvenance,\n  type Settings,\n} from \"../goal-settings.js\";\nimport {\n  curateAuditReviewSources,\n  normalizeObjective,\n  resolveReviewerConfig,\n  reviewerMenuOptions,\n  runReviewer,\n  type ReviewerConfig,\n} from \"../reviewer.js\";\nimport {\n  discoverGllaProjects,\n  filterPremature,\n  formatRollupJson,\n  formatRollupTable,\n  rollupProject,\n  type ProjectRollup,\n} from \"../goal-loop-stats.js\";\nimport {\n  cancelDetachedGoalCompletionAuditor,\n  newDetachedAuditJobAttemptId,\n  runDetachedGoalCompletionAuditor,\n  type AuditorProgress,\n} from \"../goal-loop-auditor-process.js\";\nimport {\n  REPETITION,\n  isActuallyStuck,\n  loopInterventionDirective,\n  continueVariant,\n  textFingerprint,\n  pushCapped as pushRepetitionCapped,\n} from \"../goal-loop-repetition.js\";\nimport { buildStatusText, buildWidgetLines, truncateCells, type AuditDisplayProgress } from \"../goal-loop-display.js\";\nimport {\n  buildLoopCompletionSummary,\n  buildRichArchiveSection,\n  compactLoopCompletionSummary,\n  compactTerminalCompletionSummary,\n  isTerminalLoopStopReason,\n  resolveCompletionSummary,\n} from \"../completion-summary.js\";\nimport {\n  defaultAgentDir,\n  resolveEffectiveSubagentModel,\n  syncSubagentModelOverrides,\n  type SubagentModelStrategy,\n} from \"../goal-loop-subagents.js\";\nimport {\n  buildSettingsRows,\n  SettingsMenuComponent,\n  type SettingsRow,\n  type SettingsSectionId,\n} from \"../settings-menu.js\";\nimport {\n  VISION_ASSIST_GUIDANCE,\n  routeVisionCheck,\n  visionAssistLedger,\n} from \"../vision-assist.js\";\nimport {\n  buildModelPickItems,\n  ModelPickerComponent,\n  type ModelPickItem,\n} from \"../model-picker.js\";\nimport { shouldCompactBetweenTasks } from '../goal-compactor.js';\nimport { shouldRecoverContextPressure, isExplicitPromptOverflow, compactFirstEligible } from '../context-pressure-recovery.js';\nimport { claimPressureAttempt, clearPressureAttempt, resetPressureBudget, setPressureExclusion } from '../context-pressure-attempt.js';\nimport { consumeRecoveryResume, sameModelRef } from \"../goal-recovery.js\"; // decomposition step 3 (v0.34.111)\nimport {\n  createGoalHeartbeat,\n  endSubagentHangProbe,\n  markSubagentHangProgress,\n  startHeartbeat,\n  signalSupervisionEvent,\n  upsertSubagentHangProbe,\n  type HeartbeatDeps,\n  type HeartbeatFlags,\n} from \"../goal-heartbeat.js\"; // decomposition step 4 (v0.34.112)\nimport {\n  clearMainModelRecoveryTimer,\n  createGoalRecovery,\n  isCompletionAuditRecoveryPending,\n  mainModelRecoveryActive,\n  mainModelRecoveryKind,\n  mainModelRecoveryReason,\n  mainModelRecoverySucceeded,\n  mainModelFallbackRefs,\n  mainModelSameModelRetryActive,\n  manuallyResumeMainModelRecovery,\n  markCompletionAuditRecoveryPending,\n  parkMainModelAfterFailure,\n  probeMainModelRecovery,\n  recoverMainModelFromSendStorm,\n  resolveMainModel,\n  scheduleHourlyProbe,\n  scheduleMainModelRecoveryTimer,\n  setMainModelRecoveryPause,\n  tryMainModelFallback,\n  withMainModelRecoveryWindow,\n  type RecoveryDeps,\n  type RecoveryFlags,\n} from \"../goal-recovery.js\"; // decomposition step 3 (v0.34.111) — clusters B (main-model recovery) + C (completion-audit recovery)\nimport {\n  ConfirmDraftComponent,\n} from \"../confirm-draft.js\";\nimport {\n  applyMeasurement,\n  applyMetriclessTick,\n  applyRefinement,\n  loopBranchName,\n  parseLoopStartArgs,\n  loopFinishStopReason,\n  isLoopWriteTool,\n  parseMetric,\n  LOOP_DEFAULTS,\n  resolveSpecFiles,\n  respecTarget,\n  topOpenAuditFinding,\n  specFileHash,\n  countCheckedSpecItems,\n  auditMeasureCmd,\n  auditTarget,\n  AUDIT_PLATEAU_MAX_REPRIEVES,\n  countOpenAuditFindings,\n  AUDIT_FINDINGS_REL,\n  projectAuditTarget,\n  LIST_AUDIT_COLLECT_MARKER,\n  GOAL_AUDIT_ONESHOT_MARKER,\n  LOOP_AUDIT_MARKER,\n  listAuditCollectTarget,\n  parseAuditFindingsForFanout,\n  listAuditFanoutItemText,\n  type AuditFindingLine,\n  type LoopTickOutcome,\n  HELD_ON_RESTORE,\n  type LoopState,\n} from \"../goal-loop-forever.js\";\nimport {\n  accountTurnForNudgesRich,\n  BACKOFF_IDLE_RETRY_MS,\n  DEFAULT_STALL_SIM_THRESHOLD,\n  DEFAULT_STALL_SHORT_WORDS,\n  HEARTBEAT_INTERVAL_MS,\n  HEARTBEAT_MAX_NUDGES,\n  HEARTBEAT_STALL_MS,\n  shouldHeartbeatRefire,\n  MEASURE_TIMEOUT_MS,\n  WEDGE_ALERT_DEFAULT_MINUTES,\n  shouldWedgeAlert,\n  PENDING_LATCH_STUCK_MS,\n  shouldFirePendingLatchWatchdog,\n} from \"../goal-loop-backoff.js\";\n\nimport {\n  addSingleItem,\n  autoNotifyCmd,\n  cmdGoal,\n  cmdList,\n  cmdReview,\n  cmdReviewerSettings,\n  cmdSettings,\n  createGoalCommands,\n  enqueueItems,\n  maybeDecisionPopup,\n  probeAutoNotify,\n  recentlyCompletedObjectives,\n  warnIfAuditorProviderRisky,\n  warnOnCommandCollision,\n  type CommandDeps,\n  type CommandFlags,\n} from \"../goal-commands.js\";\nimport {\n  STALE_TOOL_CONTEXT_MESSAGE,\n  clearLoopTimer,\n  cmdLoop,\n  createGoalLoop,\n  isLoopActive,\n  loopTimerPending,\n  runLoopTick,\n  scheduleLoopTick,\n  startLoopFromConfig,\n  type LoopDeps,\n  type LoopFlags,\n} from \"../goal-loop.js\";\nimport { defineGoalRuntimeGlobal } from \"./goal-runtime-globals.js\";\n\nfunction escalateStallNow(ctx: ExtensionContext, threshold: number): boolean {\n  if (!shouldEscalateStall(consecutiveStalls, threshold)) return false;\n  consecutiveStalls = 0;\n  appendLedger(ctx.cwd, \"stall_escalated\", { threshold, kind: isLoopActive() ? \"loop\" : \"goal\" });\n  if (isLoopActive()) {\n    clearLoopTimer();\n    state.loop = { ...state.loop!, active: false, stopReason: `stalled: ${threshold} continuation refires landed no turn — the session is not continuing (wedged message queue or stale API). Press Escape to cancel any stuck run, then /loop resume — the loop holds on restore. A fresh session_start rebinds the loop or goal; restart pi normally only if no replacement arrives.` };\n    // v0.39.x audit: the stop must prove it landed — degraded storage gets\n    // the caveat, not an unconditional safety claim.\n    const loopStopLanded = persistState(ctx);\n    ctx.ui.notify(`Loop stopped: ${threshold} refires produced no turn — the continuation is not landing. Escape cancels a stuck run, then /loop resume${loopStopLanded ? \" (the loop holds on restore)\" : \" (the stop could not persist — repair .pi-glla storage before resuming)\"}. A fresh session_start rebinds it; restart pi normally only if no replacement arrives.`, \"warning\");\n    notifyExternal(ctx, \"Loop stopped: stalled (continuation not landing).\");\n    return true;\n  }\n  if (state.goal && state.goal.status === \"active\") {\n    const stallParkLanded = updateGoal({\n      status: \"paused\",\n      pauseKind: \"error\",\n      pauseReason: `stalled: ${threshold} continuation refires landed no turn`,\n      pauseSuggestedAction: `The continuation chain is broken in this process (wedged message queue or stale API). Press Escape to cancel any stuck run, then ${activeGoalSurfaceCommand(\"resume\")}. A fresh session_start rebinds the goal; restart pi normally only if no replacement arrives.`,\n    }, ctx);\n    ctx.ui.notify(`${goalNoun()} paused: ${threshold} refires produced no turn. Escape cancels a stuck run, then ${activeGoalSurfaceCommand(\"resume\")}${stallParkLanded ? \"\" : \" (the pause could not persist — repair .pi-glla storage before resuming)\"}. A fresh session_start rebinds it; restart pi normally only if no replacement arrives.`, \"warning\");\n    notifyExternal(ctx, `${goalNoun()} paused: stalled (continuation not landing).`);\n    return true;\n  }\n  return true;\n}\n\nlet heartbeatStaleStreak = 0;\n\nlet iterationCounter = 0;\nlet toolCallsThisTurn = 0;\nlet consecutiveErrorIterations = 0;\n// v0.28.5 (E8): user aborts are NOT provider errors — separate counter,\n// separate brake message, and no auto-resume (aborting is user intent).\nlet consecutiveAbortIterations = 0;\n// v0.29.5: set when a user abort stands the chain down (0.29.4) — the\n// heartbeat refire + post-compaction refire must NOT resurrect it; only\n// an explicit schedule (resume/activate/next turn) clears it.\nlet abortedStandDown = false;\n\nfunction scheduleSessionTimeout(callback: () => void, delayMs: number): NodeJS.Timeout {\n  const generation = sessionGeneration;\n  let timer: NodeJS.Timeout;\n  timer = setTimeout(() => {\n    sessionTimeouts.delete(timer);\n    // clearTimeout is not enough when the callback is already queued. Do not\n    // let an old session's callback re-arm work after stale/shutdown/reload.\n    if (\n      generation !== sessionGeneration ||\n      sessionHandoffPending ||\n      extensionApiStale ||\n      staleTerminalDone ||\n      zombieStoodDown\n    ) return;\n    callback();\n  }, delayMs);\n  sessionTimeouts.add(timer);\n  timer.unref?.();\n  return timer;\n}\n\nfunction clearSessionOwnedTimers(preserveStaleRecovery = false): void {\n  // Tool starts/results are display-only session evidence. Clear them with\n  // the timers so a lost result cannot make the successor look WORKING.\n  clearToolActivityState();\n  sessionHandoffPending = true;\n  sessionGeneration++;\n  initialSessionLoadPending = false;\n  clearContinuationTimer();\n  clearContinuationStartWatchdog();\n  clearLoopTimer();\n  clearQueueStuckProbe();\n  // A stale terminal keeps a minimal probe alive so a same-process handle\n  // that becomes healthy again can self-heal without waiting for /reload.\n  // Normal shutdown/rebind still clears both tickers completely.\n  if (!preserveStaleRecovery && heartbeatTimer) { clearTimeout(heartbeatTimer); heartbeatTimer = null; }\n  if (!preserveStaleRecovery && uiTicker) { clearInterval(uiTicker); uiTicker = null; }\n  clearMainModelRecoveryTimer();\n  mainModelAbortForRecovery = false;\n  lastMainModelFailure = null;\n  for (const timer of sessionTimeouts) clearTimeout(timer);\n  sessionTimeouts.clear();\n  cancelProviderRetry();\n  if (ownerSession) {\n    deadOwnerSession = ownerSession; // v0.34.25: keep the dead identity for successor absorption\n    deadOwnerCwd = ownerCwd ?? lastCtx?.cwd ?? null;\n  }\n  // Keep the last context only for the stale-recovery probe. freshCtx() still\n  // refuses it while sessionHandoffPending is set, so no stale send can leak\n  // through; self-heal verifies the API before reopening the generation.\n  if (!preserveStaleRecovery) lastCtx = null;\n  ownerSession = null;\n  ownerCwd = null;\n}\n\nfunction isActionableGoal(): boolean {\n  return !!state.goal && state.goal.status === \"active\" && state.goal.autoContinue;\n}\n\nfunction freshCtx(): ExtensionContext | null {\n  if (sessionHandoffPending || initialSessionLoadPending) return null;\n  // A captured ctx throws \"stale\" after session replacement. Probe cheaply;\n  // on stale, drop it and wait for the next event to hand us a fresh one.\n  // S4: only a STALE-class throw drops the context — a transient probe\n  // glitch must fail closed for this caller without nuking lastCtx for\n  // every one-shot timer behind it (the v0.34.62 heartbeat precedent).\n  if (!lastCtx) return null;\n  try {\n    lastCtx.isIdle();\n    return lastCtx;\n  } catch (err) {\n    if (isStaleApiError(err)) lastCtx = null;\n    return null;\n  }\n}\n\n/**\n * v0.34.20: a timer can already be queued when clearSessionOwnedTimers()\n * runs, and an async audit can finish after a replacement without a queued\n * timer at all. Delayed work must prove both facts before touching pi:\n * generation identity is unchanged and the context probe succeeds. A null\n * result is a normal fail-closed handoff, not a reason to use the caller's\n * captured context as a fallback.\n */\nfunction freshCtxForGeneration(generation: number): ExtensionContext | null {\n  if (\n    generation !== sessionGeneration ||\n    sessionHandoffPending ||\n    initialSessionLoadPending ||\n    extensionApiStale ||\n    staleTerminalDone ||\n    zombieStoodDown\n  ) return null;\n  return freshCtx();\n}\n\n/**\n * v0.34.20: the generic provider-retry helper owns only the wall-clock timer and the\n * immediate notification. This adapter owns the session boundary: callbacks\n * receive a context proven fresh at fire time and may not close over the\n * scheduling event's ctx.\n */\nfunction scheduleProviderRetryForSession(\n  ctx: ExtensionContext,\n  retryAfterSec: number,\n  reason: string,\n  fire: (ctx: ExtensionContext) => void | Promise<void>,\n  label?: string,\n  options?: ProviderRetryScheduleOptions,\n): void {\n  const generation = sessionGeneration;\n  scheduleProviderRetry(ctx, retryAfterSec, reason, () => {\n    const current = freshCtxForGeneration(generation);\n    if (!current) return;\n    try {\n      void Promise.resolve(fire(current)).catch((err) => {\n        if (isStaleApiError(err)) extensionApiStale = true;\n      });\n    } catch (err) {\n      if (isStaleApiError(err)) extensionApiStale = true;\n    }\n  }, label, options);\n}\n\n// clearMainModelRecoveryTimer / mainModelRecoveryActive / mainModelRecoveryKind /\n// mainModelRecoveryReason / withMainModelRecoveryWindow moved to goal-recovery.ts\n// (decomposition step 3, v0.34.111) and imported above.\n\n// ============================================================================\n// Main-model recovery machinery (holdMainModelRecovery, tryMainModelFallback,\n// probeMainModelRecovery, scheduleMainModelRecoveryTimer, scheduleHourlyProbe,\n// manuallyResumeMainModelRecovery, recoverMainModelFromSendStorm,\n// mainModelRecoverySucceeded, parkMainModelAfterFailure, mainModelFallbackRefs,\n// resolveMainModel, setMainModelRecoveryPause, fireHourlyProbe, cancelHourlyProbe,\n// and the hourly lets) moved to goal-recovery.ts (decomposition step 3,\n// v0.34.111) and imported at the top of this file. The RecoveryFlags/RecoveryDeps\n// wiring lives at createGoalRecovery(...) below.\n// ============================================================================\n\n/** Settle an explicit provider prompt-policy refusal before loop/goal\n * bookkeeping can mistake it for an ordinary unproductive turn. The\n * provider marker is intentionally narrow; the lifecycle side effects below\n * are shared with the existing zero-stream safety boundary but keep the\n * objective and loop history durable for an explicit, changed-prompt retry. */\nfunction settlePromptPolicyRejection(ctx: ExtensionContext, failure: MainModelFailure): boolean {\n  const activeLoop = state.loop?.active === true ? state.loop : null;\n  const activeGoal = state.goal?.status === \"active\" && state.goal.autoContinue !== false ? state.goal : null;\n  // Plain pi sessions and already-paused/auditing state are not owned by this\n  // recovery path. Leave their provider error to pi/core rather than aborting\n  // an unrelated user turn.\n  if (!activeLoop && !activeGoal) return false;\n\n  const diagnostic = providerErrorPresentation(failure.raw, \"main\").diagnostic;\n  const reason = \"provider rejected the prompt as a policy violation — automatic retry cannot succeed\";\n  const resume = activeLoop ? recoverySurfaceCommand(\"loop\", \"resume\") : activeGoalSurfaceCommand(\"resume\");\n  const cancel = activeLoop ? recoverySurfaceCommand(\"loop\", \"stop\") : activeGoalSurfaceCommand(\"cancel\");\n  const action = `The work is saved. Change the ${activeLoop ? \"loop target or prompt\" : \"objective or prompt\"}, then ${resume}; ${cancel} discards it.`;\n\n  clearMainModelRecoveryTimer();\n  state.mainModelRecovery = undefined;\n  // Retain the classified failure until the matching abort event so the\n  // existing main-model abort settlement can distinguish this deliberate\n  // park from a normal provider-recovery abort.\n  lastMainModelFailure = failure;\n  cancelProviderRetry();\n  const dispatchReset = resetContinuationDispatchState(ctx.cwd);\n  setContinuationDispatchStoodDownRef(true);\n  abortedStandDown = true;\n  clearLoopTimer();\n\n  if (activeLoop) {\n    activeLoop.active = false;\n    activeLoop.stopReason = reason;\n  }\n  let persisted = true;\n  if (activeGoal) {\n    persisted = updateGoal({\n      status: \"paused\",\n      pauseKind: \"error\",\n      pauseResumeAt: undefined,\n      pauseReason: reason,\n      pauseSuggestedAction: action,\n      providerErrorDiagnostic: diagnostic,\n    }, ctx) !== false;\n  } else if (activeLoop) {\n    persisted = persistState(ctx);\n  }\n\n  let abortError: string | undefined;\n  if (!mainModelAbortForRecovery) {\n    mainModelAbortForRecovery = true;\n    try { ctx.abort(); } catch (err) { abortError = err instanceof Error ? err.message : String(err); }\n  }\n  appendLedger(ctx.cwd, \"main_model_prompt_policy_terminal\", {\n    model: modelRef(ctx.model),\n    goalId: activeGoal?.id,\n    loop: Boolean(activeLoop),\n    dispatchReset,\n    persisted,\n    ...(abortError ? { abortError: abortError.slice(0, 240) } : {}),\n  });\n  const loopRecap = activeLoop\n    ? compactLoopCompletionSummary({ ...activeLoop, historyLength: activeLoop.history?.length ?? 0 })\n    : undefined;\n  const message = `${activeLoop ? \"Loop stopped\" : activeGoal?.policy === \"list\" ? \"List item paused\" : \"Goal paused\"}: ${reason}. ${action}${loopRecap ? `\\nRecap: ${loopRecap}` : \"\"}`;\n  ctx.ui.notify(message, \"warning\");\n  notifyExternal(ctx, message);\n  if (!persisted || !dispatchReset) {\n    ctx.ui.notify(\"glla: prompt-policy settlement could not fully persist its stop boundary. Automatic work is held in this process; fix .pi-glla storage and verify the durable state before resuming.\", \"warning\");\n  }\n  return true;\n}\n\n/** Handle a provider error before loop/goal bookkeeping can mistake it for\n * an unproductive turn. Returns true when recovery owns this agent_end. */\nasync function handleMainModelAgentEnd(ctx: ExtensionContext, rawLastA: any, lastA: any): Promise<boolean> {\n  if (lastA?.stopReason === \"aborted\" && mainModelAbortForRecovery) {\n    const promptPolicy = lastMainModelFailure?.nonRecoverableReason === \"prompt-policy\";\n    mainModelAbortForRecovery = false;\n    lastMainModelFailure = null;\n    appendLedger(ctx.cwd, promptPolicy ? \"main_model_prompt_policy_abort_settled\" : \"main_model_recovery_abort_settled\", { model: modelRef(ctx.model) });\n    return true;\n  }\n  if (lastA?.stopReason === \"error\") {\n    const rawError = normalizeProviderErrorText(rawLastA, lastA.text);\n    const failure = classifyMainModelFailure(rawError);\n    if (failure.nonRecoverableReason === \"prompt-policy\" && settlePromptPolicyRejection(ctx, failure)) return true;\n    lastMainModelFailure = failure;\n    setPressureExclusion(ctx, !compactFirstEligible(failure));\n    let usage;\n    try { usage = ctx.getContextUsage?.(); } catch { /* Unknown usage preserves ordinary recovery. */ }\n    // An error is also a safe opportunity to discharge the preventive token\n    // target. Otherwise immediate fallback makes the settled threshold check\n    // unreachable (the 232819/272000 incident), even below emergency pressure.\n    const preventiveDue = compactFirstEligible(failure) && (failure.kind === 'unknown' || failure.kind === 'transient')\n      && shouldCompactBetweenTasks({ tokens: usage?.tokens, threshold: loadGlobalSettings().compactionTokenThreshold }).compact;\n    if (isSupervising() && !supervisorPaused(state) && !abortedStandDown && (preventiveDue || shouldRecoverContextPressure(failure, usage))) {\n      const generation = sessionGeneration;\n      const target = state.loop?.active ? `loop:${state.loop.startedAt}` : `goal:${state.goal?.id}`;\n      const budget = { file: path.join(piGlaDir(ctx.cwd), 'context-pressure-budget.json'), key: target };\n      const valid = () => generation === sessionGeneration && !!freshCtxForGeneration(generation)\n        && !supervisorPaused(state) && !abortedStandDown && isSupervising()\n        && target === (state.loop?.active ? `loop:${state.loop.startedAt}` : `goal:${state.goal?.id}`);\n      const recoveryFailure = isExplicitPromptOverflow(failure.raw) ? classifyMainModelFailure(failure.raw, { isContextOverflow: true }) : failure;\n      const claimed = claimPressureAttempt(ctx, {\n        failure: recoveryFailure, valid, budget,\n        record: phase => appendLedger(ctx.cwd, 'context_pressure_recovery', { phase, target, generation }),\n        fallback: original => {\n          void (async () => {\n            const current = freshCtxForGeneration(generation);\n            if (!current || !valid()) return;\n            try {\n              if (!await tryMainModelFallback(current, original)) parkMainModelAfterFailure(current, original);\n              const fresh = freshCtxForGeneration(generation);\n              if (!fresh || !valid()) return;\n              if (isLoopActive()) scheduleLoopTick(fresh);\n              else if (isActionableGoal()) scheduleContinuation(fresh, true, 1_000);\n            } catch (error) {\n              if (valid()) parkMainModelAfterFailure(current, classifyMainModelFailure(String(error)));\n            }\n          })();\n        },\n        timeout: () => {\n          if (!valid()) return true;\n          clearContinuationTimer(); clearLoopTimer();\n          // The compaction budget bounds this attempt, not the objective.\n          // Keep its one-shot budget spent and hand the ORIGINAL diagnostic\n          // to the paced provider owner; late compactor callbacks cannot\n          // reopen this attempt or duplicate the recovery continuation.\n          parkMainModelAfterFailure(ctx, recoveryFailure);\n          const landed = !isPersistenceDegraded() && !!state.mainModelRecovery?.retryAt;\n          if (!landed) {\n            setContinuationDispatchStoodDownRef(true);\n            ctx.ui.notify('glla: compact-first timeout recovery handoff could not persist. Automatic dispatch remains held; repair .pi-glla storage before resuming.', 'warning');\n          } else {\n            appendLedger(ctx.cwd, 'context_pressure_timeout_handoff', { target, generation, retryAt: state.mainModelRecovery?.retryAt });\n            ctx.ui.notify('Compaction timed out; saved work is entering paced automatic model recovery. No manual resume is required.', 'warning');\n          }\n          return landed;\n        },\n      });\n      if (claimed) {\n        clearContinuationTimer(); clearLoopTimer(); cancelProviderRetry();\n        // Abort only the already-failed request, preventing Pi's core retry\n        // from racing the idle compact-first admission. No healthy tool is cut.\n        if (!mainModelAbortForRecovery) { mainModelAbortForRecovery = true; try { ctx.abort(); } catch { /* safe boundary will retry admission */ } }\n        return true;\n      }\n      // The one-shot budget survived compaction or reload. Explicit input\n      // overflow now reaches fallback without re-entering compact-first.\n      if (isExplicitPromptOverflow(failure.raw)) {\n        if (await tryMainModelFallback(ctx, recoveryFailure)) return true;\n        parkMainModelAfterFailure(ctx, recoveryFailure);\n        return true;\n      }\n    }\n    if (failure.kind !== \"non-recoverable\") {\n      // v0.38.105: same-model retry budget (operator direction 2026-10-08).\n      // Most provider failures are transient, so the CURRENT model keeps the\n      // episode until its budget is spent. 0 = legacy immediate rotation. The\n      // budget is shared between the agent_end and the probe path so rotation\n      // cannot be triggered twice from different code paths.\n      const sameModelBudget = normalizeMainModelSameModelRetries(loadSettings(ctx.cwd).mainModelSameModelRetries);\n      const recoveryActive = state.mainModelRecovery;\n      const current = ctx.model ? modelRef(ctx.model) : undefined;\n      const rotationsAllowed = !mainModelSameModelRetryActive(ctx, recoveryActive, sameModelBudget)\n        || (!!recoveryActive && !!current && !sameModelRef(recoveryActive.active, current));\n      const switched = rotationsAllowed ? await tryMainModelFallback(ctx, failure) : false;\n      if (switched) return true; // pi's core retry now uses the selected backup\n      const backupRefs = mainModelFallbackRefs(ctx);\n      // Every recoverable provider failure uses the same ordered backup and\n      // bounded retry envelope. If the chain is empty or every candidate is\n      // rejected, the durable envelope owns retry on the current model.\n      if ((isSupervising() && requiresMainModelRecovery(failure)) || (backupRefs.length > 0 && isMainModelFallbackFailure(failure))) {\n        parkMainModelAfterFailure(ctx, failure);\n        if (mainModelRecoveryActive() || (isSupervising() && state.mainModelRecovery)) return true;\n      }\n    }\n  } else if (lastA) {\n    // `agent_end` with stopReason=aborted is a user cancellation, not proof\n    // that the provider recovered. Clearing the durable fallback episode here\n    // made Escape silently discard the only retry plan. Only a non-aborted,\n    // non-error assistant end can settle main-model recovery.\n    if (lastA.stopReason === \"aborted\" || lastA.stopReason === \"cancelled\" || lastA.stopReason === \"canceled\") { clearPressureAttempt(ctx); return false; }\n    clearPressureAttempt(ctx, true);\n    resetPressureBudget(path.join(piGlaDir(ctx.cwd), 'context-pressure-budget.json'), state.loop?.active ? `loop:${state.loop.startedAt}` : `goal:${state.goal?.id}`);\n    if (state.mainModelRecovery) mainModelRecoverySucceeded(ctx);\n    else lastMainModelFailure = null;\n  }\n  // A passive episode is history of a selected model, not proof that a\n  // supervised recovery timer owns an ordinary error. Let the ordinary\n  // retry policy own exhaustion; settlement must not claim a fresh switch.\n  if (lastA?.stopReason === \"error\" && !isSupervising()) lastMainModelFailure = null;\n  return false;\n}\n\n\n\n// =================================================================\n// Goal lifecycle\n// =================================================================\n\nfunction createGoal(objective: string, ctx: ExtensionContext, policy: \"goal\" | \"list\" = \"goal\"): Goal {\n  ensureDirs(ctx.cwd);\n  // v0.35.23 (note.md Next #2): creating a goal — via /goal start, a list\n  // item activation, or an accepted draft — IS the explicit decision a\n  // load hold waits for. Release before the new work's first continuation\n  // would otherwise be frozen.\n  // v0.39.45 (audit 2026-10-22): this release used to be a RAM-only delete\n  // that was journaled as if it had landed — the same drift the 2026-10-19\n  // repair fixed for the other release sites. releaseLoadHoldDurably\n  // restores the gate when the snapshot cannot be written and claims\n  // nothing.\n  releaseLoadHoldDurably(state, ctx, `goal-created:${policy}`);\n  // Extract verification contract if present in objective.\n  const { objective: roleCleaned, agentRole } = extractAgentRole(objective);\n  const { objective: cleanObj, verificationContract } = extractVerificationContract(roleCleaned);\n  const id = newGoalId();\n  const goal: Goal = {\n    id,\n    objective: cleanObj,\n    status: \"active\",\n    policy,\n    ...(agentRole ? { agentRole } : {}),\n    autoContinue: true,\n    verificationContract: verificationContract || \"\",\n    objectiveProvenance: {\n      originalObjective: cleanObj,\n      ...(verificationContract ? { originalContract: verificationContract } : {}),\n      userSeeds: [objective],\n    },\n    usage: { tokensUsed: 0, tokensLimit: loadSettings(ctx.cwd).tokenLimit ?? DEFAULT_TOKEN_LIMIT },\n    createdAt: nowIso(),\n    updatedAt: nowIso(),\n  };\n  return goal;\n}\n\nfunction persistState(ctx: ExtensionContext): boolean {\n  // v0.36.0: loop stops are a second terminal surface (they do not pass\n  // through archiveCurrentGoal). Materialize the same six-label recap here\n  // after a real terminal stop, while leaving lifecycle/recovery holds alone.\n  // A resumed loop clears the old recap at its explicit resume boundary.\n  let loopSummaryGenerated = false;\n  const loop = state.loop;\n  if (loop?.active && loop.completionSummary) {\n    // Mutate the existing loop object rather than replacing it: callers may\n    // still hold the same object while resolving a plateau/hold decision in\n    // the current turn.\n    loop.completionSummary = undefined;\n  } else if (loop && !loop.active && isTerminalLoopStopReason(loop.stopReason)\n    && !(loop.builder?.phase === \"complete\" && loop.completionSummary)) {\n    // Rebuild when the final stop reason changes after an intermediate\n    // measurement (the audit-loop reprieve path does exactly that). A stale\n    // recap would make the terminal notification describe the provisional\n    // plateau rather than the honest final stop.\n    const nextSummary = buildLoopCompletionSummary({\n      target: loop.target,\n      stopReason: loop.stopReason!,\n      iteration: loop.iteration,\n      bestValue: loop.bestValue,\n      historyLength: loop.history?.length ?? 0,\n    });\n    if (loop.completionSummary !== nextSummary) {\n      loop.completionSummary = nextSummary;\n      loopSummaryGenerated = true;\n    }\n  }\n  // v0.34.61 (steal #3, auditor round 2): the revision counter is\n  // CONTRACT-scoped. v0.34.59 bumped on EVERY commit — audit settles\n  // bumped too, so a settled verdict always left the goal one revision\n  // past the recorded one and every later complete_goal was falsely\n  // rejected (\"pass when matching\" was unreachable; /goal verify's\n  // escape dead-ended too). Bumps now happen ONLY at the two contract\n  // change sites (cmdTweak, complete_goal newObjective) — a settled\n  // audit leaves lastAudited.revision === state.goal.revision.\n  // The durable write itself lives in goal-state.ts (persistStateLine);\n  // this wrapper adds the UI side effects on top.\n  const landed = persistStateLine(ctx.cwd, state);\n  signalSupervisionEvent({ plane: state.mainModelRecovery ? \"provider-recovery\" : state.loop?.active ? \"loop\" : state.goal?.policy === \"list\" ? \"list\" : state.goal ? \"goal\" : \"queue\", kind: \"progress\", source: \"durable-state\" });\n  if (landed && loopSummaryGenerated && state.loop) {\n    appendLedger(ctx.cwd, \"loop_completion_summary\", {\n      iteration: state.loop.iteration,\n      best: state.loop.bestValue,\n      reason: state.loop.stopReason,\n      source: \"durable-loop-terminal-state\",\n    });\n  }\n  notifyPersistenceState(ctx); // v0.28.6 (E1): loud on the first failure, all-clear on recovery\n  refreshUI(ctx, true); // every durable state transition flows through here → the TUI is always current\n  // The synchronous repaint can be overwritten by pi's transcript/editor\n  // render that completes after this persistence callback. Re-apply the\n  // durable projection after the current event yields so status transitions\n  // such as active → auditing cannot remain stale until worker progress.\n  scheduleUIRefresh();\n  return landed;\n}\n\n// v0.28.6 (E1): persistence-degradation notify — once per failure streak,\n// once per recovery. The TUI flag (buildWidgetLines) carries the standing\n// state; these notifies are the LOUD part.\nlet persistenceDegradedNotified = false;\n\n/** v0.28.11 (U9): objective-first notifies — truncate long objectives.\n * v0.34.24: this is a display projection; persisted objective text stays raw.\n */\nconst shortObj = (s: string): string => truncateCells(compactDisplayText(s), 90);\nconst displaySlice = (s: string, max: number): string => truncateCells(compactDisplayText(s), max);\n/** v0.28.30: terminology — a list item is not a goal (user note: \"we seem\n * to call everything goal\"). User-facing pause/abort notifies name the policy. */\nconst goalNoun = (): string => (state.goal?.policy === \"list\" ? \"List item\" : \"Goal\");\nconst activeGoalCommand = (command: ModeCommand): string => modeCommand(state.goal?.policy, command);\nconst activeGoalRoot = (): \"/goal\" | \"/list\" => workCommandRoot(state.goal?.policy) as \"/goal\" | \"/list\";\nconst activeGoalSurfaceCommand = (command: string): string => workCommand(state.goal?.policy, command);\nconst activeGoalStatusCommand = (): string => state.goal?.policy === \"list\" ? `${activeGoalRoot()} show` : `${activeGoalRoot()} status`;\n// v0.34.108: the main-model recovery paths park a METRIC LOOP too — a\n// loop resumed through \"/goal resume\" would be wrong. activeGoalSurfaceCommand\n// keys off the goal policy only; this helper adds the loop surface.\nconst recoverySurfaceCommand = (kind: \"goal\" | \"loop\", command: string): string =>\n  workCommand(kind === \"loop\" ? \"loop\" : state.goal?.policy, command);\nfunction notifyPersistenceState(ctx: ExtensionContext): void {\n  if (isPersistenceDegraded() && !persistenceDegradedNotified) {\n    persistenceDegradedNotified = true;\n    const err = lastPersistenceFailure();\n    ctx.ui.notify(\n      `⚠ Persistence degraded: ${err?.what ?? \"disk write\"} failed (${(err?.error ?? \"unknown\").slice(0, 80)}). State lives in RAM and re-syncs on the next successful write — .pi-glla may be missing recent entries. Fix the disk (space/permissions) and it self-heals.`,\n      \"warning\",\n    );\n    notifyExternal(ctx, \"pi-goal-list-loop-audit: persistence degraded — .pi-glla writes failing.\");\n  } else if (!isPersistenceDegraded() && persistenceDegradedNotified) {\n    persistenceDegradedNotified = false;\n    ctx.ui.notify(\"Persistence recovered — .pi-glla writes are landing again.\", \"info\");\n  }\n}\n\nfunction goalMarkdownLanded(cwd: string, goal: Goal): boolean {\n  try {\n    return !stateRootPending() && fs.readFileSync(goalMdPath(cwd, goal.id), \"utf-8\") === renderGoalMarkdown(goal);\n  } catch {\n    return false;\n  }\n}\n\nfunction setGoal(goal: Goal, ctx: ExtensionContext, via = \"user\"): boolean {\n  goal.createdVia = via;\n  const successorFile = goalMdPath(ctx.cwd, goal.id);\n  const successor: Goal = { ...goal, activePath: path.relative(ctx.cwd, successorFile) || successorFile };\n  // Prove the successor can be journaled BEFORE any predecessor archive is\n  // published. This is the replacement transaction's commit point: after it\n  // lands, archiveCurrentGoal may clear the old live slot, and setGoal below\n  // can still finish from the durable successor snapshot after a crash.\n  if (!writeGoalStateTransaction(ctx.cwd, { ...state, goal: successor })) {\n    ctx.ui.notify(\"New objective not started — the durable goal transaction could not be written. Fix .pi-glla storage and retry.\", \"warning\");\n    return false;\n  }\n  // v0.28.14: never silently orphan a live goal — a paused/active goal\n  // being replaced is archived honestly first (the old behavior left it in\n  // goals/ but untracked: \"older goals lying around leading to confusion\").\n  // v0.34.103 (GitHub #6, Defect A): a REPLACED WAIT goal's scheduled\n  // auto-resume (pauseResumeAt) was silently dropped with it — the user's\n  // reasonable \"it will come back\" expectation broke with no notice. If the\n  // superseded goal had a pending scheduled resume, say so explicitly and\n  // ledger the cancellation so forensics can trace the dropped intent.\n  if (state.goal && state.goal.id !== goal.id && [\"active\", \"paused\", \"auditing\"].includes(state.goal.status)) {\n    const replaced = state.goal;\n    const hadScheduledResume = !!replaced.pauseResumeAt;\n    const replacementReason = `replaced by goal ${goal.id}`;\n    const replacementRecap = compactTerminalCompletionSummary({\n      goal: replaced,\n      status: \"aborted\",\n      stopReason: replacementReason,\n      archivePath: path.relative(ctx.cwd, archivedGoalPath(ctx.cwd, replaced.id)) || archivedGoalPath(ctx.cwd, replaced.id),\n    });\n    // v0.38.12 (last-wins objectives): the new objective is the real one\n    // and is NEVER refused because the old one could not archive. The old\n    // behavior returned false here, stranding the user's new objective\n    // behind a disk/archive failure they did not cause. Preserve the old\n    // objective in the ledger (nothing is silently lost — the contract,\n    // status, and audit tail needed to recreate it are all inline) and\n    // proceed with the replacement.\n    if (!archiveCurrentGoal(ctx, \"aborted\", replacementReason)) {\n      appendLedger(ctx.cwd, \"goal_superseded_unarchived\", {\n        oldGoalId: replaced.id,\n        objective: replaced.objective,\n        verificationContract: (replaced as { verificationContract?: unknown }).verificationContract ?? null,\n        status: replaced.status,\n        policy: replaced.policy,\n        pauseResumeAt: replaced.pauseResumeAt ?? null,\n        pendingCompletion: (replaced as { pendingCompletion?: unknown }).pendingCompletion ?? null,\n        replacedBy: goal.id,\n        archiveError: \"archiveCurrentGoal refused (fence or intent/persist failure)\",\n      });\n      ctx.ui.notify(`Previous ${replaced.policy === \"list\" ? \"list item\" : \"goal\"} could not be archived safely — its objective is preserved in the ledger, and the new objective starts anyway.`, \"warning\");\n    }\n    if (hadScheduledResume) {\n      appendLedger(ctx.cwd, \"replaced_resume_cancelled\", {\n        goalId: replaced.id,\n        policy: replaced.policy,\n        scheduledAt: replaced.pauseResumeAt,\n        replacedBy: goal.id,\n      });\n      const verb = replaced.policy === \"list\" ? \"/list add\" : \"/goal\";\n      ctx.ui.notify(\n        `Goal [${replaced.id}]: ${displaySlice(replaced.objective, 60)} was superseded and archived — its scheduled auto-resume (${new Date(Date.parse(replaced.pauseResumeAt!)).toLocaleTimeString()}) was cancelled. ${verb} <objective> to recreate it.\\nRecap: ${replacementRecap}`,\n        \"warning\",\n      );\n      notifyExternal(ctx, `pi-goal-list-loop-audit: a paused goal with a scheduled auto-resume was replaced; the resume was cancelled. ${replacementRecap}`);\n    } else {\n      ctx.ui.notify(`Previous ${replaced.policy === \"list\" ? \"list item\" : \"goal\"} was superseded by the new objective.\\nRecap: ${replacementRecap}`, \"info\");\n      notifyExternal(ctx, `${replaced.policy === \"list\" ? \"List item\" : \"Goal\"} superseded by a new objective: ${replacementRecap}`);\n    }\n  }\n  // v0.33.1: reset per-goal runtime state once any superseded goal has\n  // been handled. v0.38.12: archival failure no longer blocks the reset —\n  // the old objective is preserved in the ledger (goal_superseded_unarchived)\n  // and the new objective owns the runtime from here on.\n  postCompactResumeOwed = false;\n  postCompactResyncPending = false;\n  if (state.postCompactRecovery) replaceState({ ...state, postCompactRecovery: undefined });\n  clearMainModelRecoveryTimer();\n  state.mainModelRecovery = undefined;\n  mainModelAbortForRecovery = false;\n  lastMainModelFailure = null;\n  releaseContinuationDispatchStandDown();\n  countedTokenMessages.clear();\n  clearToolActivityState();\n  // v0.35.72: the successor transaction was committed before archival above;\n  // finish its markdown/state projections now. A crash at either boundary is\n  // recovered from that transaction on the next readState.\n  const file = goalMdPath(ctx.cwd, successor.id);\n  const nextGoal: Goal = { ...successor, activePath: path.relative(ctx.cwd, file) || file };\n  writeGoalMd(ctx.cwd, nextGoal);\n  replaceState({ ...state, goal: nextGoal }); // preserve list AND loop (v0.28.14: the bare reconstruction used to nuke a held/active loop whenever a goal was set)\n  const stateLanded = persistState(ctx);\n  const mdLanded = goalMarkdownLanded(ctx.cwd, nextGoal);\n  if (stateLanded && mdLanded) clearGoalStateTransaction(ctx.cwd);\n  else ctx.ui.notify(\"Goal created but its durable projection is incomplete — fix .pi-glla storage and resume to reconcile.\", \"warning\");\n  appendLedger(ctx.cwd, \"goal_created\", { goalId: goal.id, objective: goal.objective, policy: goal.policy, via, persisted: stateLanded });\n  // v0.39.45 (audit 2026-10-22): the row above carries `persisted: false`\n  // when the state line did not land — the goal is then held by the goal\n  // transaction, not by the durable projection, and the row must not claim\n  // otherwise.\n  // v0.39.x audit: durability is the return contract — callers (notably the\n  // complete_goal newObjective gate) must be able to detect ledger failure.\n  return stateLanded && mdLanded;\n}\n\nfunction updateGoal(patch: Partial<Goal>, ctx: ExtensionContext): boolean {\n  if (!state.goal) return false;\n  const statusChanged = patch.status !== undefined && patch.status !== state.goal.status;\n  const next: Goal = { ...state.goal, ...patch, updatedAt: nowIso() };\n  // Attribution belongs to this episode, not a previous stop. Runtime\n  // holds default to system; agent/user entrypoints explicitly name theirs.\n  if (next.status !== \"paused\") next.pauseSource = undefined;\n  else if (patch.status === \"paused\" || patch.pauseReason !== undefined) {\n    next.pauseSource = patch.pauseSource ?? \"system\";\n  }\n  const file = goalMdPath(ctx.cwd, next.id);\n  const nextGoal: Goal = { ...next, activePath: path.relative(ctx.cwd, file) || file };\n  // The goal the live session showed before this update — the rollback\n  // target when the durable write cannot land.\n  const previousGoal = state.goal;\n  // v0.35.72: the transaction snapshot closes the crash window between the\n  // markdown projection and the append-only state ledger. A later restart\n  // adopts it only when it is newer than the last committed state line.\n  if (!writeGoalStateTransaction(ctx.cwd, { ...state, goal: nextGoal })) {\n    ctx.ui.notify(\"Goal update was not persisted — the durable goal transaction could not be written. Fix .pi-glla storage and retry.\", \"warning\");\n    return false;\n  }\n  writeGoalMd(ctx.cwd, nextGoal);\n  state.goal = nextGoal;\n  if (statusChanged) clearToolActivityState();\n  const stateLanded = persistState(ctx);\n  const mdLanded = goalMarkdownLanded(ctx.cwd, nextGoal);\n  if (stateLanded && mdLanded) {\n    clearGoalStateTransaction(ctx.cwd);\n    // v0.39.x audit: durability is the return contract — a ledger failure\n    // must not report success to gates that depend on it.\n    return true;\n  }\n  // v0.39.45 (audit 2026-10-22): a failed state write must not leave the\n  // live session holding a goal the durable projection never recorded\n  // (AGENTS.md: never let live state drift from its durable projection).\n  // Roll the update back completely — RAM, the markdown projection and the\n  // pending transaction — so a restart resumes exactly what the live\n  // session shows and the caller can retry the update.\n  if (!stateLanded) {\n    state.goal = previousGoal;\n    writeGoalMd(ctx.cwd, previousGoal);\n    clearGoalStateTransaction(ctx.cwd);\n  }\n  ctx.ui.notify(\"Goal update was not fully persisted — the durable projection is incomplete. Fix .pi-glla storage and retry.\", \"warning\");\n  return false;\n}\n\n// v0.29.6: stacked-state auto-arbitration (user directive: \"auto archive /\n// wipe extra goals/loops/lists … make sure that we only have one\"). Dirty\n// pre-guard states can persist a live loop AND a live goal; the 0.28.21\n// decision picker asked the user to arbitrate artifacts they didn't\n// remember at every pi start. Now deterministic: MOST RECENT ACTIVITY\n// keeps the slot; the loser is ARCHIVED (recoverable), never wiped. The\n// queued list is a backlog, not a live artifact — untouched.\nfunction autoArbitrateStackedState(ctx: ExtensionContext): void {\n  const loop = state.loop?.active ? state.loop : undefined;\n  const goal = state.goal && state.goal.status !== \"complete\" && state.goal.status !== \"aborted\" ? state.goal : undefined;\n  if (!loop || !goal) return; // at most one live artifact — the invariant holds\n  const lastMeasure = loop.history.length > 0 ? loop.history[loop.history.length - 1] : undefined;\n  const loopMs = Date.parse(lastMeasure?.at ?? loop.startedAt ?? \"\") || 0;\n  const goalMs = Date.parse(goal.updatedAt ?? goal.createdAt ?? \"\") || 0;\n  const keepGoal = goalMs > loopMs; // tie → the loop keeps the slot (0.28.21 default)\n  appendLedger(ctx.cwd, \"stacked_state_auto_arbitrated\", {\n    kept: keepGoal ? \"goal\" : \"loop\",\n    goalId: goal.id,\n    goalMs,\n    loopMs,\n    loopIteration: loop.iteration,\n    loopTarget: loop.target.slice(0, 120),\n  });\n  if (keepGoal) {\n    // Same shape as /loop stop: the loop record stays in state (inactive)\n    // with an honest reason — /loop status still shows it.\n    replaceState({ ...state, loop: { ...loop, active: false, stopReason: \"auto-arbitrated on session load: the goal was more recent (one active thing)\" } });\n    persistState(ctx);\n  } else {\n    const stopReason = \"auto-arbitrated on session load: the loop was more recent (one active thing)\";\n    const goalRecap = compactTerminalCompletionSummary({\n      goal,\n      status: \"aborted\",\n      stopReason,\n      archivePath: path.relative(ctx.cwd, archivedGoalPath(ctx.cwd, goal.id)) || archivedGoalPath(ctx.cwd, goal.id),\n    });\n    if (!archiveCurrentGoal(ctx, \"aborted\", stopReason)) {\n      ctx.ui.notify(\"Stacked state could not be auto-arbitrated safely because the older goal archive failed; both live records were preserved.\", \"warning\");\n      return;\n    }\n    const loopRecap = keepGoal && state.loop\n      ? compactLoopCompletionSummary({ ...state.loop, historyLength: state.loop.history.length })\n      : undefined;\n    ctx.ui.notify(\n      `Stacked state auto-arbitrated (one active thing): kept the loop — more recent activity — and archived the goal (${goal.id}).\\nGoal recap: ${goalRecap}${loopRecap ? `\\nLoop recap: ${loopRecap}` : \"\"} Recoverable: /loop status · .pi-glla/archive/ · /glla wipe for a clean slate.`,\n      \"info\",\n    );\n    return;\n  }\n  const loopRecap = keepGoal && state.loop\n    ? compactLoopCompletionSummary({ ...state.loop, historyLength: state.loop.history.length })\n    : undefined;\n  ctx.ui.notify(\n    `Stacked state auto-arbitrated (one active thing): kept the goal — more recent activity — and archived the loop (iter ${loop.iteration}, best ${loop.bestValue ?? \"n/a\"}).${loopRecap ? `\\nLoop recap: ${loopRecap}` : \"\"} Recoverable: /loop status · .pi-glla/archive/ · /glla wipe for a clean slate.`,\n    \"info\",\n  );\n}\n\n/** v0.31.0: /list audit completion fan-out — read the audit findings file,\n * queue every OPEN finding as its own list item (severity-sorted, deduped\n * against the live queue), present DECIDE findings without queueing them.\n * Confirm-gated like every bulk import (v0.23.7: the user reads what lands\n * in the queue) unless autoAcceptDrafts is enabled; a decline leaves the\n * findings open for a later re-run.\n * v0.34.20: this detached operation retains only cwd + generation. Every\n * context use after the confirmation await must come from the fresh session.\n */\nasync function fanOutListAuditFindings(cwd: string, generation: number): Promise<void> {\n  let md = \"\";\n  try {\n    md = fs.readFileSync(path.join(piGlaDir(cwd), \"audit-loop\", \"findings.md\"), \"utf-8\");\n  } catch {\n    /* no findings file — the audit was clean or never wrote */\n  }\n  const { open, decisions } = parseAuditFindingsForFanout(md);\n  // v0.34.129: dedupe against each live queue item by the canonical finding\n  // text, not by searching one joined blob for the finding's first 60\n  // chars. A distinct finding can legitimately have that prefix inside a\n  // longer objective; the old substring check silently dropped it.\n  // The comparison runs against the STORED form: enqueueItems parses the\n  // fan-out text through parseListItemDeclaration, which splits the\n  // \"— Done when:\" tail into the verification contract. Comparing the\n  // unparsed text (with the tail) can never match a stored objective.\n  // Exact equality (not startsWith) keeps prefix-collisions out: finding\n  // A (\"fix X\") must not shadow finding B (\"fix X thoroughly\").\n  const queuedObjectives = listQueue()\n    .map((i: any) => typeof i?.objective === \"string\" ? i.objective : \"\")\n    .filter(Boolean);\n  const isQueuedFinding = (finding: AuditFindingLine): boolean => {\n    const storedForm = parseListItemDeclaration(listAuditFanoutItemText(finding.text)).objective;\n    return queuedObjectives.some((objective: string) => objective === storedForm);\n  };\n  const alreadyQueued = open.filter(isQueuedFinding).length;\n  const eligible = open.filter((f) => !isQueuedFinding(f));\n  // v0.32.0: cap one fan-out — a runaway findings file must not enqueue\n  // hundreds of items on a single Confirm. Keep cap-deferred findings\n  // separate from true queue dedupes so the ledger and UI stay truthful.\n  const fresh = eligible.slice(0, 50);\n  const deferredByCap = eligible.length - fresh.length;\n  const current = freshCtxForGeneration(generation);\n  if (!current) return;\n  // v0.33.3: DECIDE findings are RAISED TO THE USER as real questions\n  // (hegemon 2026-07-31: a truncated notify left the user typing \"decide\n  // what\" into the void). The orchestrator can't call ask_user_question —\n  // the agent can — so the full untruncated findings go to the agent as a\n  // steer with the raise + record protocol. Fires BEFORE the queueing\n  // early-returns below: decisions need answers even when nothing new\n  // queued or the fan-out was declined.\n  if (decisions.length > 0) {\n    const decList = decisions.slice(0, 8).map((d, i) => `${i + 1}. ${d.slice(0, 500)}`).join(\"\\n\");\n    if (safeSteerUser(current,\n      `[DECIDE FINDINGS — user decisions needed] The audit surfaced ${decisions.length} DECIDE finding(s) — direction calls only the user can make (a decision is not a task, so they were NOT queued):\\n${decList}\\nRaise them to the user NOW with ask_user_question — one question per finding, options from the finding's own two sides plus \"Defer\" (prose numbered list if ask_user_question is unavailable; Esc = Defer). Then record every answer in ${AUDIT_FINDINGS_REL}: replace the \"- [?]\" line with \"- [x] DECIDED: <what was chosen> (<date>)\" (or \"- [x] DEFERRED\") so it stops re-surfacing, and queue any chosen work with list_add — do NOT start the work inline.`))\n      appendLedger(cwd, \"list_audit_decisions_raised\", { decisions: decisions.length });\n  }\n  const decideNote =\n    decisions.length > 0\n      ? ` ${decisions.length} DECIDE finding(s) need YOU — raising them as questions now (not queued — a decision is not a task).`\n      : \"\";\n  if (fresh.length === 0) {\n    const afterDecision = freshCtxForGeneration(generation);\n    if (!afterDecision) return;\n    afterDecision.ui.notify(\n      open.length > 0\n        ? `Audit collected ${open.length} open finding(s) — all already queued.${decideNote}`\n        : `Audit complete — no open findings; the project is clean, nothing to queue.${decideNote}`,\n      \"info\",\n    );\n    appendLedger(cwd, \"list_audit_fanout_empty\", { open: open.length, decisions: decisions.length });\n    return;\n  }\n  const preview = fresh.map((f, i) => `  ${i + 1}. ${f.text.slice(0, 110)}`).join(\"\\n\");\n  const beforeConfirm = freshCtxForGeneration(generation);\n  if (!beforeConfirm) return;\n  // v0.34.29: autoAcceptDrafts is explicit pre-consent for generated list\n  // batches too. Keep the normal confirmation for users who have not opted\n  // in; the project override wins through loadSettings(cwd).\n  const autoAccepted = beforeConfirm.hasUI && loadSettings(cwd).autoAcceptDrafts === true;\n  let confirmed = true;\n  if (beforeConfirm.hasUI && !autoAccepted) {\n    try {\n      confirmed = await beforeConfirm.ui.confirm(`Queue ${fresh.length} audit finding(s) as list items?`, preview);\n    } catch {\n      confirmed = false;\n    }\n  }\n  // A confirm result from an old session is not consent for the replacement.\n  const afterConfirm = freshCtxForGeneration(generation);\n  if (!afterConfirm) return;\n  if (!confirmed) {\n    appendLedger(cwd, \"list_audit_fanout_declined\", { findings: fresh.length });\n    afterConfirm.ui.notify(`Fan-out declined — the findings stay open in ${AUDIT_FINDINGS_REL}; /list audit re-queues them any time.`, \"info\");\n    return;\n  }\n  const n = enqueueItems(afterConfirm, fresh.map((f) => listAuditFanoutItemText(f.text)), \"list audit fan-out\");\n  appendLedger(cwd, \"list_audit_fanout\", {\n    queued: n,\n    alreadyQueued,\n    deferredByCap,\n    decisions: decisions.length,\n    autoAccepted,\n  });\n  afterConfirm.ui.notify(\n    `Queued ${n} finding(s) — the list drains them fix by fix, each with its own audited commit.${alreadyQueued > 0 ? ` (${alreadyQueued} already queued.)` : \"\"}${deferredByCap > 0 ? ` ${deferredByCap} more held by the 50-item cap; rerun /list audit to queue them.` : \"\"}${autoAccepted ? \" Auto-accepted by autoAcceptDrafts.\" : \"\"}${decideNote}`,\n    \"info\",\n  );\n}\n\n/** Durable settlement operations are injectable without copying the state owner. */\nexport interface SettlementPersistence {\n  writeArchiveIntent: typeof writeArchiveIntent;\n  clearArchiveIntent: typeof clearArchiveIntent;\n  updateArchiveIntentPhase: typeof updateArchiveIntentPhase;\n  finalizeArchiveIntent: typeof finalizeArchiveIntent;\n  persistApprovalRender: typeof persistApprovalRender;\n  persistState: (ctx: ExtensionContext) => boolean;\n}\n\nconst settlementPersistence: SettlementPersistence = {\n  writeArchiveIntent, clearArchiveIntent, updateArchiveIntentPhase,\n  finalizeArchiveIntent, persistApprovalRender, persistState,\n};\n\nexport interface GoalSettlementBoundary {\n  archiveCurrentGoal: typeof archiveCurrentGoal;\n}\n\nexport function createGoalSettlementBoundary(overrides: Partial<SettlementPersistence> = {}): GoalSettlementBoundary {\n  const persistence = { ...settlementPersistence, ...overrides };\n  return {\n    archiveCurrentGoal: (ctx, status, reason, patch, opts) =>\n      archiveCurrentGoal(ctx, status, reason, patch, opts, persistence),\n  };\n}\n\n/** A stored approval cannot waive unfinished work. Clear its settlement claim\n * and return to rework, rather than misreporting this as an archive I/O error.\n * Preserve an explicit paused hold; all state changes use the normal transaction. */\nexport function refuseUnfinishedCompletion(ctx: ExtensionContext): boolean {\n  const goal = state.goal;\n  const open = goal?.taskList ? collectOpenTasks(goal.taskList) : [];\n  if (!goal || !open.length) return false;\n  const held = goal.status === \"paused\";\n  const persisted = updateGoal({\n    status: held ? \"paused\" : \"active\",\n    pendingCompletion: undefined,\n    pendingTasks: open.slice(0, 5).map(task => `${task.id}: ${task.title} remains unfinished; a deferral does not waive it.`),\n  }, ctx);\n  appendLedger(ctx.cwd, \"settlement_unfinished_work_refused\", { goalId: goal.id, open, persisted });\n  ctx.ui.notify(formatOpenTaskRefusal(open), \"warning\");\n  if (persisted && !held) scheduleLoopTick(ctx);\n  return true;\n}\n\nexport function archiveCurrentGoal(\n  ctx: ExtensionContext,\n  status: Status,\n  stopReason?: string,\n  patch: Partial<Pick<Goal, \"auditHistory\" | \"completionSummary\" | \"pendingTasks\">> = {},\n  // v0.38.50: agent-structured finding groups ride the audited claim into\n  // the archive rich section only — abort/wip paths omit it (flat fallback).\n  // v0.38.52: same for the gate inventory.\n  opts?: { findingGroups?: FindingGroup[]; gateRows?: GateRow[]; priorCompletionSummary?: string; terminalRender?: { goalId: string; objective: string; chatLines: string[] } },\n  persistence: SettlementPersistence = settlementPersistence,\n): boolean {\n  const { writeArchiveIntent, clearArchiveIntent, updateArchiveIntentPhase,\n    finalizeArchiveIntent, persistApprovalRender, persistState } = persistence;\n  if (!state.goal) return false;\n  if (status !== \"complete\" && status !== \"aborted\") return false;\n  if (stateRootPending()) {\n    ctx.ui.notify(\"Could not archive the goal — the selected sessionDir is not resolved yet, so no live state was changed. Reload the host session and retry.\", \"warning\");\n    return false;\n  }\n  const goal = state.goal;\n  if (!isSafePersistedId(goal.id)) {\n    ctx.ui.notify(\"Could not archive the goal — its persisted id is invalid, so no filesystem path was used. Repair the state before retrying.\", \"warning\");\n    return false;\n  }\n  // Final common fence, including manual and recovered approved settlements:\n  // old deferral stamps and a previously written verdict cannot waive work.\n  if (status === \"complete\" && refuseUnfinishedCompletion(ctx)) return false;\n  const pendingAttemptId = goal.pendingCompletion?.attemptId;\n  const target = archivedGoalPath(ctx.cwd, goal.id);\n  const archivePath = path.relative(ctx.cwd, target) || target;\n  const terminalBase: Goal = {\n    ...goal,\n    ...patch,\n    status,\n    archivedPath: archivePath,\n    stopReason,\n    // A cancelled/archived goal cannot accept a late detached worker result.\n    pendingCompletion: undefined,\n    // A successful terminal approval resolves any prior aggressive TODOs;\n    // retaining them in the archive would make a closed objective look\n    // unfinished. Aborted records may retain their last TODO projection.\n    pendingTasks: status === \"complete\" ? undefined : (patch.pendingTasks ?? goal.pendingTasks),\n  };\n  // v0.36.0: every terminal archive gets a useful six-label recap. Valid\n  // caller-authored recaps remain verbatim; missing/generic/incomplete claims\n  // are replaced with facts already captured in durable GLLA state. This is\n  // deliberately centralized here because complete, abort, cancel, impossible,\n  // auto-drop, and already-shipped paths all pass through the archive fence.\n  const summaryResolution = resolveCompletionSummary({\n    goal: terminalBase,\n    status,\n    stopReason,\n    archivePath,\n  }, terminalBase.completionSummary);\n  const terminalGoal: Goal = {\n    ...terminalBase,\n    completionSummary: summaryResolution.summary,\n  };\n  const md = renderGoalMarkdown(terminalGoal);\n  // Field 20260911_* (rich terminal voice): the archive is for humans —\n  // it carries the same rich markdown as chat over the verbatim\n  // six-label machine record. Built from the terminal goal AFTER the\n  // summary fence resolves, so chat and archive cannot disagree.\n  const richSection = buildRichArchiveSection(terminalGoal, status, archivePath, opts?.findingGroups, opts?.gateRows, opts?.priorCompletionSummary ?? goal.pendingCompletion?.priorCompletionSummary);\n  const richMd = `${md}\\n## Terminal summary\\n\\n${richSection.join(\"\\n\")}\\n`;\n  // An existing same-id archive is an immutable fence. Check it before\n  // publishing an intent so an unrelated/sentinel winner can never make the\n  // startup reconciler terminalize this live goal.\n  let archiveFence = false;\n  if (fs.existsSync(target)) {\n    archiveFence = true;\n    appendLedger(ctx.cwd, \"faulty_objective_archive_fence\", {\n      goalId: goal.id,\n      where: \"archiveCurrentGoal\",\n      archive: target,\n    });\n    ctx.ui.notify(`Could not archive ${goal.policy === \"list\" ? \"the list item\" : \"the goal\"} — an existing archive was preserved and the live objective was kept open; no terminal state was recorded. Fix the project disk and retry.`, \"warning\");\n    return false;\n  }\n  // v0.36.1: journal the terminal projection BEFORE either file can be\n  // published. A fresh lifecycle boundary can now finish the operation after\n  // a kill at archive publication, state persistence, or active-md cleanup.\n  if (!writeArchiveIntent(ctx.cwd, {\n    goalId: goal.id,\n    status,\n    stopReason,\n    terminalGoal,\n    phase: \"prepared\",\n    ...(opts?.terminalRender ? { terminalRender: opts.terminalRender } : {}),\n  })) {\n    ctx.ui.notify(`Could not archive ${goal.policy === \"list\" ? \"the list item\" : \"the goal\"} — the durable archive intent could not be written, so the live objective was kept open.`, \"warning\");\n    return false;\n  }\n  // Create the destination without replacing an archive that may win a race.\n  // A temp file plus a hard link gives us an exclusive final name without\n  // renameSync's replacement semantics.\n  const archived = runPersistStep(\"archiveCurrentGoal\", () => {\n    ensureDirs(ctx.cwd);\n    // Audit 2026-09-06: randomUUID instead of Math.random — temp names\n    // must not be guessable by a sibling writer (the wx flag already\n    // mitigates, this removes the predictability too).\n    const temp = `${target}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`;\n    try {\n      fs.writeFileSync(temp, richMd, { encoding: \"utf-8\", flag: \"wx\" });\n      fs.linkSync(temp, target);\n      return true;\n    } catch (err) {\n      // Another writer can create the final archive after the existsSync\n      // check. Treat that EEXIST as the same archive fence, never as a cue\n      // to overwrite the winner.\n      if ((err as NodeJS.ErrnoException).code === \"EEXIST\" && fs.existsSync(target)) {\n        archiveFence = true;\n        return false;\n      }\n      throw err;\n    } finally {\n      try { fs.unlinkSync(temp); } catch {}\n    }\n  }) === true;\n  if (!archived) {\n    // If a race created a winner after the preflight check, discard only this\n    // operation's intent. The winner remains byte-for-byte untouched and the\n    // live goal remains retryable.\n    clearArchiveIntent(ctx.cwd);\n    if (archiveFence) {\n      appendLedger(ctx.cwd, \"faulty_objective_archive_fence\", {\n        goalId: goal.id,\n        where: \"archiveCurrentGoal\",\n        archive: target,\n      });\n    }\n    ctx.ui.notify(`Could not archive ${goal.policy === \"list\" ? \"the list item\" : \"the goal\"} — ${archiveFence ? \"an existing archive was preserved and\" : \"the\"} live objective was kept open; no terminal state was recorded. Fix the project disk and retry.`, \"warning\");\n    return false;\n  }\n  updateArchiveIntentPhase(ctx.cwd, \"published\");\n  // Destructive lifecycle cleanup belongs after the archive is durable AND\n  // the terminal state snapshot below lands. A failed state append leaves the\n  // intent + archive as the recoverable pair and keeps the active projection.\n  const stateBeforeArchive: State = { ...state, goal };\n  replaceState({\n    ...state,\n    goal: terminalGoal,\n  });\n  if (pendingAttemptId) {\n    // Drop the ephemeral widget projection immediately; the detached worker\n    // may still emit a final callback while its SIGTERM is settling.\n    latestAuditProgress = null;\n    if (ownsDetachedAudit(sessionGeneration, goal.id, pendingAttemptId)) {\n      completionAuditInFlight = false;\n      completionAuditGeneration = null;\n    }\n    cancelDetachedGoalCompletionAuditor(ctx.cwd, pendingAttemptId);\n  }\n  if (state.mainModelRecovery?.kind === \"goal\" && state.mainModelRecovery.owner?.kind !== 'chat') {\n    clearMainModelRecoveryTimer();\n    state.mainModelRecovery = undefined;\n    mainModelAbortForRecovery = false;\n  }\n  if (summaryResolution.usedFallback) {\n    appendLedger(ctx.cwd, \"completion_summary_fallback\", {\n      goalId: goal.id,\n      status,\n      reason: summaryResolution.reason,\n      rawExcerpt: summaryResolution.raw?.slice(0, 500),\n      source: \"durable-terminal-state\",\n    });\n  }\n  appendLedger(ctx.cwd, \"goal_archived\", { goalId: goal.id, status, stopReason, objective: goal.objective.slice(0, 300) });\n  // v0.38.63 (field 032245): verified-done work needs no repair. Void\n  // queued repair items targeting this goal (disk + memory) before the\n  // terminal state lands, or the completion cascade wakes a bogus\n  // \"Repair the blocked goal...\" item right after the close. Centralized\n  // here because every completion path (detached audit, inline/provider-\n  // retry, manual verify) funnels through this archive fence. Aborts keep\n  // their queue — only a completion verdict moots a repair.\n  if (status === \"complete\") {\n    const mootRepairs = (state.list ?? []).filter((item) => item.repairTarget?.id === goal.id);\n    if (mootRepairs.length > 0) {\n      const voided: string[] = [];\n      const voidFailed: string[] = [];\n      for (const item of mootRepairs) {\n        const deleted = deleteQueueItemFileResult(ctx.cwd, item.id);\n        if (!deleted.failed) voided.push(item.id);\n        else voidFailed.push(item.id);\n      }\n      if (voided.length > 0) {\n        replaceState({ ...state, list: (state.list ?? []).filter((item) => !voided.includes(item.id)) });\n      }\n      appendLedger(ctx.cwd, \"faulty_objective_repair_voided_on_approval\", {\n        goalId: goal.id,\n        voided,\n        ...(voidFailed.length > 0 ? { voidFailed } : {}),\n      });\n    }\n  }\n  const terminalStateLanded = persistState(ctx);\n  if (!terminalStateLanded) {\n    replaceState(stateBeforeArchive);\n    ctx.ui.notify(`Archive published for ${goal.policy === \"list\" ? \"the list item\" : \"the goal\"}, but the terminal state could not be persisted. The live objective remains open and startup recovery will retry safely.`, \"warning\");\n    return false;\n  }\n  // The terminal archive is a lifecycle boundary even when the next item is\n  // not activated. Drop a lost tool call before any successor can inherit it.\n  clearToolActivityState();\n  updateArchiveIntentPhase(ctx.cwd, \"state-persisted\");\n  if (!finalizeArchiveIntent(ctx.cwd, goal.id, render => persistApprovalRender(ctx.cwd, render))) {\n    ctx.ui.notify(`Archive committed for ${goal.policy === \"list\" ? \"the list item\" : \"the goal\"}, but active-file cleanup is pending. The durable intent remains for the next recovery boundary.`, \"warning\");\n  }\n  releaseContinuationDispatchStandDown();\n  clearDispatchRecord(ctx.cwd);\n  clearContinuationTimer();\n  clearContinuationStartWatchdog();\n  clearQueueStuckProbe();\n  postCompactResumeOwed = false; // v0.33.1: the dead goal's compact debt/resync dies with it\n  postCompactResyncPending = false;\n  if (state.postCompactRecovery) replaceState({ ...state, postCompactRecovery: undefined });\n  // v0.34.120: archive is the durable history; a terminal goal must not\n  // remain in the live slot and make the user cancel a finished card. Keep\n  // the archive markdown (including completionSummary) as the final record,\n  // and clear the slot only after any list cascade/reviewer work below has\n  // had a chance to choose a successor.\n  const closeArchivedSlot = () => {\n    if (state.goal?.id !== goal.id) return;\n    // v0.35.72: the completion notification is the single live-session\n    // outcome surface. Clear the legacy lastOutcome field so an upgrade or a\n    // stale state line cannot repaint a second \"done\" row after archival;\n    // the archive and ledger retain the full durable history.\n    replaceState({\n      ...state,\n      goal: null,\n      lastOutcome: undefined,\n    });\n    persistState(ctx);\n  };\n  // Loop 2: a list-sourced goal COMPLETED → auto-activate the next item.\n  // Aborts are user actions (/list next, /goal cancel, list_activate) which\n  // pick their own next step — auto-advancing on abort double-activates\n  // (v0.2.0 bug: bare /list next silently consumed TWO items, found by the\n  // pick-any-item verification in v0.10.0).\n  if (goal.policy === \"list\" && status === \"complete\") {\n    // v0.34.81 (LIGHT parent/child): if the completed child was the last\n    // open subtask of a parent group, CASCADE CLOSE the parent. Runs BEFORE\n    // the advance so the scan-skip in activateNextListItem sees the updated\n    // queue (otherwise a parent whose last child just closed could be\n    // re-scanned as a group with children still queued — it would not, but\n    // the ordering is the right discipline: every list-complete consequence\n    // of THIS goal settles before the next goal is chosen). The parent is\n    // a queue item (never a Goal), so closing it means removing it from\n    // the queue + deleting its disk sidecar + ledger entry. The reviewer\n    // fires on the CHILD's completion (its archive md is the audit unit);\n    // no synthetic goal archive is written for the group — the ledger\n    // record is the durable trace.\n    let groupCloseBlocked = false;\n    if (goal.parentId) {\n      const pid = goal.parentId;\n      if (groupOpenChildren(pid) === 0) {\n        const queue = listQueue();\n        const parent = queue.find((c: any) => c.id === pid);\n        if (parent) {\n          const sidecar = deleteQueueItemFileResult(ctx.cwd, pid);\n          if (sidecar.failed) {\n            groupCloseBlocked = true;\n            appendLedger(ctx.cwd, \"list_group_close_sidecar_delete_failed\", { parentId: pid, path: sidecar.path });\n            ctx.ui.notify(`Group remains queued — its durable sidecar could not be removed. Fix disk access and retry the group close.`, \"warning\");\n          } else {\n          appendLedger(ctx.cwd, \"list_group_closed\", {\n            parentId: pid,\n            parentObjective: parent.objective,\n            closedVia: goal.objective,\n          });\n          replaceState({ ...state, list: queue.filter((c: any) => c.id !== pid) });\n          ctx.ui.notify(`Group closed: \"${displaySlice(parent.objective, 80)}\" — all subtasks complete.`, \"info\");\n          }\n        }\n      }\n    }\n    // v0.31.0: a /list audit collection item completed → fan the open\n    // findings out into the queue (async — Confirm-gated). When the queue\n    // was empty, enqueueItems activates the first fix itself, so the\n    // list-complete / reviewer noise below must NOT fire for this item.\n    // A parent whose sidecar deletion failed is still durable work. Do not\n    // auto-advance and reinterpret that parent as an ordinary runnable item;\n    // explicit cleanup/activation can retry after storage recovers.\n    if (groupCloseBlocked) {\n      postCompletionSettleUntil = 0;\n      closeArchivedSlot();\n      return true;\n    }\n    const isListAuditCollect = goal.objective.includes(LIST_AUDIT_COLLECT_MARKER);\n    // v0.34.7: the float gets a catch — ANY rejection here used to become\n    // an uncaughtException and kill pi (darklord 2026-08-01).\n    if (isListAuditCollect) {\n      const fanoutCwd = ctx.cwd;\n      const fanoutGeneration = sessionGeneration;\n      void fanOutListAuditFindings(fanoutCwd, fanoutGeneration).catch((err) => {\n        appendLedger(fanoutCwd, \"list_audit_fanout_error\", { error: String(err).slice(0, 200) });\n      });\n    }\n    // v0.34.104 ([Image-#1]): arm the settle window BEFORE activation. The\n    // successor schedules its first continuation inside activateNextListItem;\n    // arming afterward created a same-timestamp dispatch race that defeated\n    // the intended completion-acknowledgement delay.\n    postCompletionSettleUntil = Date.now() + LIST_COMPLETION_SETTLE_MS;\n    const advanced = activateNextListItem(ctx);\n    if (advanced) {\n      appendLedger(ctx.cwd, \"list_completion_settle_armed\", {\n        goalId: goal.id,\n        settleMs: LIST_COMPLETION_SETTLE_MS,\n        nextObjective: state.goal?.objective?.slice(0, 120),\n      });\n    } else {\n      postCompletionSettleUntil = 0;\n    }\n    // v0.26.0: the queue just EMPTIED on a completion → list-complete.\n    // v0.38.105 (field 2026-09-29, dracon-system): a REFUSED activation is\n    // not an empty queue — without the length check a blocked head (repair\n    // promoted, retry exhausted) cried \"List complete\" with items waiting.\n    if (!advanced && !isListAuditCollect && listQueue().length === 0) {\n      fireReviewer(ctx, { kind: \"list\", goalId: goal.id, objective: goal.objective, terminal: \"goal-complete\" });\n      // v0.29.0: the well ran dry — point at the project-audit loop. A\n      // suggestion, not an action: consent, never auto-start (v0.28.28).\n      ctx.ui.notify(\"List complete. /loop audit to sweep the project for the next batch of work.\", \"info\");\n    }\n    closeArchivedSlot();\n    return true;\n  }\n  // v0.26.0: a /goal (non-list) reached a terminal state → maybe fire.\n  if (goal.policy !== \"list\") {\n    // A queue that was already waiting belongs to the user's work plan. A\n    // successful standalone completion therefore hands off automatically;\n    // only reviewer items created by this completion remain subject to their\n    // existing autoResume gate. Do this before fireReviewer so a reviewer\n    // cannot double-activate the same queue head.\n    const waitingBeforeHandoff = state.list?.length ?? 0;\n    if (status === \"complete\") handoffCompletedGoalToWaitingList(ctx, goal, waitingBeforeHandoff);\n    fireReviewer(ctx, { kind: \"goal\", goalId: goal.id, objective: goal.objective, terminal: status === \"complete\" ? \"goal-complete\" : status === \"aborted\" ? \"goal-aborted\" : \"goal-paused\" });\n  }\n  closeArchivedSlot();\n  return true;\n}\n\n/**\n * A completed standalone goal may have a list waiting behind it. The list is\n * a work plan, not a prompt for the user to advance one item at a time: once\n * the prior goal has reached its terminal archive, hand the live surface to\n * the queued head and apply the same bounded completion-settle window used by\n * list-to-list completion. Aborts deliberately do not enter this path.\n */\nfunction handoffCompletedGoalToWaitingList(ctx: ExtensionContext, completedGoal: Goal, waitingCount: number): boolean {\n  if (waitingCount <= 0 || completedGoal.policy === \"list\" || state.goal?.id !== completedGoal.id) return false;\n  postCompletionSettleUntil = Date.now() + LIST_COMPLETION_SETTLE_MS;\n  const advanced = activateNextListItem(ctx);\n  if (!advanced) {\n    postCompletionSettleUntil = 0;\n    return false;\n  }\n  appendLedger(ctx.cwd, \"goal_completion_list_handoff\", {\n    goalId: completedGoal.id,\n    nextGoalId: state.goal?.id,\n    nextObjective: state.goal?.objective?.slice(0, 120),\n    waitingBefore: waitingCount,\n  });\n  appendLedger(ctx.cwd, \"list_completion_settle_armed\", {\n    goalId: completedGoal.id,\n    settleMs: LIST_COMPLETION_SETTLE_MS,\n    nextObjective: state.goal?.objective?.slice(0, 120),\n    sourcePolicy: completedGoal.policy,\n  });\n  return true;\n}\n\n/**\n * Route an auditor IMPOSSIBLE verdict or a list auto-drop through the one\n * terminal archive fence. Callers capture the returned recap for their final\n * notification, while the archive itself keeps the complete multi-line text\n * and the independent auditor history.\n */\nfunction terminalizeImpossibleGoal(\n  ctx: ExtensionContext,\n  stopReason: string,\n  auditHistory?: Goal[\"auditHistory\"],\n): { archived: boolean; summary: string } {\n  const goal = state.goal;\n  if (!goal) return { archived: false, summary: \"not recorded\" };\n  const factsGoal = auditHistory ? { ...goal, auditHistory } : goal;\n  const archiveTarget = archivedGoalPath(ctx.cwd, goal.id);\n  const archivePath = path.relative(ctx.cwd, archiveTarget) || archiveTarget;\n  const summary = resolveCompletionSummary({\n    goal: { ...factsGoal, status: \"aborted\", stopReason },\n    status: \"aborted\",\n    stopReason,\n    archivePath,\n  }, factsGoal.completionSummary).summary;\n  const archived = archiveCurrentGoal(ctx, \"aborted\", stopReason, auditHistory ? { auditHistory } : {});\n  return { archived, summary };\n}\n\n/** v0.34.21: durable completion-audit lifecycle helpers. A claim without\n * an explicit phase is legacy state and is treated as recovery-pending after\n * a fresh lifecycle event; it is never silently presented as an active run. */\n\n\n/* Runtime globals: preserve the old monolith lexical links across extracted modules. */\ndefineGoalRuntimeGlobal(\"escalateStallNow\", { get: () => escalateStallNow });\ndefineGoalRuntimeGlobal(\"heartbeatStaleStreak\", { get: () => heartbeatStaleStreak, set: (v) => { heartbeatStaleStreak = v as any; } });\ndefineGoalRuntimeGlobal(\"iterationCounter\", { get: () => iterationCounter, set: (v) => { iterationCounter = v as any; } });\ndefineGoalRuntimeGlobal(\"toolCallsThisTurn\", { get: () => toolCallsThisTurn, set: (v) => { toolCallsThisTurn = v as any; } });\ndefineGoalRuntimeGlobal(\"consecutiveErrorIterations\", { get: () => consecutiveErrorIterations, set: (v) => { consecutiveErrorIterations = v as any; } });\ndefineGoalRuntimeGlobal(\"consecutiveAbortIterations\", { get: () => consecutiveAbortIterations, set: (v) => { consecutiveAbortIterations = v as any; } });\ndefineGoalRuntimeGlobal(\"abortedStandDown\", { get: () => abortedStandDown, set: (v) => { abortedStandDown = v as any; } });\ndefineGoalRuntimeGlobal(\"scheduleSessionTimeout\", { get: () => scheduleSessionTimeout });\ndefineGoalRuntimeGlobal(\"clearSessionOwnedTimers\", { get: () => clearSessionOwnedTimers });\ndefineGoalRuntimeGlobal(\"isActionableGoal\", { get: () => isActionableGoal });\ndefineGoalRuntimeGlobal(\"freshCtx\", { get: () => freshCtx });\ndefineGoalRuntimeGlobal(\"freshCtxForGeneration\", { get: () => freshCtxForGeneration });\ndefineGoalRuntimeGlobal(\"scheduleProviderRetryForSession\", { get: () => scheduleProviderRetryForSession });\ndefineGoalRuntimeGlobal(\"handleMainModelAgentEnd\", { get: () => handleMainModelAgentEnd });\ndefineGoalRuntimeGlobal(\"createGoal\", { get: () => createGoal });\ndefineGoalRuntimeGlobal(\"persistState\", { get: () => persistState });\ndefineGoalRuntimeGlobal(\"shortObj\", { get: () => shortObj });\ndefineGoalRuntimeGlobal(\"displaySlice\", { get: () => displaySlice });\ndefineGoalRuntimeGlobal(\"goalNoun\", { get: () => goalNoun });\ndefineGoalRuntimeGlobal(\"activeGoalCommand\", { get: () => activeGoalCommand });\ndefineGoalRuntimeGlobal(\"activeGoalRoot\", { get: () => activeGoalRoot });\ndefineGoalRuntimeGlobal(\"activeGoalSurfaceCommand\", { get: () => activeGoalSurfaceCommand });\ndefineGoalRuntimeGlobal(\"activeGoalStatusCommand\", { get: () => activeGoalStatusCommand });\ndefineGoalRuntimeGlobal(\"recoverySurfaceCommand\", { get: () => recoverySurfaceCommand });\ndefineGoalRuntimeGlobal(\"notifyPersistenceState\", { get: () => notifyPersistenceState });\ndefineGoalRuntimeGlobal(\"setGoal\", { get: () => setGoal });\ndefineGoalRuntimeGlobal(\"updateGoal\", { get: () => updateGoal });\ndefineGoalRuntimeGlobal(\"autoArbitrateStackedState\", { get: () => autoArbitrateStackedState });\ndefineGoalRuntimeGlobal(\"fanOutListAuditFindings\", { get: () => fanOutListAuditFindings });\ndefineGoalRuntimeGlobal(\"terminalizeImpossibleGoal\", { get: () => terminalizeImpossibleGoal });\n",
+   expected: /"goal_created", \{ goalId: goal\.id, objective: goal\.objective, policy: goal\.policy, via \}/,
+   operator: "match",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/list-queue.test.ts:154:10
+      at fn (node:test:211:18)
+(fail) v0.28.28: goal provenance — setGoal threads `via` into the record + goal_created ledger [28.00ms]
+(pass) v0.28.28: /glla log [N] — human-readable ledger tail, noise-filtered
+(pass) v0.28.33: /glla wipe — renamed from reset (too close to /glla resume); reset redirects without acting [3.00ms]
+(pass) v0.34.119: /glla cancel cancels the whole list objective, while standalone goals/loops keep their own paths [1.00ms]
+
+tests/goal-state-drift.test.ts:
+(pass) a failed goal update leaves the live goal equal to the durable one [21.00ms]
+(pass) a goal creation is journalled with whether it actually landed [21.00ms]
+(pass) the goal_created row can state that the creation did not persist
+(pass) a complete state snapshot replaces the projection instead of merging into it [36.00ms]
+(pass) refused repair promotion rolls back recoverable sidecars (new) [33.00ms]
+(pass) refused repair promotion rolls back recoverable sidecars (existing) [31.00ms]
+
+1 tests failed:
+(fail) v0.28.28: goal provenance — setGoal threads `via` into the record + goal_created ledger [28.00ms]
+
+ 272 pass
+ 1 fail
+Ran 273 tests across 5 files. [175.54s]
+[run-tests] failure diagnostics retained at /tmp/glla-test-processes-EMccqh/failure.json
+[run-tests] cleanup evidence retained at /tmp/glla-test-processes-EMccqh
+[run-tests] finished in 176s (exit 1)

@@ -1,0 +1,1 @@
+[run-tests] Bun test lacks required capabilities: --parallel, --path-ignore-patterns. Use the project's CI toolchain (Bun 1.3.14 or newer with these flags); no tests were started.

@@ -1,0 +1,1622 @@
+bun test v1.3.3 (274e01c7)
+
+tests/list-bare-draft.test.ts:
+(pass) v0.38.51: bare /list enters list drafting — agent list_add is gated [13317.23ms]
+(pass) v0.38.51: /list show still renders the queue (viewer preserved) [642.01ms]
+(pass) v0.38.51: stale bare /list latches no drafting gate — a later list_add lands [641.01ms]
+(pass) drafter provider error reaches the original session model AND thinking through agent_end [5082.09ms]
+(pass) drafter recovery retains original thinking across configured alternatives, then exhausts without extra prompts [27.00ms]
+(pass) drafter rejected restoration retains its lease until a later restoration succeeds [29.00ms]
+(pass) implicit session drafting has one bounded same-model retry, not an empty chain or endless replay [81.00ms]
+(pass) cancelling an interview during its retry wait aborts recovery before any delayed selection or prompt [167.00ms]
+(pass) a manual model selection during retry delay supersedes the old drafter and restoration [260.00ms]
+(pass) host replacement (shutdown=true) cannot receive the old drafter's model, dial or prompt [197.00ms]
+(pass) host replacement (shutdown=false) cannot receive the old drafter's model, dial or prompt [269.00ms]
+(pass) cancellation serializes restoration behind an already-started model switch [169.00ms]
+(pass) a newer drafting command survives cancellation of an older in-flight model selection [1292.02ms]
+(pass) restoration preserves a deliberate thinking-only change by the user [186.00ms]
+(pass) a manual thinking change during retry backoff is not overwritten by recovery or restoration [194.00ms]
+(pass) a forbidden session introduced during retry delay is not selected or restored until policy permits it [174.00ms]
+(pass) concurrent drafting failures cannot spend a candidate or inject a recovery prompt twice [109.00ms]
+(pass) restore: manual dial during setModel survives a native reset (after model_select=false) [40.00ms]
+(pass) restore: manual dial during setModel survives a native reset (after model_select=true) [28.00ms]
+(pass) restore: post-await comparison preserves a manual dial on hosts without thinking events [176.00ms]
+(pass) recover: manual dial during setModel survives a native reset (after model_select=false) [324.01ms]
+(pass) recover: manual dial during setModel survives a native reset (after model_select=true) [415.01ms]
+(pass) recover: post-await comparison preserves a manual dial on hosts without thinking events [177.00ms]
+(pass) host automatic thinking defaults do not prevent configured or original-session thinking [59.00ms]
+(pass) cancellation behind a pending recovery preserves manual thinking even if the accepted switch resets it [982.02ms]
+(pass) thinking restoration remains retryable when a host accepts the model but rejects its original dial [295.01ms]
+
+tests/list-tweak-proposal.test.ts:
+(pass) bug (note 2026-08-07): bare /list tweak launches the update-proposal flow — current text shown, old→new confirmed, then applied [377.01ms]
+(pass) bare /list tweak with an empty/cancelled input changes nothing [256.00ms]
+(pass) bare /list tweak returning the unchanged text is a no-op (no revision bump, no confirm) [442.01ms]
+(pass) bare /list tweak input carrying a 'Done when:' clause applies the new contract [689.01ms]
+(pass) goal tweak rebases onto a pause that lands while confirmation is open [847.01ms]
+(pass) mirror: bare /goal tweak launches the same flow for an active goal [778.01ms]
+
+tests/list-invisible-restart.test.ts:
+(pass) v0.35.21: session_start converges a disk-sidecar queue the state ledger lost, and the widget renders it [324.01ms]
+(pass) v0.35.61: a waiting-only queue is visible and startable without a reload [1967.03ms]
+(pass) v0.35.61: silent host replacement rehydrates a sidecar-only waiting queue before repaint [847.01ms]
+(pass) v0.35.72: a newer known sidecar reconciles the in-memory queue item [233.00ms]
+(pass) v0.35.72: activation refuses when the durable sidecar cannot be removed [216.00ms]
+(pass) v0.35.21: convergence is idempotent — an item present in BOTH state and sidecar is not duplicated [184.00ms]
+
+tests/list-philosophy.test.ts:
+(pass) contract 1+2: /goal+/list draft prompt has short-item AND multi-hour framing [1.00ms]
+(pass) contract 3: /loop draft prompt has metric-driven framing [4.00ms]
+(pass) contract 4: all draft prompts open with a Long-running philosophy block [2.00ms]
+(pass) contract 5: LIST-PHILOSOPHY.md exists with the three-mode table [3.00ms]
+(pass) contract 6: INSTALL.md references LIST-PHILOSOPHY.md in a Modes section
+(pass) contract 7: /list depth headline format [2.00ms]
+(pass) contract 8+11: cross-recommend catches the 76-weak-points wrapper seed
+(pass) contract 12: cross-recommend catches the 40-findings tasklist seed
+(pass) contract 8: multi-hour seed in /list mode suggests /goal or break-up
+(pass) contract 8: five-minute seed in /goal mode suggests /list [1.00ms]
+(pass) contract 8: open-ended seed in /goal or /list mode suggests /loop
+(pass) contract 8: bounded-until beats recurring vocabulary (still a goal)
+(pass) contract 8: aggregate beats recurring (per-item work wins)
+(pass) contract 8: recurring beats five-minute (cadence changes the loop)
+
+tests/settings-menu-complete.test.ts:
+(pass) every row carries every required column field [75.00ms]
+(pass) role-specific tabs keep each agent's model, thinking, and fallback controls together
+(pass) v0.39.38: the module header names all 9 registry sections (no stale count) [2.00ms]
+(pass) every row's section is one of the 9 known section ids (no orphans) [1.00ms]
+(pass) main-agent tab starts with the runtime agent; drafter and subagent chains have their own tabs
+(pass) main fallback row explains ordered, deselectable selection [1.00ms]
+(pass) auditor and Designer displays resolve unsupported thinking exactly as dispatch does [11.00ms]
+(pass) the main fallback chain shows the level dispatch actually applies (pi's clamp precedence) [1.00ms]
+(pass) session category displays use session capabilities and ignore stale configured role thinking [3.00ms]
+(pass) role rows show each selected model with requested/effective thinking [1.00ms]
+(pass) v0.36.0: unset auditor thinking mirrors the parent session and the fallback row uses the main shape [6.00ms]
+(pass) inherited drafter and auditor model rows identify the session category [1.00ms]
+(pass) session defaults show the live thinking pair, not stale role thinking pins or fallback labels [4.00ms]
+(pass) fallback rows use session thinking, not the selected model's different dial [1.00ms]
+(pass) fallback-only auditor configuration does not masquerade as session inheritance [16.00ms]
+(pass) all embedded subagent types expose editable fallback-chain rows [3.00ms]
+(pass) key rows from v0.27.0 settings menu are all present (menu coverage contract) [3.00ms]
+(pass) descriptions and values carry no version-tag chrome (v0.34.25) [3.00ms]
+(pass) rows map 1:1 to dispatchable ids (every id can drive a handler) [93.00ms]
+(pass) main fallback row shows the persisted numbered try order and truthful runtime semantics
+(pass) auditorAllowedExtensions valueText is a count — never joined absolute paths (screen-size crash) [6.00ms]
+(pass) valueText derives from settings (effective values surface for each row) [1.00ms]
+(pass) default fallbacks surface when settings + provenance both missing [1.00ms]
+(pass) default fallbacks follow the effective aggressive matrix (explicit off → base values) [6.00ms]
+(pass) effective resolution names the real session model for inherit-parent [13.00ms]
+(pass) provenance flows into sourceText (project/global/default tags) [7.00ms]
+(pass) haiku mention is dropped from any valueText / description / sourceText [1.00ms]
+(pass) headless `/glla` fallback keeps stall brakes and the v0.34.127 sync list [9.00ms]
+(pass) the legacy flat-row startsWith logic is removed (no more `──` section headers in code) [11.00ms]
+(pass) /glla tooloverride still routes headlessly (regression: subsystems unchanged) [1.00ms]
+(pass) postaudit and reviewer routes both open the reviewer menu (back-compat) [4.00ms]
+(pass) stateRoot: one global-only row with the workingDir default
+(pass) v0.28.20: no bracket/paren chrome — VALUE and SOURCE render bare [1.00ms]
+(pass) audit-2026-09-06: settings TUI tabs row is truncated to terminal width [21.00ms]
+(pass) audit 2026-09-06: normalizeLoadedSettings resets junk numerics/enums/strings to unset [1.00ms]
+(pass) settings provenance reports normalized effective values, not rejected raw junk [6.00ms]
+(pass) audit 2026-09-06: legacy reviewer block migrates to postaudit [5.00ms]
+(pass) audit 2026-09-07 (LOW, findings 392-394): quiet copy names the count line at every surface
+(pass) settings table fits narrow terminals with details both hidden and visible [147.00ms]
+
+tests/list-import.test.ts:
+(pass) markdown checklist
+(pass) bullets of all flavors
+(pass) numbered items
+(pass) plain lines pass through
+(pass) headings, blanks, comments, hr rules are skipped
+(pass) a sisyphus-style plan file imports clean
+(pass) whitespace-only and empty content yields nothing [1.00ms]
+(pass) items with inline contracts survive intact
+(pass) resolveImportFile: detects a real file by bare name [40.00ms]
+(pass) resolveImportFile: detects paths with separators and ./ [20.00ms]
+(pass) resolveImportFile: objective text is NOT a file [4.00ms]
+(pass) resolveImportFile: directories are not importable [7.00ms]
+(pass) routeListText: file path wins over everything [9.00ms]
+(pass) routeListText: field 2026-09-16 — plain lines are a paragraph, not a batch [2.00ms]
+(pass) routeListText: field 2026-09-16 — marked structure still batches
+(pass) hasExplicitListStructure: two marked lines, one marked line, none
+(pass) routeListText: field 2026-09-16 — explicit add keeps contracted lines batched (v0.34.81 subtasks) [5.00ms]
+(pass) routeListText: field 2026-09-16 — explicit add with contract-less prose still drafts
+(pass) routeListText: field 2026-09-16 — explicit add batches mixed contracted lines
+(pass) audit 2026-09-16: bare list preserves independently contracted records
+(pass) audit 2026-09-16: add preserves a paragraph with a standalone contract
+(pass) routeListText: pasted bullets preserve item wording and contracts
+(pass) routeListText: a one-record paste remains eligible for item-level clarification
+(pass) routeListText: 'Done when:' clause adds directly, no interview
+(pass) routeListText: vague dump goes to conversational drafting
+(pass) routeListText: nonexistent file-ish text is not a file
+(pass) listMutationBlocked: only during list drafting sessions [1.00ms]
+
+tests/list-audit.test.ts:
+(pass) parseAuditFindingsForFanout: open boxes actionable, [?] boxes decisions, checked boxes ignored [44.00ms]
+(pass) parseAuditFindingsForFanout: tolerates the /loop audit format (no FIX: prefix)
+(pass) parseAuditFindingsForFanout: accepts aligned open checkbox spacing
+(pass) parseAuditFindingsForFanout: empty / missing content yields nothing
+(pass) listAuditFanoutItemText: checkable Done when tied to the findings file
+(pass) listAuditCollectTarget: collect-only — marker, no-fix law, honest-empty law, Done when
+(pass) /list audit route: builds the collect target and enqueues it
+(pass) completion fan-out: collect items fan out + suppress the list-complete noise [1.00ms]
+(pass) fan-out: canonical dedupe, cap accounting, optional auto-accept, and decline keeps findings open [1.00ms]
+(pass) fan-out dedupe round-trip: stored form matches, prefix collisions do not [58.00ms]
+(pass) help surface: /list audit appears in the command description + completions [1.00ms]
+(pass) markers: the built targets still contain what the guards match on
+(pass) /loop audit warns when a one-shot audit goal exists (paused or active)
+(pass) /goal audit + /list audit warn when an audit loop is already running
+(pass) restore-hold names the supersession in the widget surface [15.00ms]
+(pass) v0.33.3: one-shot audit raises DECIDE findings as questions before completing
+
+tests/behavioral-orchestrator.test.ts:
+194 |   setGlobalAutoResume(false);
+195 |   const cwd = tmpCwd();
+196 |   seedState(cwd, { goal: seedGoal() });
+197 |   const ctx = await freshSession(cwd, "startup");
+198 |   const g = readState(cwd).goal as { status: string; pauseReason?: string; pauseSuggestedAction?: string };
+199 |   assert.equal(g.status, "paused");
+               ^
+AssertionError: Expected values to be strictly equal:
+
+'active' !== 'paused'
+
+ generatedMessage: true,
+     actual: "active",
+   expected: "paused",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:199:10
+      at processTicksAndRejections (native:7:39)
+(fail) T3a: active goal + human load (startup) + default settings → HELD for explicit resume [43.00ms]
+212 |     pi.sent.length = 0;
+213 |     const ctx = await freshSession(cwd, "startup");
+214 |     await tick();
+215 |     assert.equal((readState(cwd).goal as { status: string }).status, "active", "the blank startup does not pause or mutate the saved goal");
+216 |     assert.equal(pi.sent.length, 0, "blank startup sends no continuation");
+217 |     assert.ok(ctx.ui.matching("has not loaded a conversation yet").length >= 1, "the initialization barrier is visible");
+                 ^
+AssertionError: the initialization barrier is visible
+ generatedMessage: false,
+     actual: false,
+   expected: true,
+   operator: "==",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:217:12
+      at processTicksAndRejections (native:7:39)
+(fail) v0.34.18: blank startup waits for the transcript before autoresume, while explicit resume and loaded history still work [164.00ms]
+263 |     const goal = seedGoal({ status: "complete", objective: "legacy completed objective" });
+264 |     fs.mkdirSync(path.join(cwd, ".pi-glla", "archive"), { recursive: true });
+265 |     fs.writeFileSync(path.join(cwd, ".pi-glla", "archive", `${goal.id}.md`), "**Status**: complete\n");
+266 |     seedState(cwd, { goal });
+267 |     await freshSession(cwd, "startup");
+268 |     assert.equal(readState(cwd).goal, null, "blank startup closes the archived terminal slot");
+                 ^
+AssertionError: blank startup closes the archived terminal slot
+[32m+ actual[39m [31m- expected[39m
+
+[32m+[39m {
+[32m+[39m   autoContinue: true,
+[32m+[39m   createdAt: '2026-10-22T17:02:05.608Z',
+[32m+[39m   id: 'test-1792688525608-0fqi50',
+[32m+[39m   objective: 'legacy completed objective',
+[32m+[39m   policy: 'goal',
+[32m+[39m   status: 'complete',
+[32m+[39m   updatedAt: '2026-10-22T17:02:05.608Z',
+[32m+[39m   usage: {
+[32m+[39m     cacheReadTokens: 0,
+[32m+[39m     cacheWriteTokens: 0,
+[32m+[39m     cost: 0,
+[32m+[39m     inputTokens: 0,
+[32m+[39m     outputTokens: 0,
+[32m+[39m     turns: 0
+[32m+[39m   }
+[32m+[39m }
+[31m-[39m null
+
+ generatedMessage: false,
+     actual: {
+  id: "test-1792688525608-0fqi50",
+  objective: "legacy completed objective",
+  status: "complete",
+  policy: "goal",
+  autoContinue: true,
+  usage: [Object ...],
+  createdAt: "2026-10-22T17:02:05.608Z",
+  updatedAt: "2026-10-22T17:02:05.608Z",
+},
+   expected: null,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:268:12
+      at processTicksAndRejections (native:7:39)
+      at done (unknown:1:1)
+      at endTest (node:test:205:13)
+      at processTicksAndRejections (native:7:39)
+(fail) v0.34.121: blank startup closes a legacy terminal slot when its archive exists [20.00ms]
+280 |   seedState(cwd, { goal: seedGoal({ interruptedAt: new Date().toISOString(), interruptedReason: "extension api stale (sendContinuation)" }) });
+281 |   pi.sent.length = 0;
+282 |   const ctx = await freshSession(cwd, "startup");
+283 |   await tick();
+284 |   const g = readState(cwd).goal as { status: string; interruptedAt?: string };
+285 |   assert.equal(g.status, "paused", "held like everything else by default");
+               ^
+AssertionError: held like everything else by default
+
+'active' !== 'paused'
+
+ generatedMessage: false,
+     actual: "active",
+   expected: "paused",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:285:10
+      at processTicksAndRejections (native:7:39)
+(fail) T3c (v0.28.21): interrupted goal HELDS by default — the 0.28.3 exemption is superseded; autoresume=on auto-resumes [152.00ms]
+306 |   seedState(cwd, { goal: seedGoal() });
+307 |   pi.sent.length = 0;
+308 |   const ctx = await freshSession(cwd, "reload");
+309 |   await tick();
+310 |   const g = readState(cwd).goal as { status: string };
+311 |   assert.equal(g.status, "paused", "reload HOLDS by default now");
+               ^
+AssertionError: reload HOLDS by default now
+
+'active' !== 'paused'
+
+ generatedMessage: false,
+     actual: "active",
+   expected: "paused",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:311:10
+      at processTicksAndRejections (native:7:39)
+(fail) T3b (v0.28.21): active goal + reload → HELD by default; autoresume=on → auto-resumes [152.00ms]
+348 |   const ctx = await freshSession(cwd, "startup");
+349 |   await tick();
+350 | 
+351 |   await pi.command("list", "cancel", ctx);
+352 |   const afterCancel = readState(cwd);
+353 |   assert.equal(afterCancel.goal, null, "/list cancel closes the active list item after archiving it");
+               ^
+AssertionError: /list cancel closes the active list item after archiving it
+[32m+ actual[39m [31m- expected[39m
+
+[32m+[39m {
+[32m+[39m   auditHistory: [
+[32m+[39m     {
+[32m+[39m       approved: false,
+[32m+[39m       at: '2026-10-22T17:02:05.933Z',
+[32m+[39m       disapproved: true,
+[32m+[39m       model: 'fixture-auditor',
+[32m+[39m       report: 'auditor report: required fix remains recorded'
+[32m+[39m     }
+[32m+[39m   ],
+[32m+[39m   autoContinue: true,
+[32m+[39m   createdAt: '2026-10-22T17:02:05.933Z',
+[32m+[39m   id: 'test-1792688525933-u7gh4u',
+[32m+[39m   objective: 'cancelled list item — done when its archive is truthful',
+[32m+[39m   policy: 'list',
+[32m+[39m   status: 'active',
+[32m+[39m   updatedAt: '2026-10-22T17:02:05.933Z',
+[32m+[39m   usage: {
+[32m+[39m     cacheReadTokens: 0,
+[32m+[39m     cacheWriteTokens: 0,
+[32m+[39m     cost: 0,
+[32m+[39m     inputTokens: 0,
+[32m+[39m     outputTokens: 0,
+[32m+[39m     turns: 0
+[32m+[39m   }
+[32m+[39m }
+[31m-[39m null
+
+ generatedMessage: false,
+     actual: {
+  id: "test-1792688525933-u7gh4u",
+  objective: "cancelled list item — done when its archive is truthful",
+  status: "active",
+  policy: "list",
+  autoContinue: true,
+  usage: [Object ...],
+  createdAt: "2026-10-22T17:02:05.933Z",
+  updatedAt: "2026-10-22T17:02:05.933Z",
+  auditHistory: [
+    [Object ...]
+  ],
+},
+   expected: null,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:353:10
+      at processTicksAndRejections (native:7:39)
+(fail) v0.35.x: list cancel archives the active item, does not relabel it as active, and preserves its audit history [168.00ms]
+386 |     goal: seedGoal({ policy: "goal", objective: "standalone cancel objective — done when pinned" }),
+387 |   });
+388 |   const ctx = await freshSession(cwd, "startup");
+389 |   await pi.command("goal", "cancel", ctx);
+390 |   const after = readState(cwd);
+391 |   assert.equal(after.goal, null, "goal cancel closes the archived objective");
+               ^
+AssertionError: goal cancel closes the archived objective
+[32m+ actual[39m [31m- expected[39m
+
+[32m+[39m {
+[32m+[39m   autoContinue: true,
+[32m+[39m   createdAt: '2026-10-22T17:02:06.099Z',
+[32m+[39m   id: 'test-1792688526099-i64dwv',
+[32m+[39m   objective: 'standalone cancel objective — done when pinned',
+[32m+[39m   policy: 'goal',
+[32m+[39m   status: 'active',
+[32m+[39m   updatedAt: '2026-10-22T17:02:06.099Z',
+[32m+[39m   usage: {
+[32m+[39m     cacheReadTokens: 0,
+[32m+[39m     cacheWriteTokens: 0,
+[32m+[39m     cost: 0,
+[32m+[39m     inputTokens: 0,
+[32m+[39m     outputTokens: 0,
+[32m+[39m     turns: 0
+[32m+[39m   }
+[32m+[39m }
+[31m-[39m null
+
+ generatedMessage: false,
+     actual: {
+  id: "test-1792688526099-i64dwv",
+  objective: "standalone cancel objective — done when pinned",
+  status: "active",
+  policy: "goal",
+  autoContinue: true,
+  usage: [Object ...],
+  createdAt: "2026-10-22T17:02:06.099Z",
+  updatedAt: "2026-10-22T17:02:06.099Z",
+},
+   expected: null,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:391:10
+      at processTicksAndRejections (native:7:39)
+      at done (unknown:1:1)
+      at endTest (node:test:205:13)
+      at processTicksAndRejections (native:7:39)
+(fail) v0.36.0: /goal cancel archives a standalone goal with a compact six-label recap [4.00ms]
+409 |   const ctx = await freshSession(cwd, "reload");
+410 |   ctx.ui.selectImpl = async (_title, options) => options.find((option) => option === "Replace current objective") ?? options[0];
+411 |   await pi.command("list", "next", ctx);
+412 |   await tick();
+413 |   const after = readState(cwd);
+414 |   assert.match((after.goal as { objective: string }).objective, /selected next item/);
+               ^
+AssertionError: The input did not match the regular expression /selected next item/. Input:
+
+'skipped active item — done when pinned'
+
+ generatedMessage: true,
+     actual: "skipped active item — done when pinned",
+   expected: /selected next item/,
+   operator: "match",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:414:10
+      at processTicksAndRejections (native:7:39)
+(fail) v0.36.0: /list next archives the skipped active item with a compact recap [167.00ms]
+430 |   const cwd = tmpCwd();
+431 |   const ctx = await freshSession(cwd, "startup");
+432 |   try {
+433 |     await pi.command("goal", "start", ctx);
+434 |     const goal = readState(cwd).goal;
+435 |     assert.equal(goal?.objective, "Implement the bounded start handoff — done when the focused test passes");
+                 ^
+AssertionError: Expected values to be strictly equal:
+[32m+ actual[39m [31m- expected[39m
+
+[32m+[39m undefined
+[31m- [39m'Implement the bounded start handoff — done when the focused test passes'
+
+ generatedMessage: true,
+     actual: undefined,
+   expected: "Implement the bounded start handoff — done when the focused test passes",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:435:12
+      at processTicksAndRejections (native:7:39)
+      at done (unknown:1:1)
+      at endTest (node:test:205:13)
+      at processTicksAndRejections (native:7:39)
+(fail) v0.36.1: bare /goal start uses one clear active-branch request [14.00ms]
+447 |   const cwd = tmpCwd();
+448 |   seedState(cwd, { list: [{ id: "bare-list-head", objective: "queued bare-start item — done when pinned", addedAt: new Date().toISOString() }] });
+449 |   const ctx = await freshSession(cwd, "startup");
+450 |   await pi.command("list", "start", ctx);
+451 |   const after = readState(cwd);
+452 |   assert.equal(after.goal?.objective, "queued bare-start item — done when pinned");
+               ^
+AssertionError: Expected values to be strictly equal:
+[32m+ actual[39m [31m- expected[39m
+
+[32m+[39m undefined
+[31m- [39m'queued bare-start item — done when pinned'
+
+ generatedMessage: true,
+     actual: undefined,
+   expected: "queued bare-start item — done when pinned",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:452:10
+      at processTicksAndRejections (native:7:39)
+      at done (unknown:1:1)
+      at endTest (node:test:205:13)
+      at processTicksAndRejections (native:7:39)
+(fail) v0.36.1: bare /list start activates the hydrated queue head [5.00ms]
+466 |   const cwd = tmpCwd();
+467 |   const ctx = await freshSession(cwd, "startup");
+468 |   try {
+469 |     await pi.command("loop", "start", ctx);
+470 |     const loop = readState(cwd).loop;
+471 |     assert.equal(loop?.target, "Improve the bounded start handoff");
+                 ^
+AssertionError: Expected values to be strictly equal:
+[32m+ actual[39m [31m- expected[39m
+
+[32m+[39m undefined
+[31m- [39m'Improve the bounded start handoff'
+
+ generatedMessage: true,
+     actual: undefined,
+   expected: "Improve the bounded start handoff",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:471:12
+      at processTicksAndRejections (native:7:39)
+      at done (unknown:1:1)
+      at endTest (node:test:205:13)
+      at processTicksAndRejections (native:7:39)
+(fail) v0.36.1: bare /loop start infers only a target and uses the metricless path [9.00ms]
+148 |     await (h as (...a: unknown[]) => Promise<void>)(...args);
+149 |   }
+150 | 
+151 |   async runTool(name: string, params: unknown, ctx: unknown, signal: AbortSignal = new AbortController().signal): Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean; details?: unknown }> {
+152 |     const t = this.tools.get(name);
+153 |     if (!t) throw new Error(`tool not registered: ${name}`);
+                            ^
+error: tool not registered: complete_goal
+      at runTool (/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/harness/mock-pi.ts:153:23)
+      at runTool (/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/harness/mock-pi.ts:151:17)
+      at <anonymous> (/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:502:23)
+(fail) v0.36.0: aborted detached audit can complete without audit only after archive success [219.00ms]
+532 |   });
+533 |   const ctx = await freshSession(cwd, "startup");
+534 |   await tick();
+535 |   await pi.command("glla", "cancel", ctx);
+536 |   const after = readState(cwd) as unknown as { goal: unknown; list?: unknown[] };
+537 |   assert.equal(after.goal, null, "glla cancel closes the objective after archiving it");
+               ^
+AssertionError: glla cancel closes the objective after archiving it
+[32m+ actual[39m [31m- expected[39m
+
+[32m+[39m {
+[32m+[39m   autoContinue: true,
+[32m+[39m   createdAt: '2026-10-22T17:02:06.518Z',
+[32m+[39m   id: 'test-1792688526518-sz7yep',
+[32m+[39m   objective: 'glla cancel objective — done when pinned',
+[32m+[39m   policy: 'list',
+[32m+[39m   status: 'active',
+[32m+[39m   updatedAt: '2026-10-22T17:02:06.518Z',
+[32m+[39m   usage: {
+[32m+[39m     cacheReadTokens: 0,
+[32m+[39m     cacheWriteTokens: 0,
+[32m+[39m     cost: 0,
+[32m+[39m     inputTokens: 0,
+[32m+[39m     outputTokens: 0,
+[32m+[39m     turns: 0
+[32m+[39m   }
+[32m+[39m }
+[31m-[39m null
+
+ generatedMessage: false,
+     actual: {
+  id: "test-1792688526518-sz7yep",
+  objective: "glla cancel objective — done when pinned",
+  status: "active",
+  policy: "list",
+  autoContinue: true,
+  usage: [Object ...],
+  createdAt: "2026-10-22T17:02:06.518Z",
+  updatedAt: "2026-10-22T17:02:06.518Z",
+},
+   expected: null,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:537:10
+      at processTicksAndRejections (native:7:39)
+(fail) v0.34.119: /glla cancel archives the active list item and drops the waiting objective queue [155.00ms]
+557 |     list: [{ id: "unrelated-waiting", objective: "unrelated waiting item", addedAt: new Date().toISOString() }],
+558 |   });
+559 |   __testOnlyLoadState(cwd);
+560 |   await pi.command("glla", "cancel", ctx);
+561 |   const after = readState(cwd) as unknown as { loop: { active?: boolean } | null; list?: unknown[] };
+562 |   assert.equal(after.loop?.active, false, "the active loop is the objective that gets cancelled");
+               ^
+AssertionError: the active loop is the objective that gets cancelled
+
+true !== false
+
+ generatedMessage: false,
+     actual: true,
+   expected: false,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:562:10
+      at processTicksAndRejections (native:7:39)
+      at done (unknown:1:1)
+      at endTest (node:test:205:13)
+      at processTicksAndRejections (native:7:39)
+(fail) v0.34.121: /glla cancel stops an active loop before touching an unrelated waiting queue [5.00ms]
+585 |   });
+586 |   const ctx = await freshSession(cwd, "startup");
+587 |   await tick();
+588 |   await pi.command("glla", "cancel", ctx);
+589 |   const after = readState(cwd) as unknown as { goal: { status?: string; pendingCompletion?: unknown } | null; list?: unknown[] };
+590 |   assert.equal(after.goal, null, "cancel closes the auditing objective after archiving it");
+               ^
+AssertionError: cancel closes the auditing objective after archiving it
+[32m+ actual[39m [31m- expected[39m
+
+[32m+[39m {
+[32m+[39m   autoContinue: true,
+[32m+[39m   createdAt: '2026-10-22T17:02:06.675Z',
+[32m+[39m   id: 'test-1792688526675-thjz46',
+[32m+[39m   objective: 'auditing list objective — done when pinned',
+[32m+[39m   pendingCompletion: {
+[32m+[39m     at: '2026-10-22T17:02:06.675Z',
+[32m+[39m     attemptId: 'audit-cancel-attempt',
+[32m+[39m     completionSummary: 'stored claim',
+[32m+[39m     phase: 'running',
+[32m+[39m     quotaAttempts: undefined,
+[32m+[39m     quotaAutoRetryUntil: undefined,
+[32m+[39m     quotaFirstAt: undefined,
+[32m+[39m     verificationSummary: 'stored evidence'
+[32m+[39m   },
+[32m+[39m   policy: 'list',
+[32m+[39m   status: 'auditing',
+[32m+[39m   updatedAt: '2026-10-22T17:02:06.675Z',
+[32m+[39m   usage: {
+[32m+[39m     cacheReadTokens: 0,
+[32m+[39m     cacheWriteTokens: 0,
+[32m+[39m     cost: 0,
+[32m+[39m     inputTokens: 0,
+[32m+[39m     outputTokens: 0,
+[32m+[39m     turns: 0
+[32m+[39m   }
+[32m+[39m }
+[31m-[39m null
+
+ generatedMessage: false,
+     actual: {
+  id: "test-1792688526675-thjz46",
+  objective: "auditing list objective — done when pinned",
+  status: "auditing",
+  policy: "list",
+  autoContinue: true,
+  usage: [Object ...],
+  createdAt: "2026-10-22T17:02:06.675Z",
+  updatedAt: "2026-10-22T17:02:06.675Z",
+  pendingCompletion: [Object ...],
+},
+   expected: null,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:590:10
+      at processTicksAndRejections (native:7:39)
+(fail) v0.34.119: /glla cancel also aborts an auditing list objective and clears its waiting queue [156.00ms]
+607 |     if (String(title).includes("already active")) conflictTitles.push(String(title));
+608 |     return options.find((option) => option === "Update current objective");
+609 |   };
+610 |   await pi.command("goal", "start updated current objective — done when updated proof exists", ctx);
+611 |   assert.equal(conflictTitles.length, 0, "/goal start asks nothing");
+612 |   assert.notEqual((readState(cwd).goal as { id: string }).id, original.id, "start replaces the identity");
+               ^
+AssertionError: start replaces the identity
+ generatedMessage: false,
+     actual: "test-1792688526835-7r5qfl",
+   expected: "test-1792688526835-7r5qfl",
+   operator: "notStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:612:10
+      at processTicksAndRejections (native:7:39)
+      at done (unknown:1:1)
+      at endTest (node:test:205:13)
+      at processTicksAndRejections (native:7:39)
+(fail) v0.35.0 (v0.38.12 last-wins): /goal start replaces without dialog; plain /goal still offers update/cancel [13.00ms]
+652 | 
+653 |   await pi.command("list", "next", ctx);
+654 | 
+655 |   const after = readState(cwd);
+656 |   assert.equal(after.goal?.id, originalId);
+657 |   assert.equal(after.goal?.objective, queued.objective);
+               ^
+AssertionError: Expected values to be strictly equal:
+[32mactual[39m [31mexpected[39m
+
+[39m'[39m[32m [39m[31mi[39m[31mn[39m[39mc[39m[32m [39m[32mu[39m[32m [39m[32mr[39m[32m [39m[32mr[39m[32m [39m[32me[39m[32m [39m[31mo[39m[31mm[39m[31mi[39m[39mn[39m[32m [39m[32mt[39m[32m [39m[31mg[39m[39m [39m[32m [39m[39mw[39m[32m [39m[39mh[39m[32m [39m[39mo[39m[32m [39m[39ml[39m[32m [39m[39me[39m[32m [39m[39m [39m[32m [39m[39ml[39m[32m [39m[39mi[39m[32m [39m[39ms[39m[32m [39m[39mt[39m[32m [39m[39m [39m[32m [39m[39mo[39m[32m [39m[39mb[39m[32m [39m[39mj[39m[32m [39m[39me[39m[32m [39m[39mc[39m[32m [39m[39mt[39m[32m [39m[39mi[39m[32m [39m[39mv[39m[32m [39m[39me[39m[32m [39m[32m [39m[32m [39m[32m[39m[32m [39m[32m [39m[32m [39m[32md[39m[32m [39m[32mo[39m[32m [39m[32mn[39m[32m [39m[32me[39m[32m [39m[32m [39m[32m [39m[32mw[39m[32m [39m[32mh[39m[32m [39m[32me[39m[32m [39m[32mn[39m[32m [39m[32m [39m[32m [39m[32mt[39m[32m [39m[32mh[39m[32m [39m[32me[39m[32m [39m[32m [39m[32m [39m[32mo[39m[32m [39m[32ml[39m[32m [39m[32md[39m[32m [39m[32m [39m[32m [39m[32mp[39m[32m [39m[32mr[39m[32m [39m[32mo[39m[32m [39m[32mo[39m[32m [39m[32mf[39m[32m [39m[32m [39m[32m [39m[32me[39m[32m [39m[32mx[39m[32m [39m[32mi[39m[32m [39m[32ms[39m[32m [39m[32mt[39m[32m [39m[32ms[39m[32m [39m[39m'[39m[32m [39m
+
+ generatedMessage: true,
+     actual: "current whole list objective — done when the old proof exists",
+   expected: "incoming whole list objective",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:657:10
+      at processTicksAndRejections (native:7:39)
+      at done (unknown:1:1)
+      at endTest (node:test:205:13)
+      at processTicksAndRejections (native:7:39)
+(fail) v0.35.x: same-mode list conflict updates the whole objective, never individual tasks [8.00ms]
+688 |   ctx.ui.confirmImpl = async () => true;
+689 | 
+690 |   await pi.command("list", "next", ctx);
+691 | 
+692 |   const after = readState(cwd);
+693 |   assert.equal(after.goal?.status, "active");
+               ^
+AssertionError: Expected values to be strictly equal:
+[32mactual[39m [31mexpected[39m
+
+[39m'[39m[39ma[39m[32mu[39m[32md[39m[32mi[39m[31mc[39m[39mt[39m[39mi[39m[32mn[39m[32mg[39m[31mv[39m[31me[39m[39m'[39m
+
+ generatedMessage: true,
+     actual: "auditing",
+   expected: "active",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:693:10
+      at processTicksAndRejections (native:7:39)
+      at done (unknown:1:1)
+      at endTest (node:test:205:13)
+      at processTicksAndRejections (native:7:39)
+(fail) v0.35.x: auditing list conflict cancels the stale audit before whole-objective update [8.00ms]
+148 |     await (h as (...a: unknown[]) => Promise<void>)(...args);
+149 |   }
+150 | 
+151 |   async runTool(name: string, params: unknown, ctx: unknown, signal: AbortSignal = new AbortController().signal): Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean; details?: unknown }> {
+152 |     const t = this.tools.get(name);
+153 |     if (!t) throw new Error(`tool not registered: ${name}`);
+                            ^
+error: tool not registered: list_activate
+      at runTool (/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/harness/mock-pi.ts:153:23)
+      at runTool (/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/harness/mock-pi.ts:151:17)
+      at <anonymous> (/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:715:27)
+      at endTest (node:test:205:13)
+(fail) v0.35.x: list_activate uses the same whole-objective conflict update [5.00ms]
+743 |   ctx.ui.inputImpl = async () => { inputs++; return undefined; };
+744 | 
+745 |   await pi.command("list", "next", ctx);
+746 | 
+747 |   assert.equal(readState(cwd).goal?.objective, "current list before retry — done when the old proof exists");
+748 |   assert.equal(confirms, 1, "the explicit decline ends the update");
+               ^
+AssertionError: the explicit decline ends the update
+
+0 !== 1
+
+ generatedMessage: false,
+     actual: 0,
+   expected: 1,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:748:10
+      at processTicksAndRejections (native:7:39)
+      at done (unknown:1:1)
+      at endTest (node:test:205:13)
+      at processTicksAndRejections (native:7:39)
+(fail) C7: declined list conflict update preserves work without retrying the editor [10.00ms]
+759 |   const cwd = tmpCwd();
+760 |   seedState(cwd, { loop: seedLoop({ active: true, target: "current loop target" }) });
+761 |   const ctx = await freshSession(cwd, "reload");
+762 |   ctx.ui.selectImpl = async (_title, options) => options.find((option) => option === "Replace current objective");
+763 |   await pi.command("goal", "goal replacing loop — done when proof exists", ctx);
+764 |   assert.match((readState(cwd).goal as { objective: string }).objective, /goal replacing loop/);
+                                     ^
+TypeError: null is not an object (evaluating 'readState(cwd).goal.objective')
+      at <anonymous> (/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:764:32)
+      at endTest (node:test:205:13)
+(fail) v0.35.0: a cross-mode replacement confirms before replacing a live loop [13.00ms]
+802 |     await pi.command("loop", 'start refusal target branch=1 measure="cat /definitely-not-here-xyz" direction=min', ctx);
+803 |     assert.equal(readState(cwd).loop ?? null, null, "the refused start must not create a loop state");
+804 |     const branch = execSync("git branch --show-current", { cwd }).toString().trim();
+805 |     assert.equal(branch, "main", "the user is back on the original branch after the refusal");
+806 |     const leftovers = execSync("git branch --list 'pi-glla-loop/*'", { cwd }).toString().trim();
+807 |     assert.ok(leftovers.length > 0, "the empty scratch branch remains but is not checked out");
+                 ^
+AssertionError: the empty scratch branch remains but is not checked out
+ generatedMessage: false,
+     actual: false,
+   expected: true,
+   operator: "==",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:807:12
+      at processTicksAndRejections (native:7:39)
+      at done (unknown:1:1)
+      at endTest (node:test:205:13)
+      at processTicksAndRejections (native:7:39)
+(fail) v0.35.4: a refused branch-mode loop start restores the original branch [294.01ms]
+820 |   const cwd = tmpCwd();
+821 |   seedState(cwd, { goal: seedGoal({ objective: "goal before loop — done when proof exists" }) });
+822 |   const ctx = await freshSession(cwd, "reload");
+823 |   ctx.ui.selectImpl = async (_title, options) => options.find((option) => option === "Replace current objective");
+824 |   await pi.command("loop", "start loop replacement target", ctx);
+825 |   assert.equal(readState(cwd).goal, null, "the replaced goal is archived and closed");
+               ^
+AssertionError: the replaced goal is archived and closed
+[32m+ actual[39m [31m- expected[39m
+
+[32m+[39m {
+[32m+[39m   autoContinue: true,
+[32m+[39m   createdAt: '2026-10-22T17:02:07.196Z',
+[32m+[39m   id: 'test-1792688527196-pew0k0',
+[32m+[39m   objective: 'goal before loop — done when proof exists',
+[32m+[39m   policy: 'goal',
+[32m+[39m   status: 'active',
+[32m+[39m   updatedAt: '2026-10-22T17:02:07.196Z',
+[32m+[39m   usage: {
+[32m+[39m     cacheReadTokens: 0,
+[32m+[39m     cacheWriteTokens: 0,
+[32m+[39m     cost: 0,
+[32m+[39m     inputTokens: 0,
+[32m+[39m     outputTokens: 0,
+[32m+[39m     turns: 0
+[32m+[39m   }
+[32m+[39m }
+[31m-[39m null
+
+ generatedMessage: false,
+     actual: {
+  id: "test-1792688527196-pew0k0",
+  objective: "goal before loop — done when proof exists",
+  status: "active",
+  policy: "goal",
+  autoContinue: true,
+  usage: [Object ...],
+  createdAt: "2026-10-22T17:02:07.196Z",
+  updatedAt: "2026-10-22T17:02:07.196Z",
+},
+   expected: null,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:825:10
+      at processTicksAndRejections (native:7:39)
+      at done (unknown:1:1)
+      at endTest (node:test:205:13)
+      at processTicksAndRejections (native:7:39)
+(fail) v0.35.0: a direct /loop start also confirms before replacing a live goal [25.00ms]
+832 |   const cwd = tmpCwd();
+833 |   // NOTE: the loop must start live in-session — session_start holds a
+834 |   // restored loop, which would make the stop assertion vacuous.
+835 |   const ctx = await freshSession(cwd, "reload");
+836 |   await pi.command("loop", "start loop before goal", ctx);
+837 |   assert.equal((readState(cwd).loop as { active: boolean }).active, true, "precondition: the loop is live");
+                                     ^
+TypeError: undefined is not an object (evaluating 'readState(cwd).loop.active')
+      at <anonymous> (/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:837:32)
+      at endTest (node:test:205:13)
+(fail) C2: an explicit /goal start stops the active loop instead of stacking two live things [11.00ms]
+865 |   fs.writeFileSync(path.join(cwd, ".pi-glla", "continuation-dispatch.json.tmp-test"), "partial");
+866 |   let confirms = 0;
+867 |   ctx.ui.confirmImpl = async () => { confirms++; return true; };
+868 |   await pi.command("glla", "wipe", ctx);
+869 |   const after = readState(cwd);
+870 |   assert.equal(after.goal, null, "the terminal goal record is removed from the live slot");
+               ^
+AssertionError: the terminal goal record is removed from the live slot
+[32m+ actual[39m [31m- expected[39m
+
+[32m+[39m {
+[32m+[39m   autoContinue: true,
+[32m+[39m   createdAt: '2026-10-22T17:02:07.234Z',
+[32m+[39m   id: 'test-1792688527234-4tvnqu',
+[32m+[39m   objective: 'wipe-once objective — done when pinned',
+[32m+[39m   policy: 'goal',
+[32m+[39m   status: 'active',
+[32m+[39m   updatedAt: '2026-10-22T17:02:07.234Z',
+[32m+[39m   usage: {
+[32m+[39m     cacheReadTokens: 0,
+[32m+[39m     cacheWriteTokens: 0,
+[32m+[39m     cost: 0,
+[32m+[39m     inputTokens: 0,
+[32m+[39m     outputTokens: 0,
+[32m+[39m     turns: 0
+[32m+[39m   }
+[32m+[39m }
+[31m-[39m null
+
+ generatedMessage: false,
+     actual: {
+  id: "test-1792688527234-4tvnqu",
+  objective: "wipe-once objective — done when pinned",
+  status: "active",
+  policy: "goal",
+  autoContinue: true,
+  usage: [Object ...],
+  createdAt: "2026-10-22T17:02:07.234Z",
+  updatedAt: "2026-10-22T17:02:07.234Z",
+},
+   expected: null,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:870:10
+      at processTicksAndRejections (native:7:39)
+      at done (unknown:1:1)
+      at endTest (node:test:205:13)
+      at processTicksAndRejections (native:7:39)
+(fail) v0.34.121: one confirmed /glla wipe clears recovery and dispatch artifacts too [19.00ms]
+926 |     verificationContract?: string;
+927 |     pauseReason?: string;
+928 |   };
+929 |   assert.equal(updated.status, "paused", "tweak does not activate the list item");
+930 |   assert.equal(updated.policy, "list", "the list provenance is preserved");
+931 |   assert.equal(updated.objective, "new paused list item");
+               ^
+AssertionError: Expected values to be strictly equal:
+[32mactual[39m [31mexpected[39m
+
+[39m'[39m[32mo[39m[32ml[39m[32md[39m[31mn[39m[31me[39m[31mw[39m[39m [39m[39mp[39m[39ma[39m[39mu[39m[39ms[39m[39me[39m[39md[39m[39m [39m[39ml[39m[39mi[39m[39ms[39m[39mt[39m[39m [39m[39mi[39m[39mt[39m[39me[39m[39mm[39m[39m'[39m
+
+ generatedMessage: true,
+     actual: "old paused list item",
+   expected: "new paused list item",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:931:10
+      at processTicksAndRejections (native:7:39)
+(fail) v0.35.x: /list tweak amends a paused list item without activating it or changing waiting entries [159.00ms]
+972 |     pauseReason?: string;
+973 |     pauseSuggestedAction?: string;
+974 |   };
+975 |   assert.equal(updated.status, "paused", "tweak does not wake the goal");
+976 |   assert.equal(updated.policy, "goal", "the goal provenance is preserved");
+977 |   assert.equal(updated.objective, "new paused goal objective");
+               ^
+AssertionError: Expected values to be strictly equal:
+[32mactual[39m [31mexpected[39m
+
+[39m'[39m[32m [39m[32mo[39m[32m [39m[32ml[39m[32m [39m[32md[39m[32m [39m[31mn[39m[31me[39m[31mw[39m[39m [39m[32m [39m[39mp[39m[32m [39m[39ma[39m[32m [39m[39mu[39m[32m [39m[39ms[39m[32m [39m[39me[39m[32m [39m[39md[39m[32m [39m[39m [39m[32m [39m[39mg[39m[32m [39m[39mo[39m[32m [39m[39ma[39m[32m [39m[39ml[39m[32m [39m[39m [39m[32m [39m[39mo[39m[32m [39m[39mb[39m[32m [39m[39mj[39m[32m [39m[39me[39m[32m [39m[39mc[39m[32m [39m[39mt[39m[32m [39m[39mi[39m[32m [39m[39mv[39m[32m [39m[39me[39m[32m [39m[39m'[39m[32m [39m
+
+ generatedMessage: true,
+     actual: "old paused goal objective",
+   expected: "new paused goal objective",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:977:10
+      at processTicksAndRejections (native:7:39)
+(fail) field 2026-09-16 (VidPro park): /goal tweak amends a paused goal without waking it [158.00ms]
+ 997 |   const cwd = tmpCwd();
+ 998 |   seedState(cwd, {});
+ 999 |   const ctx = await freshSession(cwd, "reload");
+1000 |   await tick();
+1001 |   await pi.command("goal", "tweak whatever the goal should become", ctx);
+1002 |   assert.ok(ctx.ui.matching("No goal to tweak. /goal <objective> to start one.").length >= 1, "the refusal names the start path");
+                ^
+AssertionError: the refusal names the start path
+ generatedMessage: false,
+     actual: false,
+   expected: true,
+   operator: "==",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:1002:10
+      at processTicksAndRejections (native:7:39)
+(fail) field 2026-09-16: /goal tweak with no goal names the real path [150.00ms]
+1029 |       confirmMessage = message;
+1030 |       return true;
+1031 |     };
+1032 |     await pi.command("goal", "tweak ok adjsut it", ctx);
+1033 |     const stored = readState(cwd).goal as { objective: string; status: string };
+1034 |     assert.equal(stored.objective, "remove the live screenshot requirement from the contract", "the discussed objective is adopted");
+                  ^
+AssertionError: the discussed objective is adopted
+[32mactual[39m [31mexpected[39m
+
+[39m'[39m[32mO[39m[32mv[39m[32me[39m[39mr[39m[32mh[39m[32ma[39m[32mu[39m[32ml[39m[32m [39m[32mt[39m[32mh[39m[39me[39m[32m [39m[32mQ[39m[32mu[39m[32mi[39m[32mc[39m[32mk[39m[32m [39m[32mf[39m[32mu[39m[32ml[39m[32ml[39m[32m [39m[32ms[39m[32me[39m[32mt[39m[32mu[39m[32mp[39m[32m [39m[31mm[39m[39mo[39m[39mv[39m[39me[39m[32mr[39m[32ml[39m[32ma[39m[32my[39m[39m [39m[32mi[39m[32mn[39m[32m [39m[39mt[39m[39mh[39m[39me[39m[39m [39m[32mV[39m[32mi[39m[32md[39m[32mP[39m[32mr[39m[32mo[39m[32m [39m[32me[39m[32mx[39m[32mt[39m[32me[39m[32mn[39m[32ms[39m[32mi[39m[32mo[39m[32mn[39m[32m [39m[32m([39m[39ml[39m[39mi[39m[39mv[39m[39me[39m[39m [39m[39ms[39m[39mc[39m[39mr[39m[39me[39m[39me[39m[39mn[39m[39ms[39m[39mh[39m[39mo[39m[39mt[39m[39m [39m[39mr[39m[39me[39m[39mq[39m[39mu[39m[39mi[39m[39mr[39m[39me[39m[32md[39m[32m)[39m[31mm[39m[31me[39m[31mn[39m[31mt[39m[31m [39m[31mf[39m[31mr[39m[31mo[39m[31mm[39m[31m [39m[31mt[39m[31mh[39m[31me[39m[31m [39m[31mc[39m[31mo[39m[31mn[39m[31mt[39m[31mr[39m[31ma[39m[31mc[39m[31mt[39m[39m'[39m
+
+ generatedMessage: false,
+     actual: "Overhaul the Quick full setup overlay in the VidPro extension (live screenshot required)",
+   expected: "remove the live screenshot requirement from the contract",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:1034:12
+      at processTicksAndRejections (native:7:39)
+(fail) field 2026-09-16 (VidPro replay): tweak chatter adopts the discussed objective, never the chatter [156.00ms]
+1058 |       assert.match(message, /Fix the flaky login test/);
+1059 |       asked = true;
+1060 |       return false;
+1061 |     };
+1062 |     await pi.command("goal", "tweak ok adjust it", ctx);
+1063 |     assert.equal(asked, true);
+                  ^
+AssertionError: Expected values to be strictly equal:
+
+false !== true
+
+ generatedMessage: true,
+     actual: false,
+   expected: true,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:1063:12
+      at processTicksAndRejections (native:7:39)
+(fail) audit 2026-09-16: inferred tweak rejection leaves objective and ledger unchanged [158.00ms]
+1083 |   await tick();
+1084 |   await pi.command("goal", "tweak ok adjsut it", ctx);
+1085 |   const stored = readState(cwd).goal as { objective: string; status: string };
+1086 |   assert.equal(stored.objective, before, "the objective is untouched");
+1087 |   assert.equal(stored.status, "paused", "the park survives");
+1088 |   assert.ok(ctx.ui.matching("acknowledgment rather than a replacement").length >= 1, "the guidance names the shape");
+                ^
+AssertionError: the guidance names the shape
+ generatedMessage: false,
+     actual: false,
+   expected: true,
+   operator: "==",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:1088:10
+      at processTicksAndRejections (native:7:39)
+(fail) field 2026-09-16: tweak chatter with no discussed objective guides and changes nothing [160.00ms]
+1098 |   await tick();
+1099 |   assert.equal((readState(cwd).goal as { status: string }).status, "active", "precondition: the goal is active");
+1100 |   ctx.ui.selectImpl = async () => "Update current objective";
+1101 |   await pi.command("goal", "ok adjust it. Done when: the overlay ships", ctx);
+1102 |   const stored = readState(cwd).goal as { objective: string; verificationContract?: string };
+1103 |   assert.equal(stored.objective, "ok adjust it", "an explicit contract is explicit intent — adopted verbatim");
+                ^
+AssertionError: an explicit contract is explicit intent — adopted verbatim
+[32mactual[39m [31mexpected[39m
+
+[39m'[39m[32mO[39m[32mv[39m[32me[39m[32mr[39m[32mh[39m[32ma[39m[32mu[39m[32ml[39m[32m [39m[32mt[39m[32mh[39m[32me[39m[32m [39m[32mQ[39m[32mu[39m[32mi[39m[32mc[39m[31mo[39m[39mk[39m[39m [39m[32mf[39m[31ma[39m[31md[39m[31mj[39m[39mu[39m[32ml[39m[32ml[39m[32m [39m[39ms[39m[32me[39m[39mt[39m[32mu[39m[32mp[39m[39m [39m[32mo[39m[32mv[39m[32me[39m[32mr[39m[32ml[39m[32ma[39m[32my[39m[31mi[39m[31mt[39m[39m'[39m
+
+ generatedMessage: false,
+     actual: "Overhaul the Quick full setup overlay",
+   expected: "ok adjust it",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:1103:10
+      at processTicksAndRejections (native:7:39)
+(fail) field 2026-09-16: plain-/goal update with an explicit contract stays verbatim (explicit intent wins) [158.00ms]
+1122 |   ctx.ui.inputImpl = async () => "go";
+1123 |   await pi.command("goal", "tweak", ctx);
+1124 |   const stored = readState(cwd).goal as { objective: string; status: string };
+1125 |   assert.equal(stored.objective, before, "dialog chatter is not adopted");
+1126 |   assert.equal(stored.status, "paused", "the park survives");
+1127 |   assert.ok(ctx.ui.matching("acknowledgment rather than a replacement").length >= 1, "the guidance fires on the dialog path too");
+                ^
+AssertionError: the guidance fires on the dialog path too
+ generatedMessage: false,
+     actual: false,
+   expected: true,
+   operator: "==",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:1127:10
+      at processTicksAndRejections (native:7:39)
+(fail) field 2026-09-16: chatter typed into the bare-tweak dialog guides, never adopts [158.00ms]
+1140 |     return false;
+1141 |   };
+1142 |   const seed = "Overhaul the Quick setup overlay. It should keep the current layout.\nThe progress bar needs a11y labels too.";
+1143 |   const sentBefore = pi.userMessages.length;
+1144 |   await pi.command("list", seed, ctx);
+1145 |   assert.ok(pi.userMessages.slice(sentBefore).some(({ message }) => message.includes(seed)), "the drafting prompt preserves the entire multiline seed");
+                ^
+AssertionError: the drafting prompt preserves the entire multiline seed
+ generatedMessage: false,
+     actual: false,
+   expected: true,
+   operator: "==",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:1145:10
+      at processTicksAndRejections (native:7:39)
+(fail) field 2026-09-16: a typed paragraph drafts as one thing, never an import-or-nothing [157.00ms]
+1154 |   seedState(cwd, { goal: seedGoal({ policy: "goal", status: "paused" }) });
+1155 |   const ctx = await freshSession(cwd, "reload");
+1156 |   await tick();
+1157 |   await pi.command("list", "Fix login. Done when: login passes\nUpdate docs. Done when: docs built", ctx);
+1158 |   const items = readState(cwd).list as Array<{ objective: string; verificationContract: string }>;
+1159 |   assert.deepEqual(items.map(({ objective, verificationContract }) => ({ objective, verificationContract })), [
+                ^
+AssertionError: Expected values to be strictly deep-equal:
+[32m+ actual[39m [31m- expected[39m
+
+[32m+[39m []
+[31m-[39m [
+[31m-[39m   {
+[31m-[39m     objective: 'Fix login',
+[31m-[39m     verificationContract: 'login passes'
+[31m-[39m   },
+[31m-[39m   {
+[31m-[39m     objective: 'Update docs',
+[31m-[39m     verificationContract: 'docs built'
+[31m-[39m   }
+[31m-[39m ]
+
+ generatedMessage: true,
+     actual: [],
+   expected: [
+  [Object ...], [Object ...]
+],
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:1159:10
+      at processTicksAndRejections (native:7:39)
+(fail) audit 2026-09-16: bare list keeps separately contracted objectives in separate queue records [156.00ms]
+1169 |   const ctx = await freshSession(cwd, "reload");
+1170 |   await tick();
+1171 |   await pi.command("loop", "refine capture setup cost too", ctx);
+1172 |   const loop = readState(cwd).loop as { active: boolean; refineHint?: string; iteration: number; stopReason?: string; consecutiveErrors: number; consecutiveStuck: number; stallCount: number };
+1173 |   assert.equal(loop.iteration, 7, "resume preserves iteration history");
+1174 |   assert.equal(loop.stopReason, undefined);
+                ^
+AssertionError: Expected values to be strictly equal:
+[32m+ actual[39m [31m- expected[39m
+
+[32m+[39m 'paused by user (/loop pause)'
+[31m- [39mundefined
+
+ generatedMessage: true,
+     actual: "paused by user (/loop pause)",
+   expected: undefined,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:1174:10
+      at processTicksAndRejections (native:7:39)
+(fail) field 2026-09-16 (loop sweep): /loop refine on a held loop queues the hint and resumes [164.00ms]
+(pass) audit 2026-09-23: failed loop dispatch preserves every one-shot directive [216.00ms]
+1227 |   await tick();
+1228 |   const sentBefore = pi.userMessages.length;
+1229 |   await pi.command("loop", "refine capture setup cost too", ctx);
+1230 |   const loop = readState(cwd).loop as { active: boolean; refineHint?: string };
+1231 |   assert.equal(loop.active, false);
+1232 |   assert.equal(loop.refineHint, "capture setup cost too");
+                ^
+AssertionError: Expected values to be strictly equal:
+[32m+ actual[39m [31m- expected[39m
+
+[32m+[39m undefined
+[31m- [39m'capture setup cost too'
+
+ generatedMessage: true,
+     actual: undefined,
+   expected: "capture setup cost too",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:1232:10
+      at processTicksAndRejections (native:7:39)
+(fail) audit 2026-09-16: held-loop refine respects wrong-branch guard [188.00ms]
+1250 |     }),
+1251 |   });
+1252 |   const ctx = await freshSession(cwd, "reload");
+1253 |   await tick();
+1254 |   await pi.command("goal", "resume", ctx);
+1255 |   assert.equal((readState(cwd).goal as { status: string }).status, "active", "precondition: the goal is active");
+                ^
+AssertionError: precondition: the goal is active
+
+'paused' !== 'active'
+
+ generatedMessage: false,
+     actual: "paused",
+   expected: "active",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:1255:10
+      at processTicksAndRejections (native:7:39)
+(fail) field 2026-09-16 (loop sweep): held-loop refine over an active goal queues but stays held [154.00ms]
+1269 |   await tick();
+1270 |   await pi.command("loop", "refine capture setup cost too", ctx);
+1271 |   const loop = readState(cwd).loop as { active: boolean; refineHint?: string };
+1272 |   assert.equal(loop.refineHint, undefined, "no hint is queued onto a dead loop");
+1273 |   assert.equal(loop.active, false, "nothing resumes");
+1274 |   assert.ok(ctx.ui.matching("/loop start begins a fresh run").length >= 1, "the refusal names the fresh-start path");
+                ^
+AssertionError: the refusal names the fresh-start path
+ generatedMessage: false,
+     actual: false,
+   expected: true,
+   operator: "==",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:1274:10
+      at processTicksAndRejections (native:7:39)
+(fail) field 2026-09-16 (loop sweep): refine on a user-stopped loop refuses with the honest path [162.00ms]
+1281 |   const ctx = await freshSession(cwd, "reload");
+1282 |   await tick();
+1283 |   await pi.command("loop", "refine capture setup cost too", ctx);
+1284 |   const loop = readState(cwd).loop as { active: boolean; refineHint?: string };
+1285 |   assert.equal(loop.refineHint, undefined, "no hint is queued onto a broken loop");
+1286 |   assert.ok(ctx.ui.matching("propose_loop_refine").length >= 1, "the refusal names the agent repair path, not a fresh start");
+                ^
+AssertionError: the refusal names the agent repair path, not a fresh start
+ generatedMessage: false,
+     actual: false,
+   expected: true,
+   operator: "==",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:1286:10
+      at processTicksAndRejections (native:7:39)
+(fail) field 2026-09-16 (loop sweep): refine on a measure-broken loop points at the agent repair path [157.00ms]
+1294 |   const ctx = await freshSession(cwd, "reload");
+1295 |   await tick();
+1296 |   assert.equal((readState(cwd).loop as { active: boolean }).active, true, "precondition: the loop is active");
+1297 |   await pi.command("loop", "refine capture setup cost too", ctx);
+1298 |   const loop = readState(cwd).loop as { active: boolean; refineHint?: string };
+1299 |   assert.equal(loop.refineHint, "capture setup cost too", "the hint is queued");
+                ^
+AssertionError: the hint is queued
+[32m+ actual[39m [31m- expected[39m
+
+[32m+[39m undefined
+[31m- [39m'capture setup cost too'
+
+ generatedMessage: false,
+     actual: undefined,
+   expected: "capture setup cost too",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:1299:10
+      at processTicksAndRejections (native:7:39)
+(fail) field 2026-09-16 (loop sweep): refine on an active loop keeps today's behavior [154.00ms]
+1306 | test("T3d: active loop + human load → HELD_ON_RESTORE (loop deactivated loudly, not silently dropped)", async () => {
+1307 |   const cwd = tmpCwd();
+1308 |   seedState(cwd, { loop: seedLoop() });
+1309 |   const ctx = await freshSession(cwd, "startup");
+1310 |   const l = readState(cwd).loop as { active: boolean; stopReason?: string };
+1311 |   assert.equal(l.active, false);
+                ^
+AssertionError: Expected values to be strictly equal:
+
+true !== false
+
+ generatedMessage: true,
+     actual: true,
+   expected: false,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:1311:10
+      at processTicksAndRejections (native:7:39)
+      at done (unknown:1:1)
+      at endTest (node:test:205:13)
+      at processTicksAndRejections (native:7:39)
+(fail) T3d: active loop + human load → HELD_ON_RESTORE (loop deactivated loudly, not silently dropped) [5.00ms]
+(pass) v0.35.x: a successor auto-resumes lifecycle-held loops intact but preserves deliberate stops [432.01ms]
+(pass) v0.29.14: live audit loop on open-count/min migrates to closed-count/max on load (discovery no longer reads as regression) [117.00ms]
+(pass) v0.29.18: live audit loop on the audit-every-iteration target migrates to FIX-FIRST on load [33.00ms]
+(pass) v0.34.16: lifecycle handoff resumes same-process replacement but quit does not bypass restore consent [2110.04ms]
+(pass) stale list work survives invalidation and resumes only through a fresh file-backed session [889.02ms]
+(pass) v0.34.49: fresh MAIN session_start resets stale state and rejects the old dispatch generation [912.02ms]
+(pass) v0.34.49: a handoff is one-shot and only matching predecessor identity can resume [1015.02ms]
+(pass) v0.34.23: host replacement with a new SessionManager is not rejected as foreign [1173.02ms]
+(pass) v0.34.20: registered tools use the replacement invocation context without session_shutdown [1094.02ms]
+(pass) T3e (v0.28.21): no active goal + queued list + reload → NOT activated by default; autoresume=on → head activates [735.01ms]
+(pass) v0.34.24: continuation dispatch waits for owner start proof and clears its sidecar [2189.04ms]
+(pass) v0.34.36: compaction releases a timed-out dispatch for one fresh resync attempt [3814.07ms]
+(pass) v0.34.36: a loop missing start proof stops durably and /loop resume re-arms it exactly once [4239.07ms]
+(pass) v0.34.48: /list resume releases an unacknowledged dispatch exactly once [3824.07ms]
+(pass) v0.34.24: missing start proof stands down durably and explicit resume sends one fresh attempt [890.02ms]
+(pass) v0.34.88: a transient no-turn-start miss self-heals with exactly ONE verbatim retry [613.01ms]
+(pass) v0.34.88: a genuine stall fires unacknowledged after the retry backoff — exactly one retry, then re-sends stop [799.01ms]
+(pass) v0.34.88: a goal paused inside the watchdog window is never blind-retried [958.02ms]
+(pass) T5: mutating tools refuse a foreign (subagent) session ctx [116.00ms]
+(pass) T5: guard coverage pin — every mutating tool routes through foreignToolGuard [96.00ms]
+(pass) v0.36.3: live activity is scoped across lost results, host replacement, timestamps, timers, and pending dispatch [93.00ms]
+(pass) v0.36.4: /glla resume behaviorally re-kicks an ACTIVE-but-idle goal [297.01ms]
+(pass) T2: a stale send on agent_end continuation → goal ACTIVE + interrupt marker + loud notify [385.01ms]
+(pass) T2b: stale before compaction → no late rebind, refire, or misleading active UI [591.01ms]
+(pass) v0.35.x: stale terminal keeps a recovery probe and self-heals without reload [441.01ms]
+(pass) v0.34.48: host-session loss without replacement session_start parks durably and rejects late callbacks [2534.04ms]
+(pass) v0.35.x: host loss keeps durable auditor disapproval feedback visible [249.00ms]
+(pass) v0.35.x: full auditor reports and required-fixes tails survive lifecycle boundaries [7731.13ms]
+(pass) S3: a mid-session absorb publishes the owner file, so the shutdown handoff still validates [853.01ms]
+(pass) v0.34.25: silent swap — live file-backed successor is absorbed via a tool call and the work auto-resumes [548.01ms]
+(pass) v0.34.25: silent swap — in-memory (subagent) ctx is still refused and the park stays honest [401.01ms]
+(pass) v0.34.25: the field ordering — stale before compaction, then the successor's compact event absorbs in place [563.01ms]
+(pass) v0.34.25: dead owner + ephemeral ctx cannot claim the plane (subagent lockout fix) [188.00ms]
+(pass) S4: a transient lastCtx probe glitch fails one tool call closed without dropping the context [51.00ms]
+(pass) v0.34.27: stale host recovery absorbs the first replacement contact across lifecycle and stream boundaries [6399.11ms]
+(pass) v0.34.27: plain startup from a dead file-backed successor is not rejected as a subagent [485.01ms]
+(pass) v0.38.68 reviewer P1: compact-defer settles without kicking a turn into the hot window [1477.03ms]
+(pass) manual pause+resume between exhaustion episodes restarts the relentless cycle [2365.04ms]
+(pass) v0.34.26: repeated output-token truncation pauses the goal durably with re-scope guidance and a fresh resume budget [1924.03ms]
+(pass) v0.34.26: output-token-limit provider errors pause with the named wall, not generic provider-error text [807.01ms]
+(pass) goal draft rejects whitespace-only objectives before Confirm or activation [194.00ms]
+(pass) task-list Confirm discloses milestone verification commands [359.01ms]
+(pass) T1a: stale Confirm in propose_goal_draft → NOT-a-rejection guidance, no goal created [127.00ms]
+(pass) T1b: stale /goal start → goal persisted to .pi-glla with honest notify [91.00ms]
+(pass) drafting state is not left behind by a stale seed, and old confirmations cannot mutate a replacement session [747.01ms]
+(pass) auto-accept escape hatch: ALWAYS choice persists project autoAcceptDrafts and accepts the draft [302.01ms]
+(pass) escape hatch: a later draft skips the dialog entirely once autoAcceptDrafts landed [90.00ms]
+(pass) source pin: all five draft-class dialogs route through confirmDraft with the 3-choice ALWAYS option [124.00ms]
+(pass) quota error turns enter durable main-model recovery instead of a resend storm [933.02ms]
+(pass) main-model recovery external notices are deduplicated per provider episode [649.01ms]
+(pass) request-rate prose uses the generic fallback chain [395.01ms]
+(pass) explicit 429-shaped errors use the generic fallback chain [436.01ms]
+(pass) a successful core retry clears generic provider recovery and resumes the parked goal [4426.08ms]
+(pass) v0.35.x: a successful main-model recovery gives a parked audit its one automatic retry [15511.26ms]
+(pass) a user-aborted agent_end does not falsely clear main-model recovery [5055.09ms]
+(pass) recoverable error turns enter generic recovery before stall accounting [2454.04ms]
+(pass) explicit prompt-policy rejection pauses the owning goal without retrying [2693.05ms]
+(pass) carryover pause (default): new goal over stale paused goal+list+held loop → ONE summary, goal archived, list+loop kept [603.01ms]
+(pass) carryover=clear: new goal drops the queue, dismisses the held loop, archives the paused goal [226.00ms]
+(pass) v0.35.4: a recovered sidecar is hydrated before list mutations [284.00ms]
+(pass) /loop cancel: first-class alias stops the loop (stopReason recorded) [687.01ms]
+(pass) /loop finish persists and notifies the complete six-label recap [1516.03ms]
+(pass) one-active-thing tool guards: list_activate + propose_loop_draft + propose_goal_draft refuse over the wrong active kind [2410.04ms]
+(pass) one-active-thing: /goal resume guard remains; the load-time combo is auto-arbitrated (v0.29.6) [420.01ms]
+(pass) v0.29.6: stacked state at load is AUTO-ARBITRATED — most recent activity keeps the slot, loser archived (supersedes the 0.28.21 picker) [3373.06ms]
+(pass) carryover via /list next (pause): summary fires BEFORE the stale item activates; paused goal archived, held loop kept [601.01ms]
+(pass) carryover via /list next (clear): the stale queue is dropped BEFORE activation — nothing activates [1017.02ms]
+(pass) carryover=resume: legacy silent stacking — no summary, queue + held loop untouched [1513.03ms]
+(pass) /list audit: queues a collect-only audit item with the restart-safe marker [1669.03ms]
+(pass) /goal decide: content pick → decision sent to the agent + goal resumes [2816.05ms]
+(pass) /goal decide: Escape (undefined) → goal stays paused, nothing sent [588.01ms]
+(pass) /goal decide: command option (/goal cancel) runs the command, not a message [1014.02ms]
+(pass) /goal decide: no pending decision → notify, no picker [310.01ms]
+(pass) /goal status + /goal pause: no goal id in user-facing text (v0.28.24) [654.01ms]
+(pass) goal-start notify has no (id: …) suffix (v0.28.24 source pin) [77.00ms]
+(pass) v0.34.21 lifecycle: completion audit from a replaced generation leaves the stored claim intact [598.01ms]
+(pass) v0.34.119: impossible completion counts reach the durable auditor claim before the worker starts [6716.11ms]
+(pass) v0.34.22: complete_goal returns while a detached auditor finishes and archives approval [9799.17ms]
+(pass) v0.35.x: provider-wall diagnostics stay durable while completion surfaces remain sanitized and deduplicated [9274.16ms]
+(pass) v0.35.x: /glla audits full sanitizes active and global reports [191.00ms]
+(pass) v0.35.x: bare 403 main recovery sanitizes live surfaces while retaining diagnostics [487.01ms]
+(pass) v0.35.x: bare 403 completion diagnostics stay durable while completion surfaces remain sanitized [22757.39ms]
+(pass) v0.34.119: auditor-approved list completion archives the item and activates exactly the next queue item [11914.20ms]
+(pass) v0.36.2: approved standalone completion automatically activates a pre-queued list head [6384.11ms]
+(pass) v0.34.91: detached approval notify carries the agent's completion recap, not process boilerplate [5501.09ms]
+(pass) v0.34.87: complete_goal on a paused item names the pause + resume verb, not a flat 'No active goal' [201.00ms]
+(pass) v0.34.22: detached disapproval resumes the goal with a durable report [5062.09ms]
+(pass) v0.35.x: a detached approval blocked by the regression shield is not relabeled [6543.11ms]
+(pass) v0.34.22: an old detached result cannot archive after session replacement [2803.05ms]
+(pass) v0.34.21 lifecycle: cold startup holds a recovered claim until explicit resume [921.02ms]
+(pass) v0.35.x: validated session handoff auto-retries a parked completion audit [9236.16ms]
+(pass) v0.35.x: explicit Auto-resume retries a parked claim on cold startup [8788.15ms]
+(pass) v0.35.x: manual /list resume retries a parked list completion claim directly [10116.17ms]
+(pass) v0.35.x: one automatic parked-audit retry is durable across repeated lifecycle events [2227.04ms]
+102 | }
+103 | 
+104 | async function waitUntil(predicate: () => boolean, timeoutMs = 30_000): Promise<void> {
+105 |   const deadline = untilMs(timeoutMs);
+106 |   while (!predicate()) {
+107 |     if (Date.now() >= deadline) throw new Error("timed out waiting for detached-auditor state");
+                                                ^
+error: timed out waiting for detached-auditor state
+      at waitUntil (/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/behavioral-orchestrator.test.ts:107:43)
+(fail) v0.35.x: stale host replacement session_start auto-recovers the parked audit [7954.13ms]
+(fail) v0.35.x: healthy same-session heartbeat recovers a parked completion audit without manual resume [120054.02ms]
+  ^ this test timed out after 120000ms, before its done callback was called. If a done callback was not intended, remove the last parameter from the test callback function
+(pass) v0.36.0: exhausted no-verdict auditor chain enters the shared ladder with an automatic retry timer [9525.16ms]
+(pass) bounded recovery: initial aggressive completion preserves its horizon and exhausted chain [6713.11ms]
+(pass) v0.35.x: stale host loss releases an in-flight completion audit without a verdict [8668.15ms]
+(pass) v0.34.29: audit fan-out honors autoAcceptDrafts without opening confirmation [40.00ms]
+(pass) v0.34.129: fan-out dedupe does not drop a finding whose prefix appears inside another queue item [123.00ms]
+(pass) v0.34.129: fan-out reports cap-deferred findings separately from true queue dedupes [190.00ms]
+(pass) v0.34.20 lifecycle: fan-out confirmation from the old generation cannot queue into its replacement [115.00ms]
+(pass) v0.34.20 lifecycle: loop measurement abandons the old generation after replacement [757.01ms]
+(pass) v0.34.25: a resolved auditor model failure advances to the session fallback without a verdict [54.00ms]
+(pass) v0.35.x: zero-stream zombie auto-aborts and parks a list item without a retry storm [664.01ms]
+(pass) v0.35.x: zero-stream loop termination preserves and notifies its recap [70.00ms]
+(pass) v0.35.4: zombie watchdog stands down while a subagent wait is in flight [260.00ms]
+(pass) v0.35.64: a stale subagent probe no longer shields unrelated parent cleanup [228.00ms]
+(pass) v0.35.4: context-starved warning is one-shot per refusal episode [131.00ms]
+(pass) audit-2026-09-06: measure test-run dialogs disclose the pre-confirm exec [30.00ms]
+(pass) tweak carries its revision bump inside the durable patch (no phantom revision) [532.01ms]
+(pass) resetContinuationDispatchState clears the in-memory pending ref (S2 audit)
+
+tests/settings-editors.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+44 | 
+45 | function readGlobal(): Record<string, unknown> {
+46 |   return fs.existsSync(GLOBAL_FILE) ? (JSON.parse(fs.readFileSync(GLOBAL_FILE, "utf-8")) as Record<string, unknown>) : {};
+47 | }
+48 | 
+49 | test("T4: select editor — stateRoot writes the global workingDir/sessionDir choice", async () => {
+     ^
+NotImplementedError: test() inside another test() is not yet implemented in Bun. Track the status & thumbs up the issue: https://github.com/oven-sh/bun/issues/5090. Use `bun:test` in the interim.
+ code: "ERR_NOT_IMPLEMENTED"
+
+      at #checkNotInsideTest (node:test:114:26)
+      at checkNotInsideTest (node:test:119:32)
+      at createTest (node:test:198:21)
+      at test (node:test:144:41)
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/settings-editors.test.ts:49:1
+      at loadAndEvaluateModule (2:1)
+-------------------------------
+
+
+tests/list-queue.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+23 | 
+24 | function tmpCwd(): string {
+25 |   return fs.mkdtempSync(path.join(os.tmpdir(), "pi-gla-list-test-"));
+26 | }
+27 | 
+28 | test("readState restores an empty list when no state exists", () => {
+     ^
+NotImplementedError: test() inside another test() is not yet implemented in Bun. Track the status & thumbs up the issue: https://github.com/oven-sh/bun/issues/5090. Use `bun:test` in the interim.
+ code: "ERR_NOT_IMPLEMENTED"
+
+      at #checkNotInsideTest (node:test:114:26)
+      at checkNotInsideTest (node:test:119:32)
+      at createTest (node:test:198:21)
+      at test (node:test:144:41)
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/list-queue.test.ts:28:1
+      at loadAndEvaluateModule (2:1)
+-------------------------------
+
+
+tests/list-subtasks.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+42 | 
+43 | // =====================================================================
+44 | // PURE TIER — parser / data model
+45 | // =====================================================================
+46 | 
+47 | test("v0.35.72: visible hierarchical positions map to flat queue indexes", () => {
+     ^
+NotImplementedError: test() inside another test() is not yet implemented in Bun. Track the status & thumbs up the issue: https://github.com/oven-sh/bun/issues/5090. Use `bun:test` in the interim.
+ code: "ERR_NOT_IMPLEMENTED"
+
+      at #checkNotInsideTest (node:test:114:26)
+      at checkNotInsideTest (node:test:119:32)
+      at createTest (node:test:198:21)
+      at test (node:test:144:41)
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/list-subtasks.test.ts:47:1
+      at loadAndEvaluateModule (2:1)
+-------------------------------
+
+
+tests/list-stall-reproduction.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+55 |   await pi.fire("session_start", { reason: "startup" }, ctx);
+56 |   await tick(20);
+57 |   return ctx;
+58 | }
+59 | 
+60 | test("completed standalone goal automatically hands off to the waiting list", async () => {
+     ^
+NotImplementedError: test() inside another test() is not yet implemented in Bun. Track the status & thumbs up the issue: https://github.com/oven-sh/bun/issues/5090. Use `bun:test` in the interim.
+ code: "ERR_NOT_IMPLEMENTED"
+
+      at #checkNotInsideTest (node:test:114:26)
+      at checkNotInsideTest (node:test:119:32)
+      at createTest (node:test:198:21)
+      at test (node:test:144:41)
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/list-stall-reproduction.test.ts:60:1
+      at loadAndEvaluateModule (2:1)
+-------------------------------
+
+
+tests/list-audit-state-root.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+22 |     value: { goal, list: [], loop: null },
+23 |     at: new Date().toISOString(),
+24 |   }) + "\n";
+25 | }
+26 | 
+27 | test("list-audit fan-out reads findings from the configured sessionDir root", async () => {
+     ^
+NotImplementedError: test() inside another test() is not yet implemented in Bun. Track the status & thumbs up the issue: https://github.com/oven-sh/bun/issues/5090. Use `bun:test` in the interim.
+ code: "ERR_NOT_IMPLEMENTED"
+
+      at #checkNotInsideTest (node:test:114:26)
+      at checkNotInsideTest (node:test:119:32)
+      at createTest (node:test:198:21)
+      at test (node:test:144:41)
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/list-audit-state-root.test.ts:27:1
+      at loadAndEvaluateModule (2:1)
+-------------------------------
+
+
+tests/list-stale-context.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+64 | 
+65 | // ────────────────────────────────────────────────────────────────────
+66 | // Mutating subcommands are refused on a stale handle
+67 | // ────────────────────────────────────────────────────────────────────
+68 | 
+69 | test("v0.34.51: /list add on a stale handle is refused — honest recovery result, zero state mutation", async () => {
+     ^
+NotImplementedError: test() inside another test() is not yet implemented in Bun. Track the status & thumbs up the issue: https://github.com/oven-sh/bun/issues/5090. Use `bun:test` in the interim.
+ code: "ERR_NOT_IMPLEMENTED"
+
+      at #checkNotInsideTest (node:test:114:26)
+      at checkNotInsideTest (node:test:119:32)
+      at createTest (node:test:198:21)
+      at test (node:test:144:41)
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/list-stale-context.test.ts:69:1
+      at loadAndEvaluateModule (2:1)
+-------------------------------
+
+
+tests/goal-state-drift.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+59 | afterEach(() => {
+60 |   const descriptor = Object.getOwnPropertyDescriptor(globalThis, "persistState");
+61 |   if (descriptor && "value" in descriptor) delete (globalThis as Record<string, unknown>).persistState;
+62 | });
+63 | 
+64 | test("a failed goal update leaves the live goal equal to the durable one", () => {
+     ^
+NotImplementedError: test() inside another test() is not yet implemented in Bun. Track the status & thumbs up the issue: https://github.com/oven-sh/bun/issues/5090. Use `bun:test` in the interim.
+ code: "ERR_NOT_IMPLEMENTED"
+
+      at #checkNotInsideTest (node:test:114:26)
+      at checkNotInsideTest (node:test:119:32)
+      at createTest (node:test:198:21)
+      at test (node:test:144:41)
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/goal-state-drift.test.ts:64:1
+      at loadAndEvaluateModule (2:1)
+-------------------------------
+
+
+tests/list-settings-route.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+62 | 
+63 | // ────────────────────────────────────────────────────────────────────
+64 | // /list settings is handled explicitly — never a drafting seed
+65 | // ────────────────────────────────────────────────────────────────────
+66 | 
+67 | test("v0.34.53: /list settings redirects to /glla explicitly — no drafting, no state mutation", async () => {
+     ^
+NotImplementedError: test() inside another test() is not yet implemented in Bun. Track the status & thumbs up the issue: https://github.com/oven-sh/bun/issues/5090. Use `bun:test` in the interim.
+ code: "ERR_NOT_IMPLEMENTED"
+
+      at #checkNotInsideTest (node:test:114:26)
+      at checkNotInsideTest (node:test:119:32)
+      at createTest (node:test:198:21)
+      at test (node:test:144:41)
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/list-settings-route.test.ts:67:1
+      at loadAndEvaluateModule (2:1)
+-------------------------------
+
+
+tests/list-parallel.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+39 | 
+40 | function tmpCwd(): string {
+41 |   return fs.mkdtempSync(path.join(os.tmpdir(), "pi-gla-list-parallel-test-"));
+42 | }
+43 | 
+44 | test("extractParallelFlag: truthy values mark the item parallel-safe", () => {
+     ^
+NotImplementedError: test() inside another test() is not yet implemented in Bun. Track the status & thumbs up the issue: https://github.com/oven-sh/bun/issues/5090. Use `bun:test` in the interim.
+ code: "ERR_NOT_IMPLEMENTED"
+
+      at #checkNotInsideTest (node:test:114:26)
+      at checkNotInsideTest (node:test:119:32)
+      at createTest (node:test:198:21)
+      at test (node:test:144:41)
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/list-parallel.test.ts:44:1
+      at loadAndEvaluateModule (2:1)
+-------------------------------
+
+
+tests/list-draft-handoff.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+50 |   "That self-check doesn't fit the current stage: we're drafting a list, not implementing changes yet. " +
+51 |   "We already have enough signal to choose priorities. " +
+52 |   "I also wouldn't add another storage item blindly — the existing title already covers it. " +
+53 |   "Requesting indexing before a change is deployed wouldn't verify anything.";
+54 | 
+55 | test("125335: fresh commentary-only draft end delivers exactly one bounded correction", { timeout: scaledBudgetMs(15000) }, async () => {
+     ^
+NotImplementedError: test() inside another test() is not yet implemented in Bun. Track the status & thumbs up the issue: https://github.com/oven-sh/bun/issues/5090. Use `bun:test` in the interim.
+ code: "ERR_NOT_IMPLEMENTED"
+
+      at #checkNotInsideTest (node:test:114:26)
+      at checkNotInsideTest (node:test:119:32)
+      at createTest (node:test:198:21)
+      at test (node:test:144:41)
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/list-draft-handoff.test.ts:55:1
+      at loadAndEvaluateModule (2:1)
+-------------------------------
+
+
+54 tests failed:
+(fail) T3a: active goal + human load (startup) + default settings → HELD for explicit resume [43.00ms]
+(fail) v0.34.18: blank startup waits for the transcript before autoresume, while explicit resume and loaded history still work [164.00ms]
+(fail) v0.34.121: blank startup closes a legacy terminal slot when its archive exists [20.00ms]
+(fail) T3c (v0.28.21): interrupted goal HELDS by default — the 0.28.3 exemption is superseded; autoresume=on auto-resumes [152.00ms]
+(fail) T3b (v0.28.21): active goal + reload → HELD by default; autoresume=on → auto-resumes [152.00ms]
+(fail) v0.35.x: list cancel archives the active item, does not relabel it as active, and preserves its audit history [168.00ms]
+(fail) v0.36.0: /goal cancel archives a standalone goal with a compact six-label recap [4.00ms]
+(fail) v0.36.0: /list next archives the skipped active item with a compact recap [167.00ms]
+(fail) v0.36.1: bare /goal start uses one clear active-branch request [14.00ms]
+(fail) v0.36.1: bare /list start activates the hydrated queue head [5.00ms]
+(fail) v0.36.1: bare /loop start infers only a target and uses the metricless path [9.00ms]
+(fail) v0.36.0: aborted detached audit can complete without audit only after archive success [219.00ms]
+(fail) v0.34.119: /glla cancel archives the active list item and drops the waiting objective queue [155.00ms]
+(fail) v0.34.121: /glla cancel stops an active loop before touching an unrelated waiting queue [5.00ms]
+(fail) v0.34.119: /glla cancel also aborts an auditing list objective and clears its waiting queue [156.00ms]
+(fail) v0.35.0 (v0.38.12 last-wins): /goal start replaces without dialog; plain /goal still offers update/cancel [13.00ms]
+(fail) v0.35.x: same-mode list conflict updates the whole objective, never individual tasks [8.00ms]
+(fail) v0.35.x: auditing list conflict cancels the stale audit before whole-objective update [8.00ms]
+(fail) v0.35.x: list_activate uses the same whole-objective conflict update [5.00ms]
+(fail) C7: declined list conflict update preserves work without retrying the editor [10.00ms]
+(fail) v0.35.0: a cross-mode replacement confirms before replacing a live loop [13.00ms]
+(fail) v0.35.4: a refused branch-mode loop start restores the original branch [294.01ms]
+(fail) v0.35.0: a direct /loop start also confirms before replacing a live goal [25.00ms]
+(fail) C2: an explicit /goal start stops the active loop instead of stacking two live things [11.00ms]
+(fail) v0.34.121: one confirmed /glla wipe clears recovery and dispatch artifacts too [19.00ms]
+(fail) v0.35.x: /list tweak amends a paused list item without activating it or changing waiting entries [159.00ms]
+(fail) field 2026-09-16 (VidPro park): /goal tweak amends a paused goal without waking it [158.00ms]
+(fail) field 2026-09-16: /goal tweak with no goal names the real path [150.00ms]
+(fail) field 2026-09-16 (VidPro replay): tweak chatter adopts the discussed objective, never the chatter [156.00ms]
+(fail) audit 2026-09-16: inferred tweak rejection leaves objective and ledger unchanged [158.00ms]
+(fail) field 2026-09-16: tweak chatter with no discussed objective guides and changes nothing [160.00ms]
+(fail) field 2026-09-16: plain-/goal update with an explicit contract stays verbatim (explicit intent wins) [158.00ms]
+(fail) field 2026-09-16: chatter typed into the bare-tweak dialog guides, never adopts [158.00ms]
+(fail) field 2026-09-16: a typed paragraph drafts as one thing, never an import-or-nothing [157.00ms]
+(fail) audit 2026-09-16: bare list keeps separately contracted objectives in separate queue records [156.00ms]
+(fail) field 2026-09-16 (loop sweep): /loop refine on a held loop queues the hint and resumes [164.00ms]
+(fail) audit 2026-09-16: held-loop refine respects wrong-branch guard [188.00ms]
+(fail) field 2026-09-16 (loop sweep): held-loop refine over an active goal queues but stays held [154.00ms]
+(fail) field 2026-09-16 (loop sweep): refine on a user-stopped loop refuses with the honest path [162.00ms]
+(fail) field 2026-09-16 (loop sweep): refine on a measure-broken loop points at the agent repair path [157.00ms]
+(fail) field 2026-09-16 (loop sweep): refine on an active loop keeps today's behavior [154.00ms]
+(fail) T3d: active loop + human load → HELD_ON_RESTORE (loop deactivated loudly, not silently dropped) [5.00ms]
+(fail) v0.35.x: stale host replacement session_start auto-recovers the parked audit [7954.13ms]
+(fail) v0.35.x: healthy same-session heartbeat recovers a parked completion audit without manual resume [120054.02ms]
+  ^ this test timed out after 120000ms, before its done callback was called. If a done callback was not intended, remove the last parameter from the test callback function
+
+ 246 pass
+ 54 fail
+ 10 errors
+Ran 300 tests across 18 files. [431.89s]

@@ -1,0 +1,11 @@
+[run-tests] mode=all slow_files=13 stall_timeout=433s heartbeat=30s
+[run-tests] host is 2.4x slower than an idle host — per-test budget raised to 288s
+bun test v1.3.3 (274e01c7)
+
+tests/repro-jiti-state-split.test.mjs:
+(pass) jiti: /list audit enqueues, persists the item, and ACTIVATES (state binding not split) [3350.06ms]
+
+ 1 pass
+ 0 fail
+Ran 1 test across 1 file. [6.58s]
+[run-tests] finished in 7s (exit 0)
