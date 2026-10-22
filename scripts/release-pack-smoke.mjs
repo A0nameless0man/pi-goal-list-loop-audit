@@ -56,6 +56,7 @@ try {
     "scripts/goal-compactor-worker.mjs",
     "scripts/contained-child.mjs",
     "scripts/run-tests.mjs",
+    "scripts/slow-files.mjs",
     "scripts/test-process-registry.mjs",
     "scripts/durable-wait.mjs",
     "scripts/release-pack-smoke.mjs",
@@ -109,6 +110,18 @@ try {
   const packedLauncher = await import(pathToFileURL(path.join(installedPackage, "scripts/goal-auditor-launch.mjs")).href);
   if (typeof packedLauncher.buildAuditorPiSpawnSpec !== "function") throw new Error("packed launcher did not load");
   if (typeof packedLauncher.renameWithWindowsRetry !== "function") throw new Error("packed launcher exports are incomplete");
+
+  // v0.39.45 (audit 2026-10-22): presence in the tarball is not loadability.
+  // The shipped runner used to import the slow-file list from `tests/`,
+  // which the package does not ship — so the packaged runner died with
+  // ERR_MODULE_NOT_FOUND the moment anyone imported it, while the release
+  // gate certified that it ships. Import the INSTALLED runner: its import
+  // graph must resolve inside the package, or the artifact is broken.
+  // The runner is import-safe (it only runs the suite when invoked as a
+  // script), so this check executes no tests.
+  const packedRunner = await import(pathToFileURL(path.join(installedPackage, "scripts/run-tests.mjs")).href);
+  if (typeof packedRunner.buildRunnerArgs !== "function") throw new Error("packed test runner did not load");
+  if (!Array.isArray(packedRunner.SLOW_TEST_FILES ?? [])) throw new Error("packed test runner did not expose the slow-file list");
 
   // Tar-list presence is not worker coverage. Start the shipped worker from
   // the installed tree with a tiny RPC stub, then require its real result.json

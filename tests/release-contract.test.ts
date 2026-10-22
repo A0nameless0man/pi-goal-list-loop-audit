@@ -76,6 +76,40 @@ test("release contract: changed tests ride the hardened runner", { timeout: scal
   assert.ok(dryRunFiles().has("scripts/run-tests.mjs"), "the hardened runner must ship in the tarball");
 });
 
+test("release contract: the release lane refuses an unreviewed tag and the canary never runs dispatched code with provider keys", () => {
+  // v0.39.45 (audit 2026-10-22): the publish lane compared the tag STRING
+  // with package.json only, so any commit could be published under a
+  // matching tag (docs/RELEASING.md requires the reviewed source). The
+  // canary handed provider API keys to whatever ref was dispatched.
+  const publish = fs.readFileSync(".github/workflows/publish.yml", "utf-8");
+  assert.match(publish, /merge-base --is-ancestor/, "the publish lane must check the tag is reachable from the default branch");
+  assert.match(publish, /Verify the tag points at reviewed source/);
+  const canary = fs.readFileSync(".github/workflows/real-host-canary.yml", "utf-8");
+  assert.match(canary, /ref: \$\{\{ github\.default_branch \}\}/,
+    "the canary must check out the reviewed default branch, never a dispatched ref");
+  assert.match(canary, /OPENAI_API_KEY/);
+});
+
+test("release contract: the shipped runner's import graph resolves inside the package", { timeout: scaledBudgetMs(60_000) }, () => {
+  // v0.39.45 (audit 2026-10-22): the runner shipped while the module it
+  // imported (tests/slow-files.mjs) did not, so the packaged runner could
+  // not be imported at all (ERR_MODULE_NOT_FOUND) — and the gate certified
+  // that it ships. Presence is not loadability: every relative import of a
+  // SHIPPED script must resolve to a file the package also ships.
+  const files = dryRunFiles();
+  const shipped = [...files].filter((file) => file.endsWith(".mjs") && !file.includes("node_modules"));
+  for (const file of shipped) {
+    const source = fs.readFileSync(file, "utf-8");
+    for (const match of source.matchAll(/(?:from|import)\s*\(?\s*["'](\.[^"']+)["']/g)) {
+      const target = path.posix.normalize(path.posix.join(path.posix.dirname(file), match[1]!));
+      assert.ok(files.has(target), `${file} imports ${match[1]}, which the package does not ship (${target})`);
+    }
+  }
+  assert.ok(files.has("scripts/slow-files.mjs"), "the runner's slow-file policy must ship beside it");
+  assert.match(fs.readFileSync("scripts/release-pack-smoke.mjs", "utf-8"), /scripts\/run-tests\.mjs/,
+    "the pack smoke must import the installed runner, not only list it");
+});
+
 test("release contract: glla-delegate skill loads without diagnostics (source-tree fast tier)", () => {
   // Audit 2026-09-13: this is the fast source-tree tier only. The packed-
   // tarball tier lives in scripts/release-pack-smoke.mjs (loadSkills

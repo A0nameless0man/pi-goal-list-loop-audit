@@ -3,7 +3,7 @@ import * as assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { isSessionModelTail, resolveAuditorThinkingLevel, resolveCandidateThinkingLevel } from "../extensions/auditor-thinking.js";
-import { stallDecision } from "../scripts/run-tests.mjs";
+import { stallDecision, stallTimeoutMs } from "../scripts/run-tests.mjs";
 
 const model = (over: Record<string, unknown> = {}): any => ({ reasoning: true, ...over });
 
@@ -133,4 +133,18 @@ test("the stall watchdog asks whether the host is slow before killing a silent s
   const capped = stallDecision({ silentMs: 900_000, limitMs: base, extensions: 0, factor: 8, maxTimeoutMs: 900_000 });
   assert.equal(capped.action, "extend");
   assert.ok((capped.limitMs ?? 0) <= 900_000, "the extended window is capped");
+  // v0.39.45 (audit 2026-10-22): an extension must never SHRINK a window
+  // that was already granted — the old branch could hand back a SMALLER
+  // limit than it received while logging "extended".
+  const neverShrinks = stallDecision({ silentMs: 1_200_000, limitMs: 1_200_000, extensions: 0, factor: 8, maxTimeoutMs: 900_000 });
+  assert.equal(neverShrinks.action, "extend");
+  assert.equal(neverShrinks.limitMs, 1_200_000, "the granted window is never rewinded by the ceiling");
+});
+
+test("the stall window never exceeds its declared ceiling, however contended the host is", () => {
+  // v0.39.45 (audit 2026-10-22): the scaled initial window was 180s x the
+  // contention factor (up to 8) = 24 minutes, past the module's own
+  // MAX_STALL_TIMEOUT_MS ceiling.
+  assert.ok(stallTimeoutMs({}) <= 900_000, "the initial stall window is bounded by the declared ceiling");
+  assert.ok(stallTimeoutMs({ GLLA_TEST_STALL_TIMEOUT_MS: "45000" }) === 45_000, "an explicit env window is honoured verbatim");
 });

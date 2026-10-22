@@ -141,6 +141,28 @@ jobs:
           }
           NODE
 
+      - name: Verify the tag points at reviewed source
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          # v0.39.45 (audit 2026-10-22): docs/RELEASING.md requires a
+          # release tag to point at the reviewed, validated source, but the
+          # lane only compared the tag STRING with package.json — any commit
+          # in the repository could be published under a matching tag.
+          base_ref="refs/remotes/origin/main"
+          if ! git rev-parse --verify --quiet "$base_ref" >/dev/null; then
+            base_ref="origin/main"
+          fi
+          tag_sha="$(git rev-list -n 1 "refs/tags/$RELEASE_TAG")"
+          if [ -z "$tag_sha" ]; then
+            echo "::error::release tag $RELEASE_TAG does not resolve to a commit"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$tag_sha" "$base_ref"; then
+            echo "::error::release tag $RELEASE_TAG ($tag_sha) is not reachable from $base_ref — refusing to publish an unreviewed tree"
+            exit 1
+          fi
+
       - name: Install project dependencies
         run: npm ci
 

@@ -12,6 +12,13 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          # v0.39.45 (audit 2026-10-22): this job hands OPENAI_API_KEY and
+          # ANTHROPIC_API_KEY to the code it runs, and the script forwards
+          # its whole environment to the child it spawns. The dispatch ref
+          # is selectable by anyone with push rights, so the secret boundary
+          # must be the reviewed default branch — never a dispatched branch.
+          ref: ${{ github.default_branch }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22.19.0

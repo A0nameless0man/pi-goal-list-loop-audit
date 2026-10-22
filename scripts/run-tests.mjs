@@ -4,7 +4,7 @@
 //
 // Fast/slow suite split. The full serialized suite takes ~7 minutes —
 // slow enough to discourage running it. Default `npm test` runs the
-// fast set (everything minus tests/slow-files.mjs, excluded via bun's
+// fast set (everything minus the slow-file list, excluded via bun's
 // --path-ignore-patterns); `npm run test:slow` runs the slow files;
 // `npm run test:all` still runs the whole suite plus the release gates.
 //
@@ -35,7 +35,12 @@ import { pathToFileURL } from "node:url";
 import { terminateContainedChild } from "./contained-child.mjs";
 import { createTestProcessRegistry, registerOwnedTestProcess, reapOwnedTestProcesses } from "./test-process-registry.mjs";
 import { captureTestFailureDiagnostics, diagnosticTail } from "./test-failure-diagnostics.mjs";
-import { SLOW_TEST_FILES } from "../tests/slow-files.mjs";
+import { SLOW_TEST_FILES } from "./slow-files.mjs";
+// v0.39.45 (audit 2026-10-22): re-exported so the PACKAGED runner can prove
+// it loaded its own policy list (scripts/release-pack-smoke.mjs) — the list
+// used to live under tests/, which the npm package does not ship, so the
+// packaged runner could not be imported at all.
+export { SLOW_TEST_FILES };
 import { contentionFactor } from "./host-contention.mjs";
 
 /** v0.39.41: the gate's default per-test budget, in wall-clock time.
@@ -99,7 +104,12 @@ export function stallTimeoutMs(env = process.env) {
   // still prints, but a starved child can hold the output for longer than an
   // idle-host budget allows, so the bound scales with the same measured
   // slowdown the per-test budget uses.
-  return Math.ceil(DEFAULT_STALL_TIMEOUT_MS * contentionFactor());
+  // v0.39.45 (audit 2026-10-22): the scaled window is CLAMPED to the
+  // declared ceiling. Without the clamp, a maximally contended host
+  // (factor 8) produced a 24-minute window — past the module's own
+  // MAX_STALL_TIMEOUT_MS — and the "extend" branch then shrank that
+  // already-granted window back to the ceiling while logging "extended".
+  return Math.min(MAX_STALL_TIMEOUT_MS, Math.ceil(DEFAULT_STALL_TIMEOUT_MS * contentionFactor()));
 }
 
 export function heartbeatMs(env = process.env) {
@@ -125,7 +135,10 @@ export function isStalled({ silentMs, limitMs }) {
 export function stallDecision({ silentMs, limitMs, extensions, factor, maxExtensions = MAX_STALL_EXTENSIONS, maxTimeoutMs = MAX_STALL_TIMEOUT_MS }) {
   if (!isStalled({ silentMs, limitMs })) return { action: "wait" };
   if (Number.isFinite(factor) && factor > 1.2 && extensions < maxExtensions) {
-    return { action: "extend", limitMs: Math.min(limitMs * Math.min(factor, 4), maxTimeoutMs) };
+    // v0.39.45 (audit 2026-10-22): an extension never SHORTENS a window it
+    // already granted. The ceiling caps growth; it does not rewind it.
+    const grown = Math.min(limitMs * Math.min(factor, 4), maxTimeoutMs);
+    return { action: "extend", limitMs: Math.max(limitMs, grown) };
   }
   return { action: "kill" };
 }
