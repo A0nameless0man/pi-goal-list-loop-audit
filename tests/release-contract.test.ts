@@ -85,8 +85,16 @@ test("release contract: the release lane refuses an unreviewed tag and the canar
   assert.match(publish, /merge-base --is-ancestor/, "the publish lane must check the tag is reachable from the default branch");
   assert.match(publish, /Verify the tag points at reviewed source/);
   const canary = fs.readFileSync(".github/workflows/real-host-canary.yml", "utf-8");
-  assert.match(canary, /ref: \$\{\{ github\.default_branch \}\}/,
-    "the canary must check out the reviewed default branch, never a dispatched ref");
+  // github.default_branch is NOT a GitHub context property: it resolves
+  // empty and checkout then falls back to the dispatch-selected ref.
+  const pinsDefaultBranch = (workflow: string) =>
+    /^\s*ref:\s*\$\{\{\s*github\.event\.repository\.default_branch\s*\}\}\s*$/m.test(workflow);
+  assert.ok(pinsDefaultBranch(canary),
+    "the canary must use the repository event's default branch, never a dispatched ref");
+  assert.ok(pinsDefaultBranch(canary.replace("${{ github.event.repository.default_branch }}", "${{github.event.repository.default_branch}}")),
+    "harmless expression whitespace must not invalidate the fence");
+  assert.equal(pinsDefaultBranch(canary.replace("github.event.repository.default_branch", "github.default_branch")), false,
+    "an undefined context property must not masquerade as a default-branch fence");
   assert.match(canary, /OPENAI_API_KEY/);
 });
 
