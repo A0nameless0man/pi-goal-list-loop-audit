@@ -8,8 +8,9 @@
  */
 
 import { spawn } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { lstat, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
 import { constants as fsConstants, readdirSync, readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
@@ -130,6 +131,30 @@ function stableJson(value) {
 function hashRequest(request) {
   const { requestHash: ignored, ...withoutHash } = request;
   return createHash("sha256").update(stableJson(withoutHash), "utf8").digest("hex");
+}
+
+/** v0.39.45 (audit 2026-10-22): the per-attempt verdict key arrives on the
+ * dedicated pipe (fd 3) the parent opens for this worker. It is NOT in the
+ * argv, NOT in the environment, and NOT on disk — so the auditor child,
+ * which runs with bash inside the audited project, cannot read it. The
+ * worker reads it once and drops it. */
+async function readVerdictKey() {
+  if (typeof process.stdin === "undefined" && !process.env) return undefined;
+  try {
+    const chunks = [];
+    for await (const chunk of createReadStream(null, { fd: 3 })) chunks.push(chunk);
+    const key = Buffer.concat(chunks).toString("utf8").trim();
+    return key.length >= 32 ? key : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The same signature the parent computes (HMAC-SHA256 over the canonical
+ * result payload, excluding the signature field itself). */
+function signVerdict(result, key) {
+  const { verdictMac: ignored, ...payload } = result;
+  return createHmac("sha256", key).update(stableJson(payload), "utf8").digest("hex");
 }
 
 // Provider/RPC errors may carry HTTP status and message as non-enumerable
@@ -360,6 +385,9 @@ async function main() {
   const progressPath = path.join(jobDir, "progress.json");
   const lockPath = path.join(jobDir, "lock");
   const attemptId = path.basename(jobDir);
+  // v0.39.45 (audit 2026-10-22): take the verdict key BEFORE the child is
+  // spawned, so it is never in the child's reach.
+  const verdictKey = await readVerdictKey();
   await regular(lockPath);
   const request = await readJson(requestPath);
   identity(request, attemptId);
@@ -582,6 +610,11 @@ async function main() {
     // progress first, so it cannot return on result.json while the TUI still
     // shows an older tool/report phase.
     await progress("complete").catch(() => {});
+    // v0.39.45 (audit 2026-10-22): sign the verdict. Without a valid
+    // signature the parent ignores this file and keeps waiting, so a
+    // forged result.json dropped in the job dir by the auditor child can
+    // never end the audit.
+    if (verdictKey) result.verdictMac = signVerdict(result, verdictKey);
     await atomicJson(resultPath, result);
   };
 

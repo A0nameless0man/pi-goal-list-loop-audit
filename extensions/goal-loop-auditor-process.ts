@@ -11,7 +11,7 @@ import { registerOwnedTestProcess } from "../scripts/test-process-registry.mjs";
 import * as fs from "node:fs/promises";
 import { constants as fsConstants, readFileSync, readlinkSync, readdirSync, realpathSync, rmSync, statSync } from "node:fs";
 import { spawn as nodeSpawn, spawnSync as nodeSpawnSync, type ChildProcess, type SpawnOptions } from "node:child_process";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
 import * as path from "node:path";
 import * as os from "node:os";
 import { fileURLToPath } from "node:url";
@@ -1493,6 +1493,26 @@ interface AuditorResultFile {
   verificationIncomplete?: boolean;
   /** v0.38.99: the cancelled tool calls, for forensics/stall evidence. */
   cancelledToolCalls?: { name: string; argsPrefix?: string; budgetMs?: number; cancelledAt?: number }[];
+  /** v0.39.45 (audit 2026-10-22): HMAC of the result payload under the
+   * per-attempt verdict key. The request hash is a SELF-CHECK (it is
+   * unkeyed, so anyone who can write the job dir can recompute it); the
+   * verdict key never leaves the parent's memory and the worker's pipe, so
+   * a result that does not authenticate was not written by our worker. */
+  verdictMac?: string;
+}
+
+/** v0.39.45 (audit 2026-10-22): the per-attempt verdict key and the
+ * signature both sides compute. The key is generated in the parent's
+ * memory, handed to the worker over a dedicated pipe (never argv, never an
+ * env var, never a file), and never persisted — so a crash-recovery reader
+ * has no key and cannot authenticate a saved verdict. */
+export function verdictMacFor(result: Record<string, unknown>, keyHex: string): string {
+  const { verdictMac: _ignored, ...payload } = result;
+  return createHmac("sha256", keyHex).update(stableJson(payload), "utf8").digest("hex");
+}
+
+export function newVerdictKey(): string {
+  return randomBytes(32).toString("hex");
 }
 
 interface AuditorProgressFile {
@@ -2098,6 +2118,19 @@ export function readCompletedCompletionAudit(cwd: string, goal: Goal, strictChal
     let progress: AuditorProgressFile | undefined;
     try { progress = JSON.parse(readFileSync(path.join(dir, "progress.json"), "utf8")); } catch { /* result-only legacy job */ }
     if (progress && (progress.protocolVersion !== PROTOCOL_VERSION || progress.attemptId !== name || progress.requestHash !== hash)) return reject("progress-mismatch");
+    // v0.39.45 (audit 2026-10-22): a saved verdict can only be applied when
+    // it AUTHENTICATES. The per-attempt verdict key lived in the dead
+    // parent's memory and was never persisted (it must not be: anything in
+    // the state root can be written by the auditor child, which runs with
+    // bash inside the audited project), so a saved result cannot be
+    // authenticated after a crash. Applying it anyway would let a
+    // prompt-injected auditor approve its own goal. The audit re-runs
+    // instead — a re-run costs one attempt, a forged approval costs the
+    // goal. The gate sits LAST so every identity/mismatch gate above keeps
+    // its own diagnostic.
+    if (typeof result.verdictMac !== "string" || !/^[0-9a-f]{64}$/.test(result.verdictMac)) {
+      return reject("verdict-unauthenticated");
+    }
     const validated = validateCompletedAuditorResult({
       result, goal, model: request.model, thinkingLevel: request.thinkingLevel,
       capturedRevisionToken: token, strictChallenge: (strictChallenge && request.auditTier !== "light") || request.strictChallenge === true,
@@ -2202,6 +2235,9 @@ async function runDetachedGoalCompletionAuditorInner(args: {
     ? TOOL_CANCEL_GRACE_MS
     : Math.max(0, runtime.toolCancelGraceMs);
   const attemptId = runtime.attemptId?.() ?? `${Date.now().toString(36)}-${randomUUID()}`;
+  // v0.39.45 (audit 2026-10-22): the per-attempt verdict key. It exists
+  // only in this process's memory and in the worker's pipe.
+  const verdictKey = newVerdictKey();
   const logicalAttemptId = runtime.logicalAttemptId ?? attemptId;
   // v0.34.59: capture the focus revision token at dispatch. Every result
   // shape returned to the parent carries this token so the parent can
@@ -2251,6 +2287,9 @@ async function runDetachedGoalCompletionAuditorInner(args: {
   // independent detectors for the same failure; the ledger must not record
   // the same stall twice.
   let stallReported = false;
+  /** v0.39.45 (audit 2026-10-22): at most ONE ledger row per attempt for a
+   * result that does not authenticate. */
+  let unauthenticatedResultNoted = false;
   /** Fail fast WITH evidence: every stall event carries the attempt's cost
    * record (prompt bytes, tool calls, vision inputs, elapsed) so the next
    * slow audit names its driver instead of a bare "Auditor stalled". Falls
@@ -2379,9 +2418,26 @@ async function runDetachedGoalCompletionAuditorInner(args: {
     child = spawn(command, [workerPath, "--job-dir", jobDir], {
       cwd: args.cwd,
       detached: true,
-      stdio: "ignore",
+      // v0.39.45 (audit 2026-10-22): fd 3 carries the per-attempt verdict
+      // key to the worker. It is a PIPE, so the auditor child (which runs
+      // with bash in the audited project) cannot reach it: it is not in the
+      // worker's argv, not in its env, not on disk, and the worker's own
+      // child never inherits the descriptor.
+      stdio: ["ignore", "ignore", "ignore", "pipe"],
       env,
     } satisfies SpawnOptions);
+    // Hand the key over immediately and close the pipe: the worker reads it
+    // once at startup. A spawn shim that does not provide the descriptor
+    // leaves the attempt unauthenticated, which fails closed below.
+    try {
+      const keyChannel = child.stdio?.[3];
+      if (keyChannel && typeof (keyChannel as { end?: (chunk: string) => void }).end === "function") {
+        (keyChannel as { end: (chunk: string) => void }).end(verdictKey);
+      }
+    } catch {
+      // A missing key channel is not fatal here: the verdict check below
+      // rejects an unauthenticated result, so the attempt fails closed.
+    }
     registerOwnedTestProcess(child, env);
     // The first-event watchdog is a worker-silence budget, not a dispatch
     // setup budget. Anchor it to Node's successful spawn event so filesystem
@@ -2461,6 +2517,24 @@ async function runDetachedGoalCompletionAuditorInner(args: {
           const result = await readJson<AuditorResultFile>(resultPath);
           if (result.protocolVersion !== PROTOCOL_VERSION || result.attemptId !== attemptId || result.requestHash !== request.requestHash) {
             return infra(model, thinkingLevel, "auditor result identity/request-hash mismatch", "", capturedRevisionToken, "no-verdict");
+          }
+          // v0.39.45 (audit 2026-10-22): the result must AUTHENTICATE. The
+          // request hash above is a self-check — it is unkeyed, so anything
+          // that can write the job dir (the auditor child runs with bash in
+          // the audited project) can recompute it and drop a forged verdict
+          // next to the real one. The verdict key never leaves the parent's
+          // memory and the worker's pipe, so a result that does not
+          // authenticate was not written by our worker: it is ignored, the
+          // attempt keeps waiting for the worker's signed result, and the
+          // rejection is journalled once.
+          if (typeof result.verdictMac !== "string" || result.verdictMac !== verdictMacFor(result as unknown as Record<string, unknown>, verdictKey)) {
+            if (!unauthenticatedResultNoted) {
+              unauthenticatedResultNoted = true;
+              try {
+                appendLedger(args.cwd, "auditor_result_unauthenticated", { goalId: args.goal.id, attemptId });
+              } catch { /* best effort */ }
+            }
+            continue;
           }
           // A fast worker can publish progress.json and result.json between
           // two parent polls. Read the final progress snapshot once more
