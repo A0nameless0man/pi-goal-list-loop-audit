@@ -110,3 +110,31 @@ test("the goal_created row can state that the creation did not persist", () => {
   assert.match(GOAL_SRC, /appendLedger\(ctx\.cwd, "goal_created", \{[^}]*persisted: stateLanded/s,
     "the goal_created row must carry whether the state line landed");
 });
+
+test("a complete state snapshot replaces the projection instead of merging into it", () => {
+  // v0.39.45 (audit 2026-10-22): readState merged every legacy state line
+  // field by field, so a field the newest COMPLETE snapshot had dropped
+  // (JSON.stringify omits an undefined value — lastModelRef is exactly
+  // that case) survived from an older line and came back on a cold start.
+  const cwd = tmpCwd();
+  const at = new Date().toISOString();
+  const complete = (goal: unknown, list: unknown[], extra: Record<string, unknown> = {}) => ({
+    type: "state", at,
+    value: {
+      goal, list, loop: null, mainModelRecovery: null,
+      lastCompactionAt: null, postCompactRecovery: null,
+      supervisorPausedAt: null, loadHoldAt: null, lastOutcome: null,
+      ...extra,
+    },
+  });
+  const file = path.join(cwd, ".pi-glla", "active.jsonl");
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, [
+    JSON.stringify(complete({ id: "old", status: "active" }, [], { lastModelRef: "old/model" })),
+    JSON.stringify(complete(null, [])),
+    "",
+  ].join("\n"));
+  const loaded = readState(cwd);
+  assert.equal(loaded.goal, null, "the newest complete snapshot owns the goal");
+  assert.equal(loaded.lastModelRef, undefined, "a field the newest snapshot dropped does not resurrect");
+});

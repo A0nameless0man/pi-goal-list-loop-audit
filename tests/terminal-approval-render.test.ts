@@ -394,3 +394,55 @@ test('refusal rotation preserves callback enqueues and makes them reachable next
   assert.equal(replayUndeliveredApprovalRenders({ cwd }, entry => { delivered.push(entry.goalId); return true; }), 2);
   assert.equal(new Set(delivered).size, 7);
 });
+
+// v0.39.45 (audit 2026-10-22) — the delivery acknowledgement is the gate
+// for the "replayed" claim, and a broken store is reported once, not on
+// every read.
+test('a replay whose acknowledgement cannot land is not claimed as replayed and is not re-delivered', () => {
+  const cwd = tmpCwd();
+  assert.equal(persistApprovalRender(cwd, { goalId: 'ack-fail', objective: 'ack', chatLines: ['ack'] }), true);
+  const file = approvalRenderStorePath(cwd);
+  const delivered: string[] = [];
+  // The store can be READ but not WRITTEN: the write path creates a temp
+  // file next to the store, so a directory in its place makes every write
+  // fail (EISDIR) while the pending entry stays readable.
+  fs.mkdirSync(`${file}.tmp`);
+  try {
+    assert.equal(replayUndeliveredApprovalRenders({ cwd }, entry => { delivered.push(entry.goalId); return true; }), 1);
+    const lines = fs.readFileSync(ledgerPath(cwd), 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l));
+    assert.equal(lines.some(l => l.type === 'terminal_approval_render_replayed'), false,
+      'a delivery whose acknowledgement did not land must not be journalled as replayed');
+    assert.equal(lines.some(l => l.type === 'terminal_approval_render_replay_unacknowledged'), true,
+      'the unacknowledged delivery is journalled as such');
+    // The same process must not show the user the same summary again.
+    assert.equal(replayUndeliveredApprovalRenders({ cwd }, entry => { delivered.push(entry.goalId); return true; }), 0);
+    assert.deepEqual(delivered, ['ack-fail']);
+    // The durable truth is unchanged: the entry is still pending, because
+    // the acknowledgement never landed.
+    const stored = JSON.parse(fs.readFileSync(file, 'utf8'));
+    assert.equal(stored[0].deliveredAt, undefined, 'an unacknowledged delivery stays pending in the store');
+  } finally { fs.rmSync(`${file}.tmp`, { recursive: true, force: true }); }
+  // The store is writable again, but this process already showed the user
+  // that summary — it is not shown twice in the same session.
+  const again: string[] = [];
+  assert.equal(replayUndeliveredApprovalRenders({ cwd }, entry => { again.push(entry.goalId); return true; }), 0);
+  assert.deepEqual(again, []);
+});
+
+test('a broken store is reported once per distinct broken file, not on every read', () => {
+  const cwd = tmpCwd();
+  const file = approvalRenderStorePath(cwd);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, '{not json');
+  for (let i = 0; i < 3; i++) assert.equal(replayUndeliveredApprovalRenders({ cwd }, () => true), 0);
+  const rows = fs.readFileSync(ledgerPath(cwd), 'utf8').split('\n').filter(Boolean)
+    .map(l => JSON.parse(l)).filter(l => l.type === 'terminal_approval_render_store_invalid');
+  assert.equal(rows.length, 1, 'the same broken store is reported once');
+  assert.ok(String(rows[0].value.repair ?? '').length > 0, 'the row names the repair');
+  // A DIFFERENT broken store is reported again.
+  fs.writeFileSync(file, '{still not json');
+  assert.equal(replayUndeliveredApprovalRenders({ cwd }, () => true), 0);
+  const rows2 = fs.readFileSync(ledgerPath(cwd), 'utf8').split('\n').filter(Boolean)
+    .map(l => JSON.parse(l)).filter(l => l.type === 'terminal_approval_render_store_invalid');
+  assert.equal(rows2.length, 2, 'a changed broken store is reported again');
+});

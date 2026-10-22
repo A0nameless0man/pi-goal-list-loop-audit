@@ -3016,6 +3016,27 @@ export function rotateLedgerIfNeeded(cwd: string, latestStateLine: string, thres
   }
 }
 
+/** The fields the canonical writer puts on EVERY snapshot (see
+ * stateLedgerValue). A state line that carries all of them is a complete
+ * replacement of the projection; anything less is a legacy partial line. */
+const CANONICAL_STATE_KEYS = [
+  "goal",
+  "list",
+  "loop",
+  "mainModelRecovery",
+  "lastCompactionAt",
+  "postCompactRecovery",
+  "supervisorPausedAt",
+  "loadHoldAt",
+  "lastOutcome",
+] as const;
+
+function isCompleteStateSnapshot(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return CANONICAL_STATE_KEYS.every((key) => Object.prototype.hasOwnProperty.call(record, key));
+}
+
 export function readState(cwd: string): State {
   const file = ledgerPath(cwd);
   // v0.28.6 (E1): an unreadable ledger (EACCES, EIO) degrades loudly
@@ -3049,10 +3070,21 @@ export function readState(cwd: string): State {
     } else if (fs.existsSync(file)) {
       // Preserve legacy merge semantics until a project has a rotated
       // snapshot: older hand-written state lines may contain partial fields.
+      //
+      // v0.39.45 (audit 2026-10-22): a COMPLETE snapshot is a replacement,
+      // not a delta. The field-by-field merge kept fields alive that the
+      // newest complete snapshot had already cleared, so a stale goal (or
+      // queue) could resurrect on a cold start. Only a legacy PARTIAL line
+      // still merges — and a partial line after a complete one can no longer
+      // resurrect what the complete snapshot cleared.
       scanLedgerLines(file, (line) => {
         const evt = parseLedgerRecord(line);
         if (evt?.type !== "state") return;
-        Object.assign(parsed, evt.value ?? {});
+        const value = evt.value ?? {};
+        if (isCompleteStateSnapshot(value)) {
+          for (const key of Object.keys(parsed)) delete (parsed as Record<string, unknown>)[key];
+        }
+        Object.assign(parsed, value);
         if (typeof evt.at === "string") {
           lastStateAt = evt.at;
           lastStateLine = line;

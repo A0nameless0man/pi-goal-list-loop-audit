@@ -42,16 +42,24 @@ function isValidRender(entry: unknown): entry is PendingApprovalRender {
 }
 
 /** null means an existing store could not be recovered. Only ENOENT is
- * an empty queue: replacing an unreadable/corrupt queue loses obligations. */
+ * an empty queue: replacing an unreadable/corrupt queue loses obligations.
+ *
+ * v0.39.45 (audit 2026-10-22): the same broken store used to be re-reported
+ * on EVERY read — one ledger row per replay attempt, forever, while the
+ * queue stayed stuck. The row is now reported ONCE per distinct broken
+ * store (the fingerprint changes when the file does), and it names the
+ * repair. The fail-closed contract is unchanged: the original bytes stay
+ * exactly where they are and mutations stay refused until an operator
+ * repairs the file — replacing the queue would drop the obligations it
+ * still holds. */
 function readRenders(cwd: string): PendingApprovalRender[] | null {
   let raw: string;
   try {
     raw = fs.readFileSync(approvalRenderStorePath(cwd), "utf-8");
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
-    appendLedger(cwd, "terminal_approval_render_store_unreadable", {
-      code: (error as NodeJS.ErrnoException).code ?? "unknown",
-    });
+    const code = (error as NodeJS.ErrnoException).code ?? "unknown";
+    reportStoreFailure(cwd, "unreadable", `${code}:${storeFingerprint(cwd)}`, { code });
     return null;
   }
   try {
@@ -61,9 +69,31 @@ function readRenders(cwd: string): PendingApprovalRender[] | null {
   } catch {
     // Preserve all original bytes, including valid entries in a partially
     // invalid array. Recovery must not silently acknowledge their delivery.
-    appendLedger(cwd, "terminal_approval_render_store_invalid", { preserved: true });
+    reportStoreFailure(cwd, "invalid", storeFingerprint(cwd), { preserved: true });
     return null;
   }
+}
+
+/** One row per distinct broken store, not one per read. */
+const reportedStoreFailures = new Map<string, string>();
+
+function storeFingerprint(cwd: string): string {
+  try {
+    const stat = fs.statSync(approvalRenderStorePath(cwd));
+    return `${stat.size}:${stat.mtimeMs}`;
+  } catch {
+    return "unknown";
+  }
+}
+
+function reportStoreFailure(cwd: string, kind: "invalid" | "unreadable", fingerprint: string, extra: Record<string, unknown> = {}): void {
+  const key = `${cwd}:${kind}`;
+  if (reportedStoreFailures.get(key) === fingerprint) return;
+  reportedStoreFailures.set(key, fingerprint);
+  appendLedger(cwd, `terminal_approval_render_store_${kind}`, {
+    ...extra,
+    repair: "repair or remove .pi-glla/pending-approval-renders.json to resume terminal-summary delivery",
+  });
 }
 
 function writeRenders(cwd: string, renders: PendingApprovalRender[]): boolean {
@@ -101,6 +131,11 @@ function renderIdentity(entry: PendingApprovalRender): string {
   return JSON.stringify([entry.goalId, entry.createdAt, entry.objective, entry.chatLines]);
 }
 const inFlightRenders = new Map<string, Set<string>>();
+/** v0.39.45 (audit 2026-10-22): renders this process already delivered but
+ * could not acknowledge durably. The store is the source of truth and still
+ * lists them as undelivered, so without this set every later replay would
+ * show the user the same summary again. */
+const deliveredWithoutAck = new Set<string>();
 
 /** Enqueue before attempting delivery. Only replay can acknowledge it. */
 export function persistApprovalRender(cwd: string, render: {
@@ -168,7 +203,7 @@ export function replayUndeliveredApprovalRenders(
     const inFlight = inFlightRenders.get(file) ?? new Set<string>();
     inFlightRenders.set(file, inFlight);
     const inScope = (e: PendingApprovalRender) => !e.deliveredAt && (!onlyGoalId || e.goalId === onlyGoalId);
-    const pending = renders.filter(e => inScope(e) && !inFlight.has(renderIdentity(e))).slice(0, MAX_REPLAY_PER_CONTACT);
+    const pending = renders.filter(e => inScope(e) && !inFlight.has(renderIdentity(e)) && !deliveredWithoutAck.has(renderIdentity(e))).slice(0, MAX_REPLAY_PER_CONTACT);
     const attempted = new Set<string>();
     let replayed = 0;
     try {
@@ -185,13 +220,29 @@ export function replayUndeliveredApprovalRenders(
           if (!deliver(entry)) continue;
           replayed++;
           const at = nowIso();
-          mutateRenders(ctx.cwd, latest => {
+          // v0.39.45 (audit 2026-10-22): the acknowledgement write result was
+          // discarded, so a store that could not be written still produced a
+          // "replayed" row while the entry stayed undelivered FOREVER — the
+          // same summary was re-delivered on every later replay. The
+          // acknowledgement is now the gate for the claim: it lands, or the
+          // row says the delivery could not be acknowledged and this process
+          // does not deliver the same render twice.
+          const acknowledged = mutateRenders(ctx.cwd, latest => {
             const match = latest.find(e => renderIdentity(e) === key);
             if (!match || match.deliveredAt) return true;
             match.deliveredAt = at;
             return writeRenders(ctx.cwd, latest);
-          });
-          appendLedger(ctx.cwd, "terminal_approval_render_replayed", { goalId: entry.goalId, createdAt: entry.createdAt });
+          }) === true;
+          if (acknowledged) {
+            appendLedger(ctx.cwd, "terminal_approval_render_replayed", { goalId: entry.goalId, createdAt: entry.createdAt });
+          } else {
+            deliveredWithoutAck.add(key);
+            appendLedger(ctx.cwd, "terminal_approval_render_replay_unacknowledged", {
+              goalId: entry.goalId,
+              createdAt: entry.createdAt,
+              reason: "delivery_acknowledgement_not_persisted",
+            });
+          }
         } catch { break; }
         finally { inFlight.delete(key); }
       }
