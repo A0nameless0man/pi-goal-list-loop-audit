@@ -414,19 +414,22 @@ test('a replay whose acknowledgement cannot land is not claimed as replayed and 
       'a delivery whose acknowledgement did not land must not be journalled as replayed');
     assert.equal(lines.some(l => l.type === 'terminal_approval_render_replay_unacknowledged'), true,
       'the unacknowledged delivery is journalled as such');
-    // The same process must not show the user the same summary again.
-    assert.equal(replayUndeliveredApprovalRenders({ cwd }, entry => { delivered.push(entry.goalId); return true; }), 0);
-    assert.deepEqual(delivered, ['ack-fail']);
     // The durable truth is unchanged: the entry is still pending, because
     // the acknowledgement never landed.
     const stored = JSON.parse(fs.readFileSync(file, 'utf8'));
     assert.equal(stored[0].deliveredAt, undefined, 'an unacknowledged delivery stays pending in the store');
   } finally { fs.rmSync(`${file}.tmp`, { recursive: true, force: true }); }
-  // The store is writable again, but this process already showed the user
-  // that summary — it is not shown twice in the same session.
+  // The store is writable again: the next replay re-attempts the
+  // acknowledgement (the visible message is deduplicated by the delivery
+  // layer, not by the outbox) and the row now claims a real replay.
   const again: string[] = [];
-  assert.equal(replayUndeliveredApprovalRenders({ cwd }, entry => { again.push(entry.goalId); return true; }), 0);
-  assert.deepEqual(again, []);
+  assert.equal(replayUndeliveredApprovalRenders({ cwd }, entry => { again.push(entry.goalId); return true; }), 1);
+  assert.deepEqual(again, ['ack-fail']);
+  const rows = fs.readFileSync(ledgerPath(cwd), 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l));
+  assert.equal(rows.some(l => l.type === 'terminal_approval_render_replayed'), true,
+    'a landed acknowledgement is journalled as a replay');
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8'))[0].deliveredAt !== undefined, true,
+    'the acknowledgement landed this time');
 });
 
 test('a broken store is reported once per distinct broken file, not on every read', () => {

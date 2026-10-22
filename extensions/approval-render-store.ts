@@ -131,11 +131,6 @@ function renderIdentity(entry: PendingApprovalRender): string {
   return JSON.stringify([entry.goalId, entry.createdAt, entry.objective, entry.chatLines]);
 }
 const inFlightRenders = new Map<string, Set<string>>();
-/** v0.39.45 (audit 2026-10-22): renders this process already delivered but
- * could not acknowledge durably. The store is the source of truth and still
- * lists them as undelivered, so without this set every later replay would
- * show the user the same summary again. */
-const deliveredWithoutAck = new Set<string>();
 
 /** Enqueue before attempting delivery. Only replay can acknowledge it. */
 export function persistApprovalRender(cwd: string, render: {
@@ -203,7 +198,7 @@ export function replayUndeliveredApprovalRenders(
     const inFlight = inFlightRenders.get(file) ?? new Set<string>();
     inFlightRenders.set(file, inFlight);
     const inScope = (e: PendingApprovalRender) => !e.deliveredAt && (!onlyGoalId || e.goalId === onlyGoalId);
-    const pending = renders.filter(e => inScope(e) && !inFlight.has(renderIdentity(e)) && !deliveredWithoutAck.has(renderIdentity(e))).slice(0, MAX_REPLAY_PER_CONTACT);
+    const pending = renders.filter(e => inScope(e) && !inFlight.has(renderIdentity(e))).slice(0, MAX_REPLAY_PER_CONTACT);
     const attempted = new Set<string>();
     let replayed = 0;
     try {
@@ -236,7 +231,9 @@ export function replayUndeliveredApprovalRenders(
           if (acknowledged) {
             appendLedger(ctx.cwd, "terminal_approval_render_replayed", { goalId: entry.goalId, createdAt: entry.createdAt });
           } else {
-            deliveredWithoutAck.add(key);
+            // The visible message is deduplicated by the delivery layer, so
+            // the retry does not show it twice; what was missing is the
+            // durable acknowledgement, and that is what this row says.
             appendLedger(ctx.cwd, "terminal_approval_render_replay_unacknowledged", {
               goalId: entry.goalId,
               createdAt: entry.createdAt,
