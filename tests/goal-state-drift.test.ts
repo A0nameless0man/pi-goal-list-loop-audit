@@ -168,7 +168,7 @@ for (const existingRepair of [false, true]) {
     assert.deepEqual(readState(cwd).list?.map(entry => entry.id), items.map(entry => entry.id), "snapshot remains unchanged");
     const recovered = readQueueFromDisk(cwd);
     assert.deepEqual(recovered.map(entry => entry.id).sort(), items.map(entry => entry.id).sort(), "no refused repair resurrects from a sidecar");
-    if (existingRepair) assert.equal(fs.readFileSync(queueItemPath(cwd, repair.id), "utf8"), originalSidecar, "old sidecar metadata and order are restored");
+    if (existingRepair) assert.deepEqual(JSON.parse(fs.readFileSync(queueItemPath(cwd, repair.id), "utf8")), JSON.parse(originalSidecar!), "old sidecar metadata and order are restored");
     // Successful retry must still promote and persist exactly one repair.
     assert.equal(promote(ctx, item, assessment), true);
     assert.equal(state.list?.length, 2);
