@@ -1041,13 +1041,11 @@ function updateGoal(patch: Partial<Goal>, ctx: ExtensionContext): boolean {
   }
   const file = goalMdPath(ctx.cwd, next.id);
   const nextGoal: Goal = { ...next, activePath: path.relative(ctx.cwd, file) || file };
-  // The goal the live session showed before this update — the rollback
-  // target when the durable write cannot land.
-  const previousGoal = state.goal;
   // v0.35.72: the transaction snapshot closes the crash window between the
   // markdown projection and the append-only state ledger. A later restart
   // adopts it only when it is newer than the last committed state line.
-  if (!writeGoalStateTransaction(ctx.cwd, { ...state, goal: nextGoal })) {
+  const transactionLanded = writeGoalStateTransaction(ctx.cwd, { ...state, goal: nextGoal });
+  if (!transactionLanded) {
     ctx.ui.notify("Goal update was not persisted — the durable goal transaction could not be written. Fix .pi-glla storage and retry.", "warning");
     return false;
   }
@@ -1062,18 +1060,11 @@ function updateGoal(patch: Partial<Goal>, ctx: ExtensionContext): boolean {
     // must not report success to gates that depend on it.
     return true;
   }
-  // v0.39.45 (audit 2026-10-22): a failed state write must not leave the
-  // live session holding a goal the durable projection never recorded
-  // (AGENTS.md: never let live state drift from its durable projection).
-  // Roll the update back completely — RAM, the markdown projection and the
-  // pending transaction — so a restart resumes exactly what the live
-  // session shows and the caller can retry the update.
-  if (!stateLanded) {
-    state.goal = previousGoal;
-    writeGoalMd(ctx.cwd, previousGoal);
-    clearGoalStateTransaction(ctx.cwd);
-  }
-  ctx.ui.notify("Goal update was not fully persisted — the durable projection is incomplete. Fix .pi-glla storage and retry.", "warning");
+  // If control reaches here the transaction DID land (line above returns when
+  // it did not), so the update is durably committed even though the JSONL or
+  // markdown projection is incomplete. The transaction is the projection a
+  // restart adopts, so it stays; RAM keeps the new goal for the same reason.
+  ctx.ui.notify("Goal update committed to the durable recovery snapshot, but the journal/markdown projection is incomplete. The restart projection carries the update; repair .pi-glla storage before resuming.", "warning");
   return false;
 }
 
