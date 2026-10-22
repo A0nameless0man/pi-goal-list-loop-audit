@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.39.45 — authenticated verdicts, fail-closed recovery and a fail-closed test gate (2026-10-22)
+
 ### Downstream compatibility: `pendingCompletion.leftOut`
 
 - `pendingCompletion.leftOut`, when present, is a **string**, matching runtime
@@ -14,7 +16,7 @@
   is valid; `"leftOut": ["Deferred the migration"]` is not. Existing runtime
   records using strings need no data migration.
 
-### Auditor verdict authentication and fence repair (audit 2026-10-22)
+### Auditor verdict authentication and fence repair
 
 - The detached auditor's verdict artifact is now AUTHENTICATED. The parent
   generates a per-attempt key, hands it to the worker over the worker's stdin
@@ -39,6 +41,26 @@
   effective deadline is the greater of the configured `auditorToolTimeoutMs`
   base and the timeout the call itself declared, bounded by the shared
   ceiling. The base is a floor, not a ceiling.
+
+### Test gate and card corrections (audit 2026-10-22)
+
+- The test runner now checks Bun's own `test --help` for the flags it relies on
+  (`--parallel`, `--max-concurrency`, `--path-ignore-patterns`) and refuses to
+  start when they are missing. An older Bun accepted an unsupported exclusion
+  flag as an inclusion filter, so a whole-suite run reported a fast green after
+  executing almost nothing. The gate now fails loudly instead of narrowing
+  silently; `scripts/run-tests.d.mts` and focused regressions cover the check.
+- Queued-but-not-started rework is no longer described as active work in the
+  compact card: the review line says saved/waiting and the `you:` line says no
+  action is needed while the turn is queued. Active and unconfirmed wording is
+  unchanged.
+- Choosing session inheritance for a subagent thinking pin now clears that
+  role's pin from every settings scope that holds one, so a project-level
+  deletion can no longer reveal the same role's global pin. Other roles' pins
+  are untouched.
+- A refusal to promote a queued repair item now restores its sidecar file and
+  reports the refusal to its caller, which stops instead of retrying the same
+  promotion.
 
 ## 0.39.44 — session inheritance and role fallback repairs (2026-10-21)
 

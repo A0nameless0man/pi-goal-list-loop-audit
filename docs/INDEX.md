@@ -34,7 +34,7 @@
 ## Versions and shipped content
 
 [CHANGELOG.md](../CHANGELOG.md) records the full release history from
-v0.1.0-alpha.1 (2026-07-19) through v0.39.44 (2026-10-21), including session inheritance and ten-slot role fallbacks, clearer
+v0.1.0-alpha.1 (2026-07-19) through v0.39.45 (2026-10-22), including authenticated auditor verdicts, fail-closed crash recovery, session inheritance and ten-slot role fallbacks, clearer
 waiting/completion messages, deterministic final-audit persistence,
 provider-report preservation/privacy fixes and untagged v0.39.29 development
 changes; the npm registry remains the publication authority. `/glla version`
