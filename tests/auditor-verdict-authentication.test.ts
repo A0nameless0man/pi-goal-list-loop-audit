@@ -21,6 +21,7 @@ import * as path from "node:path";
 
 import { runDetachedGoalCompletionAuditor } from "../extensions/goal-loop-auditor-process.js";
 import type { Goal } from "../extensions/goal-loop-core.js";
+import { untilMs } from "./harness/host-budget.js";
 
 const VERDICT_HELPER = path.join(path.dirname(new URL(import.meta.url).pathname), "harness", "fake-auditor-verdict.mjs");
 
@@ -76,7 +77,9 @@ await atomic(dir + "/result.json", { ...base, ok: true, output: "<evidence>\\nfo
 // starved past the whole window and only ever see the signed result, so the
 // rejection row never appears even though authentication worked.
 const ledger = dir.replace(/\\/audit-jobs\\/[^\\/]+$/, "") + "/active.jsonl";
-const deadline = Date.now() + 30_000;
+const deadline = Number(process.env.GLLA_TEST_WAIT_BUDGET_MS) > 0
+  ? Date.now() + Number(process.env.GLLA_TEST_WAIT_BUDGET_MS)
+  : Date.now() + 30_000;
 let seen = false;
 while (Date.now() < deadline) {
   try {
@@ -112,6 +115,7 @@ setInterval(() => {}, 1_000);
         firstEventTimeoutMs: 30_000,
         heartbeatNoProgressMs: 30_000,
         heartbeatFreshMs: 5_000,
+        env: { GLLA_TEST_WAIT_BUDGET_MS: String(untilMs(30_000) - Date.now()) },
       },
     });
     assert.equal(result.disapproved, true, "the SIGNED verdict is the one that counts");
