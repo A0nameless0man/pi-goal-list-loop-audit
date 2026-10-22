@@ -14,6 +14,48 @@
     }
   },
   {
+    "timestamp": "2026-10-22T08:53:30.455Z",
+    "toolCall": {
+      "type": "toolCall",
+      "id": "call_function_pu8cvcm19b2z_1",
+      "name": "subagent",
+      "arguments": {
+        "agent": "scout",
+        "task": "READ-ONLY audit of the detached-auditor worker/process seam. Repo: /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit (branch main). Do NOT edit, commit, push, publish, install, or reload anything. Do not spawn subagents. Tools: read/grep/find/ls only; if bash exists use it read-only (git log, wc, rg).\n\nSCOPE (exclusive): scripts/goal-auditor-worker.mjs, scripts/goal-auditor-launch.mjs, scripts/auditor-process-tree.mjs, scripts/auditor-child-env.mjs, scripts/auditor-stderr-diagnostic.mjs, scripts/auditor-round-prompts.mjs, scripts/auditor-extension-specs.mjs, scripts/verify-auditor-extensions-offline.mjs, extensions/goal-loop-auditor-process.ts, extensions/auditor-extensions.ts, extensions/audit-rework-handoff.ts, extensions/auditor-thinking.ts, and the tests that cover them (tests/auditor-*.test.ts, tests/respec-builder-audit-runtime.test.ts, tests/regression-shield.test.ts).\n\nHUNT FOR: security holes (tool allowlist that can be widened by a worker event, --approve in a \"read-only\" worker, command injection through model refs / job dir / attempt id, path traversal or symlink swap inside the audit job dir, unvalidated requestHash/attemptId protocol fields, env or secret leakage into the child or into logs, stderr/stdout that echoes credentials), missing or unbounded timeouts (per-tool, first-event, total), protocol downgrade or a verdict accepted without its required evidence block, and any place where a failed/killed worker is reported as a clean no-verdict or a passing result.\n\nEVIDENCE RULE: every finding needs BOTH sides quoted (the code/line and the contradicting contract/consumer) with file:line. If you cannot quote both, DROP the finding. No style nits, no speculative refactors.\n\nDEDUPE: read audit/audit-loop-2026-10-22/prior-findings-index.md (grep it for your keywords: auditor, worker, approve, timeout, tool allowlist) before reporting. A finding already listed there is NOT new \u2014 skip it.\n\nBUDGET: ~35 tool calls. REPORT CAP: ~150 lines; if you approach the limit, STOP and report what you have. Report each finding as: SEVERITY (HIGH/MEDIUM/LOW) \u2014 one-sentence defect \u2014 file:line \u2014 quoted evidence \u2014 one-line fix direction. End with a \"BLOCKERS:\" section (\"none\" if empty). Report zero findings honestly if you find none; never invent.",
+        "cwd": "/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit",
+        "async": true
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-22T08:53:36.998Z",
+    "toolCall": {
+      "type": "toolCall",
+      "id": "call_function_dyrtm5rzmcvs_1",
+      "name": "subagent",
+      "arguments": {
+        "agent": "scout",
+        "task": "READ-ONLY audit of the documentation-vs-code drift seam. Repo: /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit (branch main). Do NOT edit, commit, push, publish, install, or reload anything. Do not spawn subagents. Tools: read/grep/find/ls only; if bash exists use it read-only (git log, wc, rg).\n\nSCOPE (exclusive): docs/DESIGN.md (835 lines), docs/RECOVERY.md (530 lines), docs/ARCHITECTURE.md, docs/SETTINGS.md, docs/RUNTIME-INVENTORY.md, docs/INDEX.md, docs/UI-STATUS.md, docs/OWNERSHIP-AND-SETTLEMENT.md, docs/WORKFLOWS.md, docs/RELEASING.md, docs/COMPATIBILITY.md, docs/PROMOTION-CONTRACT.md, README.md and INSTALL.md.\n\nWHY THIS SEAM: the 2026-10-19 project audit only mechanically SWEPT these docs (links, paths, verbs, settings registries, numeric ceilings, backticked identifiers) and explicitly said a line-by-line PROSE read of docs/DESIGN.md and docs/RECOVERY.md was NOT done and \"remains the natural next seam\". You are that read. A mechanical sweep cannot catch a sentence that states a rule the code no longer implements.\n\nCROSS-CHECK AGAINST CODE (read-only, targeted): extensions/goal-settings.ts (SETTINGS_KEYS, GLOBAL_ONLY_KEYS, defaults), extensions/loops/goal-settings-ui.ts, extensions/goal-loop-core.ts, extensions/goal-loop-auditor-process.ts (timeouts/ceilings), scripts/host-contention.mjs (contention caps), extensions/auditor-thinking.ts (thinking levels), extensions/designer-model.ts + extensions/drafter-model.ts (fallback slot limits), scripts/run-tests.mjs (suite split), CHANGELOG.md (current version).\n\nHUNT FOR: prose that states a rule, number, threshold, key name, file path, command verb or ordering the code contradicts; documented settings keys that no longer exist or are not registered (and registered keys missing from docs/SETTINGS.md); documented commands that do not exist; version/date claims that are stale; statements of intent (\"the X is always Y\", \"never\", \"only\") that the code can violate. Prioritize contradictions that would mislead an operator or an agent.\n\nEVIDENCE RULE: every finding needs BOTH sides quoted (the doc line and the contradicting code line) with file:line for both. If you cannot quote both, DROP it. No style/typo/wording nits, no \"consider expanding the docs\" wishlists, no speculative refactors.\n\nDEDUPE: read audit/audit-loop-2026-10-22/prior-findings-index.md (grep it for your keywords) before reporting. A finding already listed there is NOT new \u2014 skip it.\n\nBUDGET: ~35 tool calls. REPORT CAP: ~150 lines; if you approach the limit, STOP and report what you have. Report each finding as: SEVERITY (HIGH/MEDIUM/LOW) \u2014 one-sentence defect \u2014 doc:line + code:line \u2014 quoted evidence \u2014 one-line fix direction. End with a \"BLOCKERS:\" section (\"none\" if empty). Report zero findings honestly if you find none; never invent.",
+        "cwd": "/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit",
+        "async": true
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-22T08:53:46.448Z",
+    "toolCall": {
+      "type": "toolCall",
+      "id": "call_function_hifof1s6yjga_1",
+      "name": "subagent",
+      "arguments": {
+        "agent": "scout",
+        "task": "READ-ONLY audit of the settings and model-selection seam. Repo: /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit (branch main). Do NOT edit, commit, push, publish, install, or reload anything. Do not spawn subagents. Tools: read/grep/find/ls only; if bash exists use it read-only (git log, wc, rg).\n\nSCOPE (exclusive): extensions/goal-settings.ts, extensions/settings-menu.ts, extensions/loops/goal-settings-ui.ts, extensions/model-selector.ts, extensions/model-picker.ts, extensions/designer-model.ts, extensions/drafter-model.ts, extensions/main-model-recovery.ts, extensions/auditor-thinking.ts, extensions/model-refs.ts (or the equivalent ref-normalizing module \u2014 find it), plus the tests that cover them (tests/settings-*.test.ts, tests/settings-menu-complete.test.ts, tests/designer-*.test.ts, tests/drafter-*.test.ts, tests/model-*.test.ts, tests/auditor-fallback-unification.test.ts, tests/auditor-ladder-discipline.test.ts).\n\nHUNT FOR: layered setting writes that leak across scopes (project vs global) or that delete a key the user still wants; a value the UI writes that the runtime cannot read back (or vice versa) \u2014 e.g. the explicit session override represented as null vs undefined; UI/runtime disagreement on fallback slot caps, ordering, deduplication, or forbidden-model matching; unvalidated persisted values reaching a provider call; a picker that can select a model the runtime will refuse (policy bypass) or a model the UI claims to exclude; async races where a concurrent session/goal switch leaves the saved setting pointing at the wrong scope; thinking-level resolution that can report a higher level than dispatch actually uses.\n\nEVIDENCE RULE: every finding needs BOTH sides quoted (the code/line and the contradicting consumer/contract) with file:line. If you cannot quote both, DROP the finding. No style nits, no speculative refactors, no \"add more tests\" wishlists.\n\nDEDUPE: read audit/audit-loop-2026-10-22/prior-findings-index.md (grep it for your keywords: settings, fallback, forbidden, thinking, scope, model) before reporting. A finding already listed there is NOT new \u2014 skip it. Note: a 2026-10-21 pass just repaired six findings in this area (auditor session override, designer enablement, designer inheritance, thinking display, ten fallback slots, drafter recovery) \u2014 do not re-report those, and verify they are actually fixed rather than assuming.\n\nBUDGET: ~35 tool calls. REPORT CAP: ~150 lines; if you approach the limit, STOP and report what you have. Report each finding as: SEVERITY (HIGH/MEDIUM/LOW) \u2014 one-sentence defect \u2014 file:line \u2014 quoted evidence \u2014 one-line fix direction. End with a \"BLOCKERS:\" section (\"none\" if empty). Report zero findings honestly if you find none; never invent.",
+        "cwd": "/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit",
+        "async": true
+      }
+    }
+  },
+  {
     "timestamp": "2026-10-22T08:53:54.612Z",
     "toolCall": {
       "type": "toolCall",
@@ -23,6 +65,37 @@
         "agent": "scout",
         "task": "READ-ONLY audit of the durable-state and journal seam. Repo: /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit (branch main). Do NOT edit, commit, push, publish, install, or reload anything. Do not spawn subagents. Tools: read/grep/find/ls only; if bash exists use it read-only (git log, wc, rg).\n\nSCOPE (exclusive): extensions/goal-state.ts, extensions/loops/goal-runtime-globals.ts, extensions/state-root-owner.ts, extensions/audit-lifecycle.ts, extensions/approval-render-store.ts, extensions/glla-state-root.ts, extensions/loops/goal-list-queue.ts, and in extensions/goal-loop-core.ts ONLY the state persistence/journal helpers (grep for persistState, readState, journal, ledger, appendState, saveState \u2014 do not try to read all 257KB).\n\nHUNT FOR: live/RAM state drifting from the durable projection (AGENTS.md forbids this outright) \u2014 a mutation applied in RAM whose persist can fail without a restore; a ledger/journal row that claims a state the snapshot contradicts (e.g. \"released\"/\"closed\" rows with the gate still held); non-atomic or partial writes that can leave a truncated journal; unbounded growth of active.jsonl/ledger without rotation or retention; a failure path that loses a queued item, an archived goal, or a pending claim; cross-project leakage of state when the state root changes or when two projects share a root; ownership/generation checks that can be fooled by a stale writer; pending-approval or sidecar files written before the state they describe, so a crash leaves a false \"approved\" marker.\n\nEVIDENCE RULE: every finding needs BOTH sides quoted (the code/line and the contradicting contract/consumer) with file:line. If you cannot quote both, DROP the finding. No style nits, no speculative refactors.\n\nDEDUPE: read audit/audit-loop-2026-10-22/prior-findings-index.md (grep it for your keywords: journal, persist, state, ledger, drift, archive, owner) before reporting. A finding already listed there is NOT new \u2014 skip it. The 2026-10-19 audit already fixed a \"releaseLoadHoldDurably\" drift class \u2014 do not re-report that one, but do report a DIFFERENT site with the same class if you find one.\n\nBUDGET: ~35 tool calls. REPORT CAP: ~150 lines; if you approach the limit, STOP and report what you have. Report each finding as: SEVERITY (HIGH/MEDIUM/LOW) \u2014 one-sentence defect \u2014 file:line \u2014 quoted evidence \u2014 one-line fix direction. End with a \"BLOCKERS:\" section (\"none\" if empty). Report zero findings honestly if you find none; never invent.",
         "cwd": "/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit",
+        "async": true
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-22T15:22:55.017Z",
+    "toolCall": {
+      "type": "toolCall",
+      "id": "call_3a0f7e904a9144acb12f3333c04b47bb|fc_0a433ee84adc860e016ada2a3ea24c8191aeb9a04ed89be9d2",
+      "name": "subagent",
+      "arguments": {
+        "workflow": "parallel",
+        "args": {
+          "tasks": [
+            {
+              "agent": "scout",
+              "cwd": "/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit",
+              "task": "READ-ONLY fresh audit of repaired release/packaging seam for the ONE existing 2026-10-22 project audit. Scope ONLY .github/workflows/{real-host-canary,publish}.yml, scripts/{run-tests,slow-files,release-pack-smoke}.mjs, tests/release-contract.test.ts. Budget ~30 tool uses maximum; aim to stop sooner on established evidence. Report <=150 lines; if near token limit STOP and report partial. No edits, commits, install, reload, subagents, outside-cwd code changes, or full suites. Seek real surviving security/flow/packaging bugs, not nits. Dedupe against .pi-glla/audit-loop/findings.md and audit/audit-loop-2026-10-22/README.md; do not re-report checked issues. First canary correction used nonexistent github.default_branch; corrected in 250a79b97 to github.event.repository.default_branch. Verify current source and report only new actionable defects or zero honestly. Every finding requires both code and violated contract references. End BLOCKERS: none or concrete blocker. Return concise source-backed assessment."
+            },
+            {
+              "agent": "scout",
+              "cwd": "/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit",
+              "task": "READ-ONLY fresh audit of repaired settings seam for the ONE existing 2026-10-22 project audit. Scope ONLY extensions/{goal-settings,compactor-model,settings-menu,auditor-thinking}.ts, extensions/loops/goal-settings-ui.ts and tests/settings-editors.test.ts. Budget ~30 tool uses maximum; narrow grep/read instead of whole large files. Report <=150 lines; if near token limit STOP and report partial. No edits, commits, install, reload, subagents, outside-cwd changes, or full suites. Seek real surviving override-merge, inherited thinking, ten fallback-slot, protected primary, or dispatch/display bugs, not nits. Dedupe .pi-glla/audit-loop/findings.md and audit/audit-loop-2026-10-22/README.md; don't re-report fixed items. Revised task permits clearing thinking pins in both scopes instead of tombstone. Report only NEW actionable defects with both source and consumer/contract evidence, or zero honestly. End BLOCKERS."
+            },
+            {
+              "agent": "scout",
+              "cwd": "/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit",
+              "task": "READ-ONLY fresh audit of repaired durable-state seam for the ONE existing 2026-10-22 project audit. Scope ONLY extensions/approval-render-store.ts, extensions/loops/{goal-orchestrator,goal-list-queue}.ts (persistence/rollback portions only), extensions/goal-loop-core.ts readState snapshot handling, tests/{goal-state-drift,terminal-approval-render}.test.ts. Budget ~30 tool uses maximum; narrow reads, report <=150 lines; if near token limit STOP and report partial. No edits, commits, install, reload, subagents, outside-cwd changes, or full suites. Seek real surviving RAM/durable divergence or lost pending obligations. Dedupe .pi-glla/audit-loop/findings.md and audit/audit-loop-2026-10-22/README.md; don't repeat fixed issues. Revised tasks explicitly preserve corrupt outbox bytes/refuse mutation and report failed goal_created with persisted:false. User DECIDE crash authentication is queued separately, do not reopen it. NEW defects require concrete source plus violated contract references, or report zero honestly. End BLOCKERS."
+            }
+          ]
+        },
         "async": true
       }
     }
