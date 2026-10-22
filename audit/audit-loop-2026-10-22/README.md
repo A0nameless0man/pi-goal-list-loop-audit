@@ -52,4 +52,10 @@ written here; nothing already listed was re-reported. Append-only.
 
 ## DECIDE findings (2026-10-22 pass)
 
-- [?] DECIDE: LOW: the crash-recovery path applies a saved verdict that it cannot authenticate. The per-attempt verdict key lives only in the launching parent's memory and the worker's pipe, so a reader in a fresh session has no key to verify a saved `result.json` with (extensions/goal-loop-auditor-process.ts:2109-2119). Two defensible answers: (a) keep applying the hash-consistent saved verdict — a completed audit is not re-run after a host crash, and a prompt-injected auditor that survives the parent's death can forge that saved verdict; (b) decline an unverifiable saved verdict and let the audit re-run — no forged verdict is ever applied, and a host crash costs one audit attempt. The live path is protected either way (the verdict is authenticated there since 51fc9a99f).
+- [x] DECIDED: Decline unverifiable saved audit verdicts after a host crash and rerun the audit; chosen by user and queued with list_add (2026-10-22). Cost: another audit attempt after a crash; benefit: recovery cannot apply an unauthenticated verdict. Target: extensions/goal-loop-auditor-process.ts:2109-2119. Live-path authentication remains protected by 51fc9a99f. Recovery behavior is unchanged in this pass.
+
+Two older open decisions were also raised and answered on 2026-10-22:
+- [x] DECIDED: Queue compact-card wording that distinguishes queued-but-not-started rework from active work, including the `you:` line.
+- [x] DECIDED: Queue a compatibility/release note explaining the corrected `pendingCompletion.leftOut` string schema; retain the runtime-correct schema.
+
+All three selected follow-ups are queued behind this audit. None was silently implemented as a FIX.
