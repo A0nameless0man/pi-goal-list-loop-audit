@@ -1,0 +1,59 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=201s heartbeat=30s
+[run-tests] host is 1.1x slower than an idle host — per-test budget raised to 134s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/contract-resolution-runtime.test.ts:
+(pass) goal: explicit acceptance persists exact amendment and preserves work [269.19ms]
+(pass) list: explicit acceptance persists exact amendment and preserves work [108.00ms]
+(pass) decline resumes original criteria without accepting an amendment [102.61ms]
+(pass) restart retains concrete amendment consent and acceptance does not require agent memory [347.02ms]
+(pass) failed amendment transaction reports no acceptance and retains the original hold [114.92ms]
+(pass) late markdown failure reports durable commit, stays held and recovers revised criteria [306.70ms]
+54 |  const target=failedProjection==='markdown'?goalMdPath(f.cwd,before.id):`${f.cwd}/.pi-glla/active.jsonl`;
+55 |  const saved=fs.readFileSync(target);fs.unlinkSync(target);fs.mkdirSync(target);
+56 |  try {
+57 |   f.ctx.ui.selectImpl=async(_t,options)=>options[0];await f.pi.command('goal','decide',f.ctx);
+58 |   const durable=readGoalStateTransaction(f.cwd)?.state.goal!;
+59 |   assert.equal(durable.status,'paused');assert.equal(durable.revision,4);assert.notEqual(durable.verificationContract,contract);
+                    ^
+TypeError: undefined is not an object (evaluating 'durable.status')
+      at <anonymous> (/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/contract-resolution-runtime.test.ts:59:16)
+(fail) late journal failure reports durable commit, stays held and recovers revised criteria [419.97ms]
+(pass) goal schema is executable JSON [7.80ms]
+(pass) stale proposal after an independently confirmed tweak reports no amendment [133.80ms]
+(pass) public tweak rejects misleading standalone contract edits and reports identical text as no change [135.58ms]
+(pass) unsupported contract-edit guidance is never extracted as an executable suggestion [0.34ms]
+(pass) unattended recommendation declines rather than waiving failing criteria [429.11ms]
+(pass) a classified material conflict never defaults to amendment or resumed criteria [432.34ms]
+(pass) missing item or unchanged proposal cannot advertise acceptance [0.33ms]
+(pass) unbounded command replacement never drops undelimited or multiple-command predicates [0.15ms]
+(pass) v0.39.38: numbered-line matching needs no replacement normalization [0.13ms]
+(pass) quote correction is separate from changed test coverage and preserves its predicate [40.99ms]
+
+tests/auditor-stall-watchdog.test.ts:
+(pass) stall: worker that never emits a first event is failed fast, not left for the wall [16732.13ms]
+[run-tests] progress: 30s elapsed · 5s since last output · 2 KiB of suite output
+(pass) stall: first-event budget starts after successful spawn, not pre-spawn setup [18660.14ms]
+(pass) stall: worker whose single boot heartbeat goes stale is failed fast, not left for the wall [6437.20ms]
+(pass) progress: a live auditor outlives the legacy wall metadata and settles on its result [751.88ms]
+(pass) stall: a running auditor tool is exempt — the per-tool timeout owns that axis [1453.68ms]
+(pass) stall: a silent-past-bound attempt fails fast WITH its cost record (controlled clock) [846.77ms]
+(pass) stall: a worker-reported brake is reclassified with the same evidence [535.48ms]
+(pass) stall: an open in-budget tool is not silence — the no-progress bound spares it [840.85ms]
+(pass) v0.38.99: an over-budget tool is NOT fatal — the worker cancels it, resumes, and its result still lands [3080.92ms]
+[run-tests] progress: 60s elapsed · 2s since last output · 3 KiB of suite output
+(pass) v0.38.99 approval guard: an approving verdict from a verification-incomplete attempt is refused, not applied [2430.82ms]
+(pass) v0.38.99: a genuinely wedged tool still fails fast once the grace expires [1327.01ms]
+
+tests/auditor-verdict-authentication.test.ts:
+(pass) a forged result file cannot end the audit — the worker's signed verdict wins [1079.24ms]
+
+1 tests failed:
+(fail) late journal failure reports durable commit, stays held and recovers revised criteria [419.97ms]
+
+ 28 pass
+ 1 fail
+Ran 29 tests across 3 files. [64.51s]
+[run-tests] failure diagnostics retained at /dev/shm/glla-rerun-03945/glla-test-processes-AxSSWB/failure.json
+[run-tests] cleanup evidence retained at /dev/shm/glla-rerun-03945/glla-test-processes-AxSSWB
+[run-tests] finished in 65s (exit 1)

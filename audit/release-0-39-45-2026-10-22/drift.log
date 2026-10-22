@@ -1,0 +1,36 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=662s heartbeat=30s
+[run-tests] host is 3.7x slower than an idle host — per-test budget raised to 441s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/contract-resolution-runtime.test.ts:
+(pass) goal: explicit acceptance persists exact amendment and preserves work [399.71ms]
+(pass) list: explicit acceptance persists exact amendment and preserves work [79.32ms]
+(pass) decline resumes original criteria without accepting an amendment [90.67ms]
+(pass) restart retains concrete amendment consent and acceptance does not require agent memory [143.66ms]
+(pass) failed amendment transaction reports no acceptance and retains the original hold [126.01ms]
+(pass) late markdown failure reports durable commit, stays held and recovers revised criteria [171.82ms]
+(pass) late journal failure reports durable commit, stays held and recovers revised criteria [704.81ms]
+(pass) goal schema is executable JSON [1.59ms]
+(pass) stale proposal after an independently confirmed tweak reports no amendment [72.50ms]
+(pass) public tweak rejects misleading standalone contract edits and reports identical text as no change [75.02ms]
+(pass) unsupported contract-edit guidance is never extracted as an executable suggestion [0.56ms]
+(pass) unattended recommendation declines rather than waiving failing criteria [401.62ms]
+(pass) a classified material conflict never defaults to amendment or resumed criteria [377.47ms]
+(pass) missing item or unchanged proposal cannot advertise acceptance [0.20ms]
+(pass) unbounded command replacement never drops undelimited or multiple-command predicates [0.13ms]
+(pass) v0.39.38: numbered-line matching needs no replacement normalization [0.13ms]
+(pass) quote correction is separate from changed test coverage and preserves its predicate [6.68ms]
+
+tests/goal-state-drift.test.ts:
+(pass) an incomplete projection leaves the live goal equal to what a restart adopts [66.46ms]
+(pass) a goal update with no durable commit point is not kept in RAM [7.21ms]
+(pass) a goal creation is journalled with whether it actually landed [35.16ms]
+(pass) the goal_created row can state that the creation did not persist [1.27ms]
+(pass) a complete state snapshot replaces the projection instead of merging into it [3.93ms]
+(pass) refused repair promotion rolls back recoverable sidecars (new) [27.32ms]
+(pass) refused repair promotion rolls back recoverable sidecars (existing) [6.67ms]
+
+ 24 pass
+ 0 fail
+Ran 24 tests across 2 files. [8.88s]
+[run-tests] finished in 10s (exit 0)

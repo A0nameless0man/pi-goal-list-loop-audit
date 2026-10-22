@@ -1,0 +1,55 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=289s heartbeat=30s
+[run-tests] host is 1.6x slower than an idle host — per-test budget raised to 192s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/supervised-provider-exhaustion-runtime.test.ts:
+[provider-exhaustion] goal: 1/2101 durable failure/probe cycles verified
+[provider-exhaustion] goal: 250/2101 durable failure/probe cycles verified
+[run-tests] progress: 30s elapsed · 17s since last output · 0 KiB of suite output
+[provider-exhaustion] goal: 500/2101 durable failure/probe cycles verified
+[run-tests] progress: 60s elapsed · 23s since last output · 0 KiB of suite output
+[provider-exhaustion] goal: 750/2101 durable failure/probe cycles verified
+[provider-exhaustion] goal: 1000/2101 durable failure/probe cycles verified
+[provider-exhaustion] goal: 1250/2101 durable failure/probe cycles verified
+[provider-exhaustion] goal: 1500/2101 durable failure/probe cycles verified
+[run-tests] progress: 90s elapsed · 1s since last output · 1 KiB of suite output
+[provider-exhaustion] goal: 1750/2101 durable failure/probe cycles verified
+[provider-exhaustion] goal: 2000/2101 durable failure/probe cycles verified
+[provider-exhaustion] goal: 2101/2101 durable failure/probe cycles verified
+(pass) goal: 2101 provider exhaustion failures preserve work then continue [97650.36ms]
+[provider-exhaustion] list: 1/2101 durable failure/probe cycles verified
+[provider-exhaustion] list: 250/2101 durable failure/probe cycles verified
+[run-tests] progress: 120s elapsed · 9s since last output · 1 KiB of suite output
+[provider-exhaustion] list: 500/2101 durable failure/probe cycles verified
+[provider-exhaustion] list: 750/2101 durable failure/probe cycles verified
+[run-tests] progress: 150s elapsed · 1s since last output · 1 KiB of suite output
+[provider-exhaustion] list: 1000/2101 durable failure/probe cycles verified
+[provider-exhaustion] list: 1250/2101 durable failure/probe cycles verified
+[provider-exhaustion] list: 1500/2101 durable failure/probe cycles verified
+[provider-exhaustion] list: 1750/2101 durable failure/probe cycles verified
+[run-tests] progress: 180s elapsed · 1s since last output · 2 KiB of suite output
+[provider-exhaustion] list: 2000/2101 durable failure/probe cycles verified
+[provider-exhaustion] list: 2101/2101 durable failure/probe cycles verified
+(pass) list: 2101 provider exhaustion failures preserve work then continue [84276.58ms]
+[provider-exhaustion] loop: 1/2101 durable failure/probe cycles verified
+[provider-exhaustion] loop: 250/2101 durable failure/probe cycles verified
+[provider-exhaustion] loop: 500/2101 durable failure/probe cycles verified
+[run-tests] progress: 210s elapsed · 6s since last output · 2 KiB of suite output
+[provider-exhaustion] loop: 750/2101 durable failure/probe cycles verified
+[run-tests] progress: 240s elapsed · 19s since last output · 2 KiB of suite output
+[provider-exhaustion] loop: 1000/2101 durable failure/probe cycles verified
+[provider-exhaustion] loop: 1250/2101 durable failure/probe cycles verified
+[provider-exhaustion] loop: 1500/2101 durable failure/probe cycles verified
+[provider-exhaustion] loop: 1750/2101 durable failure/probe cycles verified
+[provider-exhaustion] loop: 2000/2101 durable failure/probe cycles verified
+[provider-exhaustion] loop: 2101/2101 durable failure/probe cycles verified
+(pass) loop: 2101 provider exhaustion failures preserve work then continue [80741.88ms]
+(pass) provider probe cannot unpause a stored completion claim [205.04ms]
+(pass) loop: healthy recovery still enforces the retained iterations bound [456.48ms]
+(pass) loop: healthy recovery still enforces the retained time bound [282.03ms]
+(pass) loop: healthy recovery still enforces the retained tokens bound [298.22ms]
+
+ 7 pass
+ 0 fail
+Ran 7 tests across 1 file. [265.69s]
+[run-tests] finished in 266s (exit 0)

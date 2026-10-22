@@ -1,0 +1,38 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=351s heartbeat=30s
+[run-tests] host is 2.0x slower than an idle host — per-test budget raised to 234s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/contract-resolution-runtime.test.ts:
+(pass) goal: explicit acceptance persists exact amendment and preserves work [369.79ms]
+(pass) list: explicit acceptance persists exact amendment and preserves work [172.07ms]
+(pass) decline resumes original criteria without accepting an amendment [222.43ms]
+(pass) restart retains concrete amendment consent and acceptance does not require agent memory [860.99ms]
+(pass) failed amendment transaction reports no acceptance and retains the original hold [404.11ms]
+(pass) late markdown failure reports durable commit, stays held and recovers revised criteria [757.89ms]
+54 |  const target=failedProjection==='markdown'?goalMdPath(f.cwd,before.id):`${f.cwd}/.pi-glla/active.jsonl`;
+55 |  const saved=fs.readFileSync(target);fs.unlinkSync(target);fs.mkdirSync(target);
+56 |  try {
+57 |   f.ctx.ui.selectImpl=async(_t,options)=>options[0];await f.pi.command('goal','decide',f.ctx);
+58 |   const durable=readGoalStateTransaction(f.cwd)?.state.goal!;
+59 |   assert.equal(durable.status,'paused');assert.equal(durable.revision,4);assert.notEqual(durable.verificationContract,contract);
+                    ^
+TypeError: undefined is not an object (evaluating 'durable.status')
+      at <anonymous> (/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/tests/contract-resolution-runtime.test.ts:59:16)
+(fail) late journal failure reports durable commit, stays held and recovers revised criteria [798.11ms]
+(pass) goal schema is executable JSON [4.16ms]
+(pass) stale proposal after an independently confirmed tweak reports no amendment [594.56ms]
+(pass) public tweak rejects misleading standalone contract edits and reports identical text as no change [316.75ms]
+(pass) unsupported contract-edit guidance is never extracted as an executable suggestion [0.36ms]
+(pass) unattended recommendation declines rather than waiving failing criteria [177.42ms]
+(pass) a classified material conflict never defaults to amendment or resumed criteria [182.55ms]
+(pass) missing item or unchanged proposal cannot advertise acceptance [0.27ms]
+(pass) unbounded command replacement never drops undelimited or multiple-command predicates [0.16ms]
+(pass) v0.39.38: numbered-line matching needs no replacement normalization [0.12ms]
+(pass) quote correction is separate from changed test coverage and preserves its predicate [0.27ms]
+
+ 16 pass
+ 1 fail
+Ran 17 tests across 1 file. [10.03s]
+[run-tests] failure diagnostics retained at /dev/shm/glla-rerun-03945/glla-test-processes-ksBVmp/failure.json
+[run-tests] cleanup evidence retained at /dev/shm/glla-rerun-03945/glla-test-processes-ksBVmp
+[run-tests] finished in 13s (exit 1)

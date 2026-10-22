@@ -1,0 +1,26 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=900s heartbeat=30s
+[run-tests] host is 8.0x slower than an idle host — per-test budget raised to 600s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/auditor-stall-watchdog.test.ts:
+[run-tests] progress: 30s elapsed · 30s since last output · 0 KiB of suite output
+(pass) stall: worker that never emits a first event is failed fast, not left for the wall [25126.85ms]
+(pass) stall: first-event budget starts after successful spawn, not pre-spawn setup [25938.81ms]
+[run-tests] progress: 60s elapsed · 4s since last output · 0 KiB of suite output
+(pass) stall: worker whose single boot heartbeat goes stale is failed fast, not left for the wall [6444.73ms]
+(pass) progress: a live auditor outlives the legacy wall metadata and settles on its result [1325.54ms]
+(pass) stall: a running auditor tool is exempt — the per-tool timeout owns that axis [1431.93ms]
+(pass) stall: a silent-past-bound attempt fails fast WITH its cost record (controlled clock) [984.57ms]
+(pass) stall: a worker-reported brake is reclassified with the same evidence [1115.08ms]
+(pass) stall: an open in-budget tool is not silence — the no-progress bound spares it [1496.95ms]
+(pass) v0.38.99: an over-budget tool is NOT fatal — the worker cancels it, resumes, and its result still lands [3116.22ms]
+(pass) v0.38.99 approval guard: an approving verdict from a verification-incomplete attempt is refused, not applied [2151.13ms]
+(pass) v0.38.99: a genuinely wedged tool still fails fast once the grace expires [895.17ms]
+
+tests/auditor-verdict-authentication.test.ts:
+(pass) a forged result file cannot end the audit — the worker's signed verdict wins [423.71ms]
+
+ 12 pass
+ 0 fail
+Ran 12 tests across 2 files. [76.31s]
+[run-tests] finished in 77s (exit 0)
