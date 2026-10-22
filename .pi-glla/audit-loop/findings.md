@@ -1164,3 +1164,5 @@ Existing queue-promotion finding reopened: snapshot refusal restores RAM but lea
 - [x] FIX: MEDIUM: this pass's own `goal_created` truthfulness change broke the v0.28.28 provenance pin, which matched the ledger row as one exact literal, so the list-queue suite failed against a correct implementation (tests/list-queue.test.ts:154) — fixed in fa1749dcb (the pin now asserts the `via` and `persisted` fields separately: a dropped field still fails, an added field does not)
 
 (The earlier "Repair and verification pending" note above is superseded by the two checked FIX rows that follow it.)
+
+- [ ] FIX: HIGH: the test runner passes modern Bun isolation/exclusion flags without checking support; Bun 1.3.3 treats an unsupported exclusion value as an inclusion filter, so --all reports green after running only the Node-only test (scripts/run-tests.mjs:215-235; reproduced with disposable two-file fixture and the local --all run).

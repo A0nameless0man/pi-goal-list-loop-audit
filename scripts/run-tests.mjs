@@ -202,7 +202,24 @@ const log = (line) => {
   if (process.env.GLLA_TEST_RUNNER_QUIET !== "1") process.stderr.write(`[run-tests] ${line}\n`);
 };
 
+/** Bun used to silently interpret unknown flag values as test filters.
+ * Check capabilities, not a version string, before granting the gate a run. */
+export function bunTestCapabilityError(probe = spawnSync) {
+  const result = probe("bun", ["test", "--help"], { encoding: "utf8", timeout: 10_000, maxBuffer: 1024 * 1024 });
+  if (result.error || result.status !== 0) return `Could not inspect Bun test capabilities: ${result.error?.message ?? `exit ${result.status}`}`;
+  const help = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+  const missing = ["--parallel", "--max-concurrency", "--path-ignore-patterns"]
+    .filter(flag => !new RegExp(`${flag}(?=[=\\s<]|$)`).test(help));
+  return missing.length ? `Bun test lacks required capabilities: ${missing.join(", ")}. Use the project's CI toolchain (Bun 1.3.14 or newer with these flags); no tests were started.` : undefined;
+}
+
 function main() {
+  const capabilityError = bunTestCapabilityError();
+  if (capabilityError) {
+    process.stderr.write(`[run-tests] ${capabilityError}\n`);
+    process.exitCode = 1;
+    return;
+  }
   // Size the gate's hang bounds for the CPU this host is actually giving
   // the suite. On an idle host the factor is 1.0 and every bound is exactly
   // what it was before; on a contended host the per-test bound grows in
