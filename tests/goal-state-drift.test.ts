@@ -22,7 +22,7 @@ import * as assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { readState, readQueueFromDisk, writeQueueItemFile, queueItemPath, type ListItem, type Goal } from "../extensions/goal-loop-core.js";
+import { readState, readQueueFromDisk, writeQueueItemFile, queueItemPath, goalStateTransactionPath, type ListItem, type Goal } from "../extensions/goal-loop-core.js";
 import { assessSuspiciousObjective, buildRepairTaskObjective } from "../extensions/faulty-objective-recovery.js";
 import { state, replaceState, persistStateLine } from "../extensions/goal-state.js";
 import { MockPi, makeMockCtx, tmpCwd, seedState } from "./harness/mock-pi.js";
@@ -61,7 +61,7 @@ afterEach(() => {
   if (descriptor && "value" in descriptor) delete (globalThis as Record<string, unknown>).persistState;
 });
 
-test("a failed goal update leaves the live goal equal to the durable one", () => {
+test("an incomplete projection leaves the live goal equal to what a restart adopts", () => {
   const cwd = tmpCwd();
   const ctx = makeMockCtx(cwd) as never;
   const goal = {
@@ -75,14 +75,45 @@ test("a failed goal update leaves the live goal equal to the durable one", () =>
   replaceState({ ...state, goal, list: [] } as typeof state);
   persistStateLine(cwd, state);
   const restore = breakStateLedger(cwd);
+  let ok: boolean;
   try {
-    const ok = runtime().updateGoal({ status: "complete", completionSummary: "Outcome: done" }, ctx);
-    assert.equal(ok, false, "a failed durable write reports failure");
+    ok = runtime().updateGoal({ status: "complete", completionSummary: "Outcome: done" }, ctx);
+    assert.equal(ok, false, "an incomplete projection reports failure");
   } finally {
     restore();
   }
-  assert.equal(state.goal?.status, "active", "the live goal is rolled back to the durable one");
-  assert.equal(state.goal?.completionSummary, undefined, "the unpersisted update is not kept in RAM");
+  // The durable goal-state transaction is the documented commit point, so the
+  // update survives even when the JSONL line could not be written. The drift
+  // invariant is that RAM matches what a restart ADOPTS — not that every
+  // unprojected update is discarded (that would throw away a real commit).
+  const adopted = readState(cwd).goal;
+  assert.equal(adopted?.status, "complete", "the landed commit point carries the update");
+  assert.equal(adopted?.completionSummary, "Outcome: done");
+  assert.equal(state.goal?.status, "complete", "the live goal tracks the durable commit it made");
+  assert.equal(state.goal?.completionSummary, "Outcome: done");
+});
+
+test("a goal update with no durable commit point is not kept in RAM", () => {
+  const cwd = tmpCwd();
+  const ctx = makeMockCtx(cwd) as never;
+  const goal = {
+    id: "goal-drift-none", objective: "Keep the durable projection", policy: "goal" as const,
+    status: "active" as const, autoContinue: true,
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    usage: { tokensUsed: 0, tokensLimit: 0 },
+  };
+  seedState(cwd, { goal, list: [] });
+  replaceState({ ...state, goal, list: [] } as typeof state);
+  persistStateLine(cwd, state);
+  // Block the transaction write itself: nothing durable can be committed.
+  const txn = goalStateTransactionPath(cwd);
+  fs.mkdirSync(txn);
+  try {
+    assert.equal(runtime().updateGoal({ status: "complete", completionSummary: "Outcome: done" }, ctx), false);
+    assert.equal(state.goal?.status, "active", "an uncommitted update is not kept in RAM");
+  } finally {
+    fs.rmdirSync(txn);
+  }
   assert.equal(readState(cwd).goal?.status, "active", "the durable projection still holds the old goal");
 });
 
