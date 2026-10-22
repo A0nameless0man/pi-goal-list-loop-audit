@@ -1156,6 +1156,11 @@ The existing canary finding above required a second correction: the first fix us
 
 ### Corrective parallel scout assessment (same pass)
 
-- [ ] FIX: MEDIUM: selecting session inheritance for a subagent thinking pin removes only its owning scope, so a project pin deletion reveals the same role's global pin instead of inheriting the session (extensions/loops/goal-settings-ui.ts:1225; extensions/goal-settings.ts:943-946).
+- [x] FIX: MEDIUM: selecting session inheritance for a subagent thinking pin removes only its owning scope, so a project pin deletion reveals the same role's global pin instead of inheriting the session (extensions/loops/goal-settings-ui.ts:1225; extensions/goal-settings.ts:943-946) — fixed in b264e24c3 (the inherit choice now clears that role's thinking pin in EVERY scope that holds one, leaving every other role untouched; 4471ab8f5 keeps the layer map's type exact)
 
 Existing queue-promotion finding reopened: snapshot refusal restores RAM but leaves the new or rewritten repair sidecar recoverable; the activation caller also retries despite refusal (extensions/loops/goal-list-queue.ts:826-855,951-961). This is the surviving rollback half of the existing finding, not a duplicate FIX row. Repair and verification pending.
+
+- [x] FIX: MEDIUM: a refused repair promotion rolled back RAM but left the new or rewritten repair sidecar recoverable, and the activation caller retried the promotion anyway (extensions/loops/goal-list-queue.ts:826-855,951-961) — fixed in 28111809f (the helper reports refusal, the new sidecar is removed and the rewritten one restored to its previous bytes, the refusal is journalled with whether the rollback landed, and the activation caller stops instead of retrying)
+- [x] FIX: MEDIUM: this pass's own `goal_created` truthfulness change broke the v0.28.28 provenance pin, which matched the ledger row as one exact literal, so the list-queue suite failed against a correct implementation (tests/list-queue.test.ts:154) — fixed in fa1749dcb (the pin now asserts the `via` and `persisted` fields separately: a dropped field still fails, an added field does not)
+
+(The earlier "Repair and verification pending" note above is superseded by the two checked FIX rows that follow it.)
