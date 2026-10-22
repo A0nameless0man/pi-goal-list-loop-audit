@@ -1165,4 +1165,4 @@ Existing queue-promotion finding reopened: snapshot refusal restores RAM but lea
 
 (The earlier "Repair and verification pending" note above is superseded by the two checked FIX rows that follow it.)
 
-- [ ] FIX: HIGH: the test runner passes modern Bun isolation/exclusion flags without checking support; Bun 1.3.3 treats an unsupported exclusion value as an inclusion filter, so --all reports green after running only the Node-only test (scripts/run-tests.mjs:215-235; reproduced with disposable two-file fixture and the local --all run).
+- [x] FIX: HIGH: the test runner passes modern Bun isolation/exclusion flags without checking support; Bun 1.3.3 treats an unsupported exclusion value as an inclusion filter, so --all reports green after running only the Node-only test (scripts/run-tests.mjs:215-235; reproduced with disposable two-file fixture and the local --all run) — fixed in ad3c7111c (bounded capability preflight refuses unsupported Bun before starting tests); regression fixtures and declarations in ded2af54a. Old Bun now exits 1; CI-pinned Bun 1.3.14 passes the hardened seven-file regression run (110 pass, 0 fail).
