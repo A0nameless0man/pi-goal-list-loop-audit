@@ -1,0 +1,30 @@
+[
+  {
+    "timestamp": "2026-10-22T08:53:21.769Z",
+    "toolCall": {
+      "type": "toolCall",
+      "id": "call_function_0om07gugz3dt_1",
+      "name": "subagent",
+      "arguments": {
+        "agent": "scout",
+        "task": "READ-ONLY audit of the release/CI/packaging seam. Repo: /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit (branch main). Do NOT edit, commit, push, publish, install, or reload anything. Do not spawn subagents. Tools: read/grep/find/ls only; if bash exists use it read-only (git log, wc, rg).\n\nSCOPE (exclusive): scripts/run-tests.mjs, scripts/release-pack-smoke.mjs, scripts/npm-pack-report.mjs, scripts/host-contention.mjs, scripts/test-process-registry.mjs, scripts/contained-child.mjs, scripts/test-failure-diagnostics.mjs, scripts/verify-test-pin-controls.mjs, .github/workflows/publish.yml, .github/workflows/compatibility.yml, .github/workflows/real-host-canary.yml, package.json (scripts/files/version), package-lock.json root fields, and the tests that cover them (tests/release-contract.test.ts, tests/npm-pack-report.test.ts, tests/test-split.test.ts or equivalent).\n\nWHY THIS SEAM: the 2026-10-19 project audit explicitly left scripts/ and .github/workflows/ NOT AUDITED (its tasklist #8). This is that seam.\n\nHUNT FOR: gate bypass or false-green paths (a step that can report success on a partial/aborted run, a timeout treated as pass, swallowed non-zero exit), packaging omissions (files the package must ship but \"files\" allowlist drops; tarball content vs docs/README claims), version drift between package.json, package-lock.json (both version fields) and workflow/tag expectations, CI steps that would pass on a broken build, destructive or irreversible git/network commands in scripts (git reset --hard, force push, rm -rf of repo paths), secret/token handling in workflows (secrets in env of untrusted steps, OIDC scope leakage, publish without provenance), concurrency/cancellation that can cancel a release midway, and artifacts/diagnostics that are referenced but never uploaded.\n\nEVIDENCE RULE: every finding needs BOTH sides quoted (the code/line and the contradicting consumer/contract) with file:line. If you cannot quote both, DROP the finding. No style nits, no speculative refactors, no \"consider adding tests\" wishlists.\n\nDEDUPE: read audit/audit-loop-2026-10-22/prior-findings-index.md (grep it for your keywords) before reporting. A finding already listed there is NOT new \u2014 skip it.\n\nBUDGET: ~35 tool calls. REPORT CAP: ~150 lines; if you approach the limit, STOP and report what you have. Report each finding as: SEVERITY (HIGH/MEDIUM/LOW) \u2014 one-sentence defect \u2014 file:line \u2014 quoted evidence \u2014 one-line fix direction. End with a \"BLOCKERS:\" section (\"none\" if empty). Report zero findings honestly if you find none; never invent.",
+        "cwd": "/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit",
+        "async": true
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-22T08:53:54.612Z",
+    "toolCall": {
+      "type": "toolCall",
+      "id": "call_function_3xhw90yp471g_1",
+      "name": "subagent",
+      "arguments": {
+        "agent": "scout",
+        "task": "READ-ONLY audit of the durable-state and journal seam. Repo: /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit (branch main). Do NOT edit, commit, push, publish, install, or reload anything. Do not spawn subagents. Tools: read/grep/find/ls only; if bash exists use it read-only (git log, wc, rg).\n\nSCOPE (exclusive): extensions/goal-state.ts, extensions/loops/goal-runtime-globals.ts, extensions/state-root-owner.ts, extensions/audit-lifecycle.ts, extensions/approval-render-store.ts, extensions/glla-state-root.ts, extensions/loops/goal-list-queue.ts, and in extensions/goal-loop-core.ts ONLY the state persistence/journal helpers (grep for persistState, readState, journal, ledger, appendState, saveState \u2014 do not try to read all 257KB).\n\nHUNT FOR: live/RAM state drifting from the durable projection (AGENTS.md forbids this outright) \u2014 a mutation applied in RAM whose persist can fail without a restore; a ledger/journal row that claims a state the snapshot contradicts (e.g. \"released\"/\"closed\" rows with the gate still held); non-atomic or partial writes that can leave a truncated journal; unbounded growth of active.jsonl/ledger without rotation or retention; a failure path that loses a queued item, an archived goal, or a pending claim; cross-project leakage of state when the state root changes or when two projects share a root; ownership/generation checks that can be fooled by a stale writer; pending-approval or sidecar files written before the state they describe, so a crash leaves a false \"approved\" marker.\n\nEVIDENCE RULE: every finding needs BOTH sides quoted (the code/line and the contradicting contract/consumer) with file:line. If you cannot quote both, DROP the finding. No style nits, no speculative refactors.\n\nDEDUPE: read audit/audit-loop-2026-10-22/prior-findings-index.md (grep it for your keywords: journal, persist, state, ledger, drift, archive, owner) before reporting. A finding already listed there is NOT new \u2014 skip it. The 2026-10-19 audit already fixed a \"releaseLoadHoldDurably\" drift class \u2014 do not re-report that one, but do report a DIFFERENT site with the same class if you find one.\n\nBUDGET: ~35 tool calls. REPORT CAP: ~150 lines; if you approach the limit, STOP and report what you have. Report each finding as: SEVERITY (HIGH/MEDIUM/LOW) \u2014 one-sentence defect \u2014 file:line \u2014 quoted evidence \u2014 one-line fix direction. End with a \"BLOCKERS:\" section (\"none\" if empty). Report zero findings honestly if you find none; never invent.",
+        "cwd": "/home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit",
+        "async": true
+      }
+    }
+  }
+]
