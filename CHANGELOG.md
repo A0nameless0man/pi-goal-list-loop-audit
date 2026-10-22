@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Downstream compatibility: `pendingCompletion.leftOut`
+
+- `pendingCompletion.leftOut`, when present, is a **string**, matching runtime
+  output. The previously published array schema was incorrect; the corrected
+  `schemas/goal.schema.json` retains the string type. This is a schema correction,
+  not a change from array-valued to string-valued runtime output.
+- Downstream validators and generated clients based on the old schema should
+  refresh their schema/types and treat `leftOut` as an optional string, not an
+  array to iterate or join. For example, `"leftOut": "Deferred the migration"`
+  is valid; `"leftOut": ["Deferred the migration"]` is not. Existing runtime
+  records using strings need no data migration.
+
 ### Auditor verdict authentication and fence repair (audit 2026-10-22)
 
 - The detached auditor's verdict artifact is now AUTHENTICATED. The parent
