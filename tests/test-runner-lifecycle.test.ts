@@ -12,7 +12,7 @@ async function runStub(source: string, signal?: NodeJS.Signals, preload?: string
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "glla-runner-lifecycle-"));
   let child: ReturnType<typeof spawn> | undefined;
   try {
-    fs.writeFileSync(path.join(cwd, "bun"), `#!/usr/bin/env node\n${source}\n`, { mode: 0o755 });
+    fs.writeFileSync(path.join(cwd, "bun"), `#!/usr/bin/env node\nif (process.argv.includes("--help")) { console.log("--parallel=<n> --max-concurrency=<n> --path-ignore-patterns=<pattern>"); process.exit(0); }\n${source}\n`, { mode: 0o755 });
     const bootstrap = path.join(cwd, "preload.mjs");
     if (preload) fs.writeFileSync(bootstrap, preload);
     child = spawn("node", [...(preload ? ["--import", bootstrap] : []), path.resolve("scripts/run-tests.mjs"), "--all"], {

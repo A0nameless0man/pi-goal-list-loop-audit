@@ -21,6 +21,8 @@ export declare function buildRunnerArgs(
 
 export declare function runBlocking(args: string[]): number;
 
+export declare function bunTestCapabilityError(probe?: typeof import("node:child_process").spawnSync): string | undefined;
+
 export declare const MAX_STALL_TIMEOUT_MS: number;
 export declare const MAX_STALL_EXTENSIONS: number;
 export declare function stallDecision(input: {
