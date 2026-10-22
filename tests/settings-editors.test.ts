@@ -1103,3 +1103,27 @@ test("auditor dial inherit clears the pin in every layer, not only the owning on
     restoreGlobal();
   }
 });
+
+// v0.39.45 (audit 2026-10-22) — a RETIRED recovery knob must not be
+// dropped silently. `mainModelFallbackOnRateLimit` stopped controlling
+// anything in v0.34.142, but the shipped docs still described it as a live
+// switch, so an operator could set it and watch nothing happen.
+test("a retired recovery knob is reported as ignored instead of vanishing", () => {
+  try {
+    const cwd = tmpCwd();
+    fs.mkdirSync(path.dirname(GLOBAL_FILE), { recursive: true });
+    fs.writeFileSync(GLOBAL_FILE, JSON.stringify({ mainModelFallbackOnRateLimit: false }));
+    const loaded = loadSettings(cwd) as unknown as Record<string, unknown>;
+    assert.equal(loaded.mainModelFallbackOnRateLimit, undefined, "the retired knob is inert");
+    const journal = path.join(cwd, ".pi-glla", "active.jsonl");
+    const rows = fs.existsSync(journal)
+      ? fs.readFileSync(journal, "utf8").split("\n").filter(Boolean).map(line => JSON.parse(line))
+      : [];
+    assert.ok(
+      rows.some(row => row.type === "settings_invalid_ignored" && row.value?.key === "mainModelFallbackOnRateLimit"),
+      "the retired knob is reported so the operator learns it is inert",
+    );
+  } finally {
+    restoreGlobal();
+  }
+});

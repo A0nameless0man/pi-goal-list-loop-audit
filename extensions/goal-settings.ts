@@ -690,9 +690,20 @@ export function normalizeLoadedSettings(settings: Settings): Settings {
   // v0.34.142: these old policy knobs no longer control recovery. Drop
   // them from the effective object so stale files cannot resurrect the old
   // behavior or make the settings UI imply that quota inspection exists.
+  //
+  // v0.39.45 (audit 2026-10-22): dropping them SILENTLY left an operator
+  // who set `mainModelFallbackOnRateLimit` believing the switch was live
+  // (the shipped docs still described it). A retired key is reported like
+  // any other ignored value — the throttled report names the key, so the
+  // operator learns the setting is inert instead of wondering why it does
+  // nothing.
   const legacy = settings as unknown as Record<string, unknown>;
   if (legacy.hourlyRetryProbe === undefined && typeof legacy.hourlyQuotaProbe === "boolean") {
     legacy.hourlyRetryProbe = legacy.hourlyQuotaProbe;
+  }
+  for (const retired of ["hourlyQuotaProbe", "mainModelFallbackOnRateLimit", "quotaRetryMinutes"] as const) {
+    const raw = legacy[retired];
+    if (raw !== undefined) noteDroppedSetting(retired, raw);
   }
   delete legacy.hourlyQuotaProbe;
   delete legacy.mainModelFallbackOnRateLimit;
@@ -826,6 +837,13 @@ export function migrateLegacySettings(value: Partial<Settings>): Record<string, 
   delete migrated.reviewer;
   if (migrated.hourlyRetryProbe === undefined && typeof migrated.hourlyQuotaProbe === "boolean") {
     migrated.hourlyRetryProbe = migrated.hourlyQuotaProbe;
+  }
+  // v0.39.45 (audit 2026-10-22): report the RETIRED recovery knobs instead
+  // of dropping them silently — an operator who set one deserves to learn
+  // it is inert. The report is throttled per distinct value.
+  for (const retired of ["hourlyQuotaProbe", "mainModelFallbackOnRateLimit", "quotaRetryMinutes"] as const) {
+    const raw = migrated[retired];
+    if (raw !== undefined) noteDroppedSetting(retired, raw);
   }
   delete migrated.hourlyQuotaProbe;
   delete migrated.mainModelFallbackOnRateLimit;

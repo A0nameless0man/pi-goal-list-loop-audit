@@ -15,7 +15,7 @@ loops (`/goal`, `/list`, `/loop`) share one runtime, one ledger
 ## 1. Entry and runtime (3 min)
 
 - Entry: `extensions/loops/goal.ts` → `registerGoalRuntime`
-  (`extensions/loops/goal-activation.ts`). All 17 Pi event
+  (`extensions/loops/goal-activation.ts`). All 18 Pi event
   registrations (`session_start`, `agent_end`, `tool_result`, …) live
   there; per-handler gates differ deliberately (worker vs subagent
   vs foreign vs host-successor planes).
@@ -68,10 +68,11 @@ complete_goal → claim → dispatch (tier) → worker (round 1 [+ challenge]) �
   tier (full = audit + falsification round; light = single round),
   ledgers `audit_tier_decided`, spawns the worker with a hashed
   `request.json`.
-- **Worker** (`scripts/goal-auditor-worker.mjs`): runs Pi `--no-session`
-  against the brief, parses the final-line verdict (`<approved/>` /
-  `<disapproved/>`), challenges approvals in a fresh session unless
-  the tier says light. Fail-open: a failed challenge yields
+- **Worker** (`scripts/goal-auditor-worker.mjs`): runs Pi in `--mode rpc`
+  against the brief (`--no-session`, or `--session <jobDir>/session.jsonl`
+  when the `auditorInspection` setting is on), parses the final-line verdict
+  (`<approved/>` / `<disapproved/>`), challenges approvals in a fresh session
+  unless the tier says light. Fail-open: a failed challenge yields
   byte-identical round-1 output, recorded as `skipped:*`.
 - **Parent**: validates attempt/hash/revision, enforces the audit-tool
   floor and the regression shield (contract items must be cited),

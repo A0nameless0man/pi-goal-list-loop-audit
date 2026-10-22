@@ -149,6 +149,7 @@ This authority boundary applies before settings-value normalization.
 | `toolOverrides` | unset | Per-tool allow/hide/per-tool-config overrides. |
 | `contextCheckpointProjection` | `false` (off) | Per-turn `context`-hook splice of a bounded continuation checkpoint. Off (default) leaves the transcript append-only so the provider prefix-cache holds; the fresh continuation prompt still carries live state. On restores the legacy projection (busts the cache). |
 | `reviewer` | legacy | Deprecated alias for `postaudit`; migrated on load, `postaudit` wins. |
+| `fleetHealthRoots` | unset (current project) | Roots `/glla fleet` scans for project health (`["/home/dracon/Dev"]`). Relative paths resolve from the invoking project. Project-settable; not a menu row, so it is edited in the settings JSON. |
 
 ## Auditor backup selection
 

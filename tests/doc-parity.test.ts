@@ -231,3 +231,66 @@ test("docs/DESIGN.md names only identifiers that still exist in the code", () =>
     `docs/DESIGN.md names identifiers that do not exist in the code: ${missing.join(", ")}`,
   );
 });
+
+// ---- v0.39.45 (audit 2026-10-22): the docs-vs-code pass found five more
+// drifted claims. Each guard below checks the DOC against the CODE (or
+// against the other shipped doc that gives the operator the instruction),
+// so the claim cannot drift back.
+//
+//  1. docs/DESIGN.md quoted a stale slow-file count (the list holds 13).
+//  2. docs/ARCHITECTURE.md quoted a stale Pi-event count (18 registers).
+//  3. docs/ARCHITECTURE.md described the auditor worker as running Pi
+//     `--no-session`; the worker always runs `--mode rpc` and only adds
+//     `--session` when the `auditorInspection` setting is on.
+//  4. docs/UI-STATUS.md tells the operator to configure `fleetHealthRoots`
+//     in the settings JSON, but docs/SETTINGS.md — the shipped settings
+//     contract — did not document that key.
+
+test("every shipped doc quotes the current slow-file count", () => {
+  for (const file of ["docs/DESIGN.md", "docs/ARCHITECTURE.md"]) {
+    const text = read(file);
+    const claims = [...text.matchAll(/(\d+)\s+(?:evidence-timed\s+)?slow(?:est|[- ]timed)?\s+files?/g)];
+    for (const claim of claims) {
+      assert.equal(Number(claim[1]), SLOW_TEST_FILES.length,
+        `${file} quotes ${claim[1]} slow files; the runner's list holds ${SLOW_TEST_FILES.length}`);
+    }
+  }
+});
+
+test("docs/ARCHITECTURE.md quotes the number of Pi event registrations the runtime makes", () => {
+  const architecture = read("docs/ARCHITECTURE.md");
+  const claim = architecture.match(/All (\d+) Pi event/);
+  assert.ok(claim, "docs/ARCHITECTURE.md still states how many Pi events are registered");
+  const source = read("extensions/loops/goal-activation.ts");
+  const events = new Set(
+    [...source.matchAll(/pi\.on\("([a-z_]+)"/g)].map((match) => match[1]!),
+  );
+  assert.ok(events.size > 0, "the activation module registers no literal Pi events");
+  assert.equal(Number(claim[1]), events.size,
+    `docs/ARCHITECTURE.md quotes ${claim[1]} Pi event registrations; the runtime registers ${events.size}`);
+});
+
+test("docs/ARCHITECTURE.md describes the auditor worker's Pi invocation as the code runs it", () => {
+  const architecture = read("docs/ARCHITECTURE.md");
+  const worker = read("scripts/goal-auditor-worker.mjs");
+  assert.ok(worker.includes('"--mode", "rpc"'), "the worker still starts Pi in rpc mode");
+  assert.ok(
+    worker.includes('"--session", sessionPath') && worker.includes('"--no-session"'),
+    "the worker still switches between --session and --no-session",
+  );
+  assert.ok(!/runs Pi `--no-session`/.test(architecture),
+    "docs/ARCHITECTURE.md must not claim the worker always runs Pi --no-session: it always runs --mode rpc");
+  assert.ok(architecture.includes("--mode rpc"),
+    "docs/ARCHITECTURE.md must state the rpc mode the worker actually uses");
+});
+
+test("every key another shipped doc tells the operator to configure is in the settings contract", () => {
+  const status = read("docs/UI-STATUS.md");
+  const settings = read("docs/SETTINGS.md");
+  const mentioned = [...status.matchAll(/Configure `([A-Za-z][A-Za-z0-9]*)`/g)].map((match) => match[1]!);
+  assert.ok(mentioned.length > 0, "the fleet section still names the keys it asks the operator to configure");
+  for (const key of mentioned) {
+    assert.ok(settings.includes(`\`${key}\``),
+      `docs/UI-STATUS.md tells the operator to configure ${key}, but docs/SETTINGS.md does not document it`);
+  }
+});

@@ -203,6 +203,9 @@ architectural decisions that changed the SHAPE of the system:
 > Historical rollout note: this section records the older reason-aware
 > recovery implementation. The active policy is the v0.34.142 addendum below;
 > quota/rate-limit wording no longer selects fallback or retry timing.
+> `mainModelFallbackOnRateLimit` was RETIRED with that addendum: the key is
+> dropped when a settings file is read, so a value in an operator's file has
+> no effect and is reported as an ignored setting rather than honoured.
 
 - **Global recovery policy**: `mainModelFallbacks`,
   `mainModelFallbackOnRateLimit`, `mainModelRetryMinutes`, and
@@ -788,7 +791,7 @@ shapes (details in CHANGELOG.md; each is pinned by tests):
 ## Addendum v0.38.82 (fast/slow suite split)
 
 - **The everyday loop is fast; the gate is whole.** `npm test` excludes
-  the 12 evidence-timed slow files via repeated bun
+  the 13 evidence-timed slow files via repeated bun
   `--path-ignore-patterns` (comma-separated does not union); `test:slow`
   runs them; `test:all` and `release:check` still run everything.
   Explicit test paths drop the exclusion — naming a file means running
