@@ -1062,3 +1062,44 @@ test("v0.38.104: the auditor model path carries no dead settings placeholders", 
   const bindings = [...src.matchAll(/^\s*const (\w+) = undefined;$/gm)].map((m) => m[1]);
   assert.deepEqual(bindings, [], `dead undefined bindings: ${bindings.join(", ")}`);
 });
+
+// v0.39.45 (audit 2026-10-22) — "session — inherit" for the auditor dial
+// must clear the dial in EVERY layer. The editor wrote to one scope, so a
+// pin in the other layer survived: the menu announced session inheritance
+// while the runtime still applied the other layer's dial.
+test("auditor dial inherit clears the pin in every layer, not only the owning one", async () => {
+  try {
+    const cwd = tmpCwd();
+    const session = { provider: "live", id: "current", reasoning: true, thinkingLevelMap: { max: "max" } };
+    const models = [session, { provider: "audit", id: "project", reasoning: true, thinkingLevelMap: { max: "max" } }];
+    const ctx = Object.assign(makeMockCtx(cwd), {
+      model: session, thinkingLevel: "max",
+      modelRegistry: {
+        getAvailable: () => models,
+        hasConfiguredAuth: () => true,
+        find: (provider: string, id: string) => models.find(model => model.provider === provider && model.id === id),
+      },
+    });
+    const hostCtx = ctx as unknown as ExtensionContext;
+    fs.mkdirSync(path.dirname(GLOBAL_FILE), { recursive: true });
+    fs.writeFileSync(GLOBAL_FILE, JSON.stringify({ auditorModel: "audit/global", auditorThinkingLevel: "low" }, null, 2));
+    // The project owns the MODEL; the global owns the DIAL.
+    fs.mkdirSync(path.dirname(projectSettingsPath(cwd)), { recursive: true });
+    fs.writeFileSync(projectSettingsPath(cwd), JSON.stringify({ auditorModel: "audit/project" }));
+    ctx.ui.customStubMode = true;
+    ctx.ui.customImpl = async () => ({ kind: "model", ref: "audit/project" });
+    ctx.ui.selectImpl = async () => "session — inherit current session level (default)";
+    await handleSettingChoice("auditorModel", hostCtx);
+    assert.equal(loadSettings(cwd).auditorThinkingLevel, undefined,
+      "the effective dial is inherited, not the other layer's pin");
+    assert.equal(readGlobal().auditorThinkingLevel, undefined,
+      "the global layer's dial is cleared too");
+    const resolved = resolveAuditorModel(hostCtx, loadSettings(cwd).auditorModel, loadSettings(cwd).auditorModelFallbacks);
+    assert.equal(resolveCandidateThinkingLevel(resolved, {
+      auditorThinkingLevel: loadSettings(cwd).auditorThinkingLevel,
+      sessionThinkingLevel: ctx.thinkingLevel,
+    }), "max", "the auditor runs at the session dial");
+  } finally {
+    restoreGlobal();
+  }
+});

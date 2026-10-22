@@ -243,6 +243,27 @@ function saveSettings(scope: "global" | "project", ctx: ExtensionContext, patch:
   if (Object.keys(globalPatch).length > 0) persistSettings("global", cwd, globalPatch as Partial<Settings>);
 }
 
+/** v0.39.45 (audit 2026-10-22): "session — inherit" must clear the auditor
+ * dial in EVERY layer that can hold one.
+ *
+ * saveSettings routes a key to the layer that currently OWNS it, so
+ * clearing only the owner revealed the OTHER layer's dial: the menu said
+ * "thinking inherited from the session" while the runtime still applied
+ * the other layer's pin. Only layers that actually hold the key are
+ * touched, so no empty settings file is created. */
+function clearAuditorThinkingEverywhere(ctx: ExtensionContext): void {
+  const globalLayer = readSettingsFile(globalSettingsPath());
+  const projectLayer = readSettingsFile(projectSettingsPath(ctx.cwd));
+  const holds = (layer: Record<string, unknown>): boolean => "auditorThinkingLevel" in layer;
+  if (!holds(globalLayer) && !holds(projectLayer)) return;
+  const probe = (globalThis as any).warnIfStaleAtEntry as ((ctx: ExtensionContext, what: string) => boolean) | undefined;
+  if (typeof probe === "function" && probe(ctx, "settings save")) {
+    throw new Error("settings save refused: the session handle went stale during the edit (a replacement session owns the state root)");
+  }
+  if (holds(globalLayer)) persistSettings("global", ctx.cwd, { auditorThinkingLevel: undefined });
+  if (holds(projectLayer)) persistSettings("project", ctx.cwd, { auditorThinkingLevel: undefined });
+}
+
 /** Parse the unsigned integer syntax used by the numeric settings editors.
  * Number.parseInt("15minutes", 10) silently accepted malformed input; a
  * settings editor must either save the complete value or reject it. */
@@ -563,7 +584,9 @@ async function promptAuditorThinking(
     // Audit 2026-09-07 (MEDIUM, finding 387): a non-reasoning model
     // must not inherit a dead override — clear it so the next
     // reasoning model starts from session inheritance, not a stale pin.
-    if (curThinking !== undefined) saveSettings("global", ctx, { auditorThinkingLevel: undefined });
+    // v0.39.45 (audit 2026-10-22): the stale pin is cleared in EVERY
+    // layer, not only the one that owns it.
+    if (curThinking !== undefined) clearAuditorThinkingEverywhere(ctx);
     return { kind: "non-reasoning", clearedStale: curThinking !== undefined };
   }
   // Audit 2026-09-07 (MEDIUM, finding 386): parity with the drafter
@@ -578,7 +601,7 @@ async function promptAuditorThinking(
     ),
   );
   const inheritThinking = t?.startsWith("session —") ?? false;
-  if (inheritThinking) saveSettings("global", ctx, { auditorThinkingLevel: undefined });
+  if (inheritThinking) clearAuditorThinkingEverywhere(ctx);
   else if (t) saveSettings("global", ctx, { auditorThinkingLevel: t.split(" ")[0] as Settings["auditorThinkingLevel"] });
   return { kind: "set", suffix: inheritThinking ? " · thinking inherited from the session" : t ? ` · thinking ${t.split(" ")[0]}` : "" };
 }
@@ -1799,8 +1822,13 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
         ),
       );
       const inheritThinking = t?.startsWith("session —") ?? false;
-      if (inheritThinking) saveAuditor({ auditorThinkingLevel: undefined });
-      else if (t) saveAuditor({ auditorThinkingLevel: t.split(" ")[0] as Settings["auditorThinkingLevel"] });
+      if (inheritThinking) {
+        // v0.39.45 (audit 2026-10-22): "inherit" has to clear the dial in
+        // EVERY layer. saveAuditor writes to ONE scope, so the other
+        // layer's pin survived and the runtime kept applying it while the
+        // menu announced session inheritance.
+        clearAuditorThinkingEverywhere(ctx);
+      } else if (t) saveAuditor({ auditorThinkingLevel: t.split(" ")[0] as Settings["auditorThinkingLevel"] });
       ctx.ui.notify(`Auditor model: ${pick.ref}${inheritThinking ? " · thinking inherited from the session" : t ? ` · thinking ${t.split(" ")[0]}` : ""}`, "info");
       return;
     }
