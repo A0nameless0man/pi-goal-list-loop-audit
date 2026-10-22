@@ -22,7 +22,8 @@ import * as assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { readState } from "../extensions/goal-loop-core.js";
+import { readState, readQueueFromDisk, writeQueueItemFile, queueItemPath, type ListItem, type Goal } from "../extensions/goal-loop-core.js";
+import { assessSuspiciousObjective, buildRepairTaskObjective } from "../extensions/faulty-objective-recovery.js";
 import { state, replaceState, persistStateLine } from "../extensions/goal-state.js";
 import { MockPi, makeMockCtx, tmpCwd, seedState } from "./harness/mock-pi.js";
 import activate from "../extensions/loops/goal.js";
@@ -138,3 +139,40 @@ test("a complete state snapshot replaces the projection instead of merging into 
   assert.equal(loaded.goal, null, "the newest complete snapshot owns the goal");
   assert.equal(loaded.lastModelRef, undefined, "a field the newest snapshot dropped does not resurrect");
 });
+
+for (const existingRepair of [false, true]) {
+  test(`refused repair promotion rolls back recoverable sidecars (${existingRepair ? "existing" : "new"})`, () => {
+    const cwd = tmpCwd();
+    const ctx = makeMockCtx(cwd);
+    const item: ListItem = { id: "suspicious-item", objective: "Evidence: all tests passed", addedAt: new Date().toISOString(), queueOrder: 1 };
+    const assessment = assessSuspiciousObjective(item.objective);
+    assert.equal(assessment.suspicious, true);
+    const repair: ListItem = {
+      id: "existing-repair", addedAt: item.addedAt, queueOrder: 5,
+      objective: buildRepairTaskObjective({ policy: "list", objective: item.objective } as Goal, assessment),
+    };
+    const items = existingRepair ? [item, repair] : [item];
+    seedState(cwd, { goal: null, list: items });
+    replaceState({ goal: null, list: items });
+    persistStateLine(cwd, state);
+    for (const queued of items) assert.equal(writeQueueItemFile(cwd, queued).failed, undefined);
+    const originalSidecar = existingRepair ? fs.readFileSync(queueItemPath(cwd, repair.id), "utf8") : undefined;
+    const promote = (globalThis as unknown as {
+      queueRepairAheadOfListItem: (ctx: unknown, item: ListItem, assessment: ReturnType<typeof assessSuspiciousObjective>) => boolean;
+    }).queueRepairAheadOfListItem;
+    const restore = breakStateLedger(cwd);
+    try {
+      assert.equal(promote(ctx, item, assessment), false, "refusal propagates to the activation caller");
+    } finally { restore(); }
+    assert.deepEqual(state.list, items, "RAM order and repair metadata roll back");
+    assert.deepEqual(readState(cwd).list?.map(entry => entry.id), items.map(entry => entry.id), "snapshot remains unchanged");
+    const recovered = readQueueFromDisk(cwd);
+    assert.deepEqual(recovered.map(entry => entry.id).sort(), items.map(entry => entry.id).sort(), "no refused repair resurrects from a sidecar");
+    if (existingRepair) assert.equal(fs.readFileSync(queueItemPath(cwd, repair.id), "utf8"), originalSidecar, "old sidecar metadata and order are restored");
+    // Successful retry must still promote and persist exactly one repair.
+    assert.equal(promote(ctx, item, assessment), true);
+    assert.equal(state.list?.length, 2);
+    assert.equal(state.list?.[0]?.objective, repair.objective);
+    assert.equal(readQueueFromDisk(cwd).length, 2);
+  });
+}

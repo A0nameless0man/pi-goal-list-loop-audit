@@ -1067,6 +1067,28 @@ test("v0.38.104: the auditor model path carries no dead settings placeholders", 
 // must clear the dial in EVERY layer. The editor wrote to one scope, so a
 // pin in the other layer survived: the menu announced session inheritance
 // while the runtime still applied the other layer's dial.
+test("subagent thinking inherit clears both role pins and preserves other roles", async () => {
+  try {
+    const cwd = tmpCwd();
+    const ctx = makeMockCtx(cwd);
+    fs.mkdirSync(path.dirname(GLOBAL_FILE), { recursive: true });
+    fs.writeFileSync(GLOBAL_FILE, JSON.stringify({ subagentThinkingOverrides: { scout: "high", reviewer: "low" } }));
+    fs.mkdirSync(path.dirname(projectSettingsPath(cwd)), { recursive: true });
+    fs.writeFileSync(projectSettingsPath(cwd), JSON.stringify({ subagentThinkingOverrides: { scout: "low", worker: "medium" } }));
+    ctx.ui.selectImpl = async () => "session — inherit current session level (default)";
+    await handleSettingChoice("subagentThinkingOverrides.scout", ctx as unknown as ExtensionContext);
+    assert.equal(loadSettings(cwd).subagentThinkingOverrides?.scout, undefined, "one inherit choice must not expose the global pin");
+    assert.deepEqual(readGlobal().subagentThinkingOverrides, { reviewer: "low" });
+    assert.deepEqual(JSON.parse(fs.readFileSync(projectSettingsPath(cwd), "utf8")).subagentThinkingOverrides, { worker: "medium" });
+    ctx.ui.selectImpl = async () => "high — ";
+    await handleSettingChoice("subagentThinkingOverrides.worker", ctx as unknown as ExtensionContext);
+    assert.equal(loadSettings(cwd).subagentThinkingOverrides?.worker, "high", "concrete edits still route to the owning layer");
+    assert.deepEqual(readGlobal().subagentThinkingOverrides, { reviewer: "low" });
+  } finally {
+    restoreGlobal();
+  }
+});
+
 test("auditor dial inherit clears the pin in every layer, not only the owning one", async () => {
   try {
     const cwd = tmpCwd();

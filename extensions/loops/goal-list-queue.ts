@@ -787,7 +787,7 @@ function groupOpenChildren(groupId: string): number {
 /** Keep the malformed queue item in place and put a safe, actionable repair
  * item immediately ahead of it. The original is not silently dropped or
  * archived merely because activation was attempted. */
-function queueRepairAheadOfListItem(ctx: ExtensionContext, item: ListItem, assessment: ReturnType<typeof assessSuspiciousObjective>): void {
+function queueRepairAheadOfListItem(ctx: ExtensionContext, item: ListItem, assessment: ReturnType<typeof assessSuspiciousObjective>): boolean {
   const repairObjective = buildRepairTaskObjective({ policy: "list", objective: item.objective } as Goal, assessment);
   const target: ObjectiveRepairTarget = {
     id: item.id,
@@ -813,7 +813,7 @@ function queueRepairAheadOfListItem(ctx: ExtensionContext, item: ListItem, asses
     const written = writeQueueItemFile(ctx.cwd, repaired, { replace: true });
     if (written.failed) {
       ctx.ui.notify("Could not durably promote the repair; the original queued order remains unchanged.", "warning");
-      return;
+      return false;
     }
     const rest = current.filter((queued) => queued.id !== repaired.id);
     replaceState({ ...state, list: [repaired, ...rest] });
@@ -823,12 +823,15 @@ function queueRepairAheadOfListItem(ctx: ExtensionContext, item: ListItem, asses
     // restore the RAM order and record the unpersisted promotion instead.
     if (persistState(ctx) !== true) {
       replaceState({ ...state, list: current });
-      appendLedger(ctx.cwd, "faulty_objective_repair_recovery_unpersisted", { goalId: repaired.id, targetId: item.id, source: "list-activation", queueOrder: repaired.queueOrder });
-      ctx.ui.notify("Could not persist the repair promotion durably — the queued order is unchanged. Fix .pi-glla storage and retry.", "warning");
-      return;
+      const rolledBack = !writeQueueItemFile(ctx.cwd, existing, { replace: true }).failed;
+      appendLedger(ctx.cwd, "faulty_objective_repair_recovery_unpersisted", { goalId: repaired.id, targetId: item.id, source: "list-activation", queueOrder: repaired.queueOrder, sidecarRolledBack: rolledBack });
+      ctx.ui.notify(rolledBack
+        ? "Could not persist the repair promotion durably — the queued order is unchanged. Fix .pi-glla storage and retry."
+        : "Could not persist or roll back the repair sidecar — activation stopped. Repair .pi-glla storage before retrying.", "warning");
+      return false;
     }
     appendLedger(ctx.cwd, "faulty_objective_repair_target_recovered", { goalId: repaired.id, targetId: item.id, source: "list-activation", queueOrder: repaired.queueOrder });
-    return;
+    return true;
   }
 
   // Generate the id and final head order BEFORE the first sidecar write. The
@@ -842,7 +845,7 @@ function queueRepairAheadOfListItem(ctx: ExtensionContext, item: ListItem, asses
   const written = writeQueueItemFile(ctx.cwd, repair);
   if (written.failed) {
     ctx.ui.notify("Could not persist the repair item; the original queued item remains unchanged.", "warning");
-    return;
+    return false;
   }
   replaceState({ ...state, list: [repair, ...current] });
   // v0.39.45 (audit 2026-10-22): same durable-projection contract as the
@@ -850,11 +853,15 @@ function queueRepairAheadOfListItem(ctx: ExtensionContext, item: ListItem, asses
   // as one.
   if (persistState(ctx) !== true) {
     replaceState({ ...state, list: current });
-    appendLedger(ctx.cwd, "faulty_objective_repair_promoted_unpersisted", { goalId: repair.id, targetId: item.id, position: 1, source: "list-activation", reasons: assessment.reasons, queueOrder: repair.queueOrder });
-    ctx.ui.notify("Could not persist the repair promotion durably — the queued order is unchanged. Fix .pi-glla storage and retry.", "warning");
-    return;
+    const rolledBack = !deleteQueueItemFileResult(ctx.cwd, repair.id).failed;
+    appendLedger(ctx.cwd, "faulty_objective_repair_promoted_unpersisted", { goalId: repair.id, targetId: item.id, position: 1, source: "list-activation", reasons: assessment.reasons, queueOrder: repair.queueOrder, sidecarRolledBack: rolledBack });
+    ctx.ui.notify(rolledBack
+      ? "Could not persist the repair promotion durably — the queued order is unchanged. Fix .pi-glla storage and retry."
+      : "Could not persist or remove the repair sidecar — activation stopped. Repair .pi-glla storage before retrying.", "warning");
+    return false;
   }
   appendLedger(ctx.cwd, "faulty_objective_repair_promoted", { goalId: repair.id, targetId: item.id, position: 1, source: "list-activation", reasons: assessment.reasons, queueOrder: repair.queueOrder });
+  return true;
 }
 
 function activateNextListItem(ctx: ExtensionContext, n = 1, opts?: { explicit?: boolean; displayLabel?: string; repairRetried?: boolean }): boolean {
@@ -948,7 +955,7 @@ function activateNextListItem(ctx: ExtensionContext, n = 1, opts?: { explicit?: 
         queueItemId: candidate.id,
         reasons: assessment.reasons,
       });
-      queueRepairAheadOfListItem(ctx, candidate, assessment);
+      if (!queueRepairAheadOfListItem(ctx, candidate, assessment)) return false;
       // v0.38.105 (field 2026-09-29, dracon-system): the promoted repair is
       // safe and actionable BY CONSTRUCTION (fixed imperative text) —
       // activate it now instead of idling the queue until a manual resume.
