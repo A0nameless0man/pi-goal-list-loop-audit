@@ -9,6 +9,10 @@
 
 ## have a system level / global auto accept drafts
 
+## we need a way better proposal 
+/home/dracon/Pictures/Screenshots/Screenshot_20261022_161729.png
+
+
 ##
 
 ##
