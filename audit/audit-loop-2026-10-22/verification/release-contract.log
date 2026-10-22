@@ -1,0 +1,24 @@
+bun test v1.3.14 (0d9b296a)
+
+tests/release-contract.test.ts:
+(pass) release contract: published documentation links are covered by the npm tarball [6406.41ms]
+(pass) release contract: the release gate exercises the packed artifact [0.55ms]
+(pass) release contract: packed prompts, schema, and workers ship in the dry-run list [1965.55ms]
+(pass) release contract: changed tests ride the hardened runner [2850.19ms]
+(pass) release contract: the release lane refuses an unreviewed tag and the canary never runs dispatched code with provider keys [85.46ms]
+(pass) release contract: the shipped runner's import graph resolves inside the package [1845.42ms]
+(pass) release contract: glla-delegate skill loads without diagnostics (source-tree fast tier) [13.13ms]
+(pass) release contract: docs index tracks the package version [0.13ms]
+(pass) release contract: package is discoverable as a Pi extension and skill [2271.38ms]
+(pass) release contract: README package contents claim matches the files allowlist [1369.30ms]
+(pass) release contract: first-use README guidance matches current behavior [0.76ms]
+(pass) release contract: smoke waits use durable or literal transition markers [0.30ms]
+(pass) release workflow scopes trusted-publishing OIDC to the publish job [0.14ms]
+(pass) v0.38.32: release runs never share the push-churn concurrency group [0.08ms]
+(pass) release contract: changelog has one heading for the current package version [5.76ms]
+(pass) release contract: untagged source work has an Unreleased changelog section to promote [17.42ms]
+(pass) v0.39.38: every release-check lane uploads its $TMPDIR failure diagnostics [0.39ms]
+
+ 17 pass
+ 0 fail
+Ran 17 tests across 1 file. [19.74s]
