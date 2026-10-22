@@ -1,0 +1,28 @@
+bun test v1.3.14 (0d9b296a)
+
+../../../../../dev/shm/glla-release-ladder-proof/tests/auditor-ladder-discipline.test.ts:
+93 |   assert.equal(r.model.id, "space-bunny-beta");
+94 |   assert.deepEqual(r.fallbackModels ?? [], [], "same identity must not become a duplicate attempt");
+95 |   // Identity equality does not turn an explicit pin into implicit inheritance.
+96 |   // Exercise the consumer of route provenance instead of pinning its spelling.
+97 |   const candidate = { ...r, via: "session", model: { ...r.model, reasoning: true } };
+98 |   assert.equal(resolveCandidateThinkingLevel(candidate, { auditorThinkingLevel: "low", sessionThinkingLevel: "high" }), "low");
+              ^
+AssertionError: Expected values to be strictly equal:
+
+'high' !== 'low'
+
+ generatedMessage: true,
+     actual: "high",
+   expected: "low",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /dev/shm/glla-release-ladder-proof/tests/auditor-ladder-discipline.test.ts:98:10
+      at fn (node:test:215:18)
+(fail) an explicit auditor pin to the session identity keeps its configured dial without an invented ladder [22.14ms]
+
+ 0 pass
+ 14 filtered out
+ 1 fail
+Ran 1 test across 1 file. [1.86s]

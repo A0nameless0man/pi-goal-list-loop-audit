@@ -1,0 +1,9 @@
+bun test v1.3.14 (0d9b296a)
+
+../../../../../dev/shm/glla-release-ladder-proof/tests/regression-shield.test.ts:
+(pass) mechanical checks stay async and kill descendant processes on timeout [15827.05ms]
+
+ 1 pass
+ 37 filtered out
+ 0 fail
+Ran 1 test across 1 file. [18.99s]

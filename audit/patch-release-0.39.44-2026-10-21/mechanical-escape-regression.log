@@ -1,0 +1,28 @@
+bun test v1.3.14 (0d9b296a)
+
+../../../../../dev/shm/glla-release-ladder-proof/tests/regression-shield.test.ts:
+562 |     assert.equal(result.passed, false);
+563 |     assert.match(result.output ?? "", /process tree terminated/);
+564 |     assert.equal(fs.existsSync(startedPath), true, "the descendant actually started before timeout");
+565 |     fs.writeFileSync(releasePath, "release after termination");
+566 |     await new Promise((resolve) => setTimeout(resolve, 1800));
+567 |     assert.equal(fs.existsSync(survivorPath), false, "descendants are killed with the process group");
+                 ^
+AssertionError: descendants are killed with the process group
+
+true !== false
+
+ generatedMessage: false,
+     actual: true,
+   expected: false,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /dev/shm/glla-release-ladder-proof/tests/regression-shield.test.ts:567:12
+      at processTicksAndRejections (native:7:39)
+(fail) mechanical checks stay async and kill descendant processes on timeout [15854.04ms]
+
+ 0 pass
+ 37 filtered out
+ 1 fail
+Ran 1 test across 1 file. [18.28s]

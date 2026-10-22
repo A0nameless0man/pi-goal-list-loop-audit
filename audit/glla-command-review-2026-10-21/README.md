@@ -21,9 +21,14 @@ Original failure logs remain historical and unchanged.
 | 5 — Thinking display exceeds dispatch | Repaired: menu/runtime and actual headless parity, max without xhigh, inherited thinking and non-reasoning models in `tests/settings-menu-complete.test.ts` and `tests/auditor-thinking-display.test.ts` | [Thinking parity](../thinking-display-parity-2026-10-21/README.md) |
 | 6 — Primary consumes fallback slot ten | Repaired: actual tenth selection for both roles, overflow, aliases, forbidden identities and explicit session order in `tests/designer-drafter-policy.test.ts` | [Ten slots](../ten-role-fallback-slots-2026-10-21/README.md) |
 
-Release gate results are recorded below when observed; the integrated 6/6 result alone
-is **not** a release-gate pass. No live project recovery, publication or installed-session
-reload is claimed.
+**Final patch validation:** package and both lockfile versions are **0.39.44**;
+CHANGELOG describes all six repairs. The complete `npm run release:check` terminated
+**exit 0** using isolated owned temporary storage: **4282 passed, 1 pre-existing
+env-gated skip, 0 failed**, then TypeScript, real Node/jiti state split, offline
+auditor extension, runtime inventory, package dry-run and packed install/worker RPC
+checks all succeeded. See [release evidence, failed-run dispositions and final log](../patch-release-0.39.44-2026-10-21/README.md).
+The integrated 6/6 result is separate evidence, not a substitute for that gate.
+No live project recovery, publication or installed-session reload is claimed.
 
 ## Findings (historical review)
 

@@ -1,0 +1,19 @@
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/fleet-health.test.ts:
+(pass) configured roots remain read-only and saved audits never prove running or death [562.29ms]
+(pass) fleet output never exposes saved prerequisites or private workflow text [0.83ms]
+(pass) only explicit closure after the state observation establishes dormant [3.37ms]
+(pass) malformed, missing and invalid journals cannot make a healthy report [2.42ms]
+(pass) permission-denied journals report unreadable rather than healthy [1.75ms]
+(pass) a malformed newest record cannot advertise an earlier terminal snapshot [0.49ms]
+(pass) depth, directory, project, total-byte and time budgets report incompleteness [2.02ms]
+(pass) bounded journal tails keep current workflow but disclose skipped history [1.43ms]
+(pass) symlinks, nonregular artifacts and unavailable roots are explicit skipped/unreadable observations [2.48ms]
+(pass) /glla fleet command does not dispatch work or change sibling artifacts [75.25ms]
+(pass) a saved retry is not an armed timer in fleet output [0.75ms]
+(pass) bounds raised above the safety ceiling are clamped and reported, never silently ignored [11.20ms]
+
+ 12 pass
+ 0 fail
+Ran 12 tests across 1 file. [2.41s]

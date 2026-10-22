@@ -82,4 +82,62 @@ full execution belongs to the parent, not the reviewer. The later explicit-pin
 consumer assertion is executor-reviewed and covered by the final gate, not attributed
 to that earlier static review.
 
-Final successful release evidence will be appended only after observing it.
+## Final gate repairs and verified release result
+
+Further complete runs were retained rather than relabeled:
+
+- `release-stress-and-marker-failures.log`: 4277 pass, 1 skip, 5 fail. Two
+  2101-cycle workloads exceeded their unscaled 300-second caps; unfinished async
+  fixtures then leaked assertions into the following cases. Those workloads now
+  use the same measured host deadline helper, with all 2101 cycles, durable
+  assertions, no-output watchdog and finite bounds retained. The mechanical
+  descendant could write its fixed-delay marker *before* a load-scaled kill;
+  it now records real child startup and waits for an explicit release written only
+  after cancellation completes. No production process-kill assertions were removed.
+- `release-fleet-budget-failure.log`: 4281 pass, 1 skip, 1 fail. The saved-retry
+  provenance test exhausted the production scan's 10-second total I/O deadline
+  under host scheduling pressure, so there was no status to assert. Its observation
+  clock is now fixed locally and restored in `finally`; production time limits,
+  independent fleet budget/incompleteness checks and saved-retry honesty assertions
+  remain unchanged. All 12 fleet tests pass in `fleet-focused.log`.
+
+Disposable sensitivity checks retain behavior, not incidental literals:
+
+- Explicit-pin test tolerates a model identity rename, and fails when candidate
+  provenance incorrectly becomes implicit session (`ladder-*.log`).
+- Descendant test tolerates a longer timeout and fails when the child deliberately
+  escapes the owned process group and writes after cancellation
+  (`mechanical-harmless.log`, `mechanical-escape-regression.log`). Initial disposable
+  invocations omitted Bun's explicit test budget and timed out at its 5s default;
+  those are not evidence of behavior. Retained logs are the corrected bounded runs.
+- Fresh static follow-up review found no issues in pin/dial, measured stress budget,
+  child release gating or compact-starting repaint (`review-gate-followup.md`). It
+  is static-only, not an independent command execution. The later fleet clock
+  fixture was executor-reviewed and exercised by the complete gate.
+
+**Final observed command:**
+
+```sh
+TMPDIR=<owned-executable-tmpfs-directory> timeout 10800 npm run release:check
+```
+
+**Exit 0** (`release-check-final.exit`). `release-check-final.log` records:
+
+- **4282 passed, 1 skipped, 0 failed** across 462 files (4283 tests); the sole skip
+  is the pre-existing env-gated watched-repo auto-committer integration case.
+- Full serialized test runner exited 0; TypeScript check and real Node/jiti state
+  split regression succeeded.
+- Offline auditor extension fixture registered and ran without installation side
+  effects.
+- Generated runtime inventory passed its consistency check.
+- `npm pack --dry-run` succeeded, and the isolated packed installation imported
+  0.39.44, loaded the launcher, completed the bounded worker RPC challenge, and
+  loaded the delegate skill with zero diagnostics.
+
+`tested.sha256` binds package/lock/changelog and every gate-test repair to this
+execution; all hashes were rechecked against the worktree afterward. Evidence-only
+report additions followed; no runtime/test source changed after the passing gate.
+`git diff --check` also passed. Source stays on main; there was no tag, publication,
+installed-session reload or live project recovery. Package and both lockfile version
+fields are 0.39.44, with six repair bullets and the Unreleased section retained.
+The gate is a prepared-release result, not a provider-health or live-session receipt.

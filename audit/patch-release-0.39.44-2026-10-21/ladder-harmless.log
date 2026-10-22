@@ -1,0 +1,9 @@
+bun test v1.3.14 (0d9b296a)
+
+../../../../../dev/shm/glla-release-ladder-proof/tests/auditor-ladder-discipline.test.ts:
+(pass) an explicit auditor pin to the session identity keeps its configured dial without an invented ladder [120.66ms]
+
+ 1 pass
+ 14 filtered out
+ 0 fail
+Ran 1 test across 1 file. [4.15s]
