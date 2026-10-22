@@ -1515,6 +1515,18 @@ export function newVerdictKey(): string {
   return randomBytes(32).toString("hex");
 }
 
+/** v0.39.45 (audit 2026-10-22): the verdict keys of the attempts this
+ * process launched. The key never leaves the launching process's memory and
+ * the worker's pipe, so a reader that did not launch the attempt (a
+ * crash-recovery reader in a fresh session) has no key and cannot
+ * authenticate a saved verdict — it declines and the audit re-runs. */
+const verdictKeys = new Map<string, string>();
+
+/** Test-only: forget a launch's verdict key. */
+export function __testOnlyForgetVerdictKey(attemptId: string): void {
+  verdictKeys.delete(attemptId);
+}
+
 interface AuditorProgressFile {
   /** Job directory (audit-jobs/<attemptId>) the worker is reporting from,
    * surfaced to test progress callbacks so handshake fixtures can stage
@@ -2131,6 +2143,11 @@ export function readCompletedCompletionAudit(cwd: string, goal: Goal, strictChal
     if (typeof result.verdictMac !== "string" || !/^[0-9a-f]{64}$/.test(result.verdictMac)) {
       return reject("verdict-unauthenticated");
     }
+    const savedKey = verdictKeys.get(name);
+    if (!savedKey) return reject("verdict-unauthenticated");
+    if (result.verdictMac !== verdictMacFor(result as unknown as Record<string, unknown>, savedKey)) {
+      return reject("verdict-mac");
+    }
     const validated = validateCompletedAuditorResult({
       result, goal, model: request.model, thinkingLevel: request.thinkingLevel,
       capturedRevisionToken: token, strictChallenge: (strictChallenge && request.auditTier !== "light") || request.strictChallenge === true,
@@ -2238,6 +2255,7 @@ async function runDetachedGoalCompletionAuditorInner(args: {
   // v0.39.45 (audit 2026-10-22): the per-attempt verdict key. It exists
   // only in this process's memory and in the worker's pipe.
   const verdictKey = newVerdictKey();
+  verdictKeys.set(attemptId, verdictKey);
   const logicalAttemptId = runtime.logicalAttemptId ?? attemptId;
   // v0.34.59: capture the focus revision token at dispatch. Every result
   // shape returned to the parent carries this token so the parent can

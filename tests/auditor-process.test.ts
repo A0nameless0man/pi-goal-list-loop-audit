@@ -60,11 +60,14 @@ async function atomicJson(file, value, beforePublish) {
   } catch (e) { await rm(temp, { force: true }).catch(() => {}); throw e; }
 }
 `;
+const VERDICT_HELPER = path.join(path.dirname(new URL(import.meta.url).pathname), "harness", "fake-auditor-verdict.mjs");
 const workerSource = `
 import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
+import { readVerdictKey, signVerdict } from ${JSON.stringify(VERDICT_HELPER)};
 const dir = process.argv[process.argv.indexOf("--job-dir") + 1];
 ${ATOMIC_JSON_SOURCE}
+const verdictKey = await readVerdictKey();
 const request = JSON.parse(await readFile(dir + "/request.json", "utf8"));
 const progress = {
   protocolVersion: 1, attemptId: request.attemptId, requestHash: request.requestHash,
@@ -79,7 +82,7 @@ const progress = {
   } : { recentOutput: [], toolCalls: [] }),
 };
 await atomicJson(dir + "/progress.json", progress);
-await atomicJson(dir + "/result.json", { protocolVersion: 1, attemptId: request.attemptId, requestHash: request.requestHash, ok: true, output: process.env.FAKE_AUDIT_OUTPUT || "<disapproved/>", model: request.model, thinkingLevel: request.thinkingLevel, toolCalls: process.env.FAKE_TOOL === "yes" ? [{ name: "read", argsPrefix: "{}", finishedAt: Date.now() }] : [], ...(process.env.FAKE_CHALLENGE ? { challenge: process.env.FAKE_CHALLENGE } : {}) });
+await atomicJson(dir + "/result.json", signVerdict({ protocolVersion: 1, attemptId: request.attemptId, requestHash: request.requestHash, ok: true, output: process.env.FAKE_AUDIT_OUTPUT || "<disapproved/>", model: request.model, thinkingLevel: request.thinkingLevel, toolCalls: process.env.FAKE_TOOL === "yes" ? [{ name: "read", argsPrefix: "{}", finishedAt: Date.now() }] : [], ...(process.env.FAKE_CHALLENGE ? { challenge: process.env.FAKE_CHALLENGE } : {}) }, verdictKey));
 `;
 
 const goal = {
