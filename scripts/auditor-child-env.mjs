@@ -9,7 +9,11 @@
 //    env carries host secrets, they stop here. A missing or malformed list
 //    throws fail-closed (identity error) — never degrading to full env.
 //    Tampering with the list breaks the request hash, which the worker
-//    verifies at load.
+//    verifies at load. NOTE (v0.39.45, audit 2026-10-22): that hash is a
+//    CONSISTENCY check, not an authenticity guarantee — it is unkeyed, so
+//    anything that can write the job dir can recompute it. The verdict
+//    artifact is protected separately by a per-attempt HMAC key that never
+//    leaves the parent's memory and the worker's pipe.
 // 2. GLLA_PI_BINARY must not redirect the auditor to an arbitrary
 //    executable: unset means PATH-resolved `pi`; anything else must be an
 //    absolute path to an existing file (operators needing a custom binary

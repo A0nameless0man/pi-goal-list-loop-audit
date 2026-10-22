@@ -13,7 +13,6 @@
 // field, with the key as the raw ASCII hex string.
 
 import { createHmac } from "node:crypto";
-import { createReadStream } from "node:fs";
 
 /** The same canonical JSON the parent's stableJson produces. */
 export function stableJson(value) {
@@ -25,9 +24,13 @@ export function stableJson(value) {
 /** Read the per-attempt verdict key the parent wrote to fd 3. Absent key
  * (a worker spawned outside the parent) leaves the result unsigned. */
 export async function readVerdictKey() {
+  // Only when the parent announced the channel (the same signal the real
+  // worker uses) — a worker started by anything else must not block on an
+  // inherited stdin.
+  if (process.env.GLLA_AUDITOR_VERDICT_KEY !== "1") return undefined;
   try {
     const chunks = [];
-    for await (const chunk of createReadStream(null, { fd: 3 })) chunks.push(chunk);
+    for await (const chunk of process.stdin) chunks.push(chunk);
     const key = Buffer.concat(chunks).toString("utf8").trim();
     return key.length >= 32 ? key : undefined;
   } catch {

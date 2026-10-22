@@ -1293,8 +1293,10 @@ import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { scaledBudgetMs } from ${JSON.stringify(CONTENTION_MODULE)};
+import { readVerdictKey, signVerdict } from ${JSON.stringify(VERDICT_HELPER)};
 ${ATOMIC_JSON_SOURCE}
 const dir = process.argv[process.argv.indexOf("--job-dir") + 1];
+const verdictKey = await readVerdictKey();
 const request = JSON.parse(await readFile(dir + "/request.json", "utf8"));
 // Stage a complete result without exposing it. Publish the open granted
 // tool atomically, then wait for parent observation before the final rename.
@@ -1309,7 +1311,7 @@ const stagedProgress = {
   recentOutput: [], toolCalls: [], currentTool: "bash", currentToolArgs: "{}",
   currentToolStartedAt: Date.now() - 10_000, currentToolTimeoutMs: 600_000,
 };
-await writeFile(dir + "/result.json.tmp", JSON.stringify(stagedResult));
+await writeFile(dir + "/result.json.tmp", JSON.stringify(signVerdict(stagedResult, verdictKey)));
 await writeFile(dir + "/progress.json", JSON.stringify(stagedProgress));
 const deadline = Date.now() + scaledBudgetMs(5000);
 while (!existsSync(${JSON.stringify(releasePath)})) {

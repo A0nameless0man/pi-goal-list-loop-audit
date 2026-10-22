@@ -10,10 +10,10 @@
 import { spawn } from "node:child_process";
 import { createHash, createHmac } from "node:crypto";
 import { lstat, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { createReadStream } from "node:fs";
 import { constants as fsConstants, readdirSync, readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
+import os from "node:os";
 import { buildAuditorPiSpawnSpec, renameWithWindowsRetry } from "./goal-auditor-launch.mjs";
 import { isAuditorAccountFailure } from "./auditor-provider-failure.mjs";
 import { accumulateStderrDiagnostic } from "./auditor-stderr-diagnostic.mjs";
@@ -139,10 +139,12 @@ function hashRequest(request) {
  * which runs with bash inside the audited project, cannot read it. The
  * worker reads it once and drops it. */
 async function readVerdictKey() {
-  if (typeof process.stdin === "undefined" && !process.env) return undefined;
+  // Only when the parent announced the channel. A worker started by
+  // anything else must not block on an inherited stdin.
+  if (process.env.GLLA_AUDITOR_VERDICT_KEY !== "1") return undefined;
   try {
     const chunks = [];
-    for await (const chunk of createReadStream(null, { fd: 3 })) chunks.push(chunk);
+    for await (const chunk of process.stdin) chunks.push(chunk);
     const key = Buffer.concat(chunks).toString("utf8").trim();
     return key.length >= 32 ? key : undefined;
   } catch {
@@ -287,9 +289,11 @@ function identity(request, attemptId) {
   // v0.36.0: optional extension allowlist. Specs reach `pi --extension`
   // only through the loadable-path fence (scripts/auditor-extension-specs.mjs):
   // the shape check below rejects structural corruption loudly, while
-  // scheme/flag/relative/nonexistent entries drop fail-closed at spawn so a
-  // tampered job dir can only narrow the auditor (fully isolated), never
-  // widen it into installs, fetches, or extra CLI surface.
+  // scheme/flag/relative/nonexistent entries drop fail-closed at spawn, and
+  // since v0.39.45 a spec must also live inside the operator's own trees
+  // (the audited project or the pi agent dir) — so a tampered job dir can
+  // only reach the operator's own extensions, never widen the auditor into
+  // installs, fetches, foreign code, or extra CLI surface.
   if (request.allowedExtensions !== undefined) {
     if (!Array.isArray(request.allowedExtensions)) throw new Error("auditor request allowedExtensions must be an array");
     if (request.allowedExtensions.length > 32) throw new Error("auditor request allowedExtensions is too large");
@@ -845,7 +849,13 @@ async function main() {
     // disabled: --tools above remains the auditor's only tool surface, so
     // allow-listed extensions effectively contribute model providers.
     // v0.39.38: never pass job-dir specs verbatim — see the fence module.
-    const { ok: loadableExtensions, dropped: droppedExtensions } = filterLoadableExtensionSpecs(request.allowedExtensions);
+    // v0.39.45 (audit 2026-10-22): the fence keeps only specs inside the
+    // operator's own trees — the audited project and the pi agent dir. A
+    // tampered job dir can no longer name an extension file anywhere on the
+    // host; the auditor either loads the operator's own extension or runs
+    // fully isolated.
+    const extensionRoots = [request.cwd, path.join(os.homedir(), ".pi", "agent")];
+    const { ok: loadableExtensions, dropped: droppedExtensions } = filterLoadableExtensionSpecs(request.allowedExtensions, undefined, extensionRoots);
     if (droppedExtensions > 0) {
       process.stderr.write(`goal-auditor-worker: dropped ${droppedExtensions} unloadable allowedExtension spec(s); auditor runs narrowed.\n`);
     }

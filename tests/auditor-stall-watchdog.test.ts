@@ -35,6 +35,7 @@ import {
   type AuditorStalledInfo,
 } from "../extensions/goal-loop-auditor-process.ts";
 import { scaledBudgetMs } from "../scripts/host-contention.mjs";
+const VERDICT_HELPER = path.join(path.dirname(new URL(import.meta.url).pathname), "harness", "fake-auditor-verdict.mjs");
 
 /** The scenario budgets below are the PRODUCT's own timing knobs, and the
  * detached child has to boot, be observed and do its work inside them. The
@@ -268,7 +269,9 @@ test("progress: a live auditor outlives the legacy wall metadata and settles on 
   const worker = path.join(dir, "progress-worker.mjs");
   await writeFile(worker, `
 import { readFile, writeFile } from "node:fs/promises";
+import { readVerdictKey, signVerdict } from ${JSON.stringify(VERDICT_HELPER)};
 const dir = process.argv[process.argv.indexOf("--job-dir") + 1];
+const verdictKey = await readVerdictKey();
 const request = JSON.parse(await readFile(dir + "/request.json", "utf8"));
 const progressPath = dir + "/progress.json";
 const resultPath = dir + "/result.json";
@@ -282,12 +285,12 @@ const publish = async () => {
   }));
   if (tick >= 12) {
     clearInterval(timer);
-    await writeFile(resultPath, JSON.stringify({
+    await writeFile(resultPath, JSON.stringify(signVerdict({
       protocolVersion: 1, attemptId: request.attemptId, requestHash: request.requestHash,
       ok: true, output: "<evidence>live progress</evidence>\\n<approved/>",
       model: request.model, thinkingLevel: request.thinkingLevel,
       toolCalls: [{ name: "read", argsPrefix: "{}", finishedAt: Date.now() }],
-    }));
+    }, verdictKey)));
   }
 };
 const timer = setInterval(() => { void publish(); }, 20);
@@ -404,7 +407,9 @@ test("stall: a silent-past-bound attempt fails fast WITH its cost record (contro
   const worker = path.join(dir, "costed-then-silent-worker.mjs");
   await writeFile(worker, `
 import { readFile, writeFile } from "node:fs/promises";
+import { readVerdictKey, signVerdict } from ${JSON.stringify(VERDICT_HELPER)};
 const dir = process.argv[process.argv.indexOf("--job-dir") + 1];
+const verdictKey = await readVerdictKey();
 const request = JSON.parse(await readFile(dir + "/request.json", "utf8"));
 const finished = Date.now();
 await writeFile(dir + "/progress.json", JSON.stringify({
@@ -479,7 +484,9 @@ test("stall: a worker-reported brake is reclassified with the same evidence", { 
   const worker = path.join(dir, "self-braked-worker.mjs");
   await writeFile(worker, `
 import { readFile, writeFile } from "node:fs/promises";
+import { readVerdictKey, signVerdict } from ${JSON.stringify(VERDICT_HELPER)};
 const dir = process.argv[process.argv.indexOf("--job-dir") + 1];
+const verdictKey = await readVerdictKey();
 const request = JSON.parse(await readFile(dir + "/request.json", "utf8"));
 const stamp = Date.now();
 await writeFile(dir + "/progress.json", JSON.stringify({
@@ -487,12 +494,12 @@ await writeFile(dir + "/progress.json", JSON.stringify({
   phase: "running", elapsedMs: 600_000, promptBytes: 98_765, lastActivityAt: stamp,
   recentOutput: [], toolCalls: [{ name: "bash", argsPrefix: "{\\"command\\":\\"bun test\\"}", finishedAt: stamp }],
 }));
-await writeFile(dir + "/result.json", JSON.stringify({
+await writeFile(dir + "/result.json", JSON.stringify(signVerdict({
   protocolVersion: 1, attemptId: request.attemptId, requestHash: request.requestHash,
   ok: false, output: "", model: request.model, thinkingLevel: request.thinkingLevel,
   error: "Auditor stalled — no session activity for 10m while no auditor tool was running, so it was aborted.",
   toolCalls: [],
-}));
+}, verdictKey)));
 setInterval(() => {}, 1_000);
 `);
   const stalled: AuditorStalledInfo[] = [];
@@ -544,6 +551,8 @@ test("stall: an open in-budget tool is not silence — the no-progress bound spa
   const worker = path.join(dir, "long-tool-worker.mjs");
   await writeFile(worker, `
 import { readFile, writeFile, rename } from "node:fs/promises";
+import { readVerdictKey, signVerdict } from ${JSON.stringify(VERDICT_HELPER)};
+const verdictKey = await readVerdictKey();
 const dir = process.argv[process.argv.indexOf("--job-dir") + 1];
 const request = JSON.parse(await readFile(dir + "/request.json", "utf8"));
 const openedAt = Date.now();
@@ -567,12 +576,12 @@ async function beat() {
   }));
   await rename(dir + "/progress.tmp", dir + "/progress.json");
   if (tick >= 6) {
-    await writeFile(dir + "/result.json", JSON.stringify({
+    await writeFile(dir + "/result.json", JSON.stringify(signVerdict({
       protocolVersion: 1, attemptId: request.attemptId, requestHash: request.requestHash,
       ok: true, output: "<evidence>long suite finished</evidence>\\n<approved/>",
       model: request.model, thinkingLevel: request.thinkingLevel,
       toolCalls: [{ name: "read", argsPrefix: "{}", finishedAt: Date.now() }],
-    }));
+    }, verdictKey)));
     return;
   }
   // Serialized recursion: overlapping ticks would race on progress.tmp and
@@ -646,6 +655,8 @@ test("v0.38.99: an over-budget tool is NOT fatal — the worker cancels it, resu
   const worker = path.join(dir, "cancel-continue-worker.mjs");
   await writeFile(worker, `
 import { readFile, writeFile, rename } from "node:fs/promises";
+import { readVerdictKey, signVerdict } from ${JSON.stringify(VERDICT_HELPER)};
+const verdictKey = await readVerdictKey();
 const dir = process.argv[process.argv.indexOf("--job-dir") + 1];
 const request = JSON.parse(await readFile(dir + "/request.json", "utf8"));
 const openedAt = Date.now() - 5_000; // already past the 800ms budget
@@ -668,14 +679,14 @@ setTimeout(async () => {
     verificationIncomplete: true,
   }));
   await rename(dir + "/progress.tmp", dir + "/progress.json");
-  await writeFile(dir + "/result.json", JSON.stringify({
+  await writeFile(dir + "/result.json", JSON.stringify(signVerdict({
     protocolVersion: 1, attemptId: request.attemptId, requestHash: request.requestHash,
     ok: true, output: "<evidence>suite result unknown; re-ran one targeted test</evidence>\\n<disapproved/>",
     model: request.model, thinkingLevel: request.thinkingLevel,
     toolCalls: [{ name: "bash", argsPrefix: "{\\"command\\":\\"bun test src/x\\"}", finishedAt: Date.now() }],
     verificationIncomplete: true,
     cancelledToolCalls: [{ name: "bash", argsPrefix: "{\\"command\\":\\"bun test\\"}", budgetMs: 800 }],
-  }));
+  }, verdictKey)));
   process.exit(0);
 }, 2_500);
 setInterval(() => {}, 1_000);
@@ -719,7 +730,9 @@ test("v0.38.99 approval guard: an approving verdict from a verification-incomple
   const worker = path.join(dir, "approve-with-cancelled-tool.mjs");
   await writeFile(worker, `
 import { readFile, writeFile } from "node:fs/promises";
+import { readVerdictKey, signVerdict } from ${JSON.stringify(VERDICT_HELPER)};
 const dir = process.argv[process.argv.indexOf("--job-dir") + 1];
+const verdictKey = await readVerdictKey();
 const request = JSON.parse(await readFile(dir + "/request.json", "utf8"));
 const openedAt = Date.now() - 5_000;
 await writeFile(dir + "/progress.json", JSON.stringify({
@@ -730,14 +743,14 @@ await writeFile(dir + "/progress.json", JSON.stringify({
   recentOutput: [], toolCalls: [],
 }));
 setTimeout(async () => {
-  await writeFile(dir + "/result.json", JSON.stringify({
+  await writeFile(dir + "/result.json", JSON.stringify(signVerdict({
     protocolVersion: 1, attemptId: request.attemptId, requestHash: request.requestHash,
     ok: true, output: "<evidence>looks fine to me</evidence>\\n<approved/>",
     model: request.model, thinkingLevel: request.thinkingLevel,
     toolCalls: [{ name: "read", argsPrefix: "{}", finishedAt: Date.now() }],
     verificationIncomplete: true,
     cancelledToolCalls: [{ name: "bash", argsPrefix: "{\\"command\\":\\"bun test\\"}", budgetMs: 800 }],
-  }));
+  }, verdictKey)));
   process.exit(0);
 }, 1_500);
 setInterval(() => {}, 1_000);
@@ -780,7 +793,9 @@ test("v0.38.99: a genuinely wedged tool still fails fast once the grace expires"
   const worker = path.join(dir, "wedged-tool-worker.mjs");
   await writeFile(worker, `
 import { readFile, writeFile } from "node:fs/promises";
+import { readVerdictKey, signVerdict } from ${JSON.stringify(VERDICT_HELPER)};
 const dir = process.argv[process.argv.indexOf("--job-dir") + 1];
+const verdictKey = await readVerdictKey();
 const request = JSON.parse(await readFile(dir + "/request.json", "utf8"));
 const openedAt = Date.now() - 5_000;
 await writeFile(dir + "/progress.json", JSON.stringify({

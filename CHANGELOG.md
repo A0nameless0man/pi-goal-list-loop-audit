@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Auditor verdict authentication and fence repair (audit 2026-10-22)
+
+- The detached auditor's verdict artifact is now AUTHENTICATED. The parent
+  generates a per-attempt key, hands it to the worker over the worker's stdin
+  pipe (never argv, never an env var, never a file), and the worker signs the
+  result with it. A result that does not authenticate is ignored — the attempt
+  keeps waiting for the worker's signed result — and the rejection is
+  journalled once as `auditor_result_unauthenticated`. The request hash was a
+  consistency check only (it is unkeyed, so anything that can write the job dir
+  could recompute it); the auditor child runs with bash inside the audited
+  project, so a forged `result.json` could previously end an audit.
+- The auditor extension fence now keeps only specs inside the operator's own
+  trees (the audited project and the pi agent dir). It used to keep any
+  absolute existing path, so a tampered job dir could name an extension file
+  anywhere on the host. A fence with no roots keeps nothing (fail-closed).
+- The per-tool budget description in `docs/DESIGN.md` now matches the code: the
+  effective deadline is the greater of the configured `auditorToolTimeoutMs`
+  base and the timeout the call itself declared, bounded by the shared
+  ceiling. The base is a floor, not a ceiling.
+
 ## 0.39.44 — session inheritance and role fallback repairs (2026-10-21)
 
 - Drafter recovery tries the permitted original session pair after configured

@@ -131,7 +131,13 @@ architectural decisions that changed the SHAPE of the system:
 - **Auditor liveness has event-derived layers**: no-event inactivity aborts
   after 10m only when no auditor tool is active; a live verification tool may
   finish, and the complete isolated run has no unconditional wall-clock cap.
-  Each auditor tool also has an independent five-minute ceiling. These
+  Each auditor tool carries its own budget: the effective per-tool deadline
+  is the greater of the configured `auditorToolTimeoutMs` base and the
+  timeout the tool call itself declared, bounded by the shared 6h ceiling
+  (`extensions/goal-loop-auditor-process.ts` `effectiveToolTimeoutMs`, and
+  the worker's mirror). The base is therefore a FLOOR, not a ceiling — a
+  long verification command that declared its own budget is not cut off at
+  the base — and raising the base is what shortens every tool's budget. These
   watchdog outcomes are infrastructure failures, never verdicts, and the
   stored claim remains retryable.
 
@@ -170,11 +176,12 @@ architectural decisions that changed the SHAPE of the system:
   Worker snapshots retain the verification round independently of the live
   thinking/tool/report phase, so the second audit pass remains visible.
 - **Event-derived worker liveness**: no session event for 10 minutes while
-  no auditor tool is active aborts the worker; a five-minute per-tool ceiling
-  remains armed while a tool is open. There is no unconditional wall-clock
-  bound, so active output/tool progress may continue indefinitely. Watchdog
-  outcomes are infrastructure failures, never verdicts, and the claim remains
-  retryable.
+  no auditor tool is active aborts the worker; the per-tool budget stays
+  armed while a tool is open (the configured base, raised by the timeout the
+  call itself declared, bounded by the shared ceiling). There is no
+  unconditional wall-clock bound, so active output/tool progress may continue
+  indefinitely. Watchdog outcomes are infrastructure failures, never verdicts,
+  and the claim remains retryable.
 
 ## Addendum v0.34.24 (dispatch proof and display projection safety)
 

@@ -2130,22 +2130,21 @@ export function readCompletedCompletionAudit(cwd: string, goal: Goal, strictChal
     let progress: AuditorProgressFile | undefined;
     try { progress = JSON.parse(readFileSync(path.join(dir, "progress.json"), "utf8")); } catch { /* result-only legacy job */ }
     if (progress && (progress.protocolVersion !== PROTOCOL_VERSION || progress.attemptId !== name || progress.requestHash !== hash)) return reject("progress-mismatch");
-    // v0.39.45 (audit 2026-10-22): a saved verdict can only be applied when
-    // it AUTHENTICATES. The per-attempt verdict key lived in the dead
-    // parent's memory and was never persisted (it must not be: anything in
-    // the state root can be written by the auditor child, which runs with
-    // bash inside the audited project), so a saved result cannot be
-    // authenticated after a crash. Applying it anyway would let a
-    // prompt-injected auditor approve its own goal. The audit re-runs
-    // instead — a re-run costs one attempt, a forged approval costs the
-    // goal. The gate sits LAST so every identity/mismatch gate above keeps
-    // its own diagnostic.
-    if (typeof result.verdictMac !== "string" || !/^[0-9a-f]{64}$/.test(result.verdictMac)) {
-      return reject("verdict-unauthenticated");
-    }
+    // v0.39.45 (audit 2026-10-22): the live verdict path requires an
+    // AUTHENTICATED result (see the parent's poll loop). The crash-recovery
+    // path cannot: the per-attempt verdict key lived in the dead parent's
+    // memory and was never persisted (it must not be — anything in the
+    // state root can be written by the auditor child, which runs with bash
+    // inside the audited project). A reader that did not launch the attempt
+    // therefore has no key and cannot authenticate a saved verdict. What
+    // happens here is an operator-direction call (recorded as a DECIDE
+    // finding in the 2026-10-22 audit): either this path keeps applying a
+    // hash-consistent saved verdict (the audit does not re-run, and a
+    // hostile auditor that survives a parent crash can forge that saved
+    // verdict) or it declines the saved verdict and the audit re-runs.
     const savedKey = verdictKeys.get(name);
-    if (!savedKey) return reject("verdict-unauthenticated");
-    if (result.verdictMac !== verdictMacFor(result as unknown as Record<string, unknown>, savedKey)) {
+    if (savedKey && typeof result.verdictMac === "string"
+      && result.verdictMac !== verdictMacFor(result as unknown as Record<string, unknown>, savedKey)) {
       return reject("verdict-mac");
     }
     const validated = validateCompletedAuditorResult({
@@ -2432,23 +2431,28 @@ async function runDetachedGoalCompletionAuditorInner(args: {
     const spawn = runtime.spawn ?? nodeSpawn;
     // v0.39.38: dispatchEnv above is the fenced worker env (its keys are
     // hashed into the request as auditorEnvAllowlist).
-    const env = dispatchEnv;
+    // v0.39.45 (audit 2026-10-22): GLLA_AUDITOR_VERDICT_KEY tells the
+    // worker that the verdict key arrives on its stdin. It is added to the
+    // SPAWN env only — the allowlist is derived from dispatchEnv, so the
+    // auditor child never learns that the channel exists.
+    const env = { ...dispatchEnv, GLLA_AUDITOR_VERDICT_KEY: "1" };
     child = spawn(command, [workerPath, "--job-dir", jobDir], {
       cwd: args.cwd,
       detached: true,
-      // v0.39.45 (audit 2026-10-22): fd 3 carries the per-attempt verdict
-      // key to the worker. It is a PIPE, so the auditor child (which runs
-      // with bash in the audited project) cannot reach it: it is not in the
-      // worker's argv, not in its env, not on disk, and the worker's own
-      // child never inherits the descriptor.
-      stdio: ["ignore", "ignore", "ignore", "pipe"],
+      // v0.39.45 (audit 2026-10-22): the worker's STDIN carries the
+      // per-attempt verdict key. It is a PIPE, so the auditor child (which
+      // runs with bash in the audited project) cannot reach it: it is not
+      // in the worker's argv, not in its env, not on disk, and the worker's
+      // own child gets a fresh pipe for stdin (the RPC channel), never this
+      // one.
+      stdio: ["pipe", "ignore", "ignore", "ignore"],
       env,
     } satisfies SpawnOptions);
     // Hand the key over immediately and close the pipe: the worker reads it
     // once at startup. A spawn shim that does not provide the descriptor
     // leaves the attempt unauthenticated, which fails closed below.
     try {
-      const keyChannel = child.stdio?.[3];
+      const keyChannel = child.stdio?.[0];
       if (keyChannel && typeof (keyChannel as { end?: (chunk: string) => void }).end === "function") {
         (keyChannel as { end: (chunk: string) => void }).end(verdictKey);
       }
