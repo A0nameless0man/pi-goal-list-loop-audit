@@ -13,7 +13,7 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 import { appendLedger, isForbiddenModel } from "./goal-loop-core.js";
-import { MAX_MAIN_MODEL_FALLBACKS, modelRef, normalizeMainModelFallbackRefs } from "./main-model-recovery.js";
+import { MAX_MAIN_MODEL_FALLBACKS, modelRef, normalizeBoundedModelRefs, normalizeMainModelFallbackRefs } from "./main-model-recovery.js";
 import { ModelSelector } from "./model-selector.js";
 import type { Settings } from "./goal-settings.js";
 
@@ -62,10 +62,16 @@ export function resolveCompactorChain(
   settings: Pick<Settings, "compactorModel" | "compactorModelFallbacks" | "forbiddenModels">,
 ): { configuredRefs: string[]; candidates: CompactorModelCandidate[] } {
   const primary = typeof settings.compactorModel === "string" ? settings.compactorModel.trim() : "";
-  const configuredRefs = normalizeMainModelFallbackRefs([
+  // Bound the fallback setting independently of the primary. The settings UI
+  // accepts ten compactor fallbacks ("up to 10") and the runtime walked
+  // "the drafter/auditor exactly" — but the combined list was capped at ten,
+  // so a configured primary silently consumed one slot and the tenth
+  // alternative never ran. The 2026-10-21 repair gave the drafter, auditor
+  // and designer that same independence; the compactor keeps it now.
+  const configuredRefs = normalizeBoundedModelRefs([
     ...(primary ? [primary] : []),
     ...normalizeMainModelFallbackRefs(settings.compactorModelFallbacks),
-  ]).slice(0, MAX_COMPACTOR_FALLBACKS);
+  ], MAX_COMPACTOR_FALLBACKS + 1);
   const currentRef = modelRef(ctx.model);
   const forbidden = (ref: string) => isForbiddenModel(ref, settings.forbiddenModels);
   const selector = new ModelSelector({

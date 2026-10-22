@@ -167,6 +167,50 @@ test("T4: select options stay concise — rationale lives in the title, not the 
   }
 });
 
+test("a project subagent pin shadows only its own role, not every global pin", () => {
+  // v0.39.45 (audit 2026-10-22): the per-role PIN maps replaced the global
+  // map wholesale, so a project that pinned one role made every other
+  // role's global pin inert in that project.
+  try {
+    const cwd = tmpCwd();
+    fs.mkdirSync(path.dirname(projectSettingsPath(cwd)), { recursive: true });
+    fs.writeFileSync(projectSettingsPath(cwd), JSON.stringify({
+      subagentModelOverrides: { reviewer: "project/reviewer-model" },
+    }));
+    fs.writeFileSync(GLOBAL_FILE, JSON.stringify({
+      subagentModelOverrides: { reviewer: "global/reviewer-model", scout: "global/scout-model" },
+      subagentThinkingOverrides: { reviewer: "high", scout: "low" },
+    }));
+    const settings = loadSettings(cwd);
+    assert.equal(settings.subagentModelOverrides?.reviewer, "project/reviewer-model", "the project role wins");
+    assert.equal(settings.subagentModelOverrides?.scout, "global/scout-model", "other global roles survive");
+    assert.equal(settings.subagentThinkingOverrides?.reviewer, "high", "the global thinking pin survives");
+    assert.equal(settings.subagentThinkingOverrides?.scout, "low");
+  } finally {
+    restoreGlobal();
+  }
+});
+
+test("a dead project pin entry falls through to the live global role", () => {
+  try {
+    const cwd = tmpCwd();
+    fs.mkdirSync(path.dirname(projectSettingsPath(cwd)), { recursive: true });
+    fs.writeFileSync(projectSettingsPath(cwd), JSON.stringify({
+      subagentModelOverrides: { reviewer: "   " },
+      subagentThinkingOverrides: { reviewer: "not-a-level" },
+    }));
+    fs.writeFileSync(GLOBAL_FILE, JSON.stringify({
+      subagentModelOverrides: { reviewer: "global/reviewer-model" },
+      subagentThinkingOverrides: { reviewer: "medium" },
+    }));
+    const settings = loadSettings(cwd);
+    assert.equal(settings.subagentModelOverrides?.reviewer, "global/reviewer-model");
+    assert.equal(settings.subagentThinkingOverrides?.reviewer, "medium");
+  } finally {
+    restoreGlobal();
+  }
+});
+
 test("main recovery settings are global-only and project copies cannot create a UI/runtime mismatch", () => {
   try {
     const cwd = tmpCwd();
@@ -245,6 +289,99 @@ test("forbidden-model editing excludes drafter and auditor fallback chains", asy
     await handleSettingChoice("forbiddenModels", ctx as unknown as ExtensionContext);
     assert.deepEqual(readGlobal().forbiddenModels, ["provider/new"], "all configured fallback roles stay mutually exclusive");
     assert.ok(ctx.ui.matching("policy excludes").length >= 1);
+  } finally {
+    restoreGlobal();
+  }
+});
+
+test("a subagent pin edit writes only its own role into the owning layer", async () => {
+  // v0.39.45 (audit 2026-10-22): the pin editor used to save the EFFECTIVE
+  // map (global merged with project) back into one layer, which cloned
+  // every global pin into the project file and shadowed other roles.
+  try {
+    const cwd = tmpCwd();
+    fs.mkdirSync(path.dirname(projectSettingsPath(cwd)), { recursive: true });
+    fs.writeFileSync(projectSettingsPath(cwd), JSON.stringify({
+      subagentModelOverrides: { reviewer: "project/reviewer-model" },
+    }));
+    fs.writeFileSync(GLOBAL_FILE, JSON.stringify({
+      subagentModelOverrides: { reviewer: "global/reviewer-model", scout: "global/scout-model" },
+    }));
+    const ctx = makeMockCtx(cwd) as any;
+    const scout = { provider: "openai", id: "new-scout", reasoning: true };
+    ctx.modelRegistry = {
+      find: (provider: string, id: string) => (provider === "openai" && id === "new-scout" ? scout : undefined),
+      getAvailable: () => [scout],
+      hasConfiguredAuth: () => true,
+    };
+    ctx.ui.customImpl = async () => ({ kind: "model", ref: "openai/new-scout" });
+    await handleSettingChoice("subagentModelOverrides.scout", ctx as unknown as ExtensionContext);
+
+    const globalAfter = JSON.parse(fs.readFileSync(GLOBAL_FILE, "utf8"));
+    assert.equal(globalAfter.subagentModelOverrides.scout, "openai/new-scout", "the edited role lands in the global layer");
+    assert.equal(globalAfter.subagentModelOverrides.reviewer, "global/reviewer-model", "other global roles are untouched");
+    const projectAfter = JSON.parse(fs.readFileSync(projectSettingsPath(cwd), "utf8"));
+    assert.equal(projectAfter.subagentModelOverrides.reviewer, "project/reviewer-model", "the project layer keeps its own role");
+    assert.equal(projectAfter.subagentModelOverrides.scout, undefined, "the global pin is not cloned into the project layer");
+  } finally {
+    restoreGlobal();
+  }
+});
+
+test("the auditor fallback editor excludes the EFFECTIVE primary, not the global one", async () => {
+  // v0.39.45 (audit 2026-10-22): the editor computed the primary from the
+  // global layer while the runtime resolves the project-aware one, so a
+  // project-owned primary could be saved as a backup and was then dropped
+  // at runtime.
+  try {
+    const cwd = tmpCwd();
+    fs.mkdirSync(path.dirname(projectSettingsPath(cwd)), { recursive: true });
+    fs.writeFileSync(projectSettingsPath(cwd), JSON.stringify({ auditorModel: "project/auditor" }));
+    fs.writeFileSync(GLOBAL_FILE, JSON.stringify({
+      auditorModel: "global/auditor",
+      auditorModelFallbacks: ["global/backup", "project/auditor"],
+    }));
+    const ctx = makeMockCtx(cwd) as any;
+    const projectAuditor = { provider: "project", id: "auditor", reasoning: true };
+    const globalBackup = { provider: "global", id: "backup", reasoning: true };
+    ctx.modelRegistry = {
+      find: (provider: string, id: string) => (provider === "project" && id === "auditor" ? projectAuditor : provider === "global" && id === "backup" ? globalBackup : undefined),
+      getAvailable: () => [projectAuditor, globalBackup],
+      hasConfiguredAuth: () => true,
+    };
+    ctx.ui.customStubMode = true;
+    ctx.ui.inputImpl = async () => "global/backup,project/auditor";
+    await handleSettingChoice("auditorModelFallbacks", ctx as unknown as ExtensionContext);
+    const saved = readGlobal().auditorModelFallbacks as string[];
+    assert.ok(saved.includes("global/backup"), "the real backup is kept");
+    assert.ok(!saved.includes("project/auditor"), "the effective (project) primary is not offered as its own backup");
+  } finally {
+    restoreGlobal();
+  }
+});
+
+test("forbidden-model editing also protects the pinned role primaries and dedupes case-insensitively", async () => {
+  // v0.39.45 (audit 2026-10-22): a forbidden pattern that matches a pinned
+  // auditor/drafter/designer model silently voids that pin at runtime, so
+  // the editor must not offer it. The selection also deduplicates
+  // case-insensitively now — the forbidden gate matches that way.
+  try {
+    fs.writeFileSync(GLOBAL_FILE, JSON.stringify({
+      forbiddenModels: [],
+      drafterModel: "provider/drafter-primary",
+      auditorModel: "provider/auditor-primary",
+      designerModel: "provider/designer-primary",
+    }));
+    const ctx = makeMockCtx(tmpCwd());
+    ctx.ui.customStubMode = true;
+    ctx.ui.inputImpl = async () => "provider/drafter-primary,provider/auditor-primary,provider/designer-primary,Provider/New,Sonnet,sonnet";
+    await handleSettingChoice("forbiddenModels", ctx as unknown as ExtensionContext);
+    const saved = readGlobal().forbiddenModels as string[];
+    assert.ok(!saved.includes("provider/drafter-primary"), "a pinned drafter primary cannot be forbidden");
+    assert.ok(!saved.includes("provider/auditor-primary"), "a pinned auditor primary cannot be forbidden");
+    assert.ok(!saved.includes("provider/designer-primary"), "a pinned designer primary cannot be forbidden");
+    assert.deepEqual(saved.filter(ref => ref.toLowerCase() === "sonnet"), ["Sonnet"], "case variants collapse to one row");
+    assert.ok(saved.includes("Provider/New"), "an unrelated pattern is still saved");
   } finally {
     restoreGlobal();
   }

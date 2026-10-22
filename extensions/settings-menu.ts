@@ -143,6 +143,51 @@ function modelThinkingText(
     : `${ref} · ${effective} (requested ${requested})`;
 }
 
+/** The MAIN chain is switched by pi itself: dispatch calls pi's
+ * `clampThinkingLevel` (extensions/goal-recovery.ts applyRecoveryThinking),
+ * which raises the requested level to the next SUPPORTED one BEFORE it falls
+ * back downward. The shared downward resolver therefore UNDER-stated what the
+ * main chain actually runs at: a model that excludes `medium` but supports
+ * `high` is switched to at `high`, while this menu used to show `low`.
+ *
+ * v0.39.45 (audit 2026-10-22): mirror pi's precedence for this chain so the
+ * menu and dispatch agree — the same "display == dispatch" contract the
+ * auditor/Designer rows already carry (they dispatch through the shared
+ * downward resolver).
+ */
+const PI_THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
+
+function clampThinkingLevelLikePi(supported: readonly string[], requested: string): string {
+  if (supported.includes(requested)) return requested;
+  const index = PI_THINKING_LEVELS.indexOf(requested as (typeof PI_THINKING_LEVELS)[number]);
+  if (index < 0) return supported[0] ?? "off";
+  for (let i = index; i < PI_THINKING_LEVELS.length; i++) {
+    const candidate = PI_THINKING_LEVELS[i]!;
+    if (supported.includes(candidate)) return candidate;
+  }
+  for (let i = index - 1; i >= 0; i--) {
+    const candidate = PI_THINKING_LEVELS[i]!;
+    if (supported.includes(candidate)) return candidate;
+  }
+  return supported[0] ?? "off";
+}
+
+function mainChainThinkingText(
+  ref: string,
+  requested: string,
+  context: MenuSubagentContext,
+): string {
+  const capabilityRef = ref === "session model" ? context.sessionModel ?? ref : ref;
+  const levels = context.thinkingLevelsByRef?.[capabilityRef.toLowerCase()];
+  if (!levels || levels.length === 0 || requested === "session thinking" || requested === "session level") {
+    return `${ref} · ${requested}`;
+  }
+  const effective = clampThinkingLevelLikePi(levels, requested);
+  return effective === requested
+    ? `${ref} · ${effective}`
+    : `${ref} · ${effective} (requested ${requested})`;
+}
+
 function modelChainText(
   refs: readonly string[] | undefined,
   requested: string,
@@ -307,7 +352,7 @@ export function buildSettingsRows(
       section: "main-agent",
       label: `Fallback models (up to ${MAX_MAIN_MODEL_FALLBACKS})`,
       valueText: settings.mainModelFallbacks?.length
-        ? `${settings.mainModelFallbacks.length}/${MAX_MAIN_MODEL_FALLBACKS} · ${settings.mainModelFallbacks.map((ref, index) => `${index + 1}. ${modelThinkingText(ref, settings.mainModelFallbackThinkingLevels?.[ref.toLowerCase()] ?? sessionThinking, subagent)}`).join(" → ")}`
+        ? `${settings.mainModelFallbacks.length}/${MAX_MAIN_MODEL_FALLBACKS} · ${settings.mainModelFallbacks.map((ref, index) => `${index + 1}. ${mainChainThinkingText(ref, settings.mainModelFallbackThinkingLevels?.[ref.toLowerCase()] ?? sessionThinking, subagent)}`).join(" → ")}`
         : `0/${MAX_MAIN_MODEL_FALLBACKS} · none`,
       sourceText: src("mainModelFallbacks"),
       description: "ordered and deselectable: current main agent → fallback 1 → fallback 2…; every recoverable provider failure switches one eligible fallback at a time; choose thinking per model or inherit the primary session level",
@@ -317,7 +362,7 @@ export function buildSettingsRows(
       section: "main-agent",
       label: "Fallback thinking",
       valueText: settings.mainModelFallbacks?.length
-        ? settings.mainModelFallbacks.map(ref => modelThinkingText(ref, settings.mainModelFallbackThinkingLevels?.[ref.toLowerCase()] ?? sessionThinking, subagent)).join(" → ")
+        ? settings.mainModelFallbacks.map(ref => mainChainThinkingText(ref, settings.mainModelFallbackThinkingLevels?.[ref.toLowerCase()] ?? sessionThinking, subagent)).join(" → ")
         : "choose fallback models first",
       sourceText: src("mainModelFallbackThinkingLevels"),
       description: "edit thinking for one saved fallback; adding models asks only for newly selected models and preserves existing choices",

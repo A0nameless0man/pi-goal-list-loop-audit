@@ -897,6 +897,35 @@ export function loadSettings(cwd: string): Settings {
   if (Object.keys(globalFallbacks).length || Object.keys(projectFallbacks).length) {
     merged.subagentFallbacks = { ...globalFallbacks, ...projectFallbacks };
   }
+  // v0.39.45 (audit 2026-10-22): the per-role PIN maps merge per role too.
+  // A project that pins ONE role's model made the whole global pin map
+  // inert in that project (the project's object replaced the global one
+  // wholesale) — the same shadowing the fallback-chain merge above already
+  // prevents. A dead project entry (junk ref, unknown thinking level) falls
+  // through to the live global role instead of shadowing it.
+  const normalizePinMap = (value: unknown, allowed?: readonly string[]): Record<string, string> => {
+    const out: Record<string, string> = {};
+    if (value && typeof value === "object") {
+      for (const [role, entry] of Object.entries(value as Record<string, unknown>)) {
+        if (typeof entry !== "string") continue;
+        const trimmed = entry.trim();
+        if (!trimmed) continue;
+        if (allowed && !allowed.includes(trimmed)) continue;
+        out[role] = trimmed;
+      }
+    }
+    return out;
+  };
+  const globalModelPins = normalizePinMap(global.subagentModelOverrides);
+  const projectModelPins = normalizePinMap(project.subagentModelOverrides);
+  if (Object.keys(globalModelPins).length || Object.keys(projectModelPins).length) {
+    merged.subagentModelOverrides = { ...globalModelPins, ...projectModelPins };
+  }
+  const globalThinkingPins = normalizePinMap(global.subagentThinkingOverrides, THINKING_LEVELS);
+  const projectThinkingPins = normalizePinMap(project.subagentThinkingOverrides, THINKING_LEVELS);
+  if (Object.keys(globalThinkingPins).length || Object.keys(projectThinkingPins).length) {
+    merged.subagentThinkingOverrides = { ...globalThinkingPins, ...projectThinkingPins } as Settings["subagentThinkingOverrides"];
+  }
   const out = normalizeLoadedSettings(merged);
   // C10: surface dead hand-edited values as ledger evidence (throttled once
   // per distinct junk value inside noteDroppedSetting). loadGlobalSettings

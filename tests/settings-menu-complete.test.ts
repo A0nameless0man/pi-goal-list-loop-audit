@@ -171,6 +171,30 @@ test("auditor and Designer displays resolve unsupported thinking exactly as disp
   }
 });
 
+test("the main fallback chain shows the level dispatch actually applies (pi's clamp precedence)", () => {
+  // v0.39.45 (audit 2026-10-22): the main chain is switched by pi, whose
+  // clampThinkingLevel RAISES the request to the next supported level
+  // before falling back downward. The menu used the shared downward
+  // resolver, so it under-stated the level the chain would run at.
+  const rows = buildSettingsRows(
+    {
+      mainModelFallbacks: ["provider/backup"],
+      mainModelFallbackThinkingLevels: { "provider/backup": "medium" },
+    } as Settings,
+    EMPTY_PROV,
+    {
+      sessionModel: "provider/session",
+      sessionThinkingLevel: "high",
+      // `medium` is NOT supported by this model; `high` is.
+      thinkingLevelsByRef: { "provider/backup": ["off", "low", "high", "max"] },
+    },
+  );
+  const text = rows.find(row => row.id === "mainModelFallbacks")!.valueText;
+  assert.match(text, /provider\/backup · high \(requested medium\)/, `main chain display: ${text}`);
+  const levelText = rows.find(row => row.id === "mainModelFallbackThinkingLevels")!.valueText;
+  assert.match(levelText, /provider\/backup · high \(requested medium\)/, `main chain level display: ${levelText}`);
+});
+
 test("session category displays use session capabilities and ignore stale configured role thinking", () => {
   for (const reasoning of [true, false]) {
     const model = { reasoning, thinkingLevelMap: { max: "max", xhigh: null } };

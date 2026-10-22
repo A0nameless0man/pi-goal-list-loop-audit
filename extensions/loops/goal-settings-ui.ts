@@ -935,7 +935,13 @@ async function promptModelRefs(
     const refs = normalizeModelRefs(value);
     const seen = new Set<string>();
     const unique = refs.filter((ref) => {
-      const key = maxSelections === MAX_MAIN_MODEL_FALLBACKS ? ref.toLowerCase() : ref;
+      // v0.39.45 (audit 2026-10-22): case-insensitive ALWAYS. The old
+      // special case (case-sensitive unless the cap was exactly ten) let
+      // `Sonnet` and `sonnet` both persist in the forbidden list, while
+      // every other ref list deduplicates case-insensitively — and the
+      // forbidden gate matches case-insensitively, so the duplicate was a
+      // no-op row that survived every later edit.
+      const key = ref.toLowerCase();
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -1107,6 +1113,38 @@ export function saveSubagentFallbackChain(ctx: ExtensionContext, agentType: stri
   return { scope };
 }
 
+/** Save one role's model/thinking pin to the layer that OWNS that role.
+ *
+ * v0.39.45 (audit 2026-10-22): the pin editors used to read the EFFECTIVE
+ * map (global merged with project) and write it back wholesale. With the
+ * per-role merge in loadSettings, that copied every global pin into the
+ * project layer — and a project-owned map then shadowed the global pins of
+ * other roles. This writes only the edited role into its owning layer, the
+ * same shape saveSubagentFallbackChain already uses for fallback chains.
+ */
+export function saveSubagentPinLayer(
+  ctx: ExtensionContext,
+  key: "subagentModelOverrides" | "subagentThinkingOverrides",
+  role: string,
+  value: string | undefined,
+): { scope: "project" | "global" } {
+  const cwd = ctx.cwd;
+  const projectLayer = migrateLegacySettings(readSettingsFile(projectSettingsPath(cwd))) as Settings;
+  const projectMap = (projectLayer[key] ?? {}) as Record<string, string>;
+  const scope: "project" | "global" = Object.prototype.hasOwnProperty.call(projectMap, role) ? "project" : "global";
+  const layerMap: Record<string, string> = scope === "project"
+    ? { ...projectMap }
+    : { ...((loadGlobalSettings()[key] ?? {}) as Record<string, string>) };
+  if (value !== undefined) layerMap[role] = value;
+  else delete layerMap[role];
+  const probe = (globalThis as any).warnIfStaleAtEntry as ((ctx: ExtensionContext, what: string) => boolean) | undefined;
+  if (typeof probe === "function" && probe(ctx, "settings save")) {
+    throw new Error("settings save refused: the session handle went stale during the edit (a replacement session owns the state root)");
+  }
+  persistSettings(scope, cwd, { [key]: Object.keys(layerMap).length > 0 ? layerMap : undefined } as Partial<Settings>);
+  return { scope };
+}
+
 export async function handleSettingChoice(id: string, ctx: ExtensionContext): Promise<void> {
   // Current pi-subagents roles are data-driven. Keep this dispatch in front
   // of the switch so adding a built-in role does not require another hard-coded
@@ -1116,12 +1154,9 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
     if (OVERRIDABLE_AGENT_TYPES.includes(agentType)) {
       const pick = await promptModelRef(ctx, `Model pin for ${agentType} subagents`, "provider/model-id e.g. minimax/MiniMax-M3 — always wins over strategy; empty = follow strategy", { excludeRefs: normalizeModelRefs(loadSettings(ctx.cwd).forbiddenModels) });
       if (pick === undefined) return;
-      const current = loadSettings(ctx.cwd).subagentModelOverrides ?? {};
-      const next = { ...current };
-      if (pick.kind === "ref") next[agentType] = pick.ref;
-      else delete next[agentType];
-      saveSettings("global", ctx, { subagentModelOverrides: Object.keys(next).length > 0 ? next : undefined });
-      ctx.ui.notify(`${agentType} model pin saved — applies to NEW pi sessions.`, "info");
+      const { scope } = saveSubagentPinLayer(ctx, "subagentModelOverrides", agentType, pick.kind === "ref" ? pick.ref : undefined);
+      const where = scope === "project" ? "project settings" : "global settings";
+      ctx.ui.notify(`${agentType} model pin saved to ${where} — applies to NEW pi sessions.`, "info");
       return;
     }
   }
@@ -1156,18 +1191,18 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
       ]);
       if (pick === undefined) return;
       const settings = loadSettings(ctx.cwd);
-      const next = { ...(settings.subagentThinkingOverrides ?? {}) };
-      if (pick.startsWith("session —")) delete next[agentType];
-      else {
-        const level = pick.split(" — ")[0]!.trim();
+      let level: string | undefined;
+      if (!pick.startsWith("session —")) {
+        level = pick.split(" — ")[0]!.trim();
         if (!levels.includes(level)) {
           ctx.ui.notify(`Not a thinking level: ${pick}`, "warning");
           return;
         }
-        next[agentType] = level as NonNullable<Settings["subagentThinkingOverrides"]>[string];
       }
-      saveSettings("global", ctx, { subagentThinkingOverrides: Object.keys(next).length > 0 ? next : undefined });
-      ctx.ui.notify(`${agentType} thinking ${next[agentType] ? `pinned to ${next[agentType]}` : "cleared — inherits session"} — applies to NEW pi sessions.`, "info");
+      const { scope } = saveSubagentPinLayer(ctx, "subagentThinkingOverrides", agentType, level);
+      const where = scope === "project" ? "project settings" : "global settings";
+      const stillPinned = loadSettings(ctx.cwd).subagentThinkingOverrides?.[agentType];
+      ctx.ui.notify(`${agentType} thinking ${stillPinned ? `pinned to ${stillPinned}` : "cleared — inherits session"} (${where}) — applies to NEW pi sessions.`, "info");
       return;
     }
   }
@@ -1654,6 +1689,10 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
       // A configured fallback cannot simultaneously be forbidden. Use the
       // effective settings so project-scoped chains are protected too, and
       // cover every role that has a fallback chain (not just main/subagents).
+      // v0.39.45 (audit 2026-10-22): the role PRIMARIES are protected too —
+      // a forbidden pattern that matches a pinned auditor/drafter/designer
+      // model silently voids that pin at runtime, so the editor must not
+      // offer it.
       const fallbackRefs = [
         ...normalizeMainModelFallbackRefs(settings.mainModelFallbacks),
         ...normalizeMainModelFallbackRefs(settings.drafterModelFallbacks),
@@ -1661,6 +1700,9 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
         ...(settings.compactorModel?.trim() ? [settings.compactorModel.trim()] : []),
         ...normalizeMainModelFallbackRefs(settings.auditorModelFallbacks),
         ...Object.values(settings.subagentFallbacks ?? {}).flatMap((chain) => normalizeModelRefs(chain)),
+        ...[settings.drafterModel, settings.designerModel, settings.auditorModel]
+          .filter((ref): ref is string => typeof ref === "string" && !!ref.trim())
+          .map((ref) => ref.trim()),
       ];
       const refs = await promptModelRefs(
         ctx,
@@ -1765,7 +1807,14 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
     case "auditorModelFallbacks": {
       const settings = loadGlobalSettings();
       const current = normalizeMainModelFallbackRefs(settings.auditorModelFallbacks);
-      const configuredPrimary = settings.auditorModel?.trim();
+      // v0.39.45 (audit 2026-10-22): the list being edited is the GLOBAL
+      // one, but the primary that must be excluded is the EFFECTIVE
+      // auditor model (the project layer wins, and the project can also
+      // carry the explicit-session tombstone). Using the global pin let a
+      // project-owned primary survive in the list and then be dropped at
+      // runtime.
+      const effectivePrimary = loadSettings(ctx.cwd).auditorModel;
+      const configuredPrimary = typeof effectivePrimary === "string" ? effectivePrimary.trim() : "";
       // auditorModel also accepts a bare model id. Canonicalize it before
       // passing currentRef to the multi-picker so the selected primary is
       // disabled even when it was saved without its provider prefix.

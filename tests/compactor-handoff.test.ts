@@ -87,13 +87,29 @@ test("plan B returns [] when the registry throws", () => {
 
 // ── chain parity + transition + scope ─────────────────────────────────
 
-test("compactor chain normalizes and caps 0-10 exactly like drafter", () => {
+test("compactor chain normalizes and caps the FALLBACK setting at ten, like drafter", () => {
   assert.equal(MAX_COMPACTOR_FALLBACKS, 10);
   const ctx = { modelRegistry: fakeRegistry([]), cwd: tmpCwd() } as any;
   const refs = Array.from({ length: 12 }, (_, i) => `p/m${i}`);
   const { configuredRefs } = resolveCompactorChain(ctx, { compactorModel: "p/primary", compactorModelFallbacks: [...refs, "P/M0", "  "] });
-  assert.equal(configuredRefs.length, 10);
+  // v0.39.45 (audit 2026-10-22): the bound applies to the fallback SETTING;
+  // the primary is prepended on top (the drafter/auditor/designer shape
+  // repaired on 2026-10-21). The old code capped the COMBINED list at ten,
+  // so a configured primary silently ate one of the ten alternatives the
+  // settings UI accepts.
+  assert.equal(configuredRefs.length, 11);
   assert.equal(configuredRefs[0], "p/primary");
+  assert.equal(new Set(configuredRefs.map((ref: string) => ref.toLowerCase())).size, 11, "case duplicates collapse");
+});
+
+test("compactor keeps every configured fallback when a primary is pinned", () => {
+  const ctx = { modelRegistry: fakeRegistry([]), cwd: tmpCwd() } as any;
+  const fallbacks = Array.from({ length: 10 }, (_, i) => `p/f${i}`);
+  const { configuredRefs } = resolveCompactorChain(ctx, { compactorModel: "p/primary", compactorModelFallbacks: fallbacks });
+  assert.equal(configuredRefs.length, 11, "primary plus all ten alternatives");
+  for (const ref of fallbacks) {
+    assert.ok(configuredRefs.includes(ref), `${ref} must survive the primary`);
+  }
 });
 
 test("compactor chain never leases the stuck session model", () => {
