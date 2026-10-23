@@ -890,7 +890,7 @@ export function migrateLegacySettings(value: Partial<Settings>): Record<string, 
 }
 
 /**
- * v0.39.47 (audit item 3): delete global-only keys from a project settings
+ * v0.39.46 (audit item 3): delete global-only keys from a project settings
  * FILE. `loadSettings` already ignores them in memory; this removes the stale
  * bytes so the on-disk file cannot contradict the effective settings.
  *
@@ -1232,7 +1232,7 @@ function withSettingsFileLock<T>(file: string, fn: () => T): T {
  * and clearing a stray global-only key from a project file is precisely what
  * the cleanup loop is for.
  *
- * v0.39.48: this MUST receive the canonicalized patch. Migration can turn a
+ * v0.39.46: this MUST receive the canonicalized patch. Migration can turn a
  * legacy alias into a global-only key (`auditorModelFallback` →
  * `auditorModelFallbacks`), and validating the raw argument missed that path
  * entirely. `givenKeys` lets the refusal name both the canonical key and the
@@ -1261,7 +1261,7 @@ export function saveSettings(scope: "global" | "project", cwd: string, patch: Pa
   if (scope === "project" && stateRootPending()) {
     throw new Error("state root pending (sessionDir mode, no session dir yet) — project settings save deferred");
   }
-  // v0.39.48 (audit round 4): validate the CANONICALIZED patch, not the raw
+  // v0.39.46 (audit round 4): validate the CANONICALIZED patch, not the raw
   // argument. Migration can CREATE a global-only key from a supported legacy
   // alias — `auditorModelFallback` migrates to the global-only
   // `auditorModelFallbacks` — so checking the raw patch let such a write reach
@@ -1302,7 +1302,7 @@ export function saveSettings(scope: "global" | "project", cwd: string, patch: Pa
     }
     writeSettingsAtomically(file, next);
   });
-  // v0.39.47 (audit item 3): a global-scope save is the moment the authoritative
+  // v0.39.46 (audit item 3): a global-scope save is the moment the authoritative
   // value lands, so it is also the right moment to evict a stale project-scope
   // copy of the same key from disk. This lives on a MUTATING path by design —
   // the read path (loadSettings) must stay side-effect free, because read-only

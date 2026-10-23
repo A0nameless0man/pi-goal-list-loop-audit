@@ -334,7 +334,7 @@ export function wrap(s: string, width: number, maxLines: number): string[] {
 const WIDGET_HORIZONTAL_MARGIN = 2;
 
 /**
- * v0.39.47 (audit item 2): fold card facts WITHOUT letting the terminal clip
+ * v0.39.46 (audit item 2): fold card facts WITHOUT letting the terminal clip
  * them mid-fact. The final layout pass truncates every line to the content
  * width, so a closer of `supervisor paused · v0.39.46` at 32 columns used to
  * render as `supervisor paused · v0.39.…` — the version cut mid-fact, and at

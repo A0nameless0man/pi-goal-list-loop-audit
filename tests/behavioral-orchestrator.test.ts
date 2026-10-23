@@ -3172,7 +3172,7 @@ test("source pin: all five draft-class dialogs route through confirmDraft with t
   // scope the key actually lives in — a project-scope write of a global-only
   // key is now refused loudly instead of silently discarded.
   assert.match(GOAL_SRC, /Yes — always auto-accept drafts, system-wide/);
-  // v0.39.47: both ALWAYS branches route through one helper, so the scope and
+  // v0.39.46: both ALWAYS branches route through one helper, so the scope and
   // the claim discipline exist in exactly one place.
   assert.match(GOAL_SRC, /saveSettings\("global", context\.cwd, \{ autoAcceptDrafts: true \}\)/);
   assert.ok(!/saveSettings\("project", [^)]*autoAcceptDrafts/.test(GOAL_SRC), "no project-scope autoAcceptDrafts write survives");

@@ -314,7 +314,7 @@ test("v0.34.54: settings after a fresh session_start — the table opens AND a r
   // override was invented for a global-only key.
   assert.equal("autoAcceptDrafts" in globalAfter && globalAfter.autoAcceptDrafts !== undefined, false, "the auto-accept switch is off system-wide");
   assert.equal(globalAfter.autoResume, globalBefore.autoResume, "unrelated global keys are preserved");
-  // v0.39.47 (audit item 3), tightened in round 4: the stale per-project key is
+  // v0.39.46 (audit item 3), tightened in round 4: the stale per-project key is
   // not merely ignored in memory — the file itself is cleaned, so no later
   // reader can see a value the runtime refuses to honour. Asserted
   // SEMANTICALLY: the offending key is gone while an unrelated project setting
