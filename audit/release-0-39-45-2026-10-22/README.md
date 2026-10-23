@@ -114,3 +114,16 @@ file was written. Publishing requires creating and pushing the `v0.39.45` tag
 against this validated commit, then publishing a GitHub Release, which is what
 triggers `.github/workflows/publish.yml` (the tag must equal `package.json` and
 descend from `main`).
+
+## Publication (verified)
+
+- GitHub Release `v0.39.45` created and published; its publish workflow run
+  `39885074334` concluded **success**, including the CI-side `release:check`
+  and the pinned-npm trusted publish step.
+- Registry check (authoritative): `npm view pi-goal-list-loop-audit version` →
+  **0.39.45**, `dist-tags.latest` → **0.39.45**, modified 2026-10-23T01:53:38Z.
+- Tag `v0.39.45` points at `237a46e8f`, the same commit the local green gate ran
+  against; the workflow's own ancestry check passed against `main`.
+- No live host session was reloaded and no OS, Pi-core, provider or other plugin
+  was modified. `pi install` in an existing pi session still needs to be run by
+  the operator to load 0.39.45 locally; `/glla version` reports the loaded version.
