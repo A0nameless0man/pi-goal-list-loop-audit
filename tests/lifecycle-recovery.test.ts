@@ -292,10 +292,11 @@ test("v0.34.54: settings after a fresh session_start — the table opens AND a r
   assert.equal(refusals(afterLedger), refusals(beforeLedger), "no NEW refusal after rebind (phase-1 refusal stays in history)");
 
   // (b) a REAL settings write lands through the menu: pick the
-  // autoAcceptDrafts row, answer "off". Because the effective value is
-  // project-sourced, scope-aware editing updates that project override rather
-  // than writing a hidden global value. (After the write the loop re-renders
-  // once; the second custom call cancels.)
+  // autoAcceptDrafts row, answer "off". The key is system-wide, so the write
+  // lands in the GLOBAL file. "off" is stored as "unset" (the default), so a
+  // successful write means the key is ABSENT from global — not that some
+  // project override changed. (After the write the loop re-renders once; the
+  // second custom call cancels.)
   let pickCount = 0;
   fresh.ui.customImpl = async () => (++pickCount === 1 ? "autoAcceptDrafts" : undefined); // one pick, then cancel — the loop exits
   fresh.ui.selectImpl = async (title: string) => (title.startsWith("Auto-accept") ? "off" : undefined);
@@ -303,12 +304,12 @@ test("v0.34.54: settings after a fresh session_start — the table opens AND a r
   await pi.command("glla", "", fresh);
   await tick();
   const globalAfter = JSON.parse(fs.readFileSync(GLOBAL_SETTINGS_PATH, "utf-8")) as Record<string, unknown>;
-  // v0.39.46: autoAcceptDrafts is system-wide, so a scope-aware edit of that
-  // row now correctly lands in the GLOBAL file (it used to write a project
-  // override). The requirement this test protects is unchanged: a real
-  // settings write must actually land somewhere durable, and it must land at
-  // the scope the key belongs to.
-  assert.equal(globalAfter.autoAcceptDrafts, false, "the auto-accept switch was written system-wide");
+  // v0.39.46: autoAcceptDrafts is system-wide, so this row now writes the
+  // GLOBAL file rather than a project override. "off" is persisted as unset,
+  // so the observable proof that the write LANDED is that the key is absent
+  // from global while unrelated global keys survive — and that no project
+  // override was invented for a global-only key.
+  assert.equal("autoAcceptDrafts" in globalAfter && globalAfter.autoAcceptDrafts !== undefined, false, "the auto-accept switch is off system-wide");
   assert.equal(globalAfter.autoResume, globalBefore.autoResume, "unrelated global keys are preserved");
   assert.equal(fs.readFileSync(projectSettingsPath(cwd), "utf-8"), JSON.stringify({}), "no project override is written for a global-only key");
 });
