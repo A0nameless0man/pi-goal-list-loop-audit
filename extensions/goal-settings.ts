@@ -1176,10 +1176,33 @@ function withSettingsFileLock<T>(file: string, fn: () => T): T {
   }
 }
 
+/** v0.39.46 (note.md): a project-scope write that names a global-only key used
+ * to be silently DELETED, so the caller reported success while nothing was
+ * persisted (field-observed: the draft dialog's "always auto-accept" option
+ * re-prompted on every draft because its saveSettings("project") write was
+ * discarded, yet it still journalled draft_autoaccept_enabled and notified
+ * "ON"). Refuse loudly instead — a save that cannot land must never look like
+ * one that did. Only an explicit `undefined` (key unset) is tolerated: it is a
+ * deliberate removal, and clearing a stray global-only key from a project file
+ * is exactly what the cleanup loop below is for. */
+export function assertProjectSaveAllows(patch: Partial<Settings>): void {
+  const offending = Object.entries(patch)
+    .filter(([k, v]) => v !== undefined && GLOBAL_ONLY_KEYS.has(k as keyof Settings))
+    .map(([k]) => k)
+    .sort();
+  if (offending.length) {
+    throw new Error(
+      `saveSettings("project") cannot persist global-only setting(s): ${offending.join(", ")} — ` +
+      `these are system-wide and must be saved with scope "global"`,
+    );
+  }
+}
+
 export function saveSettings(scope: "global" | "project", cwd: string, patch: Partial<Settings>): void {
   if (scope === "project" && stateRootPending()) {
     throw new Error("state root pending (sessionDir mode, no session dir yet) — project settings save deferred");
   }
+  if (scope === "project") assertProjectSaveAllows(patch);
   const file = scope === "global" ? globalSettingsPath() : projectSettingsPath(cwd);
   withSettingsFileLock(file, () => {
     const current = migrateLegacySettings(readSettingsFile(file));
@@ -1189,9 +1212,11 @@ export function saveSettings(scope: "global" | "project", cwd: string, patch: Pa
     }
     const migratedPatch = migrateLegacySettings(patch);
     for (const [k, v] of Object.entries(migratedPatch)) {
-      // Main recovery settings are global-only. If an old project file still
-      // carries one, remove it rather than leaving a setting that appears saved
-      // but can never affect the runtime.
+      // Main recovery settings are global-only. A stray value left in an old
+      // project file is dropped so it cannot appear saved while being unable to
+      // affect the runtime; an explicit undefined still reaches here as a
+      // deliberate unset. A non-undefined global-only write never reaches this
+      // branch — assertProjectSaveAllows() rejected it before the lock.
       if (scope === "project" && GLOBAL_ONLY_KEYS.has(k as keyof Settings)) {
         delete next[k];
         continue;

@@ -1401,7 +1401,13 @@ type DraftChoice = "yes" | "no" | "stale";
 // custom builder.
 let lastConfirmDialog: { title: string; body: string; options: string[] } | null = null;
 async function confirmDraft(ctx: ExtensionContext, title: string, body: string): Promise<DraftChoice> {
-  const ALWAYS = "Yes — always auto-accept drafts for this project";
+  // v0.39.46 (note.md): auto-accept is a SYSTEM-WIDE setting — it lives in
+  // GLOBAL_ONLY_KEYS, so the old "for this project" label and
+  // saveSettings("project") call promised a scope that cannot exist. The write
+  // was silently discarded while the ledger and notification claimed success,
+  // which is why the option never stuck and the dialog reappeared every draft.
+  const ALWAYS = "Yes — always auto-accept drafts, system-wide";
+  const autoAcceptOnNotification = "Draft auto-accept ON system-wide — future draft confirms are skipped in every project. Undo in /glla settings: Auto-accept drafts = off.";
   const options = ["Yes", ALWAYS, "No"];
   // v0.34.80 (GitHub #4 rework): `custom` is ALWAYS a function in real pi
   // 0.84.1 — RPC mode resolves `undefined` WITHOUT ever invoking the factory
@@ -1422,9 +1428,9 @@ async function confirmDraft(ctx: ExtensionContext, title: string, body: string):
       });
       if (factoryInvoked) {
         if (choice === ALWAYS) {
-          saveSettings("project", ctx.cwd, { autoAcceptDrafts: true });
-          appendLedger(ctx.cwd, "draft_autoaccept_enabled", { via: title });
-          ctx.ui.notify("Draft auto-accept ON for this project — future draft confirms are skipped. Undo in /glla settings: Auto-accept drafts = off.", "info");
+          saveSettings("global", ctx.cwd, { autoAcceptDrafts: true });
+          appendLedger(ctx.cwd, "draft_autoaccept_enabled", { via: title, scope: "global" });
+          ctx.ui.notify(autoAcceptOnNotification, "info");
           return "yes";
         }
         return choice === "Yes" ? "yes" : "no";
@@ -1440,9 +1446,9 @@ async function confirmDraft(ctx: ExtensionContext, title: string, body: string):
   try {
     const choice = await ctx.ui.select(`${title}\n\n${body}`, ["Yes", ALWAYS, "No"]);
     if (choice === ALWAYS) {
-      saveSettings("project", ctx.cwd, { autoAcceptDrafts: true });
-      appendLedger(ctx.cwd, "draft_autoaccept_enabled", { via: title });
-      ctx.ui.notify("Draft auto-accept ON for this project — future draft confirms are skipped. Undo in /glla settings: Auto-accept drafts = off.", "info");
+      saveSettings("global", ctx.cwd, { autoAcceptDrafts: true });
+      appendLedger(ctx.cwd, "draft_autoaccept_enabled", { via: title, scope: "global" });
+      ctx.ui.notify(autoAcceptOnNotification, "info");
       return "yes";
     }
     return choice === "Yes" ? "yes" : "no";
