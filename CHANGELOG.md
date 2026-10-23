@@ -2,6 +2,52 @@
 
 ## Unreleased
 
+## 0.39.46 — one surface per fact, a readable amendment dialog and a real system-wide auto-accept (2026-10-23)
+
+### Display: the duplicated bottom status strip is gone
+
+- The `glla: …` line beneath the card repeated the state, next action, host and
+  agent summary the card already rendered. It is now cleared whenever a card
+  renders, so one surface carries each fact.
+- Facts that lived only on that strip moved onto the card's closer: the running
+  version tail, the `supervisor paused` marker and the waiting-list depth.
+- The fold packs facts onto rows and, when they cannot fit, wraps them at word
+  boundaries onto indented continuation rows. A narrow terminal can no longer
+  cut a version string or a state chip mid-fact (verified at 20 and 32 columns).
+- States named only by that line keep it: a background/standby wait, a
+  waiting-only queue, a stale-handle interruption, and a blocked/dormant hold.
+- The supervisor-paused exemption was removed once the card was proven to carry
+  the fact — the old condition kept a duplicate surface alive for no gain.
+
+### Settings: task-list amendment Confirm is reviewable
+
+- Replacing a committed plan no longer prints `JSON.stringify(goal.taskList)`
+  plus the full objective and verification contract. The dialog shows a short
+  goal line, `Contract: unchanged (N checks)` or the delta, the replacement
+  counts, each task title with its prior status and a `[new]` marker, and the
+  consequence sentence.
+- The single Confirm, the cancel path and the changed-target re-check are
+  unchanged; the re-check now has a test that mutates the goal during Confirm
+  and asserts the amendment is refused without touching the committed plan.
+
+### Settings: auto-accept is genuinely system-wide
+
+- `autoAcceptDrafts` is global-only, both dialog paths save at global scope, and
+  the option and its notification say **system-wide** instead of "for this
+  project" — picking it once no longer re-prompts on every project.
+- A project-scope write that names a global-only key now throws instead of being
+  silently deleted. Validation runs on the **canonicalized** patch, so a legacy
+  alias that migrates into a global-only key (`auditorModelFallback` →
+  `auditorModelFallbacks`, `hourlyQuotaProbe` → `hourlyRetryProbe`,
+  `subagentFallbacks.Designer` → `designerModelFallbacks`) is refused loudly and
+  the message names the alias the caller actually wrote.
+- A failed settings write now claims nothing: the journal row and the ON
+  notification are emitted only after the save returns, and a failure reports an
+  honest warning instead of announcing a switch that is not set.
+- A stale project-scope copy of a global-only key is removed from the settings
+  file on the next global save — never trusted, never left behind — while
+  unrelated project settings beside it survive.
+
 ## 0.39.45 — authenticated verdicts, fail-closed recovery and a fail-closed test gate (2026-10-22)
 
 ### Downstream compatibility: `pendingCompletion.leftOut`
