@@ -2380,7 +2380,10 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
       supervisorPaused ? 'supervisor paused' : '',
       // v0.39.46: queue depth rode only the retired strip. A waiting list is
       // durable context the user must still see at a glance.
-      shared?.queueDepth ? `${shared.queueDepth} queued` : '',
+      // Queue depth is durable context that rode only the retired strip. Read
+      // it from state so the fold works on every render path (the shared
+      // projection is only built when a uiStatusContext exists).
+      ((shared?.queueDepth ?? state.list?.length ?? 0) > 0) ? `${shared?.queueDepth ?? state.list?.length} queued` : '',
       versionTail ? versionTail.replace(/^[·\s]+/, '') : '',
     ].filter(Boolean);
     if (foldFacts.length > 0) {
