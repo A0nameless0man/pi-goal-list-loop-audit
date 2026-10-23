@@ -3085,13 +3085,15 @@ test("escape hatch: the ALWAYS choice skips the dialog for a SECOND draft in the
   // true. This is what the user actually experiences after picking ALWAYS.
   const before = JSON.parse(fs.readFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, "utf-8")) as { autoAcceptDrafts?: boolean };
   assert.equal(before.autoAcceptDrafts, true, "the ALWAYS choice persisted system-wide before the second draft");
-  await pi.command("goal", "", ctx); // drafting mode again
-  await pi.fire("message_start", { message: { role: "user" } }, ctx);
-  const second = await pi.runTool("propose_goal_draft", { objective: "flow two — done when pinned", verificationContract: "pinned" }, ctx);
+  // The second draft is a DIFFERENT draft class (task list) on the now-active
+  // goal — a goal draft would be refused because one is already running, which
+  // would prove nothing about auto-accept.
+  const second = await pi.runTool("propose_task_list", {
+    tasks: [{ title: "flow two task" }],
+  }, ctx);
   ctx.ui.customImpl = undefined; // cleanup BEFORE asserts
   assert.equal(customCalls, 1, "the second draft was NOT prompted");
-  assert.ok(second, "the second draft produced a result");
-  assert.doesNotMatch(second.content[0]!.text, /not started/i, "the second draft was not refused for lack of consent");
+  assert.equal(readState(cwd).goal?.taskList?.length ?? 0, 1, "the second draft applied without a dialog");
   const after = JSON.parse(fs.readFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, "utf-8")) as { autoAcceptDrafts?: boolean };
   assert.equal(after.autoAcceptDrafts, true, "the global file still contains true after the second draft");
 });
@@ -3107,11 +3109,12 @@ test("escape hatch: a failed settings write claims nothing — no journal row, n
   // Make the settings write fail the way a real one can: the settings root
   // exists as a FILE, so any atomic write beneath it fails. Nothing may be
   // journaled or announced when persistence did not land.
-  const settingsDir = path.dirname(GLOBAL_SETTINGS_PATH);
-  const savedDir = `${settingsDir}.bak.${process.pid}`;
-  fs.rmSync(savedDir, { recursive: true, force: true });
-  if (fs.existsSync(settingsDir)) fs.renameSync(settingsDir, savedDir);
-  fs.writeFileSync(settingsDir, ""); // a file where a directory must be
+  const savedSettings = fs.existsSync(GLOBAL_SETTINGS_PATH)
+    ? fs.readFileSync(GLOBAL_SETTINGS_PATH, "utf-8") : undefined;
+  // A directory where the settings FILE must be: the atomic write's rename
+  // cannot land, so saveSettings throws. Nothing may be journaled or announced.
+  fs.rmSync(GLOBAL_SETTINGS_PATH, { force: true });
+  fs.mkdirSync(GLOBAL_SETTINGS_PATH, { recursive: true });
   const journalCount = () => (fs.existsSync(path.join(cwd, ".pi-glla", "active.jsonl"))
     ? fs.readFileSync(path.join(cwd, ".pi-glla", "active.jsonl"), "utf-8").split("\n").filter((l) => l.includes("draft_autoaccept_enabled")).length
     : 0);
@@ -3121,8 +3124,8 @@ test("escape hatch: a failed settings write claims nothing — no journal row, n
     res = await pi.runTool("propose_goal_draft", { objective: "failed save objective — done when pinned", verificationContract: "pinned" }, ctx);
   } finally {
     ctx.ui.customImpl = undefined;
-    fs.rmSync(settingsDir, { force: true });
-    if (fs.existsSync(savedDir)) fs.renameSync(savedDir, settingsDir);
+    fs.rmSync(GLOBAL_SETTINGS_PATH, { recursive: true, force: true });
+    if (savedSettings !== undefined) fs.writeFileSync(GLOBAL_SETTINGS_PATH, savedSettings);
   }
   const journalAfter = journalCount();
   assert.equal(journalAfter, journalBefore, "no draft_autoaccept_enabled row when the save did not land");
