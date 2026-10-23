@@ -1401,11 +1401,11 @@ type DraftChoice = "yes" | "no" | "stale";
 // custom builder.
 let lastConfirmDialog: { title: string; body: string; options: string[] } | null = null;
 async function confirmDraft(ctx: ExtensionContext, title: string, body: string): Promise<DraftChoice> {
-  // v0.39.46 (note.md): auto-accept is a SYSTEM-WIDE setting — it lives in
-  // GLOBAL_ONLY_KEYS, so the old "for this project" label and
-  // saveSettings("project") call promised a scope that cannot exist. The write
-  // was silently discarded while the ledger and notification claimed success,
-  // which is why the option never stuck and the dialog reappeared every draft.
+  // v0.39.46 (note.md): auto-accept is now SYSTEM-WIDE — it joined
+  // GLOBAL_ONLY_KEYS so one switch governs every project. The old
+  // "for this project" wording and saveSettings("project") call described a
+  // per-project switch that had to be re-enabled in each tree; the dialog is
+  // what the user kept seeing. Scope is global now, so the label says so.
   const ALWAYS = "Yes — always auto-accept drafts, system-wide";
   const autoAcceptOnNotification = "Draft auto-accept ON system-wide — future draft confirms are skipped in every project. Undo in /glla settings: Auto-accept drafts = off.";
   const options = ["Yes", ALWAYS, "No"];

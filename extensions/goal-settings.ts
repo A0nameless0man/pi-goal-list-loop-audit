@@ -392,6 +392,10 @@ export const GLOBAL_ONLY_KEYS: ReadonlySet<keyof Settings> = new Set([
   "auditSpotCheckRate",
   "auditorStrictChallenge",
   "auditorInspection",
+  // v0.39.46: one system-wide auto-accept switch replacing the per-project one
+  // (a project-scope write offered "for this project" and was forgotten in
+  // every other tree). Global-only so the single switch truly governs.
+  "autoAcceptDrafts",
 ]);
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -1176,15 +1180,22 @@ function withSettingsFileLock<T>(file: string, fn: () => T): T {
   }
 }
 
-/** v0.39.46 (note.md): a project-scope write that names a global-only key used
- * to be silently DELETED, so the caller reported success while nothing was
- * persisted (field-observed: the draft dialog's "always auto-accept" option
- * re-prompted on every draft because its saveSettings("project") write was
- * discarded, yet it still journalled draft_autoaccept_enabled and notified
- * "ON"). Refuse loudly instead — a save that cannot land must never look like
- * one that did. Only an explicit `undefined` (key unset) is tolerated: it is a
- * deliberate removal, and clearing a stray global-only key from a project file
- * is exactly what the cleanup loop below is for. */
+/** v0.39.46 (note.md): autoAcceptDrafts is now SYSTEM-WIDE (§3 of the
+ * objective). It used to be a project-scope key: the draft dialog offered
+ * "always auto-accept drafts for this project" and wrote it per project, so on
+ * any other project the dialog reappeared and the user had to opt in again per
+ * tree. Moving the key into GLOBAL_ONLY_KEYS makes one switch govern every
+ * project; loadSettings() drops a stale project-scope copy so it can never
+ * shadow the global truth.
+ *
+ * The scope move creates a silent-drop hazard, which is what this guard
+ * removes: a caller that still writes the key at project scope would have its
+ * value deleted by the cleanup loop below while reporting success (the exact
+ * "looks saved, never applied" trap that comment warns about). Refuse loudly
+ * instead — a save that cannot land must never look like one that did. Only an
+ * explicit `undefined` (key unset) is tolerated: that is a deliberate removal,
+ * and clearing a stray global-only key from a project file is precisely what
+ * the cleanup loop is for. */
 export function assertProjectSaveAllows(patch: Partial<Settings>): void {
   const offending = Object.entries(patch)
     .filter(([k, v]) => v !== undefined && GLOBAL_ONLY_KEYS.has(k as keyof Settings))
