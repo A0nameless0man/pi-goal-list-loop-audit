@@ -3085,15 +3085,19 @@ test("escape hatch: the ALWAYS choice skips the dialog for a SECOND draft in the
   // true. This is what the user actually experiences after picking ALWAYS.
   const before = JSON.parse(fs.readFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, "utf-8")) as { autoAcceptDrafts?: boolean };
   assert.equal(before.autoAcceptDrafts, true, "the ALWAYS choice persisted system-wide before the second draft");
-  // The second draft is a DIFFERENT draft class (task list) on the now-active
-  // goal — a goal draft would be refused because one is already running, which
-  // would prove nothing about auto-accept.
-  const second = await pi.runTool("propose_task_list", {
-    tasks: [{ title: "flow two task" }],
-  }, ctx);
+  // Second draft, same flow: a fresh project. Before the fix the ALWAYS choice
+  // wrote a per-project value, so this second project prompted again — the
+  // exact re-prompt loop the user reported. Now the switch is system-wide and
+  // the second draft must sail through with no dialog at all.
+  const cwd2 = tmpCwd();
+  const ctx2 = await freshSession(cwd2, "startup");
+  await pi.command("goal", "", ctx2);
+  await pi.fire("message_start", { message: { role: "user" } }, ctx2);
+  const second = await pi.runTool("propose_goal_draft", { objective: "flow two — done when pinned", verificationContract: "pinned" }, ctx2);
   ctx.ui.customImpl = undefined; // cleanup BEFORE asserts
   assert.equal(customCalls, 1, "the second draft was NOT prompted");
-  assert.equal(readState(cwd).goal?.taskList?.length ?? 0, 1, "the second draft applied without a dialog");
+  assert.match(second.content[0]!.text, /activated|Begin work/i, "the second draft activated without a dialog");
+  assert.equal(readState(cwd2).goal?.status, "active", "the second project's goal is live");
   const after = JSON.parse(fs.readFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, "utf-8")) as { autoAcceptDrafts?: boolean };
   assert.equal(after.autoAcceptDrafts, true, "the global file still contains true after the second draft");
 });
@@ -3131,7 +3135,9 @@ test("escape hatch: a failed settings write claims nothing — no journal row, n
   assert.equal(journalAfter, journalBefore, "no draft_autoaccept_enabled row when the save did not land");
   assert.equal(ctx.ui.matching("auto-accept ON").length, 0, "no ON notification for a save that failed");
   assert.ok(ctx.ui.matching("Could not save auto-accept").length >= 1, "the failure is reported honestly");
-  assert.match(res.content[0]!.text, /activated|Begin work/i, "the draft is still accepted for this turn");
+  // The activation itself cannot complete either (every durable write shares
+  // the broken root), and it must say so rather than claim success.
+  assert.match(res.content[0]!.text, /not persisted|not started/i, "activation does not claim a success it could not persist");
 });
 
 test("escape hatch: a later draft skips the dialog entirely once autoAcceptDrafts landed", async () => {
