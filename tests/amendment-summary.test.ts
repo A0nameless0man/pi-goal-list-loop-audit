@@ -14,7 +14,16 @@ import assert from "node:assert/strict";
 import { buildAmendmentSummary } from "../extensions/loops/goal-tools.js";
 import type { Task } from "../extensions/goal-loop-core.js";
 import activate, { __testOnlyResetStaleFlag, __testOnlyLastConfirmDialog } from "../extensions/loops/goal.js";
-import { MockPi, freshSession as _unusedFs, seedGoal, seedState, tick, tmpCwd } from "./harness/mock-pi.js";
+import { MockPi, makeMockCtx, seedGoal, seedState, tick, tmpCwd } from "./harness/mock-pi.js";
+
+const pi = new MockPi();
+activate(pi.api);
+async function freshSession(cwd: string, reason: string) {
+  __testOnlyResetStaleFlag();
+  const ctx = makeMockCtx(cwd, { sessionManager: { name: `amend-${Math.random()}` } });
+  await pi.fire("session_start", { reason }, ctx);
+  return ctx;
+}
 
 const task = (title: string, status: Task["status"], extra: Partial<Task> = {}): Task =>
   ({ id: title, title, status, subtasks: [], ...extra });
