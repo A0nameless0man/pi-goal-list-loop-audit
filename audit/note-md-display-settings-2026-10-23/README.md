@@ -213,3 +213,82 @@ Bun version, not the code or the checks. The durable fix is to run the gate on
 the version the project already pins rather than to relax the capability
 probe — the probe exists because older Bun silently treats unknown flag values
 as test filters, which would have quietly run the wrong files.
+
+## Audit round 4 — two real findings, both fixed at the root
+
+### 1. [HIGH] The silent drop survived through a legacy alias
+
+`saveSettings("project", …)` validated the **raw** patch, but migration runs
+afterwards and can CREATE a global-only key from a supported legacy alias:
+
+```
+saveSettings("project", cwd, { auditorModelFallback: "provider/model" })
+  → migrateLegacySettings() turns it into auditorModelFallbacks (global-only)
+  → the write loop deletes it
+  → saveSettings returns normally
+```
+
+That is exactly the defect this guard exists to prevent, arriving through a
+different door. The fix validates the **canonicalized** patch:
+
+```ts
+const migratedPatch = migrateLegacySettings(patch);
+if (scope === "project") assertProjectSaveAllows(
+  migratedPatch as unknown as Partial<Settings>,
+  Object.keys(patch),   // so the refusal can name the caller's own spelling
+);
+```
+
+The refusal now reads:
+
+```
+saveSettings("project") cannot persist global-only setting(s):
+auditorModelFallbacks (migrated from auditorModelFallback) — these are
+system-wide and must be saved with scope "global"
+```
+
+Migration itself only produces keys when the alias is present, so ordinary
+project patches are unaffected; verified that `{aggressiveMode:true}` and
+`{autoResume:undefined}` still save, while `{hourlyQuotaProbe:true}` and
+`{subagentFallbacks:{Designer:[…]}}` refuse loudly.
+
+New test: `a legacy alias that migrates to a global-only key is refused too,
+not silently dropped` — asserts the throw, the alias name in the message, no
+phantom value on disk, an unrelated setting preserved, and that the same value
+succeeds at global scope.
+
+### 2. [MED] The whole-file `{}` assertion was collateral-damage blind
+
+`tests/lifecycle-recovery.test.ts` pinned the project file to exactly `{}`, so
+a cleanup that wiped every unrelated project setting would still have passed.
+Now the fixture seeds `aggressiveMode: true` beside the stale
+`autoAcceptDrafts`, and the assertion is semantic:
+
+```ts
+assert.equal("autoAcceptDrafts" in projectOnDisk, false, "the stale project-scope key is gone from disk");
+assert.equal(projectOnDisk.aggressiveMode, true, "an unrelated project setting is preserved, not collateral damage");
+```
+
+Negative control: making the cleanup build `next = {}` (wipe the file) now
+fails that test — the old assertion passed it.
+
+### Gate (Bun 1.3.14, the version CI pins)
+
+```
+ 458 pass
+ 0 fail
+Ran 458 tests across 12 files. [150.43s]
+```
+
+`npm run check` exit 0; `npm run check:inventory` exit 0.
+
+### A note on the earlier flaky orchestrator runs
+
+Mid-round, `tests/behavioral-orchestrator.test.ts` reported 7–10 failures with
+fan-out tests failing in full-file runs but passing in isolation. The cause was
+environmental: `/tmp` had hit **ENOSPC** (root filesystem 100%, 4.1 GB free) and
+the harness could not register test processes —
+`test process registration failed: ENOSPC: no space left on device`. After
+clearing 190 stale `/tmp/glla-test-processes-*` directories from earlier runs,
+the same file passed 158/158 and the full affected set passed 458/458. No source
+change was involved.
