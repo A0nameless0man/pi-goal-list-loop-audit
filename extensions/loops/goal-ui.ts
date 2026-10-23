@@ -935,10 +935,24 @@ function refreshUI(ctx: ExtensionContext, force = false): void {
     const statusText = buildStatusText(state, latestAuditProgress, now, theme, extras, width);
     const widgetLines = buildWidgetLines(state, latestAuditProgress, now, theme, width, extras);
     const widgetKey = widgetLines?.join("\n") ?? "";
-    const statusChanged = contextChanged || statusText !== lastUIStatusText;
+    // v0.39.46 (note.md §1): the bottom `glla: …` strip duplicated facts the
+    // card above it already shows — state, the next action, host/agent
+    // summary, audit freshness (field Screenshot_20261022_161729: the strip
+    // repeated the card verbatim and pushed the real content up). One surface
+    // per fact: when the card actually rendered, the strip is retired. The
+    // card is the surviving surface, so the facts that ONLY the strip carried
+    // (version tail, supervisor-paused) are folded into its closer by
+    // buildWidgetLines before the strip is cleared.
+    //
+    // States with no card (a bare waiting-only queue, a held loop, an absent
+    // goal) keep the legacy strip: clearing there would leave the user with
+    // no status surface at all.
+    const cardRendered = (widgetLines?.length ?? 0) > 0;
+    const effectiveStatus = cardRendered ? undefined : statusText;
+    const statusChanged = contextChanged || effectiveStatus !== lastUIStatusText;
     const widgetChanged = contextChanged || widgetKey !== lastUIWidgetKey;
     if (!statusChanged && !widgetChanged) return;
-    if (statusChanged) ctx.ui.setStatus("pi-glla", statusText);
+    if (statusChanged) ctx.ui.setStatus("pi-glla", effectiveStatus);
     // v0.38.23: pin the card to the below-chat stack (same zone as the
     // native fleet) so GLLA and fleet stop trading places across ticks.
     if (widgetChanged) {
@@ -957,7 +971,7 @@ function refreshUI(ctx: ExtensionContext, force = false): void {
     }
     lastUIRenderAt = now;
     lastUIRenderContext = ctx;
-    lastUIStatusText = statusText;
+    lastUIStatusText = effectiveStatus;
     lastUIWidgetKey = widgetKey;
   } catch {
     // stale ctx — next event refreshes
