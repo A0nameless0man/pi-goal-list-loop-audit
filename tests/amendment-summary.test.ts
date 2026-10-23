@@ -9,7 +9,8 @@
  * fail-closed behavior underneath (refuse on a changed proposal target) is
  * unchanged and is exercised here too.
  */
-import { test } from "node:test";
+import { test, afterEach } from "node:test";
+import fs from "node:fs";
 import assert from "node:assert/strict";
 import { buildAmendmentSummary } from "../extensions/loops/goal-tools.js";
 import type { Task } from "../extensions/goal-loop-core.js";
@@ -17,8 +18,13 @@ import activate, { __testOnlyResetStaleFlag, __testOnlyLastConfirmDialog } from 
 import { readState } from "../extensions/goal-loop-core.js";
 import { MockPi, makeMockCtx, seedGoal, seedState, tick, tmpCwd } from "./harness/mock-pi.js";
 
+const GLOBAL_SETTINGS_PATH = process.env.GLLA_GLOBAL_SETTINGS_PATH!;
 const pi = new MockPi();
 activate(pi.api);
+/** A reloaded session only hydrates a seeded goal when autoResume is on. */
+function setGlobalAutoResume(v: boolean): void {
+  fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify(v ? { autoResume: true } : {}));
+}
 async function freshSession(cwd: string, reason: string) {
   __testOnlyResetStaleFlag();
   const ctx = makeMockCtx(cwd, { sessionManager: { name: `amend-${Math.random()}` } });
@@ -134,6 +140,8 @@ test("amendment summary handles a first-time commit with no prior tasks", () => 
 // ── the real tool path ────────────────────────────────────────────────
 // Exercises propose_task_list against a goal that already owns a committed
 // plan, so the AMENDMENT branch (not the plain draft branch) renders.
+afterEach(() => setGlobalAutoResume(false));
+
 test("propose_task_list amendment renders the readable summary, not a JSON dump", async () => {
   const cwd = tmpCwd();
   seedState(cwd, {
@@ -143,12 +151,14 @@ test("propose_task_list amendment renders the readable summary, not a JSON dump"
       verificationContract: "gate passes",
     }),
   });
+  setGlobalAutoResume(true);
   const ctx = await freshSession(cwd, "reload");
   await tick();
   const bodies: string[] = [];
   ctx.ui.confirmImpl = async (_t: string, body: string) => { bodies.push(body); return true; };
+  ctx.ui.selectImpl = async () => "Yes";
+  // `replacing` requires an existing plan, so commit one first.
   ctx.ui.customImpl = async () => "Yes";
-  // First proposal commits a plan; the second must AMEND it (replacing branch).
   const r1 = await pi.runTool("propose_task_list", {
     tasks: [{ title: "Release/CI hardening" }, { title: "Model-selection parity" }, { title: "Durable projection" }],
   }, ctx);
@@ -164,6 +174,7 @@ test("propose_task_list amendment renders the readable summary, not a JSON dump"
   }, ctx);
   ctx.ui.confirmImpl = undefined;
   ctx.ui.customImpl = undefined;
+  ctx.ui.selectImpl = undefined;
   assert.ok(bodies.length > 0, `amendment dialog rendered (bodies=${bodies.length})`);
   const body = bodies[bodies.length - 1]!;
   assert.ok(!body.includes('"tasks":'), "no JSON task dump in the live dialog");
