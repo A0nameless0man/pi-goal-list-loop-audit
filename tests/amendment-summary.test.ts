@@ -183,3 +183,44 @@ test("propose_task_list amendment renders the readable summary, not a JSON dump"
   assert.match(body, /Replacing 3 committed tasks/, "real prior counts drive the headline");
   assert.match(body, /Re-audit pass\s+\[new\]/, "the added task is marked");
 });
+
+test("propose_task_list aborts an amendment whose target changed during Confirm", async () => {
+  const cwd = tmpCwd();
+  seedState(cwd, {
+    goal: seedGoal({
+      status: "active",
+      objective: "Race target objective — done when pinned.",
+      verificationContract: "gate passes",
+    }),
+  });
+  setGlobalAutoResume(true);
+  const ctx = await freshSession(cwd, "reload");
+  await tick();
+  ctx.ui.customImpl = async () => "Yes";
+  await pi.runTool("propose_task_list", { tasks: [{ title: "First committed task" }] }, ctx);
+  const before = readState(cwd) as { goal?: { revision?: number; taskList?: { tasks?: Array<{ title: string }> } } };
+  assert.equal(before.goal?.taskList?.tasks?.length, 1, "a plan is committed before the race");
+  const titlesBefore = (before.goal?.taskList?.tasks ?? []).map((t) => t.title).join("|");
+  // Mutate the live goal WHILE the Confirm is open — the exact race the
+  // recheck exists to fail closed on. Without the recheck the amendment would
+  // silently replace a plan the user never saw.
+  ctx.ui.confirmImpl = async () => {
+    const { updateGoal } = await import("../extensions/goal-loop-core.js");
+    updateGoal({ objective: "Race target objective MUTATED mid-confirm." }, ctx as never);
+    return true;
+  };
+  const res = await pi.runTool("propose_task_list", {
+    replaceExisting: true,
+    tasks: [{ title: "First committed task" }, { title: "Smuggled task" }],
+  }, ctx);
+  ctx.ui.confirmImpl = undefined;
+  ctx.ui.customImpl = undefined;
+  const after = readState(cwd) as { goal?: { revision?: number; taskList?: { tasks?: Array<{ title: string }> } } };
+  assert.equal((res as any)?.isError, true, "the amendment is refused as an error, not applied silently");
+  assert.match((res as any).content[0].text, /changed during confirmation/i, "the refusal names the race");
+  assert.equal(
+    (after.goal?.taskList?.tasks ?? []).map((t) => t.title).join("|"),
+    titlesBefore,
+    "the committed plan is untouched",
+  );
+});
