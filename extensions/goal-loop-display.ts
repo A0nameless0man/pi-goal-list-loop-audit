@@ -2380,7 +2380,7 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
       supervisorPaused ? 'supervisor paused' : '',
       // v0.39.46: queue depth rode only the retired strip. A waiting list is
       // durable context the user must still see at a glance.
-      status?.queueDepth ? `${status.queueDepth} queued` : '',
+      shared?.queueDepth ? `${shared.queueDepth} queued` : '',
       versionTail ? versionTail.replace(/^[·\s]+/, '') : '',
     ].filter(Boolean);
     if (foldFacts.length > 0) {
