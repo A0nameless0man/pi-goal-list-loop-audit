@@ -219,8 +219,16 @@ for (const consent of [false, true]) {
     fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, JSON.stringify({ autoAcceptDrafts: true }));
     let asked = 0;
     ctx.ui.confirmImpl = async (_title, body) => {
-      asked++; assert.ok(body.includes(before.verificationContract!));
-      assert.match(body, /Original committed task/); assert.match(body, /Reverify current round trip/);
+      asked++;
+      // v0.39.46: the amendment dialog is a readable summary — it names both
+      // the dropped and incoming tasks and the replacement counts, and it does
+      // NOT re-print the unchanged verification contract verbatim ("Contract:
+      // unchanged (N checks)" carries that fact instead). The disclosure
+      // requirement is unchanged: the user still sees what is being replaced.
+      assert.match(body, /Original committed task/);
+      assert.match(body, /Reverify current round trip/);
+      assert.match(body, /Replacing 1 committed task/);
+      assert.doesNotMatch(body, /"tasks":/, "no JSON blob in the amendment dialog");
       return consent;
     };
     await pi.runTool("propose_task_list", { replaceExisting: true, tasks: [{ title: "Reverify current round trip" }] }, ctx);

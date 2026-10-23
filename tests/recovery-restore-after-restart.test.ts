@@ -183,7 +183,11 @@ test("blank restart paints the durable list objective, recovery owner, and next 
   // v0.38.31: recovery-timer waits end at the auto-retry row — the generic
   // suggested-action tail is gone (owner + next above carry the facts).
   assert.doesNotMatch(widget, /remains safe/, "no generic boilerplate tail on the wait card");
-  assert.match(status, /main-model recovery/, "the status bar also names the recovery owner");
+  // v0.39.46 (note.md §1): the bottom strip no longer repeats facts the card
+  // already owns. The recovery owner is asserted on the WIDGET three lines
+  // above, so the requirement "the recovery owner is visible" keeps its
+  // coverage; the duplicate status line is retired, not lost.
+  assert.doesNotMatch(status, /main-model recovery/, "the strip does not repeat the card's recovery owner");
 });
 
 test("v0.34.63 — a lifecycle start with a DIFFERENT session id stays refused while the barrier pends", async () => {
