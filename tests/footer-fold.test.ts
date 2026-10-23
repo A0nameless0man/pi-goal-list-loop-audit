@@ -19,6 +19,20 @@ import { buildStatusText, buildWidgetLines, MAIN_HOST_LABEL } from "../extension
 import { backgroundStatus } from "../extensions/goal-loop-display.js";
 
 const sanitizeForCompare = (s: string) => s.replace(/\u001b\[[0-9;]*m/g, "");
+/** Terminal cell width of a plain (ANSI-free) string. */
+const tuiWidth = (s: string): number => {
+  let w = 0;
+  for (const ch of s) {
+    const cp = ch.codePointAt(0)!;
+    // wide CJK / emoji occupy two cells; combining marks occupy none
+    if (cp >= 0x1100 && (cp <= 0x115f || (cp >= 0x2e80 && cp <= 0xa4cf) || (cp >= 0xac00 && cp <= 0xd7a3)
+      || (cp >= 0xf900 && cp <= 0xfaff) || (cp >= 0xfe30 && cp <= 0xfe6f) || (cp >= 0xff00 && cp <= 0xff60)
+      || (cp >= 0xffe0 && cp <= 0xffe6) || (cp >= 0x1f300 && cp <= 0x1f9ff))) w += 2;
+    else if (cp >= 0x0300 && cp <= 0x036f) continue;
+    else w += 1;
+  }
+  return w;
+};
 const NOW = Date.parse("2026-10-22T16:00:00Z");
 const goalOf = (over: Record<string, unknown> = {}) => ({
   id: "g1",
