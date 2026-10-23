@@ -360,64 +360,85 @@ function appendFactsToCard(
   const contentWidth = width !== undefined && width > 0
     ? Math.max(1, width - WIDGET_HORIZONTAL_MARGIN)
     : Number.MAX_SAFE_INTEGER;
-  // Appending to an existing `└─` closer keeps the block's last row; every
-  // additional fact needs its own row. Continuation rows are `├─` and only the
-  // final row closes with `└─`, so the tree never reads as terminated early.
-  const canAppend = prefix === '└─ ';
   const rowPrefixWidth = 3; // `├─ ` / `└─ `/`│  `
-  const baseUsed = canAppend
-    ? tuiVisibleWidth(stripAnsi(lastLine)) + sepWidth
-    : rowPrefixWidth;
-  const rows: string[] = [];
+  // Rows are kept as {text, cont}: `cont` marks a row that continues the
+  // PREVIOUS fact (a wrapped phrase), which renders with a `│  ` indent so the
+  // tree does not suggest a new sibling item.
+  const rows: Array<{ text: string; cont: boolean }> = [];
+  // Appending to an existing `└─` closer keeps the block's last row.
+  const canAppend = prefix === '└─ ';
   let cur = '';
-  let used = baseUsed;
+  let curCont = false;
+  let used = canAppend ? tuiVisibleWidth(stripAnsi(lastLine)) + sepWidth : rowPrefixWidth;
+  const flush = () => {
+    if (cur.length === 0) return;
+    rows.push({ text: cur, cont: curCont });
+    cur = '';
+    curCont = false;
+    used = rowPrefixWidth;
+  };
   for (const fact of facts) {
     const needsSep = cur.length > 0;
     const added = tuiVisibleWidth(fact) + (needsSep ? sepWidth : 0);
-    if (cur.length > 0 && used + added > contentWidth) {
-      rows.push(cur);
-      cur = '';
-      used = rowPrefixWidth;
+    if (cur.length > 0 && used + added > contentWidth) flush();
+    if (cur.length === 0 && tuiVisibleWidth(fact) + rowPrefixWidth <= contentWidth) {
+      cur = fact;
+      used += tuiVisibleWidth(fact);
+      continue;
     }
-    if (cur.length === 0 && tuiVisibleWidth(fact) + rowPrefixWidth > contentWidth) {
-      // The fact cannot fit on one row. Split it at WORD boundaries so no word
-      // is ever cut mid-fact; a single word too wide for the row is the only
-      // remaining case and is hard-split as a last resort.
+    if (cur.length === 0) {
+      // The fact cannot fit on one row: split at WORD boundaries so no word is
+      // ever cut mid-fact (a phrase reads across rows instead of being clipped).
       const words = fact.split(' ');
       let line = '';
-      for (const word of words) {
+      words.forEach((word, wi) => {
         const candidate = line ? `${line} ${word}` : word;
-        if (tuiVisibleWidth(candidate) + rowPrefixWidth <= contentWidth) { line = candidate; continue; }
-        if (line) { rows.push(line); line = ''; }
+        const fits = tuiVisibleWidth(candidate) + rowPrefixWidth <= contentWidth;
+        if (fits) { line = candidate; return; }
+        if (line) {
+          if (cur.length === 0) cur = line;
+          else rows.length === 0 && !cur ? (cur = line) : (rows.push({ text: line, cont: true }));
+          line = '';
+        }
         if (tuiVisibleWidth(word) + rowPrefixWidth > contentWidth) {
-          // last resort: mark the over-long word rather than claim it is whole
+          // A single word wider than the row: mark it rather than pretend it
+          // is whole. (No natural break point exists.)
           const budget = Math.max(1, contentWidth - rowPrefixWidth);
           let chunk = '';
           for (const ch of word) {
             if (tuiVisibleWidth(chunk + ch) > budget) break;
             chunk += ch;
           }
-          rows.push(`${chunk}…`);
+          line = `${chunk}…`;
         } else line = word;
+      });
+      if (line) {
+        if (cur.length === 0) { cur = line; curCont = false; }
+        else { rows.push({ text: line, cont: true }); }
       }
-      if (line) rows.push(line);
       continue;
     }
-    cur = needsSep ? `${cur}${sep}${fact}` : fact;
-    used += added;
+    // cur is non-empty and the fact fits: append with a separator.
+    cur = `${cur}${sep}${fact}`;
+    used += sepWidth + tuiVisibleWidth(fact);
   }
-  if (cur.length > 0) rows.push(cur);
+  flush();
   if (rows.length === 0) return;
+  const emit = (row: { text: string; cont: boolean }, glyph: string) =>
+    lines.push(`${paint(theme, 'dim', glyph)}${dim(row.text)}`);
   if (canAppend) {
-    lines[lastIndex] = `${lastLine}${sep}${dim(rows[0]!)}`;
+    lines[lastIndex] = `${lastLine}${sep}${dim(rows[0]!.text)}`;
+    rows.slice(1).forEach((row, i, rest) => {
+      const glyph = row.cont ? '│  ' : (i === rest.length - 1 ? '└─ ' : '├─ ');
+      emit(row, glyph);
+    });
   } else {
-    const glyph = rows.length === 1 ? '└─ ' : '├─ ';
-    lines.push(`${paint(theme, 'dim', glyph)}${dim(rows[0]!)}`);
+    rows.forEach((row, i) => {
+      const last = i === rows.length - 1;
+      const glyph = row.cont && i > 0 ? '│  ' : (last ? '└─ ' : '├─ ');
+      emit(row, glyph);
+    });
   }
-  rows.slice(1).forEach((row, i, rest) => {
-    const last = i === rest.length - 1;
-    lines.push(`${paint(theme, 'dim', last ? '└─ ' : '├─ ')}${dim(row)}`);
-  });
 }
 
 function stripAnsi(s: string): string {
