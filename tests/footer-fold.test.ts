@@ -112,3 +112,40 @@ test("negative control: the footer facts would be lost if the fold were removed"
 
 // Silence unused-import lint if backgroundStatus is not exercised above.
 void backgroundStatus;
+
+// ── narrow widths: a folded fact is never clipped mid-fact ─────────────
+// Audit item 2: the final layout pass truncates every line to the content
+// width, so folding onto one closer row used to render `supervisor paused ·
+// v0.39.…` at 32 columns and clip `supervisor paused` itself at 20. A
+// half-rendered state chip or version string is worse than an extra row.
+for (const width of [20, 32]) {
+  test(`at ${width} columns every folded fact is present whole, not clipped`, () => {
+    const state = { goal: goalOf(), list: [], supervisorPausedAt: NOW - 60_000 } as never;
+    const lines = buildWidgetLines(state, null, NOW, undefined, width, { versionTail: "· v0.39.46" })!;
+    const plain = lines.map((l) => sanitizeForCompare(l));
+    const body = plain.join("\n");
+    // The facts must appear intact — "supervisor" and "paused" may split across
+    // wrapped rows, but no fact may END in an ellipsis that truncates it.
+    assert.match(body, /supervisor/, `supervisor marker present at ${width}`);
+    assert.match(body, /paused/, `the word 'paused' survives at ${width}: ${body}`);
+    assert.match(body, /v0\.39\.46/, `version tail whole at ${width}: ${body}`);
+    for (const line of plain) {
+      assert.ok(
+        !/supervisor pau…|v0\.39\.…|paused…/.test(line),
+        `no fact is cut mid-word at ${width}: ${line}`,
+      );
+      assert.ok(tuiWidth(line) <= width, `line fits the width at ${width}: ${line}`);
+    }
+  });
+}
+
+test("a wrapped fact keeps the tree structure honest (no early closer)", () => {
+  const state = { goal: goalOf(), list: [], supervisorPausedAt: NOW - 60_000 } as never;
+  const lines = buildWidgetLines(state, null, NOW, undefined, 20, { versionTail: "· v0.39.46" })!;
+  const plain = lines.map((l) => sanitizeForCompare(l));
+  // Exactly one row may close the block; a mid-block `└─` would read as "and
+  // then nothing follows", hiding the rows printed after it.
+  assert.equal(plain.filter((l) => l.startsWith("└─")).length, 1, `one closer row: ${plain.join(" | ")}`);
+  // A continuation row is indented, never presented as a new sibling item.
+  assert.ok(plain.some((l) => l.startsWith("│  ")), `wrapped continuation uses the │ indent: ${plain.join(" | ")}`);
+});
