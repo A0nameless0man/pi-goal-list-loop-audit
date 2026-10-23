@@ -81,7 +81,9 @@ test("completed standalone goal automatically hands off to the waiting list", as
   assert.equal(before.goal?.policy, "goal");
   assert.equal(before.goal?.status, "active");
   assert.equal(before.list?.length, 4);
-  assert.match(ctx.ui.statuses["pi-glla"] ?? "", /4 queued/);
+  // v0.39.46 (note.md §1): queue depth is a card fact now. The bottom strip
+  // was retired where the card renders, so the requirement is pinned on the
+  // surface that survives — the card — instead of the duplicated line.
   assert.match(buildWidgetLines(before)?.join("\n") ?? "", /4 queued/);
 
   // This is the same terminal archive fence used after an approved detached
