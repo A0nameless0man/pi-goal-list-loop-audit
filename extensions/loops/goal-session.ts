@@ -1409,6 +1409,21 @@ async function confirmDraft(ctx: ExtensionContext, title: string, body: string):
   const ALWAYS = "Yes — always auto-accept drafts, system-wide";
   const autoAcceptOnNotification = "Draft auto-accept ON system-wide — future draft confirms are skipped in every project. Undo in /glla settings: Auto-accept drafts = off.";
   const options = ["Yes", ALWAYS, "No"];
+  // v0.39.47 (audit item 5): a save that cannot land must not claim it did.
+  // The journal row and the ON notification are promises to the user that the
+  // switch is now set; emitting them after a failed/ignored write is exactly
+  // the "looks saved, never applied" lie this goal exists to remove.
+  const enableAutoAccept = (context: ExtensionContext, via: string): boolean => {
+    try {
+      saveSettings("global", context.cwd, { autoAcceptDrafts: true });
+    } catch {
+      context.ui.notify("Could not save auto-accept (settings write failed) — the draft was accepted for this turn only.", "warning");
+      return false;
+    }
+    appendLedger(context.cwd, "draft_autoaccept_enabled", { via, scope: "global" });
+    context.ui.notify(autoAcceptOnNotification, "info");
+    return true;
+  };
   // v0.34.80 (GitHub #4 rework): `custom` is ALWAYS a function in real pi
   // 0.84.1 — RPC mode resolves `undefined` WITHOUT ever invoking the factory
   // (`async custom() { /* Custom UI not supported */ return undefined; }`),
