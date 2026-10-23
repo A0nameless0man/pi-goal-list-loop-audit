@@ -32,6 +32,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import activate, { __testOnlyResetStaleFlag, __testOnlyResetOwnerSession } from "../extensions/loops/goal.js";
+import { loadSettings } from "../extensions/goal-settings.js";
 import { readState, LIST_MUTATING_SUBCOMMANDS, SETTINGS_MUTATING_ACTIONS } from "../extensions/goal-loop-core.js";
 import { MockPi, makeMockCtx, tmpCwd, seedState, invalidateHostSession, tick, type MockCtx } from "./harness/mock-pi.js";
 import { readGoalRuntimeSource } from "./harness/goal-source.js";
