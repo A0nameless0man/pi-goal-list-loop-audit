@@ -269,7 +269,9 @@ test("v0.34.54: settings after a fresh session_start — the table opens AND a r
   const cwd = tmpCwd();
   seedState(cwd, {});
   fs.mkdirSync(path.join(cwd, ".pi-glla"), { recursive: true });
-  fs.writeFileSync(projectSettingsPath(cwd), JSON.stringify({ autoAcceptDrafts: true }));
+  // A stale global-only key sits beside an UNRELATED project setting that must
+  // survive the cleanup: the fix targets the offending key, not the file.
+  fs.writeFileSync(projectSettingsPath(cwd), JSON.stringify({ autoAcceptDrafts: true, aggressiveMode: true }));
   const ctx = await freshSession(cwd, "startup");
   await tick();
   invalidateHostSession(pi, ctx);
@@ -312,11 +314,15 @@ test("v0.34.54: settings after a fresh session_start — the table opens AND a r
   // override was invented for a global-only key.
   assert.equal("autoAcceptDrafts" in globalAfter && globalAfter.autoAcceptDrafts !== undefined, false, "the auto-accept switch is off system-wide");
   assert.equal(globalAfter.autoResume, globalBefore.autoResume, "unrelated global keys are preserved");
-  // v0.39.47 (audit item 3): the stale per-project key is not merely ignored in
-  // memory — the file itself is cleaned, so no later reader can see a value the
-  // runtime refuses to honour.
+  // v0.39.47 (audit item 3), tightened in round 4: the stale per-project key is
+  // not merely ignored in memory — the file itself is cleaned, so no later
+  // reader can see a value the runtime refuses to honour. Asserted
+  // SEMANTICALLY: the offending key is gone while an unrelated project setting
+  // beside it survives, so cleanup cannot pass by wiping the whole file.
   assert.notEqual(loadSettings(cwd).autoAcceptDrafts, true, "a stale project-scope value cannot enable auto-accept");
-  assert.equal(fs.readFileSync(projectSettingsPath(cwd), "utf-8"), JSON.stringify({}), "the stale project-scope key is gone from disk");
+  const projectOnDisk = JSON.parse(fs.readFileSync(projectSettingsPath(cwd), "utf-8")) as Record<string, unknown>;
+  assert.equal("autoAcceptDrafts" in projectOnDisk, false, "the stale project-scope key is gone from disk");
+  assert.equal(projectOnDisk.aggressiveMode, true, "an unrelated project setting is preserved, not collateral damage");
 });
 
 // ────────────────────────────────────────────────────────────────────
