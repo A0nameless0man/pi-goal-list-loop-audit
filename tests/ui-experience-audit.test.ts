@@ -121,7 +121,7 @@ test("lifecycle cards and status rows fit every explicit terminal width", async 
   }
 });
 
-test("draft review keeps project consent readable and uses the supplied keybindings", () => {
+test("draft review keeps system-wide consent readable and uses the supplied keybindings", () => {
   for (const height of [8, 12, 18, 24]) {
     let accepted: string | undefined;
     const choice = "Yes — always auto-accept drafts, system-wide";
@@ -130,7 +130,10 @@ test("draft review keeps project consent readable and uses the supplied keybindi
     component.handleInput("down");
     assert.equal(component.getSelectedItem(), choice);
     assertFits(component.render(40), 40, height);
-    assert.match(component.render(40).join("\n"), /this project/);
+    // v0.39.46: the escape hatch is system-wide, not per project — the label
+    // must say so, or it promises a scope the setting does not have.
+    assert.match(component.render(40).join("\n"), /system-wide/);
+    assert.doesNotMatch(component.render(40).join("\n"), /this project/);
     component.handleInput("enter"); assert.equal(accepted, choice);
   }
 });
