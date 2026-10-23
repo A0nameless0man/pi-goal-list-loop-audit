@@ -2368,6 +2368,32 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
       withAgents = orphanHead ? [orphanHead, ...agentLines] : [...agentLines];
     }
   }
+  // v0.39.46 (note.md §1 "remove the footer"): the running-version tail and
+  // the supervisor-paused chip lived ONLY on the bottom status strip. With
+  // that strip retired in favour of the card, the card must carry them or
+  // they vanish from the screen. Rendered as the dim closer detail so a
+  // stale session is still visible at a glance without a second surface.
+  if (withAgents && withAgents.length > 0) {
+    const versionTail = extras?.versionTail?.trim();
+    const supervisorPaused = typeof state.supervisorPausedAt === 'number';
+    const foldFacts = [
+      supervisorPaused ? 'supervisor paused' : '',
+      versionTail ? versionTail.replace(/^[·\s]+/, '') : '',
+    ].filter(Boolean);
+    if (foldFacts.length > 0) {
+      const lastIndex = withAgents.length - 1;
+      const lastLine = withAgents[lastIndex]!;
+      const prefixMatch = lastLine.match(/^(└─ |├─ |│  |│ )/);
+      const folded = foldFacts.join(' · ');
+      // APPEND — the closer already carries "details: /glla status" or the
+      // next action, and that text must survive the fold.
+      if (prefixMatch && prefixMatch[1] === '└─ ') {
+        withAgents[lastIndex] = `${lastLine} ${paint(theme, 'dim', '·')} ${paint(theme, 'dim', uiSafeText(folded))}`;
+      } else if (prefixMatch) {
+        withAgents.push(`${paint(theme, 'dim', '└─ ')}${paint(theme, 'dim', uiSafeText(folded))}`);
+      }
+    }
+  }
   // The card always reads as a finished block: a final `├─`/`│` row
   // promises continuation rows that never come (field 2026-09-08 220808 —
   // the active card ended on its action row, reading as cut off). Close
