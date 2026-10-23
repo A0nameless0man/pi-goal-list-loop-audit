@@ -14,7 +14,8 @@ import assert from "node:assert/strict";
 import { buildAmendmentSummary } from "../extensions/loops/goal-tools.js";
 import type { Task } from "../extensions/goal-loop-core.js";
 import activate, { __testOnlyResetStaleFlag, __testOnlyLastConfirmDialog } from "../extensions/loops/goal.js";
-import { MockPi, makeMockCtx, readState, seedGoal, seedState, tick, tmpCwd } from "./harness/mock-pi.js";
+import { readState } from "../extensions/goal-loop-core.js";
+import { MockPi, makeMockCtx, seedGoal, seedState, tick, tmpCwd } from "./harness/mock-pi.js";
 
 const pi = new MockPi();
 activate(pi.api);
