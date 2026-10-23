@@ -592,6 +592,98 @@ function durableDeferFactsForGoal(
   });
 }
 
+/** v0.39.46 (note.md §2): a committed-plan amendment used to hand the user
+ * `JSON.stringify(taskList, null, 2)` framed by the full objective and
+ * verification contract re-printed verbatim — a multi-screen dump of machine
+ * state where the actual change (which tasks are kept, which are new) was the
+ * hardest thing to find. This renders the same decision as a reviewable
+ * summary: one-line goal, a contract line that stays quiet when nothing
+ * changed, the before/after task counts, and one numbered line per proposed
+ * task carrying its prior status. Never a JSON blob.
+ *
+ * Pure and independently testable — the dialog body is a contract, not
+ * incidental formatting. */
+export function buildAmendmentSummary(input: {
+  objective: string;
+  contract?: string;
+  priorContract?: string;
+  priorTasks: Task[];
+  proposedTitles: string[];
+  proposedRoles?: Array<string | undefined>;
+}): string {
+  const prior = input.priorTasks ?? [];
+  const proposed = input.proposedTitles;
+  const done = prior.filter((t) => t.status === "complete").length;
+  const running = prior.filter((t) => t.status === "in_progress").length;
+  const pending = prior.length - done - running;
+  const counts = [
+    done ? `${done} complete` : "",
+    running ? `${running} in progress` : "",
+    pending ? `${pending} pending` : "",
+  ].filter(Boolean).join(", ");
+
+  const lines: string[] = [];
+  // One line of goal context: enough to recognise WHICH goal, without
+  // re-printing a 30-line objective the user already confirmed.
+  lines.push(`Goal: ${sanitizeDisplayText(oneLine(input.objective, 120))}`);
+
+  const contractChecks = (text?: string) => (text ?? "").split("\n").filter((l) => l.trim() && !/^\s*Done when:/i.test(l)).length;
+  const before = contractChecks(input.priorContract);
+  const after = contractChecks(input.contract);
+  if ((input.contract ?? "") === (input.priorContract ?? "")) {
+    lines.push(before ? `Contract: unchanged (${before} check${before === 1 ? "" : "s"})` : "Contract: unchanged");
+  } else if (before && after) {
+    lines.push(`Contract: CHANGED (${before} → ${after} checks) — this is a revision boundary`);
+  } else if (after) {
+    lines.push(`Contract: set (${after} check${after === 1 ? "" : "s"})`);
+  } else {
+    lines.push("Contract: cleared — the goal would have no verification gate");
+  }
+  lines.push("");
+
+  // The headline decision, in the user's terms.
+  const priorById = new Map(prior.map((t) => [t.title.trim(), t]));
+  const replacement = prior.length
+    ? `Replacing ${prior.length} committed task${prior.length === 1 ? "" : "s"}${counts ? ` (${counts})` : ""} with ${proposed.length}`
+    : `Committing ${proposed.length} task${proposed.length === 1 ? "" : "s"}`;
+  lines.push(`${replacement}:`);
+
+  proposed.forEach((title, i) => {
+    const role = input.proposedRoles?.[i];
+    const was = priorById.get(title.trim());
+    // Prior status in brackets so the user sees continuity at a glance; NEW
+    // marks added work explicitly rather than leaving it to inference.
+    const tag = was ? `[was: ${was.status}]` : "[new]";
+    lines.push(`  ${i + 1}. ${sanitizeDisplayText(title)}${role ? ` [${role}]` : ""}  ${tag}`);
+  });
+
+  const dropped = prior.filter((t) => !proposed.some((p) => p.trim() === t.title.trim()));
+  if (dropped.length) {
+    lines.push("");
+    lines.push("Dropped:");
+    for (const t of dropped) lines.push(`  - ${sanitizeDisplayText(t.title)} [was: ${t.status}]`);
+  }
+
+  lines.push("");
+  if (input.contract !== input.priorContract) {
+    lines.push("This replaces the committed plan and changes the verification contract: prior revision proof no longer applies.");
+  } else {
+    lines.push("This replaces the committed plan and invalidates prior revision proof. Objective and contract are unchanged.");
+  }
+  lines.push("Approve?");
+  return lines.join("\n");
+}
+
+/** First line of a possibly multi-line value, clipped on a word boundary. */
+function oneLine(text: string, max: number): string {
+  const first = text.split("\n").find((l) => l.trim())?.trim() ?? "";
+  if (first.length <= max) return first;
+  const cut = first.slice(0, max);
+  const space = cut.lastIndexOf(" ");
+  return `${(space > max * 0.6 ? cut.slice(0, space) : cut).trimEnd()}…`;
+}
+
+
 function registerAgentTools(pi: any): void {
   registerRespecBuilderTools(pi, {
     context: ctx => foreignToolGuard(ctx) ? null : currentToolContext(ctx),
@@ -4300,97 +4392,6 @@ function registerAgentTools(pi: any): void {
       return { content: [{ type: "text", text: lines.join("\n") }], details: {} };
     },
   }));
-
-/** v0.39.46 (note.md §2): a committed-plan amendment used to hand the user
- * `JSON.stringify(taskList, null, 2)` framed by the full objective and
- * verification contract re-printed verbatim — a multi-screen dump of machine
- * state where the actual change (which tasks are kept, which are new) was the
- * hardest thing to find. This renders the same decision as a reviewable
- * summary: one-line goal, a contract line that stays quiet when nothing
- * changed, the before/after task counts, and one numbered line per proposed
- * task carrying its prior status. Never a JSON blob.
- *
- * Pure and independently testable — the dialog body is a contract, not
- * incidental formatting. */
-export function buildAmendmentSummary(input: {
-  objective: string;
-  contract?: string;
-  priorContract?: string;
-  priorTasks: Task[];
-  proposedTitles: string[];
-  proposedRoles?: Array<string | undefined>;
-}): string {
-  const prior = input.priorTasks ?? [];
-  const proposed = input.proposedTitles;
-  const done = prior.filter((t) => t.status === "complete").length;
-  const running = prior.filter((t) => t.status === "in_progress").length;
-  const pending = prior.length - done - running;
-  const counts = [
-    done ? `${done} complete` : "",
-    running ? `${running} in progress` : "",
-    pending ? `${pending} pending` : "",
-  ].filter(Boolean).join(", ");
-
-  const lines: string[] = [];
-  // One line of goal context: enough to recognise WHICH goal, without
-  // re-printing a 30-line objective the user already confirmed.
-  lines.push(`Goal: ${sanitizeDisplayText(oneLine(input.objective, 120))}`);
-
-  const contractChecks = (text?: string) => (text ?? "").split("\n").filter((l) => l.trim() && !/^\s*Done when:/i.test(l)).length;
-  const before = contractChecks(input.priorContract);
-  const after = contractChecks(input.contract);
-  if ((input.contract ?? "") === (input.priorContract ?? "")) {
-    lines.push(before ? `Contract: unchanged (${before} check${before === 1 ? "" : "s"})` : "Contract: unchanged");
-  } else if (before && after) {
-    lines.push(`Contract: CHANGED (${before} → ${after} checks) — this is a revision boundary`);
-  } else if (after) {
-    lines.push(`Contract: set (${after} check${after === 1 ? "" : "s"})`);
-  } else {
-    lines.push("Contract: cleared — the goal would have no verification gate");
-  }
-  lines.push("");
-
-  // The headline decision, in the user's terms.
-  const priorById = new Map(prior.map((t) => [t.title.trim(), t]));
-  const replacement = prior.length
-    ? `Replacing ${prior.length} committed task${prior.length === 1 ? "" : "s"}${counts ? ` (${counts})` : ""} with ${proposed.length}`
-    : `Committing ${proposed.length} task${proposed.length === 1 ? "" : "s"}`;
-  lines.push(`${replacement}:`);
-
-  proposed.forEach((title, i) => {
-    const role = input.proposedRoles?.[i];
-    const was = priorById.get(title.trim());
-    // Prior status in brackets so the user sees continuity at a glance; NEW
-    // marks added work explicitly rather than leaving it to inference.
-    const tag = was ? `[was: ${was.status}]` : "[new]";
-    lines.push(`  ${i + 1}. ${sanitizeDisplayText(title)}${role ? ` [${role}]` : ""}  ${tag}`);
-  });
-
-  const dropped = prior.filter((t) => !proposed.some((p) => p.trim() === t.title.trim()));
-  if (dropped.length) {
-    lines.push("");
-    lines.push("Dropped:");
-    for (const t of dropped) lines.push(`  - ${sanitizeDisplayText(t.title)} [was: ${t.status}]`);
-  }
-
-  lines.push("");
-  if (input.contract !== input.priorContract) {
-    lines.push("This replaces the committed plan and changes the verification contract: prior revision proof no longer applies.");
-  } else {
-    lines.push("This replaces the committed plan and invalidates prior revision proof. Objective and contract are unchanged.");
-  }
-  lines.push("Approve?");
-  return lines.join("\n");
-}
-
-/** First line of a possibly multi-line value, clipped on a word boundary. */
-function oneLine(text: string, max: number): string {
-  const first = text.split("\n").find((l) => l.trim())?.trim() ?? "";
-  if (first.length <= max) return first;
-  const cut = first.slice(0, max);
-  const space = cut.lastIndexOf(" ");
-  return `${(space > max * 0.6 ? cut.slice(0, space) : cut).trimEnd()}…`;
-}
 
   pi.registerTool(defineTool({
     name: "propose_task_list",
