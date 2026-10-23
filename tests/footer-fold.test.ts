@@ -18,6 +18,7 @@ import assert from "node:assert/strict";
 import { buildStatusText, buildWidgetLines, MAIN_HOST_LABEL } from "../extensions/goal-loop-display.js";
 import { backgroundStatus } from "../extensions/goal-loop-display.js";
 
+const sanitizeForCompare = (s: string) => s.replace(/\u001b\[[0-9;]*m/g, "");
 const NOW = Date.parse("2026-10-22T16:00:00Z");
 const goalOf = (over: Record<string, unknown> = {}) => ({
   id: "g1",
@@ -50,12 +51,16 @@ test("supervisor-paused marker moves onto the card closer", () => {
 });
 
 test("the card closer keeps its own text when folded facts are appended", () => {
-  const state = { goal: goalOf(), list: [] } as never;
+  // A paused goal renders detail rows and therefore a real closer holding the
+  // inspection path; the fold must append to it, never replace it.
+  const state = { goal: goalOf({ status: "paused", pauseKind: "blocked", pauseReason: "waiting on user input" }), list: [] } as never;
   const lines = buildWidgetLines(state, null, NOW, undefined, 100, { versionTail: "· v0.39.46" })!;
   const closer = lines.find((l) => l.includes("└─"))!;
-  // The closer normally names the inspection path or next action; folding
-  // must APPEND, never overwrite it.
-  assert.ok(closer.replace(/v0\.39\.46/g, "").trim().length > 6, `closer kept its own content: ${closer}`);
+  assert.ok(closer.includes("v0.39.46"), `folded fact landed on the closer: ${closer}`);
+  assert.ok(
+    sanitizeForCompare(closer).replace(/v0\.39\.46/g, "").trim().length > 6,
+    `closer kept its own content alongside the fold: ${closer}`,
+  );
 });
 
 // ── the pinned states keep their strip ─────────────────────────────────
@@ -79,13 +84,15 @@ test("an auditing card yields the duplicated strip, and buildStatusText still na
   assert.match(card.join("\n"), /auditor|audit/i, "the card names the audit state in its own words");
 });
 
-test("a waiting-only queue has no card, so it keeps the strip (the strip IS the surface)", () => {
+test("a waiting-only queue keeps its strip even though a card renders", () => {
   const state = { list: [{ id: "l1", objective: "queued work", status: "queued", createdAt: "2026-10-22T12:00:00Z" }] } as never;
   const status = buildStatusText(state, null, NOW);
-  const card = buildWidgetLines(state, null, NOW, undefined, 100);
-  if (status) {
-    assert.ok(!card || card.length === 0, "no card means the strip must not be suppressed");
-  }
+  const card = buildWidgetLines(state, null, NOW, undefined, 100)!;
+  assert.ok(status, "the queue line exists");
+  assert.ok(card.length > 0, "a queue card also renders");
+  // This state is pinned by existing behavioral contracts: goal-ui keeps the
+  // strip for it deliberately (it names the resume action for a bare queue).
+  assert.match(status!, /waiting|queued/i);
 });
 
 test("a stale-handle interruption keeps its strip", () => {
