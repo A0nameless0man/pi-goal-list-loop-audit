@@ -10,7 +10,7 @@ afterEach(() => { clearLoopTimer(); __testOnlyResetOwnerSession(); __testOnlyRes
 
 test("actual respec command and tools persist intended scope, batch and audit claim", async () => {
   const cwd = tmpCwd(), pi = new MockPi(); activate(pi.api);
-  saveSettings("project", cwd, { autoAcceptDrafts: false });
+  saveSettings("global", cwd, { autoAcceptDrafts: false });
   const ctx = makeMockCtx(cwd, { sessionManager: { name: "builder-wiring" } });
   ctx.ui.customImpl = async () => "Yes";
   await pi.fire("session_start", { reason: "startup" }, ctx);
@@ -46,7 +46,7 @@ test("actual respec command and tools persist intended scope, batch and audit cl
 
 test("declining intended scope leaves the project drafting with no adopted requirements", async () => {
   const cwd = tmpCwd(), pi = new MockPi(); activate(pi.api);
-  saveSettings("project", cwd, { autoAcceptDrafts: false });
+  saveSettings("global", cwd, { autoAcceptDrafts: false });
   const ctx = makeMockCtx(cwd, { sessionManager: { name: "builder-refusal" } });
   ctx.ui.customImpl = async () => "Yes";
   await pi.fire("session_start", { reason: "startup" }, ctx);
@@ -61,7 +61,7 @@ test("declining intended scope leaves the project drafting with no adopted requi
 
 test("registered blocker and refinement tools preserve work and require consent to change scope", async () => {
   const cwd = tmpCwd(), pi = new MockPi(); activate(pi.api);
-  saveSettings("project", cwd, { autoAcceptDrafts: false });
+  saveSettings("global", cwd, { autoAcceptDrafts: false });
   const ctx = makeMockCtx(cwd, { sessionManager: { name: "builder-refinement" } });
   ctx.ui.customImpl = async () => "Yes";
   await pi.fire("session_start", { reason: "startup" }, ctx);
@@ -101,7 +101,7 @@ test("registered blocker and refinement tools preserve work and require consent 
 
 test("project blockers automatically show generic actions after journaling, without dispatch or implicit resolution", async () => {
   const cwd = tmpCwd(), pi = new MockPi(); activate(pi.api);
-  saveSettings("project", cwd, { autoAcceptDrafts: false });
+  saveSettings("global", cwd, { autoAcceptDrafts: false });
   const ctx = makeMockCtx(cwd, { sessionManager: { name: "automatic-blocker-actions" } });
   ctx.ui.customImpl = async () => "Yes";
   await pi.fire("session_start", { reason: "startup" }, ctx);
@@ -157,7 +157,7 @@ test("project blockers automatically show generic actions after journaling, with
 
 test("work obstacles keep building and mistaken blocker-only holds release without verifying scope", async () => {
   const cwd = tmpCwd(), pi = new MockPi(); activate(pi.api);
-  saveSettings("project", cwd, { autoAcceptDrafts: false });
+  saveSettings("global", cwd, { autoAcceptDrafts: false });
   const ctx = makeMockCtx(cwd, { sessionManager: { name: "repair-obstacles" } });
   ctx.ui.customImpl = async () => "Yes";
   await pi.fire("session_start", { reason: "startup" }, ctx);
@@ -200,7 +200,7 @@ test("work obstacles keep building and mistaken blocker-only holds release witho
 
 test("held blocker reviews receive the durable project contract without silently releasing dependencies", async () => {
   const cwd = tmpCwd(), pi = new MockPi(); activate(pi.api);
-  saveSettings("project", cwd, { autoAcceptDrafts: false });
+  saveSettings("global", cwd, { autoAcceptDrafts: false });
   const ctx = makeMockCtx(cwd, { sessionManager: { name: "held-project-review" } });
   ctx.ui.customImpl = async () => "Yes";
   await pi.fire("session_start", { reason: "startup" }, ctx);

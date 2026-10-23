@@ -269,7 +269,7 @@ for (const resumeHeld of [false, true]) test(`actual project lifecycle reaches d
   const cwd = tmpCwd(), pi = new MockPi(), ctx = makeMockCtx(cwd, { sessionManager: { name: "respec-full-lifecycle", getBranch: () => [], getSessionFile: () => undefined } });
   const previous = { ...state };
   __testOnlyResetOwnerSession(); __testOnlyResetStaleFlag();
-  activate(pi.api); saveSettings("project", cwd, { autoAcceptDrafts: false });
+  activate(pi.api); saveSettings("global", cwd, { autoAcceptDrafts: false });
   ctx.ui.customImpl = async () => "Yes";
   const file = path.join(cwd, "bounded-auditor-worker.mjs"); fs.writeFileSync(file, worker);
   await pi.fire("session_start", { reason: "startup" }, ctx);
