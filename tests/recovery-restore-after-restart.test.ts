@@ -220,3 +220,26 @@ test("v0.34.63 — source guard: the barrier-completing resume gate is wired bef
   assert.match(SRC, /if \(foreignRecordedSession && !hostLifecycleStart && !resumeCompletesLoad\) return( null)?;/);
   assert.match(SRC, /sameSessionIdentity\(ctx\.sessionManager, recordedOwner\)/);
 });
+
+test("supervisor pause paints the fact on the card and clears the duplicated strip", async () => {
+  // Audit item 1: the strip was previously kept alive solely because
+  // `supervisorPausedAt` was set, even though the card already renders
+  // "supervisor paused" on its closer. This is a PAINT-level check (through
+  // the real session_start render), not a renderer-unit check, so it proves
+  // the two surfaces cannot both claim the same fact.
+  const cwd = tmpCwd();
+  seedState(cwd, {
+    goal: seedGoal({
+      objective: "supervised objective — done when pinned",
+      status: "active",
+    }),
+    supervisorPausedAt: Date.now() - 1_000,
+  } as unknown as Parameters<typeof seedState>[1]);
+  const ctx = makeManagerCtx(cwd, hostManager("supervisor-session", []));
+  await pi.fire("session_start", { reason: "startup" }, ctx);
+  const widget = ((ctx.ui.widgets["pi-glla"] as string[] | undefined) ?? []).join("\n");
+  const status = ctx.ui.statuses["pi-glla"] ?? "";
+  assert.match(widget, /supervisor paused/, "the card carries the frozen-supervisor fact");
+  assert.doesNotMatch(status, /supervisor/, `the strip does not restate the supervisor chip: ${status}`);
+  assert.doesNotMatch(status, /^glla: /, `the duplicated strip is cleared entirely: ${status}`);
+});
