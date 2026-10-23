@@ -1,0 +1,11 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=281s heartbeat=30s
+[run-tests] host is 1.6x slower than an idle host — per-test budget raised to 187s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/auditor-verdict-authentication.test.ts:
+(pass) a forged result file cannot end the audit — the worker's signed verdict wins [391.48ms]
+
+ 1 pass
+ 0 fail
+Ran 1 test across 1 file. [2.29s]
+[run-tests] finished in 3s (exit 0)

@@ -69,13 +69,48 @@ in its place) and proves an uncommitted update is still not kept in RAM.
 All runs used Bun 1.3.14 from the ignored repo-local test-tool install with
 `TMPDIR` on `/dev/shm`.
 
+## Second and third full gates: two test races found, then green
+
+`release-second.log` (4315 pass / 3 fail) and `release-third.log` (4317 pass / 1
+the fixed tree) exposed two further defects, both in tests rather than product
+behavior, and both reproducible only under load:
+
+3. **`tests/auditor-verdict-authentication.test.ts` raced its own forgery.** The
+   worker held the forged unsigned result for a fixed 250ms so the parent would
+   observe and reject it. On a starved host the parent's poll loop could miss
+   that window entirely and see only the signed verdict, so the
+   `auditor_result_unauthenticated` row never appeared even though
+   authentication worked. The worker now waits until the parent has actually
+   journalled the rejection (bounded), then publishes the signed verdict.
+4. **`tests/compaction-containment.test.ts` waited a fixed 2500ms for a 2000ms
+   timer**, so a delayed settle callback read as zero sends. It now waits for the
+   observable `compaction_refire` row under the shared host-sized budget; the
+   existing asserts still require exactly one probe, exactly one send and no
+   storm escalation.
+
+Both were proven to still detect a real break: disabling the authentication
+check fails the first test (`va-negative.log`), and disabling the refire fails the
+second (`compaction-negative-control.log`). The forgery wait also had to be routed
+through the shared host budget to satisfy `tests/host-contention.test.ts`'s
+guard against hand-rolled deadlines.
+
+**Final gate `release-final-green.log`: `npm run release:check` exit 0 — 4318
+pass, 0 fail, 4319 tests across 465 files in 1582s**, followed by typecheck,
+inventory, `npm pack --dry-run` (206 files, 1.8 MB) and the packed-tarball smoke
+(installed launcher RPC challenge, skill diagnostics, installed import). Both
+provider-exhaustion stress tests passed inside the suite in this run; no stress
+test was weakened, skipped or reduced from 2,101 cycles at any point.
+
 ## Decisions and limits
 
-The tree was corrected rather than re-running the full gate as-is, because a
-reproducible failure is a defect (`docs/RELEASING.md`). A second complete
-`release:check` after this fix is the remaining step before tagging; it is not
-assumed to pass and is not claimed here. No tag, GitHub Release, npm
-publication or live-host reload has happened yet. Publishing requires creating
-and pushing the `v0.39.45` tag against this validated commit, then publishing a
-GitHub Release, which is what triggers `.github/workflows/publish.yml` (the tag
-must equal `package.json` and descend from `main`).
+The tree was corrected rather than re-running the gate as-is each time, because a
+reproducible failure is a defect (`docs/RELEASING.md`). Exactly one complete gate
+now passes on the tagged tree: attempts one through three failed and are kept as
+records, not relabelled. No stress-test budget or assertion was lowered to reach
+green; the two fixes tighten test determinism.
+
+No tag, GitHub Release, npm publication or live-host reload had happened when this
+file was written. Publishing requires creating and pushing the `v0.39.45` tag
+against this validated commit, then publishing a GitHub Release, which is what
+triggers `.github/workflows/publish.yml` (the tag must equal `package.json` and
+descend from `main`).

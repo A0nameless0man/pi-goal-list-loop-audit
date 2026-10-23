@@ -1,0 +1,15 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=182s heartbeat=30s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+tests/compaction-containment.test.ts:
+(pass) session_before_compact returns nothing — another extension's compaction must survive [26.66ms]
+(pass) pure: in-flight marker is armed-signal plus timeout, never silence [0.44ms]
+(pass) compaction in flight suppresses send-storm escalation (no park, no recovery) [586.47ms]
+(pass) post-compact settle owns exactly one bounded probe (no duplicates) [2524.04ms]
+(pass) escalation proceeds after settle — the gate is compaction-scoped, not a blanket disable [2991.53ms]
+(pass) scheduleContinuation defers while in flight and the settle still sends once [3136.61ms]
+
+ 6 pass
+ 0 fail
+Ran 6 tests across 1 file. [11.35s]
+[run-tests] finished in 12s (exit 0)

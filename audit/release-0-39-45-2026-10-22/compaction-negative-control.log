@@ -1,0 +1,56 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=196s heartbeat=30s
+[run-tests] host is 1.1x slower than an idle host — per-test budget raised to 131s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+.pi/cc-proof/tests/compaction-containment.test.ts:
+(pass) session_before_compact returns nothing — another extension's compaction must survive [21.73ms]
+(pass) pure: in-flight marker is armed-signal plus timeout, never silence [2.00ms]
+(pass) compaction in flight suppresses send-storm escalation (no park, no recovery) [640.35ms]
+169 |   // for the observable condition under a bounded, host-sized budget instead,
+170 |   // and let the asserts below prove it fired exactly once (not merely soon).
+171 |   const settleBy = untilMs(2500);
+172 |   while (countLedger(cwd, "compaction_refire") === 0 && Date.now() < settleBy) await tick(50);
+173 | 
+174 |   assert.equal(countLedger(cwd, "compaction_refire"), 1, "exactly one post-settle probe");
+               ^
+AssertionError: exactly one post-settle probe
+
+0 !== 1
+
+ generatedMessage: false,
+     actual: 0,
+   expected: 1,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/.pi/cc-proof/tests/compaction-containment.test.ts:174:10
+      at processTicksAndRejections (native:7:39)
+(fail) post-compact settle owns exactly one bounded probe (no duplicates) [3229.50ms]
+(pass) escalation proceeds after settle — the gate is compaction-scoped, not a blanket disable [3088.43ms]
+203 |   assert.equal(pi.sent.length - sentBefore, 0, "no dispatch into a compacting host");
+204 |   assert.ok(ledgerTypes(cwd).includes("continuation_dispatch_deferred_compaction"), "deferral is ledgered");
+205 | 
+206 |   await pi.fire("session_compact", {}, ctx);
+207 |   await tick(2500);
+208 |   assert.equal(pi.sent.length - sentBefore, 1, "settle sends once — deferred dispatch is not doubled");
+               ^
+AssertionError: settle sends once — deferred dispatch is not doubled
+
+0 !== 1
+
+ generatedMessage: false,
+     actual: 0,
+   expected: 1,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/.pi/cc-proof/tests/compaction-containment.test.ts:208:10
+      at processTicksAndRejections (native:7:39)
+(fail) scheduleContinuation defers while in flight and the settle still sends once [3136.22ms]
+
+ 4 pass
+ 2 fail
+Ran 6 tests across 1 file. [11.60s]
+[run-tests] failure diagnostics retained at /dev/shm/glla-rerun-03945/glla-test-processes-Xuz3hv/failure.json
+[run-tests] cleanup evidence retained at /dev/shm/glla-rerun-03945/glla-test-processes-Xuz3hv
+[run-tests] finished in 12s (exit 1)

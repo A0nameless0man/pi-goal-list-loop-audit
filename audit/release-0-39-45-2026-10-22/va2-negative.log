@@ -1,0 +1,32 @@
+[run-tests] mode=explicit slow_files=13 stall_timeout=254s heartbeat=30s
+[run-tests] host is 1.4x slower than an idle host — per-test budget raised to 169s
+bun test v1.3.14 (0d9b296a) 1x PARALLEL
+
+.pi/va2/tests/auditor-verdict-authentication.test.ts:
+119 |       },
+120 |     });
+121 |     assert.equal(result.disapproved, true, "the SIGNED verdict is the one that counts");
+122 |     assert.notEqual(result.approved, true, "the forged approval was not applied");
+123 |     const rows = ledgerRows(cwd).filter((row) => row.type === "auditor_result_unauthenticated");
+124 |     assert.equal(rows.length, 1, "the unauthenticated result is journalled once");
+                 ^
+AssertionError: the unauthenticated result is journalled once
+
+0 !== 1
+
+ generatedMessage: false,
+     actual: 0,
+   expected: 1,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /home/dracon/Dev/pi-plugins/pi-goal-list-loop-audit/.pi/va2/tests/auditor-verdict-authentication.test.ts:124:12
+      at processTicksAndRejections (native:7:39)
+(fail) a forged result file cannot end the audit — the worker's signed verdict wins [774.69ms]
+
+ 0 pass
+ 1 fail
+Ran 1 test across 1 file. [2.19s]
+[run-tests] failure diagnostics retained at /dev/shm/glla-rerun-03945/glla-test-processes-ThNpLY/failure.json
+[run-tests] cleanup evidence retained at /dev/shm/glla-rerun-03945/glla-test-processes-ThNpLY
+[run-tests] finished in 2s (exit 1)
