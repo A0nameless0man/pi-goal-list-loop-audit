@@ -3062,7 +3062,7 @@ test("auto-accept escape hatch: ALWAYS choice persists system-wide autoAcceptDra
   const onDisk = JSON.parse(fs.readFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, "utf-8")) as { autoAcceptDrafts?: boolean };
   assert.equal(onDisk.autoAcceptDrafts, true, "persisted to GLOBAL settings (system-wide, survives restart)");
   assert.ok(ctx.ui.matching("auto-accept ON").length >= 1, "loud notify names the undo path");
-  assert.ok(ctx.ui.matching(/system-wide/i).length >= 1, "the notify names the system-wide scope, not a project");
+  assert.ok(ctx.ui.matching("system-wide").length >= 1, "the notify names the system-wide scope, not a project");
 });
 
 test("escape hatch: a later draft skips the dialog entirely once autoAcceptDrafts landed", async () => {
