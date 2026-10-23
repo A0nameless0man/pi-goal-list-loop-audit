@@ -2378,6 +2378,9 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
     const supervisorPaused = typeof state.supervisorPausedAt === 'number';
     const foldFacts = [
       supervisorPaused ? 'supervisor paused' : '',
+      // v0.39.46: queue depth rode only the retired strip. A waiting list is
+      // durable context the user must still see at a glance.
+      status?.queueDepth ? `${status.queueDepth} queued` : '',
       versionTail ? versionTail.replace(/^[·\s]+/, '') : '',
     ].filter(Boolean);
     if (foldFacts.length > 0) {
