@@ -925,16 +925,9 @@ function cleanStaleGlobalOnlyProjectKeys(cwd: string, file: string): void {
 }
 
 export function loadSettings(cwd: string): Settings {
-  const projectFile = projectSettingsPath(cwd);
-  const project = migrateLegacySettings(readSettingsFile(projectFile));
+  const project = migrateLegacySettings(readSettingsFile(projectSettingsPath(cwd)));
   const global = migrateLegacySettings(readSettingsFile(globalSettingsPath()));
   for (const key of GLOBAL_ONLY_KEYS) delete project[key];
-  // v0.39.47 (audit item 3): stripping a stale global-only key from the
-  // in-memory projection is not enough — the key stays on disk, so a later
-  // reader (a different scope, a hand edit, a stale build) can still see a
-  // value the runtime refuses to honour. Remove it from the project FILE once,
-  // so "never silently trusted" also means "never silently left behind".
-  cleanStaleGlobalOnlyProjectKeys(cwd, projectFile);
   const merged = mergeSettings(
     DEFAULT_SETTINGS as unknown as Record<string, unknown>,
     global,
@@ -1287,4 +1280,11 @@ export function saveSettings(scope: "global" | "project", cwd: string, patch: Pa
     }
     writeSettingsAtomically(file, next);
   });
+  // v0.39.47 (audit item 3): a global-scope save is the moment the authoritative
+  // value lands, so it is also the right moment to evict a stale project-scope
+  // copy of the same key from disk. This lives on a MUTATING path by design —
+  // the read path (loadSettings) must stay side-effect free, because read-only
+  // surfaces (`/glla status`, `/list show`) are contractually forbidden from
+  // writing settings.
+  if (scope === "global") cleanStaleGlobalOnlyProjectKeys(cwd, projectSettingsPath(cwd));
 }
