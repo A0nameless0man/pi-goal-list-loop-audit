@@ -158,7 +158,7 @@ test("propose_task_list amendment renders the readable summary, not a JSON dump"
     ],
   }, ctx);
   const body = __testOnlyLastConfirmDialog()?.body ?? "";
-  if (!body) return; // no dialog captured on this host path — unit tests above still pin the body
+  assert.ok(body.length > 0, "amendment dialog was captured");
   assert.ok(!body.includes('"tasks":'), "no JSON task dump in the live dialog");
   assert.ok(!body.includes('"version":'), "no JSON version key in the live dialog");
   assert.match(body, /Replacing 3 committed tasks/, "real prior counts drive the headline");
