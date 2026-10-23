@@ -1230,15 +1230,28 @@ function withSettingsFileLock<T>(file: string, fn: () => T): T {
  * instead — a save that cannot land must never look like one that did. Only an
  * explicit `undefined` (key unset) is tolerated: that is a deliberate removal,
  * and clearing a stray global-only key from a project file is precisely what
- * the cleanup loop is for. */
-export function assertProjectSaveAllows(patch: Partial<Settings>): void {
+ * the cleanup loop is for.
+ *
+ * v0.39.48: this MUST receive the canonicalized patch. Migration can turn a
+ * legacy alias into a global-only key (`auditorModelFallback` →
+ * `auditorModelFallbacks`), and validating the raw argument missed that path
+ * entirely. `givenKeys` lets the refusal name both the canonical key and the
+ * alias the caller actually passed, since that is what they will search for. */
+export function assertProjectSaveAllows(patch: Partial<Settings>, givenKeys: readonly string[] = []): void {
   const offending = Object.entries(patch)
     .filter(([k, v]) => v !== undefined && GLOBAL_ONLY_KEYS.has(k as keyof Settings))
     .map(([k]) => k)
     .sort();
   if (offending.length) {
+    // Name the caller's own spelling when the offending key was produced by
+    // migration from an alias — the canonical name may not appear anywhere in
+    // their code.
+    const aliased = offending.filter((k) => !givenKeys.includes(k));
+    const aliasNote = aliased.length > 0 && givenKeys.length > 0
+      ? ` (migrated from ${givenKeys.filter((g) => !offending.includes(g)).join(", ") || "a legacy alias"})`
+      : "";
     throw new Error(
-      `saveSettings("project") cannot persist global-only setting(s): ${offending.join(", ")} — ` +
+      `saveSettings("project") cannot persist global-only setting(s): ${offending.join(", ")}${aliasNote} — ` +
       `these are system-wide and must be saved with scope "global"`,
     );
   }
@@ -1248,7 +1261,17 @@ export function saveSettings(scope: "global" | "project", cwd: string, patch: Pa
   if (scope === "project" && stateRootPending()) {
     throw new Error("state root pending (sessionDir mode, no session dir yet) — project settings save deferred");
   }
-  if (scope === "project") assertProjectSaveAllows(patch);
+  // v0.39.48 (audit round 4): validate the CANONICALIZED patch, not the raw
+  // argument. Migration can CREATE a global-only key from a supported legacy
+  // alias — `auditorModelFallback` migrates to the global-only
+  // `auditorModelFallbacks` — so checking the raw patch let such a write reach
+  // the cleanup loop below and be discarded while saveSettings returned
+  // normally. That is the exact silent-drop the guard exists to prevent.
+  const migratedPatch = migrateLegacySettings(patch);
+  if (scope === "project") assertProjectSaveAllows(
+    migratedPatch as unknown as Partial<Settings>,
+    Object.keys(patch),
+  );
   const file = scope === "global" ? globalSettingsPath() : projectSettingsPath(cwd);
   withSettingsFileLock(file, () => {
     const current = migrateLegacySettings(readSettingsFile(file));
@@ -1256,7 +1279,6 @@ export function saveSettings(scope: "global" | "project", cwd: string, patch: Pa
     if (scope === "project") {
       for (const key of GLOBAL_ONLY_KEYS) delete next[key];
     }
-    const migratedPatch = migrateLegacySettings(patch);
     for (const [k, v] of Object.entries(migratedPatch)) {
       // Main recovery settings are global-only. A stray value left in an old
       // project file is dropped so it cannot appear saved while being unable to
