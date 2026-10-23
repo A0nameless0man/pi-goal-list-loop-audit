@@ -11,6 +11,7 @@
  */
 import { test, afterEach } from "node:test";
 import fs from "node:fs";
+import path from "node:path";
 import assert from "node:assert/strict";
 import { buildAmendmentSummary } from "../extensions/loops/goal-tools.js";
 import type { Task } from "../extensions/goal-loop-core.js";
@@ -209,8 +210,14 @@ test("propose_task_list aborts an amendment whose target changed during Confirm"
   // recheck exists to fail closed on. Without the recheck the amendment would
   // silently replace a plan the user never saw.
   ctx.ui.confirmImpl = async () => {
-    const { updateGoal } = await import("../extensions/goal-loop-core.js");
-    updateGoal({ objective: "Race target objective MUTATED mid-confirm." }, ctx as never);
+    // Simulate the concurrent writer that races an open Confirm: the durable
+    // state file changes underneath the pending proposal. The recheck compares
+    // against the LIVE goal, so any real mutation (another tool, another
+    // session, a restore) is indistinguishable from this one.
+    const statePath = path.join(cwd, ".pi-glla", "state.json");
+    const live = JSON.parse(fs.readFileSync(statePath, "utf-8")) as { goal?: Record<string, unknown> };
+    if (live.goal) live.goal.objective = "Race target objective MUTATED mid-confirm.";
+    fs.writeFileSync(statePath, JSON.stringify(live, null, 2));
     return true;
   };
   const res = await pi.runTool("propose_task_list", {
@@ -220,8 +227,6 @@ test("propose_task_list aborts an amendment whose target changed during Confirm"
   ctx.ui.confirmImpl = undefined;
   ctx.ui.customImpl = undefined;
   const after = readState(cwd) as { goal?: { revision?: number; taskList?: { tasks?: Array<{ title: string }> } } };
-  console.log("DEBUG tool:", JSON.stringify((res as any)?.content?.[0]?.text));
-  console.log("DEBUG isError:", (res as any)?.isError, "titles:", (after.goal?.taskList?.tasks ?? []).map((t) => t.title).join("|"));
   assert.equal((res as any)?.isError, true, "the amendment is refused as an error, not applied silently");
   assert.match((res as any).content[0].text, /changed during confirmation/i, "the refusal names the race");
   assert.equal(
