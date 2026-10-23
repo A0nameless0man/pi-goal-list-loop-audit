@@ -4458,7 +4458,14 @@ function registerAgentTools(pi: any): void {
       } else {
         try {
           confirmed = replacing
-            ? await liveCtx.ui.confirm("Confirm committed task amendment", `Retained objective:\n${proposalObjective}\n\nCURRENT COMMITTED TASKS:\n${sanitizeDisplayText(JSON.stringify(proposalGoal.taskList, null, 2))}\n\nPROPOSED TASKS:\n${preview}\n\nApprove?`)
+            ? await liveCtx.ui.confirm("Confirm committed task amendment", buildAmendmentSummary({
+                objective: proposalObjective,
+                contract: proposalContract,
+                priorContract: proposalContract,
+                priorTasks: proposalGoal.taskList?.tasks ?? [],
+                proposedTitles: p.tasks.map((t) => t.title),
+                proposedRoles: p.tasks.map((t) => t.agentRole),
+              }))
             : repairTarget
             ? await liveCtx.ui.confirm("Confirm repair scope amendment", `Original objective:\n${repairTarget.objective}\n\nOriginal verification contract:\n${repairTarget.verificationContract || "(none)"}\n\nProposed:\n${preview}`)
             : (await confirmDraft(liveCtx, "Confirm task list", preview)) === "yes";

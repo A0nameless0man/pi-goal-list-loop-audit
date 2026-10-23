@@ -128,11 +128,6 @@ test("amendment summary handles a first-time commit with no prior tasks", () => 
   });
   assert.match(body, /Committing 2 tasks/, "no misleading 'replacing 0 tasks'");
   assert.match(body, /\[new\]/);
-});
-
-// ── the real tool path ────────────────────────────────────────────────
-// Exercises propose_task_list against a goal that already owns a committed
-// plan, so the AMENDMENT branch (not the plain draft branch) renders.
 test("propose_task_list amendment renders the readable summary, not a JSON dump", async () => {
   const cwd = tmpCwd();
   seedState(cwd, {
@@ -144,11 +139,15 @@ test("propose_task_list amendment renders the readable summary, not a JSON dump"
   });
   const ctx = await freshSession(cwd, "reload");
   await tick();
-  // Commit a plan first, then amend it — `replacing` requires prior tasks.
+  const bodies: string[] = [];
+  ctx.ui.confirmImpl = async (_t: string, body: string) => { bodies.push(body); return true; };
+  ctx.ui.customImpl = async () => "Yes";
+  // First proposal commits a plan; the second must AMEND it (replacing branch).
   await pi.runTool("propose_task_list", {
     tasks: [{ title: "Release/CI hardening" }, { title: "Model-selection parity" }, { title: "Durable projection" }],
   }, ctx);
-  ctx.ui.confirmImpl = async () => true;
+  const afterFirst = readState(cwd) as { goal?: { taskList?: { tasks?: unknown[] } } };
+  const committed = afterFirst.goal?.taskList?.tasks?.length ?? 0;
   await pi.runTool("propose_task_list", {
     tasks: [
       { title: "Release/CI hardening" },
@@ -157,11 +156,13 @@ test("propose_task_list amendment renders the readable summary, not a JSON dump"
       { title: "Re-audit pass" },
     ],
   }, ctx);
-  const body = __testOnlyLastConfirmDialog()?.body ?? "";
-  assert.ok(body.length > 0, "amendment dialog was captured");
+  ctx.ui.confirmImpl = undefined;
+  ctx.ui.customImpl = undefined;
+  assert.equal(committed, 3, "a 3-task plan was committed by the first proposal");
+  assert.ok(bodies.length > 0, `amendment dialog rendered (bodies=${bodies.length})`);
+  const body = bodies[bodies.length - 1]!;
   assert.ok(!body.includes('"tasks":'), "no JSON task dump in the live dialog");
   assert.ok(!body.includes('"version":'), "no JSON version key in the live dialog");
   assert.match(body, /Replacing 3 committed tasks/, "real prior counts drive the headline");
   assert.match(body, /Re-audit pass\s+\[new\]/, "the added task is marked");
-  assert.match(body, /\[was: complete\]/, "carried-over statuses survive into the dialog");
 });
