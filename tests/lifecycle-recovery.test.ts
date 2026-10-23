@@ -299,12 +299,18 @@ test("v0.34.54: settings after a fresh session_start — the table opens AND a r
   let pickCount = 0;
   fresh.ui.customImpl = async () => (++pickCount === 1 ? "autoAcceptDrafts" : undefined); // one pick, then cancel — the loop exits
   fresh.ui.selectImpl = async (title: string) => (title.startsWith("Auto-accept") ? "off" : undefined);
-  const globalBefore = fs.readFileSync(GLOBAL_SETTINGS_PATH, "utf-8");
+  const globalBefore = JSON.parse(fs.readFileSync(GLOBAL_SETTINGS_PATH, "utf-8")) as Record<string, unknown>;
   await pi.command("glla", "", fresh);
   await tick();
-  const globalAfter = fs.readFileSync(GLOBAL_SETTINGS_PATH, "utf-8");
-  assert.equal(globalAfter, globalBefore, "the global baseline stays untouched");
-  assert.equal(fs.readFileSync(projectSettingsPath(cwd), "utf-8"), JSON.stringify({}), "the project override was edited in place");
+  const globalAfter = JSON.parse(fs.readFileSync(GLOBAL_SETTINGS_PATH, "utf-8")) as Record<string, unknown>;
+  // v0.39.46: autoAcceptDrafts is system-wide, so a scope-aware edit of that
+  // row now correctly lands in the GLOBAL file (it used to write a project
+  // override). The requirement this test protects is unchanged: a real
+  // settings write must actually land somewhere durable, and it must land at
+  // the scope the key belongs to.
+  assert.equal(globalAfter.autoAcceptDrafts, false, "the auto-accept switch was written system-wide");
+  assert.equal(globalAfter.autoResume, globalBefore.autoResume, "unrelated global keys are preserved");
+  assert.equal(fs.readFileSync(projectSettingsPath(cwd), "utf-8"), JSON.stringify({}), "no project override is written for a global-only key");
 });
 
 // ────────────────────────────────────────────────────────────────────
