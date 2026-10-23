@@ -124,7 +124,8 @@ test("auto-accept cannot bypass bookkeeping-only finding readiness", async () =>
   __testOnlyResetOwnerSession();
   const cwd=tmpCwd();
   const ctx=setup(cwd);
-  fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!,JSON.stringify({autoAcceptDrafts:true}));
+  const globalBaseline=fs.readFileSync(GLOBAL_SETTINGS_PATH,"utf-8");
+  fs.writeFileSync(GLOBAL_SETTINGS_PATH,JSON.stringify({...JSON.parse(globalBaseline),autoAcceptDrafts:true}));
   await pi.fire("session_start",{reason:"startup"},ctx);
   await tick();
   await enterGoalDrafting(ctx);
@@ -137,6 +138,7 @@ test("auto-accept cannot bypass bookkeeping-only finding readiness", async () =>
   assert.match(revised.content[0]!.text,/confirmed and activated/);
   assert.equal(readState(cwd).goal?.objective,objective);
   assert.match(readState(cwd).goal?.verificationContract??"",/nested-route regression/);
+  fs.writeFileSync(GLOBAL_SETTINGS_PATH,globalBaseline);
 });
 
 test("single and batch multiline bookkeeping drafts refuse before auto-accept", async () => {
@@ -144,7 +146,8 @@ test("single and batch multiline bookkeeping drafts refuse before auto-accept", 
     __testOnlyResetOwnerSession();
     const cwd=tmpCwd();
     const ctx=setup(cwd);
-    fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!,JSON.stringify({autoAcceptDrafts:true}));
+    const globalBaseline=fs.readFileSync(GLOBAL_SETTINGS_PATH,"utf-8");
+  fs.writeFileSync(GLOBAL_SETTINGS_PATH,JSON.stringify({...JSON.parse(globalBaseline),autoAcceptDrafts:true}));
     await pi.fire("session_start",{reason:"startup"},ctx);
     await tick();
     if (batch) await enterListDrafting(ctx); else await enterGoalDrafting(ctx);
@@ -153,6 +156,7 @@ test("single and batch multiline bookkeeping drafts refuse before auto-accept", 
     assert.match(result.content[0]!.text,/bookkeeping-only/);
     assert.equal(readState(cwd).goal,null);
     assert.equal(readState(cwd).list?.length,0);
+    fs.writeFileSync(GLOBAL_SETTINGS_PATH,globalBaseline);
   }
 });
 
