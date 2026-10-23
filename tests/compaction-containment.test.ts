@@ -26,6 +26,7 @@ import {
   scheduleContinuation,
 } from "../extensions/goal-continuation.js";
 import { clearMainModelRecoveryTimer } from "../extensions/goal-recovery.js";
+import { untilMs } from "./harness/host-budget.js";
 import activate, {
   __testOnlyLoadState,
   __testOnlyResetOwnerSession,
@@ -162,7 +163,13 @@ test("post-compact settle owns exactly one bounded probe (no duplicates)", async
 
   const sentBefore = pi.sent.length;
   await pi.fire("session_compact", {}, ctx);
-  await tick(2500); // the 2s post-compact settle
+  // The settle fires on a 2s timer. Waiting a fixed 2500ms made this a race:
+  // on a contended host the timer callback can be scheduled well past that
+  // window, so the probe had not run yet and the test read zero sends. Wait
+  // for the observable condition under a bounded, host-sized budget instead,
+  // and let the asserts below prove it fired exactly once (not merely soon).
+  const settleBy = untilMs(2500);
+  while (countLedger(cwd, "compaction_refire") === 0 && Date.now() < settleBy) await tick(50);
 
   assert.equal(countLedger(cwd, "compaction_refire"), 1, "exactly one post-settle probe");
   assert.equal(countLedger(cwd, "compaction_grace_refire"), 0, "grace refire stays future");
