@@ -128,6 +128,11 @@ test("amendment summary handles a first-time commit with no prior tasks", () => 
   });
   assert.match(body, /Committing 2 tasks/, "no misleading 'replacing 0 tasks'");
   assert.match(body, /\[new\]/);
+});
+
+// ── the real tool path ────────────────────────────────────────────────
+// Exercises propose_task_list against a goal that already owns a committed
+// plan, so the AMENDMENT branch (not the plain draft branch) renders.
 test("propose_task_list amendment renders the readable summary, not a JSON dump", async () => {
   const cwd = tmpCwd();
   seedState(cwd, {
