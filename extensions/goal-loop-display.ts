@@ -354,38 +354,53 @@ function appendFactsToCard(
   theme: DisplayTheme | undefined,
   width: number | undefined,
 ): void {
-  const clamped = (text: string) => paint(theme, 'dim', uiSafeText(text));
+  const dim = (text: string) => paint(theme, 'dim', uiSafeText(text));
   const sep = ` ${paint(theme, 'dim', '·')} `;
   const sepWidth = 3;
   const contentWidth = width !== undefined && width > 0
     ? Math.max(1, width - WIDGET_HORIZONTAL_MARGIN)
     : Number.MAX_SAFE_INTEGER;
-  // Room left on the existing closer row, if the facts can append there.
+  // Appending to an existing `└─` closer keeps the block's last row; every
+  // additional fact needs its own row. Continuation rows are `├─` and only the
+  // final row closes with `└─`, so the tree never reads as terminated early.
   const canAppend = prefix === '└─ ';
-  const headPrefix = canAppend ? '└─ ' : '└─ ';
-  const baseLine = canAppend ? lastLine : undefined;
-  const baseUsed = baseLine === undefined
-    ? headPrefix.length
-    : tuiVisibleWidth(stripAnsi(baseLine)) + sepWidth;
+  const rowPrefixWidth = 3; // `├─ ` / `└─ `/`│  `
+  const baseUsed = canAppend
+    ? tuiVisibleWidth(stripAnsi(lastLine)) + sepWidth
+    : rowPrefixWidth;
   const rows: string[] = [];
   let cur = '';
   let used = baseUsed;
   for (const fact of facts) {
-    const factWidth = tuiVisibleWidth(fact);
     const needsSep = cur.length > 0;
-    const added = factWidth + (needsSep ? sepWidth : 0);
+    const added = tuiVisibleWidth(fact) + (needsSep ? sepWidth : 0);
     if (cur.length > 0 && used + added > contentWidth) {
       rows.push(cur);
-      cur = fact;
-      used = 1 + 3 + factWidth; // `│  ` carries the continuation row
-      continue;
+      cur = '';
+      used = rowPrefixWidth;
     }
-    if (cur.length === 0 && used + factWidth > contentWidth) {
-      // A single fact wider than the whole row cannot be kept atomic — fall
-      // through and let it occupy its own row (truncation of one over-long
-      // fact is the least-bad outcome; it stays on one row and is marked).
-      cur = fact;
-      used = 1 + 3 + factWidth;
+    if (cur.length === 0 && tuiVisibleWidth(fact) + rowPrefixWidth > contentWidth) {
+      // The fact cannot fit on one row. Split it at WORD boundaries so no word
+      // is ever cut mid-fact; a single word too wide for the row is the only
+      // remaining case and is hard-split as a last resort.
+      const words = fact.split(' ');
+      let line = '';
+      for (const word of words) {
+        const candidate = line ? `${line} ${word}` : word;
+        if (tuiVisibleWidth(candidate) + rowPrefixWidth <= contentWidth) { line = candidate; continue; }
+        if (line) { rows.push(line); line = ''; }
+        if (tuiVisibleWidth(word) + rowPrefixWidth > contentWidth) {
+          // last resort: mark the over-long word rather than claim it is whole
+          const budget = Math.max(1, contentWidth - rowPrefixWidth);
+          let chunk = '';
+          for (const ch of word) {
+            if (tuiVisibleWidth(chunk + ch) > budget) break;
+            chunk += ch;
+          }
+          rows.push(`${chunk}…`);
+        } else line = word;
+      }
+      if (line) rows.push(line);
       continue;
     }
     cur = needsSep ? `${cur}${sep}${fact}` : fact;
@@ -393,15 +408,16 @@ function appendFactsToCard(
   }
   if (cur.length > 0) rows.push(cur);
   if (rows.length === 0) return;
-  const first = rows[0]!;
   if (canAppend) {
-    lines[lastIndex] = `${lastLine}${sep}${clamped(first)}`;
+    lines[lastIndex] = `${lastLine}${sep}${dim(rows[0]!)}`;
   } else {
-    lines.push(`${paint(theme, 'dim', '└─ ')}${clamped(first)}`);
+    const glyph = rows.length === 1 ? '└─ ' : '├─ ';
+    lines.push(`${paint(theme, 'dim', glyph)}${dim(rows[0]!)}`);
   }
-  for (const row of rows.slice(1)) {
-    lines.push(`${paint(theme, 'dim', '│  ')}${clamped(row)}`);
-  }
+  rows.slice(1).forEach((row, i, rest) => {
+    const last = i === rest.length - 1;
+    lines.push(`${paint(theme, 'dim', last ? '└─ ' : '├─ ')}${dim(row)}`);
+  });
 }
 
 function stripAnsi(s: string): string {
