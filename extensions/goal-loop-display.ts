@@ -2390,7 +2390,15 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
       const lastIndex = withAgents.length - 1;
       const lastLine = withAgents[lastIndex]!;
       const prefixMatch = lastLine.match(/^(└─ |├─ |│  |│ )/);
-      const folded = foldFacts.join(' · ');
+      // One surface per fact: a fact the card ALREADY carries must not be
+      // appended a second time (the queue-depth row and the closer can name
+      // the same count). Compare against the whole rendered card, ANSI-free.
+      const plainCard = withAgents.join("\n").replace(/\u001b\[[0-9;]*m/g, "");
+      const uniqueFacts = foldFacts.filter((fact) => !plainCard.includes(fact));
+      if (uniqueFacts.length === 0) {
+        // nothing to fold — the card is already complete
+      } else {
+      const folded = uniqueFacts.join(' · ');
       // APPEND — the closer already carries "details: /glla status" or the
       // next action, and that text must survive the fold.
       if (prefixMatch && prefixMatch[1] === '└─ ') {
@@ -2402,6 +2410,7 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
         // with no detail rows; give the folded facts their own closer row
         // rather than crowding the head past its width budget.
         withAgents.push(`${paint(theme, 'dim', '└─ ')}${paint(theme, 'dim', uiSafeText(folded))}`);
+      }
       }
     }
   }
