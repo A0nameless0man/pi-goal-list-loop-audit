@@ -889,10 +889,52 @@ export function migrateLegacySettings(value: Partial<Settings>): Record<string, 
   return migrated;
 }
 
+/**
+ * v0.39.47 (audit item 3): delete global-only keys from a project settings
+ * FILE. `loadSettings` already ignores them in memory; this removes the stale
+ * bytes so the on-disk file cannot contradict the effective settings.
+ *
+ * Deliberately narrow: it only touches keys in GLOBAL_ONLY_KEYS, only when the
+ * file actually contains one, and it never throws into a read path (an
+ * unwritable file is a degraded-persistence concern, not a read failure).
+ */
+function cleanStaleGlobalOnlyProjectKeys(cwd: string, file: string): void {
+  try {
+    const raw = readSettingsFile(file) as Record<string, unknown>;
+    const stale = Object.keys(raw).filter((k) => GLOBAL_ONLY_KEYS.has(k as keyof Settings));
+    if (stale.length === 0) return;
+    withSettingsFileLock(file, () => {
+      const current = readSettingsFile(file) as Record<string, unknown>;
+      const next: Record<string, unknown> = { ...current };
+      let removed = false;
+      for (const key of GLOBAL_ONLY_KEYS) {
+        if (key in next) { delete next[key]; removed = true; }
+      }
+      if (!removed) return;
+      writeSettingsAtomically(file, next);
+      // The cleanup is a real settings mutation; journal it so an operator
+      // auditing why a project value vanished has a row to find.
+      try {
+        appendLedger(cwd, "settings_stale_global_only_removed", { keys: stale.sort(), scope: "project" });
+      } catch { /* journal is best-effort on a read path */ }
+    });
+  } catch {
+    // Unreadable/unwritable project file: loadSettings still returns the
+    // correct effective value (the key is stripped in memory above).
+  }
+}
+
 export function loadSettings(cwd: string): Settings {
-  const project = migrateLegacySettings(readSettingsFile(projectSettingsPath(cwd)));
+  const projectFile = projectSettingsPath(cwd);
+  const project = migrateLegacySettings(readSettingsFile(projectFile));
   const global = migrateLegacySettings(readSettingsFile(globalSettingsPath()));
   for (const key of GLOBAL_ONLY_KEYS) delete project[key];
+  // v0.39.47 (audit item 3): stripping a stale global-only key from the
+  // in-memory projection is not enough — the key stays on disk, so a later
+  // reader (a different scope, a hand edit, a stale build) can still see a
+  // value the runtime refuses to honour. Remove it from the project FILE once,
+  // so "never silently trusted" also means "never silently left behind".
+  cleanStaleGlobalOnlyProjectKeys(cwd, projectFile);
   const merged = mergeSettings(
     DEFAULT_SETTINGS as unknown as Record<string, unknown>,
     global,
