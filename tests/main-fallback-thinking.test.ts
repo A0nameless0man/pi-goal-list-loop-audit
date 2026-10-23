@@ -47,7 +47,7 @@ test('fallback thinking settings and primary restoration are bounded durable val
  // v0.39.46: recovery configuration is global-only, so a project write now
  // refuses loudly instead of being silently stripped after the fact.
  assert.throws(()=>saveSettings('project',cwd,{mainModelFallbackThinkingLevels:{'p/first':'high'}}),/global-only/i);
- assert.equal(fs.readFileSync(cwd+'/.pi-glla/settings.json','utf8').includes('mainModelFallbackThinkingLevels'),false,'recovery configuration is global-only');
+ assert.equal(fs.existsSync(cwd+'/.pi-glla/settings.json') && fs.readFileSync(cwd+'/.pi-glla/settings.json','utf8').includes('mainModelFallbackThinkingLevels'),false,'recovery configuration is global-only');
 });
 
 test('thinking choices come from registered model capabilities and reject unsupported selections', async()=>{
