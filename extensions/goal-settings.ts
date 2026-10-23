@@ -1267,8 +1267,11 @@ export function saveSettings(scope: "global" | "project", cwd: string, patch: Pa
   // `auditorModelFallbacks` — so checking the raw patch let such a write reach
   // the cleanup loop below and be discarded while saveSettings returned
   // normally. That is the exact silent-drop the guard exists to prevent.
-  if (scope === "project") assertProjectSaveAllows(patch);
   const migratedPatch = migrateLegacySettings(patch);
+  if (scope === "project") assertProjectSaveAllows(
+    migratedPatch as unknown as Partial<Settings>,
+    Object.keys(patch),
+  );
   const file = scope === "global" ? globalSettingsPath() : projectSettingsPath(cwd);
   withSettingsFileLock(file, () => {
     const current = migrateLegacySettings(readSettingsFile(file));
