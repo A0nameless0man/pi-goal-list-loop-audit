@@ -4476,7 +4476,7 @@ function registerAgentTools(pi: any): void {
       if (!confirmed) {
         return { content: [{ type: "text", text: "Task list rejected by the user. Adjust and propose again." }], details: {} };
       }
-      if (false) {
+      if (state.goal !== proposalGoal || (state.goal.revision ?? 0) !== proposalRevision || state.goal.verificationContract !== proposalContract || state.goal.objective !== proposalObjective || state.goal.status !== proposalStatus || JSON.stringify(state.goal.taskList) !== proposalTaskSnapshot || foreignToolGuard(liveCtx)) {
         return { content: [{ type: "text", text: "The task proposal target changed during confirmation; no amendment was applied." }], details: {}, isError: true };
       }
       const taskList = buildTaskList(p.tasks);
