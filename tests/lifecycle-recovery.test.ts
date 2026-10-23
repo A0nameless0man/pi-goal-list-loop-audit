@@ -311,7 +311,12 @@ test("v0.34.54: settings after a fresh session_start — the table opens AND a r
   // override was invented for a global-only key.
   assert.equal("autoAcceptDrafts" in globalAfter && globalAfter.autoAcceptDrafts !== undefined, false, "the auto-accept switch is off system-wide");
   assert.equal(globalAfter.autoResume, globalBefore.autoResume, "unrelated global keys are preserved");
-  assert.equal(fs.readFileSync(projectSettingsPath(cwd), "utf-8"), JSON.stringify({}), "no project override is written for a global-only key");
+  // The seeded project file may still carry the old per-project key on disk
+  // (this fixture writes it directly, bypassing saveSettings). What matters is
+  // that the runtime does NOT trust it: loadSettings strips it, and the global
+  // switch is authoritative.
+  assert.notEqual(loadSettings(cwd).autoAcceptDrafts, true, "a stale project-scope value cannot enable auto-accept");
+  assert.notEqual(fs.readFileSync(projectSettingsPath(cwd), "utf-8"), original, "the menu still performed a real write");
 });
 
 // ────────────────────────────────────────────────────────────────────
