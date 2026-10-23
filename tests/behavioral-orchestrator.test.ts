@@ -3065,6 +3065,65 @@ test("auto-accept escape hatch: ALWAYS choice persists system-wide autoAcceptDra
   assert.ok(ctx.ui.matching("system-wide").length >= 1, "the notify names the system-wide scope, not a project");
 });
 
+test("escape hatch: the ALWAYS choice skips the dialog for a SECOND draft in the same flow", async () => {
+  __testOnlyResetStaleFlag();
+  const cwd = tmpCwd();
+  const ctx = await freshSession(cwd, "startup");
+  await pi.command("goal", "", ctx);
+  await pi.fire("message_start", { message: { role: "user" } }, ctx);
+  await pi.fire("message_start", { message: { role: "user" } }, ctx); // floor satisfied
+  let customCalls = 0;
+  ctx.ui.customImpl = async () => {
+    customCalls++;
+    return "Yes — always auto-accept drafts, system-wide";
+  };
+  // First draft: the dialog runs and the ALWAYS choice lands the setting.
+  const first = await pi.runTool("propose_goal_draft", { objective: "flow one — done when pinned", verificationContract: "pinned" }, ctx);
+  assert.match(first.content[0]!.text, /activated|Begin work/i, "first draft accepted");
+  assert.equal(customCalls, 1, "the first draft was prompted");
+  // Second draft, SAME session/flow: no prompt, and the global file still says
+  // true. This is what the user actually experiences after picking ALWAYS.
+  const before = JSON.parse(fs.readFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, "utf-8")) as { autoAcceptDrafts?: boolean };
+  assert.equal(before.autoAcceptDrafts, true, "the ALWAYS choice persisted system-wide before the second draft");
+  await pi.command("goal", "", ctx); // drafting mode again
+  await pi.fire("message_start", { message: { role: "user" } }, ctx);
+  const second = await pi.runTool("propose_goal_draft", { objective: "flow two — done when pinned", verificationContract: "pinned" }, ctx);
+  ctx.ui.customImpl = undefined; // cleanup BEFORE asserts
+  assert.equal(customCalls, 1, "the second draft was NOT prompted");
+  assert.match(second.content[0]!.text, /activated|Begin work/i, "second draft accepted without a dialog");
+  const after = JSON.parse(fs.readFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, "utf-8")) as { autoAcceptDrafts?: boolean };
+  assert.equal(after.autoAcceptDrafts, true, "the global file still contains true after the second draft");
+});
+
+test("escape hatch: a failed settings write claims nothing — no journal row, no ON notification", async () => {
+  __testOnlyResetStaleFlag();
+  const cwd = tmpCwd();
+  const ctx = await freshSession(cwd, "startup");
+  await pi.command("goal", "", ctx);
+  await pi.fire("message_start", { message: { role: "user" } }, ctx);
+  await pi.fire("message_start", { message: { role: "user" } }, ctx);
+  ctx.ui.customImpl = async () => "Yes — always auto-accept drafts, system-wide";
+  // Make the settings write fail the way the real one can: an unusable
+  // settings root. The save throws, so nothing may be journaled or announced.
+  const globalPath = process.env.GLLA_GLOBAL_SETTINGS_PATH!;
+  fs.rmSync(path.dirname(globalPath), { recursive: true, force: true });
+  fs.writeFileSync(path.dirname(globalPath) || "/", "");
+  const journalBefore = fs.existsSync(path.join(cwd, ".pi-glla", "journal.jsonl"))
+    ? fs.readFileSync(path.join(cwd, ".pi-glla", "journal.jsonl"), "utf-8").split("\n").filter((l) => l.includes("draft_autoaccept_enabled")).length
+    : 0;
+  const res = await pi.runTool("propose_goal_draft", { objective: "failed save objective — done when pinned", verificationContract: "pinned" }, ctx);
+  ctx.ui.customImpl = undefined;
+  fs.rmSync(path.dirname(globalPath), { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(globalPath), { recursive: true });
+  const journalAfter = fs.existsSync(path.join(cwd, ".pi-glla", "journal.jsonl"))
+    ? fs.readFileSync(path.join(cwd, ".pi-glla", "journal.jsonl"), "utf-8").split("\n").filter((l) => l.includes("draft_autoaccept_enabled")).length
+    : 0;
+  assert.equal(journalAfter, journalBefore, "no draft_autoaccept_enabled row when the save did not land");
+  assert.equal(ctx.ui.matching("auto-accept ON").length, 0, "no ON notification for a save that failed");
+  assert.ok(ctx.ui.matching("Could not save auto-accept").length >= 1, "the failure is reported honestly");
+  assert.match(res.content[0]!.text, /activated|Begin work/i, "the draft is still accepted for this turn");
+});
+
 test("escape hatch: a later draft skips the dialog entirely once autoAcceptDrafts landed", async () => {
   __testOnlyResetStaleFlag();
   const cwd = tmpCwd();
