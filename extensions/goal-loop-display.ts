@@ -360,67 +360,68 @@ function appendFactsToCard(
   const contentWidth = width !== undefined && width > 0
     ? Math.max(1, width - WIDGET_HORIZONTAL_MARGIN)
     : Number.MAX_SAFE_INTEGER;
-  const rowPrefixWidth = 3; // `├─ ` / `└─ `/`│  `
-  // Rows are kept as {text, cont}: `cont` marks a row that continues the
-  // PREVIOUS fact (a wrapped phrase), which renders with a `│  ` indent so the
-  // tree does not suggest a new sibling item.
+  const rowPrefixWidth = 3; // `├─ ` / `└─ ` / `│  `
+  const bodyWidth = Math.max(1, contentWidth - rowPrefixWidth);
+  // Rows carry a `cont` flag: a row that continues the previous fact renders
+  // with the `│  ` indent so the tree does not claim a new sibling item.
   const rows: Array<{ text: string; cont: boolean }> = [];
-  // Appending to an existing `└─` closer keeps the block's last row.
   const canAppend = prefix === '└─ ';
+  let used = canAppend ? tuiVisibleWidth(stripAnsi(lastLine)) + sepWidth : rowPrefixWidth;
   let cur = '';
   let curCont = false;
-  let used = canAppend ? tuiVisibleWidth(stripAnsi(lastLine)) + sepWidth : rowPrefixWidth;
   const flush = () => {
-    if (cur.length === 0) return;
-    rows.push({ text: cur, cont: curCont });
+    if (cur.length > 0) rows.push({ text: cur, cont: curCont });
     cur = '';
     curCont = false;
     used = rowPrefixWidth;
   };
-  for (const fact of facts) {
-    const needsSep = cur.length > 0;
-    const added = tuiVisibleWidth(fact) + (needsSep ? sepWidth : 0);
-    if (cur.length > 0 && used + added > contentWidth) flush();
-    if (cur.length === 0 && tuiVisibleWidth(fact) + rowPrefixWidth <= contentWidth) {
-      cur = fact;
-      used += tuiVisibleWidth(fact);
-      continue;
-    }
-    if (cur.length === 0) {
-      // The fact cannot fit on one row: split at WORD boundaries so no word is
-      // ever cut mid-fact (a phrase reads across rows instead of being clipped).
-      const words = fact.split(' ');
-      let line = '';
-      words.forEach((word, wi) => {
-        const candidate = line ? `${line} ${word}` : word;
-        const fits = tuiVisibleWidth(candidate) + rowPrefixWidth <= contentWidth;
-        if (fits) { line = candidate; return; }
-        if (line) {
-          if (cur.length === 0) cur = line;
-          else rows.length === 0 && !cur ? (cur = line) : (rows.push({ text: line, cont: true }));
-          line = '';
-        }
-        if (tuiVisibleWidth(word) + rowPrefixWidth > contentWidth) {
-          // A single word wider than the row: mark it rather than pretend it
-          // is whole. (No natural break point exists.)
-          const budget = Math.max(1, contentWidth - rowPrefixWidth);
-          let chunk = '';
-          for (const ch of word) {
-            if (tuiVisibleWidth(chunk + ch) > budget) break;
-            chunk += ch;
-          }
-          line = `${chunk}…`;
-        } else line = word;
-      });
-      if (line) {
-        if (cur.length === 0) { cur = line; curCont = false; }
-        else { rows.push({ text: line, cont: true }); }
+  // Greedy word wrap of ONE fact into bodyWidth-sized pieces. A word wider
+  // than the whole body is the only case that is cut, and it is marked so the
+  // reader knows it was truncated rather than complete.
+  const wrapFact = (fact: string): string[] => {
+    const out: string[] = [];
+    let line = '';
+    for (const word of fact.split(' ')) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (tuiVisibleWidth(candidate) <= bodyWidth) { line = candidate; continue; }
+      if (line) { out.push(line); line = ''; }
+      if (tuiVisibleWidth(word) <= bodyWidth) { line = word; continue; }
+      let chunk = '';
+      for (const ch of word) {
+        if (tuiVisibleWidth(chunk + ch) > bodyWidth - 1) break;
+        chunk += ch;
       }
+      out.push(`${chunk}…`);
+    }
+    if (line) out.push(line);
+    return out.length > 0 ? out : [fact];
+  };
+  for (const fact of facts) {
+    // Fits on the current row with a separator?
+    const joining = cur.length > 0;
+    const fitsHere = used + (joining ? sepWidth : 0) + tuiVisibleWidth(fact) <= contentWidth;
+    if (fitsHere) {
+      cur = joining ? `${cur}${sep}${fact}` : fact;
+      used += (joining ? sepWidth : 0) + tuiVisibleWidth(fact);
       continue;
     }
-    // cur is non-empty and the fact fits: append with a separator.
-    cur = `${cur}${sep}${fact}`;
-    used += sepWidth + tuiVisibleWidth(fact);
+    flush();
+    const singleFits = rowPrefixWidth + tuiVisibleWidth(fact) <= contentWidth;
+    if (singleFits) {
+      cur = fact;
+      used = rowPrefixWidth + tuiVisibleWidth(fact);
+      continue;
+    }
+    // Too long for one row: wrap it across rows instead of clipping it.
+    const parts = wrapFact(fact);
+    cur = parts[0]!;
+    used = rowPrefixWidth + tuiVisibleWidth(cur);
+    for (const part of parts.slice(1)) {
+      flush();
+      cur = part;
+      curCont = true;
+      used = rowPrefixWidth + tuiVisibleWidth(cur);
+    }
   }
   flush();
   if (rows.length === 0) return;
@@ -429,16 +430,14 @@ function appendFactsToCard(
   if (canAppend) {
     lines[lastIndex] = `${lastLine}${sep}${dim(rows[0]!.text)}`;
     rows.slice(1).forEach((row, i, rest) => {
-      const glyph = row.cont ? '│  ' : (i === rest.length - 1 ? '└─ ' : '├─ ');
-      emit(row, glyph);
+      emit(row, row.cont ? '│  ' : (i === rest.length - 1 ? '└─ ' : '├─ '));
     });
-  } else {
-    rows.forEach((row, i) => {
-      const last = i === rows.length - 1;
-      const glyph = row.cont && i > 0 ? '│  ' : (last ? '└─ ' : '├─ ');
-      emit(row, glyph);
-    });
+    return;
   }
+  rows.forEach((row, i) => {
+    const last = i === rows.length - 1;
+    emit(row, row.cont && i > 0 ? '│  ' : (last ? '└─ ' : '├─ '));
+  });
 }
 
 function stripAnsi(s: string): string {
@@ -2496,7 +2495,7 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
       // it from state so the fold works on every render path (the shared
       // projection is only built when a uiStatusContext exists).
       ((shared?.queueDepth ?? state.list?.length ?? 0) > 0) ? `${shared?.queueDepth ?? state.list?.length} queued` : '',
-      versionTail ? versionTail.replace(/^[·\s]+/, '') : '',
+      versionTail ? versionTail.replace(/^[\u00b7\u2022\u2027\s|]+/, '').trim() : '',
     ].filter(Boolean);
     if (foldFacts.length > 0) {
       const lastIndex = withAgents.length - 1;
