@@ -2391,6 +2391,11 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
         withAgents[lastIndex] = `${lastLine} ${paint(theme, 'dim', '·')} ${paint(theme, 'dim', uiSafeText(folded))}`;
       } else if (prefixMatch) {
         withAgents.push(`${paint(theme, 'dim', '└─ ')}${paint(theme, 'dim', uiSafeText(folded))}`);
+      } else {
+        // A glance card can be the head line alone (`● objective · active …`)
+        // with no detail rows; give the folded facts their own closer row
+        // rather than crowding the head past its width budget.
+        withAgents.push(`${paint(theme, 'dim', '└─ ')}${paint(theme, 'dim', uiSafeText(folded))}`);
       }
     }
   }
