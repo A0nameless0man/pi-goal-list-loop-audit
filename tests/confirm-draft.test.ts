@@ -48,7 +48,7 @@ test("buildConfirmDraftMarkdown: title is the H1, body follows", () => {
 
 test("ConfirmDraftComponent renders the title, body, and all three choices", () => {
   const lines = new ConfirmDraftComponent(
-    { title: "Confirm goal", body: "swap survival — done when absorbed", options: ["Yes", "No", "Yes — always auto-accept drafts for this project"] },
+    { title: "Confirm goal", body: "swap survival — done when absorbed", options: ["Yes", "No", "Yes — always auto-accept drafts, system-wide"] },
     () => {},
     FAKE_THEME,
     FAKE_KB,
@@ -124,7 +124,7 @@ test("auto-accept cannot bypass bookkeeping-only finding readiness", async () =>
   __testOnlyResetOwnerSession();
   const cwd=tmpCwd();
   const ctx=setup(cwd);
-  fs.writeFileSync(path.join(cwd,".pi-glla","settings.json"),JSON.stringify({autoAcceptDrafts:true}));
+  fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!,JSON.stringify({autoAcceptDrafts:true}));
   await pi.fire("session_start",{reason:"startup"},ctx);
   await tick();
   await enterGoalDrafting(ctx);
@@ -144,7 +144,7 @@ test("single and batch multiline bookkeeping drafts refuse before auto-accept", 
     __testOnlyResetOwnerSession();
     const cwd=tmpCwd();
     const ctx=setup(cwd);
-    fs.writeFileSync(path.join(cwd,".pi-glla","settings.json"),JSON.stringify({autoAcceptDrafts:true}));
+    fs.writeFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!,JSON.stringify({autoAcceptDrafts:true}));
     await pi.fire("session_start",{reason:"startup"},ctx);
     await tick();
     if (batch) await enterListDrafting(ctx); else await enterGoalDrafting(ctx);
