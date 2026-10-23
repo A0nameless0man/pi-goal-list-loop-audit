@@ -1428,7 +1428,7 @@ async function confirmDraft(ctx: ExtensionContext, title: string, body: string):
       });
       if (factoryInvoked) {
         if (choice === ALWAYS) {
-          saveSettings("project", ctx.cwd, { autoAcceptDrafts: true });
+          saveSettings("global", ctx.cwd, { autoAcceptDrafts: true });
           appendLedger(ctx.cwd, "draft_autoaccept_enabled", { via: title, scope: "global" });
           ctx.ui.notify(autoAcceptOnNotification, "info");
           return "yes";
@@ -1446,7 +1446,7 @@ async function confirmDraft(ctx: ExtensionContext, title: string, body: string):
   try {
     const choice = await ctx.ui.select(`${title}\n\n${body}`, ["Yes", ALWAYS, "No"]);
     if (choice === ALWAYS) {
-      saveSettings("project", ctx.cwd, { autoAcceptDrafts: true });
+      saveSettings("global", ctx.cwd, { autoAcceptDrafts: true });
       appendLedger(ctx.cwd, "draft_autoaccept_enabled", { via: title, scope: "global" });
       ctx.ui.notify(autoAcceptOnNotification, "info");
       return "yes";
