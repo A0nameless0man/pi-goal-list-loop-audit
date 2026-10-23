@@ -165,6 +165,7 @@ test("propose_task_list amendment renders the readable summary, not a JSON dump"
   const committed1 = ((readState(cwd) as { goal?: { taskList?: { tasks?: unknown[] } } }).goal?.taskList?.tasks?.length) ?? 0;
   assert.equal(committed1, 3, `first proposal committed a plan; tool said: ${(r1 as any)?.content?.[0]?.text}`);
   await pi.runTool("propose_task_list", {
+    replaceExisting: true,
     tasks: [
       { title: "Release/CI hardening" },
       { title: "Model-selection parity" },
