@@ -3035,9 +3035,11 @@ test("drafting state is not left behind by a stale seed, and old confirmations c
 // ── v0.28.12: auto-accept escape hatch in draft dialogs ────────────────
 // The polis incident: a 14-item batch Confirm gave no hint that /glla
 // autoaccept=on existed. Every draft-class dialog is now a 3-choice
-// select; the ALWAYS choice persists project autoAcceptDrafts and accepts.
+// select; the ALWAYS choice persists autoAcceptDrafts and accepts.
+// v0.39.46: that switch is now SYSTEM-WIDE (GLOBAL_ONLY_KEYS) instead of
+// per-project — "for this project" forced the user to re-opt-in per tree.
 
-test("auto-accept escape hatch: ALWAYS choice persists project autoAcceptDrafts and accepts the draft", async () => {
+test("auto-accept escape hatch: ALWAYS choice persists system-wide autoAcceptDrafts and accepts the draft", async () => {
   __testOnlyResetStaleFlag();
   const cwd = tmpCwd();
   const ctx = await freshSession(cwd, "startup");
@@ -3046,7 +3048,7 @@ test("auto-accept escape hatch: ALWAYS choice persists project autoAcceptDrafts 
   await pi.fire("message_start", { message: { role: "user" } }, ctx); // floor satisfied
   let selectTitle = "";
   ctx.ui.customImpl = async () => {
-    return "Yes — always auto-accept drafts for this project";
+    return "Yes — always auto-accept drafts, system-wide";
   };
   const res = await pi.runTool("propose_goal_draft", { objective: "hatch objective — done when pinned", verificationContract: "pinned" }, ctx);
   ctx.ui.customImpl = undefined; // cleanup BEFORE asserts
@@ -3057,9 +3059,10 @@ test("auto-accept escape hatch: ALWAYS choice persists project autoAcceptDrafts 
   assert.match(selectTitle, /Confirm goal/, "the dialog rendered as the goal confirm");
   const g = readState(cwd).goal as { status: string } | null;
   assert.ok(g && g.status === "active", "goal created by the ALWAYS choice");
-  const onDisk = JSON.parse(fs.readFileSync(path.join(cwd, ".pi-glla", "settings.json"), "utf-8")) as { autoAcceptDrafts?: boolean };
-  assert.equal(onDisk.autoAcceptDrafts, true, "persisted to PROJECT settings (survives restart, project-scoped)");
+  const onDisk = JSON.parse(fs.readFileSync(process.env.GLLA_GLOBAL_SETTINGS_PATH!, "utf-8")) as { autoAcceptDrafts?: boolean };
+  assert.equal(onDisk.autoAcceptDrafts, true, "persisted to GLOBAL settings (system-wide, survives restart)");
   assert.ok(ctx.ui.matching("auto-accept ON").length >= 1, "loud notify names the undo path");
+  assert.ok(ctx.ui.matching(/system-wide/i).length >= 1, "the notify names the system-wide scope, not a project");
 });
 
 test("escape hatch: a later draft skips the dialog entirely once autoAcceptDrafts landed", async () => {
@@ -3084,8 +3087,12 @@ test("source pin: all five draft-class dialogs route through confirmDraft with t
   for (const s of sites) assert.ok(GOAL_SRC.includes(s), `dialog exists: ${s}`);
   const callsites = GOAL_SRC.split("confirmDraft(").length - 1;
   assert.ok(callsites >= 6, `helper + 5 call sites (got ${callsites})`);
-  assert.match(GOAL_SRC, /Yes — always auto-accept drafts for this project/);
-  assert.match(GOAL_SRC, /saveSettings\("project", ctx\.cwd, \{ autoAcceptDrafts: true \}\)/);
+  // v0.39.46: the escape hatch is system-wide, and it must persist at the
+  // scope the key actually lives in — a project-scope write of a global-only
+  // key is now refused loudly instead of silently discarded.
+  assert.match(GOAL_SRC, /Yes — always auto-accept drafts, system-wide/);
+  assert.match(GOAL_SRC, /saveSettings\("global", ctx\.cwd, \{ autoAcceptDrafts: true \}\)/);
+  assert.ok(!/saveSettings\("project", ctx\.cwd, \{ autoAcceptDrafts/.test(GOAL_SRC), "no project-scope autoAcceptDrafts write survives");
   assert.match(GOAL_SRC, /if \(isStaleApiError\(err\)\) return "stale";/, "stale fallback preserved inside the helper");
 });
 
