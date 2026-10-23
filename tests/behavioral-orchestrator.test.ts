@@ -3068,8 +3068,10 @@ test("auto-accept escape hatch: ALWAYS choice persists system-wide autoAcceptDra
 test("escape hatch: a later draft skips the dialog entirely once autoAcceptDrafts landed", async () => {
   __testOnlyResetStaleFlag();
   const cwd = tmpCwd();
-  fs.mkdirSync(path.join(cwd, ".pi-glla"), { recursive: true });
-  fs.writeFileSync(path.join(cwd, ".pi-glla", "settings.json"), JSON.stringify({ autoAcceptDrafts: true }));
+  // v0.39.46: autoAcceptDrafts is global-only now, so it must be seeded in the
+  // global file — loadSettings() strips it from a project file. Seeding the
+  // project file here would silently test nothing.
+  fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify({ autoAcceptDrafts: true }));
   const ctx = await freshSession(cwd, "startup");
   await pi.command("goal", "", ctx);
   await pi.fire("message_start", { message: { role: "user" } }, ctx);
@@ -5006,8 +5008,8 @@ test("v0.35.x: stale host loss releases an in-flight completion audit without a 
 test("v0.34.29: audit fan-out honors autoAcceptDrafts without opening confirmation", async () => {
   __testOnlyResetStaleFlag();
   const cwd = tmpCwd();
-  fs.mkdirSync(path.join(cwd, ".pi-glla"), { recursive: true });
-  fs.writeFileSync(path.join(cwd, ".pi-glla", "settings.json"), JSON.stringify({ autoAcceptDrafts: true }));
+  // v0.39.46: global-only key — seed the global settings file, not the project.
+  fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify({ autoAcceptDrafts: true }));
   seedState(cwd, { goal: seedGoal({ status: "paused" }) });
   const ctx = await freshSession(cwd, "startup");
   const findingsDir = path.join(cwd, ".pi-glla", "audit-loop");
