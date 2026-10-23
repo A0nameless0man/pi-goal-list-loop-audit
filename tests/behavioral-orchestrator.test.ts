@@ -3128,8 +3128,12 @@ test("escape hatch: a failed settings write claims nothing — no journal row, n
     res = await pi.runTool("propose_goal_draft", { objective: "failed save objective — done when pinned", verificationContract: "pinned" }, ctx);
   } finally {
     ctx.ui.customImpl = undefined;
+    // Restore the harness's global settings file EXACTLY, including its
+    // directory: afterEach() rewrites this file, so leaving a directory here
+    // would fail every later test in this shared process.
     fs.rmSync(GLOBAL_SETTINGS_PATH, { recursive: true, force: true });
-    if (savedSettings !== undefined) fs.writeFileSync(GLOBAL_SETTINGS_PATH, savedSettings);
+    fs.mkdirSync(path.dirname(GLOBAL_SETTINGS_PATH), { recursive: true });
+    fs.writeFileSync(GLOBAL_SETTINGS_PATH, savedSettings ?? JSON.stringify({}));
   }
   const journalAfter = journalCount();
   assert.equal(journalAfter, journalBefore, "no draft_autoaccept_enabled row when the save did not land");
