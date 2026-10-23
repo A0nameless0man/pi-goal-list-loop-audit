@@ -58,7 +58,9 @@ its current transcript. The attempt stays suppressed until usage drops below
 half the target, so a failing summarizer is not retried every turn.
 
 These describe machine/provider/session policy, not a project artifact. Project
-copies are ignored (GLLA reads the global file for these policies):
+copies are ignored (GLLA reads the global file for these policies), and a
+project-scope write to any of them now throws instead of being silently
+dropped — a save that cannot land must never be reported as one that did:
 
 `stateRoot`, `mainModelFallbacks`, `mainModelFallbackThinkingLevels`, `mainModelRetryMinutes`,
 `mainModelSameModelRetries`, `mainModelFailback`, `mainModelPrimaryProbeMinutes`, `hourlyRetryProbe`,
@@ -68,12 +70,17 @@ copies are ignored (GLLA reads the global file for these policies):
 `compactorModel`, `compactorModelFallbacks`,
 `compactionTokenThreshold`,
 `auditorModelFallbacks`, `auditorToolTimeoutMs`, `auditorStallMs`,
-`auditJobRetentionMs`, `auditSpotCheckRate`, `auditorStrictChallenge`, `auditorInspection`.
+`auditJobRetentionMs`, `auditSpotCheckRate`, `auditorStrictChallenge`, `auditorInspection`,
+`autoAcceptDrafts`.
 
 This list is `GLOBAL_ONLY_KEYS` in `extensions/goal-settings.ts`, and a
 project-scope write to any of them is stripped on read. Every other key —
 including `auditCapHard` and `mechanicalLoadScale` — is project-settable and
 a project file wins over the global one.
+
+`autoAcceptDrafts` is system-wide rather than per project: one switch skips
+draft confirms in every project. The draft dialog's third choice sets it, and
+**Auto-accept drafts** in `/glla` settings turns it off again.
 
 The root selector distinguishes a missing settings file (normal defaults) from
 an unreadable or invalid existing file. The latter defers mutations and keeps
