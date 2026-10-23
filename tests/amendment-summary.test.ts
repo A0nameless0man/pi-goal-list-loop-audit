@@ -14,7 +14,7 @@ import fs from "node:fs";
 import assert from "node:assert/strict";
 import { buildAmendmentSummary } from "../extensions/loops/goal-tools.js";
 import type { Task } from "../extensions/goal-loop-core.js";
-import activate, { __testOnlyResetStaleFlag, __testOnlyLastConfirmDialog } from "../extensions/loops/goal.js";
+import activate, { __testOnlyResetOwnerSession, __testOnlyResetStaleFlag, __testOnlyLastConfirmDialog } from "../extensions/loops/goal.js";
 import { readState } from "../extensions/goal-loop-core.js";
 import { MockPi, makeMockCtx, seedGoal, seedState, tick, tmpCwd } from "./harness/mock-pi.js";
 
@@ -185,6 +185,9 @@ test("propose_task_list amendment renders the readable summary, not a JSON dump"
 });
 
 test("propose_task_list aborts an amendment whose target changed during Confirm", async () => {
+  // The previous test in this shared process may still hold MAIN-session
+  // ownership from its own context; release it so this test starts clean.
+  __testOnlyResetOwnerSession();
   const cwd = tmpCwd();
   seedState(cwd, {
     goal: seedGoal({
