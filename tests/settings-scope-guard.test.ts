@@ -128,7 +128,7 @@ test("a legacy alias that migrates to a global-only key is refused too, not sile
   // normally: the exact "looks saved, never applied" defect this guard exists
   // to prevent, arriving by a different door.
   const cwd = tmpCwd();
-  const file = projectSettingsPath(cwd);
+  const file = projectSettingsFile(cwd);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, JSON.stringify({ aggressiveMode: true }));
 
