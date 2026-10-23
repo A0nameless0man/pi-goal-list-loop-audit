@@ -43,7 +43,10 @@ test('fallback thinking settings and primary restoration are bounded durable val
  const saved=sanitizeMainModelRecovery({primary:'p/main',primaryThinkingLevel:'high',attempted:[],attempts:1,kind:'loop'});
  assert.equal(saved?.primaryThinkingLevel,'high');
  assert.equal(sanitizeMainModelRecovery({...saved,primaryThinkingLevel:'invalid'})?.primaryThinkingLevel,undefined);
- const cwd=tmpCwd();saveSettings('project',cwd,{mainModelFallbackThinkingLevels:{'p/first':'high'}});
+ const cwd=tmpCwd();
+ // v0.39.46: recovery configuration is global-only, so a project write now
+ // refuses loudly instead of being silently stripped after the fact.
+ assert.throws(()=>saveSettings('project',cwd,{mainModelFallbackThinkingLevels:{'p/first':'high'}}),/global-only/i);
  assert.equal(fs.readFileSync(cwd+'/.pi-glla/settings.json','utf8').includes('mainModelFallbackThinkingLevels'),false,'recovery configuration is global-only');
 });
 
