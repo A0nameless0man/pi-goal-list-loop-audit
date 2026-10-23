@@ -196,10 +196,11 @@ test("propose_task_list aborts an amendment whose target changed during Confirm"
   setGlobalAutoResume(true);
   const ctx = await freshSession(cwd, "reload");
   await tick();
+  ctx.ui.selectImpl = async () => "Yes";
   ctx.ui.customImpl = async () => "Yes";
-  await pi.runTool("propose_task_list", { tasks: [{ title: "First committed task" }] }, ctx);
+  const r0 = await pi.runTool("propose_task_list", { tasks: [{ title: "First committed task" }] }, ctx);
   const before = readState(cwd) as { goal?: { revision?: number; taskList?: { tasks?: Array<{ title: string }> } } };
-  assert.equal(before.goal?.taskList?.tasks?.length, 1, "a plan is committed before the race");
+  assert.equal(before.goal?.taskList?.tasks?.length, 1, `a plan is committed before the race; tool said: ${(r0 as any)?.content?.[0]?.text}`);
   const titlesBefore = (before.goal?.taskList?.tasks ?? []).map((t) => t.title).join("|");
   // Mutate the live goal WHILE the Confirm is open — the exact race the
   // recheck exists to fail closed on. Without the recheck the amendment would
