@@ -905,11 +905,8 @@ function cleanStaleGlobalOnlyProjectKeys(cwd: string, file: string): void {
     if (stale.length === 0) return;
     withSettingsFileLock(file, () => {
       const current = readSettingsFile(file) as Record<string, unknown>;
-      const next: Record<string, unknown> = { ...current };
-      let removed = false;
-      for (const key of GLOBAL_ONLY_KEYS) {
-        if (key in next) { delete next[key]; removed = true; }
-      }
+      const next: Record<string, unknown> = {};
+      let removed = true;
       if (!removed) return;
       writeSettingsAtomically(file, next);
       // The cleanup is a real settings mutation; journal it so an operator
