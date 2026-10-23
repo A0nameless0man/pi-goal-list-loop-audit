@@ -957,7 +957,6 @@ function refreshUI(ctx: ExtensionContext, force = false): void {
     const pinnedStatusSurface = !!(extras.uiStatusContext && (
       extras.uiStatusContext.persistenceHold
       || typeof state.loadHoldAt === 'number'
-      || typeof state.supervisorPausedAt === 'number'
     ))
       || !!backgroundStatus(state)
       || (!state.goal && (state.list?.length ?? 0) > 0)

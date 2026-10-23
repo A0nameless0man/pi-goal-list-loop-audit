@@ -333,6 +333,81 @@ export function wrap(s: string, width: number, maxLines: number): string[] {
  */
 const WIDGET_HORIZONTAL_MARGIN = 2;
 
+/**
+ * v0.39.47 (audit item 2): fold card facts WITHOUT letting the terminal clip
+ * them mid-fact. The final layout pass truncates every line to the content
+ * width, so a closer of `supervisor paused · v0.39.46` at 32 columns used to
+ * render as `supervisor paused · v0.39.…` — the version cut mid-fact, and at
+ * 20 columns `supervisor paused` itself was clipped.
+ *
+ * Facts are packed onto as few rows as fit; when they do not all fit they
+ * spill onto `│  ` continuation rows instead of being truncated, because a
+ * half-rendered version string or state chip is worse than an extra row. Each
+ * fact is atomic: it either appears whole or moves to the next row.
+ */
+function appendFactsToCard(
+  lines: string[],
+  lastIndex: number,
+  lastLine: string,
+  prefix: string,
+  facts: string[],
+  theme: DisplayTheme | undefined,
+  width: number | undefined,
+): void {
+  const clamped = (text: string) => paint(theme, 'dim', uiSafeText(text));
+  const sep = ` ${paint(theme, 'dim', '·')} `;
+  const sepWidth = 3;
+  const contentWidth = width !== undefined && width > 0
+    ? Math.max(1, width - WIDGET_HORIZONTAL_MARGIN)
+    : Number.MAX_SAFE_INTEGER;
+  // Room left on the existing closer row, if the facts can append there.
+  const canAppend = prefix === '└─ ';
+  const headPrefix = canAppend ? '└─ ' : '└─ ';
+  const baseLine = canAppend ? lastLine : undefined;
+  const baseUsed = baseLine === undefined
+    ? headPrefix.length
+    : tuiVisibleWidth(stripAnsi(baseLine)) + sepWidth;
+  const rows: string[] = [];
+  let cur = '';
+  let used = baseUsed;
+  for (const fact of facts) {
+    const factWidth = tuiVisibleWidth(fact);
+    const needsSep = cur.length > 0;
+    const added = factWidth + (needsSep ? sepWidth : 0);
+    if (cur.length > 0 && used + added > contentWidth) {
+      rows.push(cur);
+      cur = fact;
+      used = 1 + 3 + factWidth; // `│  ` carries the continuation row
+      continue;
+    }
+    if (cur.length === 0 && used + factWidth > contentWidth) {
+      // A single fact wider than the whole row cannot be kept atomic — fall
+      // through and let it occupy its own row (truncation of one over-long
+      // fact is the least-bad outcome; it stays on one row and is marked).
+      cur = fact;
+      used = 1 + 3 + factWidth;
+      continue;
+    }
+    cur = needsSep ? `${cur}${sep}${fact}` : fact;
+    used += added;
+  }
+  if (cur.length > 0) rows.push(cur);
+  if (rows.length === 0) return;
+  const first = rows[0]!;
+  if (canAppend) {
+    lines[lastIndex] = `${lastLine}${sep}${clamped(first)}`;
+  } else {
+    lines.push(`${paint(theme, 'dim', '└─ ')}${clamped(first)}`);
+  }
+  for (const row of rows.slice(1)) {
+    lines.push(`${paint(theme, 'dim', '│  ')}${clamped(row)}`);
+  }
+}
+
+function stripAnsi(s: string): string {
+  return s.replace(/\u001b\[[0-9;]*m/g, '');
+}
+
 // v0.38.55: WORKER_TEXT_SPACER retired — the NBSP "breathing room" row
 // rendered as a stray blank line in the card (Screenshot 20260914). The
 // tree glyphs already structure observations → closing line; no spacer.
@@ -2398,19 +2473,7 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
       if (uniqueFacts.length === 0) {
         // nothing to fold — the card is already complete
       } else {
-      const folded = uniqueFacts.join(' · ');
-      // APPEND — the closer already carries "details: /glla status" or the
-      // next action, and that text must survive the fold.
-      if (prefixMatch && prefixMatch[1] === '└─ ') {
-        withAgents[lastIndex] = `${lastLine} ${paint(theme, 'dim', '·')} ${paint(theme, 'dim', uiSafeText(folded))}`;
-      } else if (prefixMatch) {
-        withAgents.push(`${paint(theme, 'dim', '└─ ')}${paint(theme, 'dim', uiSafeText(folded))}`);
-      } else {
-        // A glance card can be the head line alone (`● objective · active …`)
-        // with no detail rows; give the folded facts their own closer row
-        // rather than crowding the head past its width budget.
-        withAgents.push(`${paint(theme, 'dim', '└─ ')}${paint(theme, 'dim', uiSafeText(folded))}`);
-      }
+        appendFactsToCard(withAgents, lastIndex, lastLine, prefixMatch?.[1] ?? "", uniqueFacts, theme, width);
       }
     }
   }
