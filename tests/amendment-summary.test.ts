@@ -210,14 +210,14 @@ test("propose_task_list aborts an amendment whose target changed during Confirm"
   // recheck exists to fail closed on. Without the recheck the amendment would
   // silently replace a plan the user never saw.
   ctx.ui.confirmImpl = async () => {
-    // Simulate the concurrent writer that races an open Confirm: the durable
-    // state file changes underneath the pending proposal. The recheck compares
-    // against the LIVE goal, so any real mutation (another tool, another
-    // session, a restore) is indistinguishable from this one.
-    const statePath = path.join(cwd, ".pi-glla", "state.json");
-    const live = JSON.parse(fs.readFileSync(statePath, "utf-8")) as { goal?: Record<string, unknown> };
-    if (live.goal) live.goal.objective = "Race target objective MUTATED mid-confirm.";
-    fs.writeFileSync(statePath, JSON.stringify(live, null, 2));
+    // Simulate the concurrent writer that races an open Confirm. The recheck
+    // compares the LIVE goal against the snapshot taken before the dialog, so
+    // any real mutation (another tool, another session, a restore) is
+    // indistinguishable from this one — which is exactly why it must fail
+    // closed instead of applying an amendment the user never saw.
+    const { state } = await import("../extensions/goal-state.js");
+    assert.ok(state.goal, "a live goal exists to mutate");
+    state.goal!.objective = "Race target objective MUTATED mid-confirm.";
     return true;
   };
   const res = await pi.runTool("propose_task_list", {
