@@ -1434,7 +1434,7 @@ function backgroundNextAction(state: State, view: WorkView, command: string): st
     : `waiting on background agent (legacy ownership unverified) → bounded assessment on eligible contact · ${command} status`;
 }
 
-function backgroundStatus(state: State, theme?: DisplayTheme): string | undefined {
+export function backgroundStatus(state: State, theme?: DisplayTheme): string | undefined {
   const data = backgroundDisplay(state);
   if (!data) return undefined;
   const { view, surface, command } = data;

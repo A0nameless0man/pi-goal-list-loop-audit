@@ -28,7 +28,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { defineTool, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { truncateCells } from "../goal-loop-display.js";
+import { truncateCells, backgroundStatus } from "../goal-loop-display.js";
 import { Type } from "typebox";
 import { uiStatusOwnerKey, type UiStatusContext } from '../ui-status.js';
 import { uiStatusContextFromRuntime, type UiAuditObservation } from '../ui-status-runtime.js';
@@ -948,7 +948,21 @@ function refreshUI(ctx: ExtensionContext, force = false): void {
     // goal) keep the legacy strip: clearing there would leave the user with
     // no status surface at all.
     const cardRendered = (widgetLines?.length ?? 0) > 0;
-    const effectiveStatus = cardRendered ? undefined : statusText;
+    // The objective keeps the legacy line shape for the states pinned by
+    // existing behavioral contracts — a background/standby wait, a
+    // waiting-only queue, a stale-handle interruption, and a blocked/dormant
+    // admission hold all name a state the card does not restate, and each has
+    // a test asserting the strip is present. Those keep their strip; the
+    // duplicated prose states (auditing/active/paused detail) surrender it.
+    const pinnedStatusSurface = !!(extras.uiStatusContext && (
+      extras.uiStatusContext.persistenceHold
+      || typeof state.loadHoldAt === 'number'
+      || typeof state.supervisorPausedAt === 'number'
+    ))
+      || !!backgroundStatus(state)
+      || (!state.goal && (state.list?.length ?? 0) > 0)
+      || (state.goal?.status === 'active' && !!state.goal.interruptedAt);
+    const effectiveStatus = cardRendered && !pinnedStatusSurface ? undefined : statusText;
     const statusChanged = contextChanged || effectiveStatus !== lastUIStatusText;
     const widgetChanged = contextChanged || widgetKey !== lastUIWidgetKey;
     if (!statusChanged && !widgetChanged) return;
