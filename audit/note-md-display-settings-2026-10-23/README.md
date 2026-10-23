@@ -160,3 +160,56 @@ Negative controls, each injected then reverted:
 | disable the amendment target recheck (`if (false)`) | `propose_task_list aborts an amendment whose target changed during Confirm` |
 | restore the project-scope `autoAcceptDrafts` save | `auto-accept escape hatch …` contract tests |
 | restore the JSON blob | `propose_task_list amendment renders the readable summary` |
+
+## Audit round 3 — the gate runs on the pinned toolchain
+
+The round-2 code findings stood. The remaining objection was toolchain, not
+behaviour: `scripts/run-tests.mjs` probes Bun for `--parallel`,
+`--path-ignore-patterns` and `--max-concurrency` before starting, and the
+host's default `bun` is **1.3.3**, which has only `--max-concurrency`. So the
+gate exited 1 with "no tests were started" and no zeros could be produced
+through it.
+
+CI already pins the required version (`.github/workflows/publish.yml`,
+`compatibility.yml`: `bun-version: 1.3.14`). Installing that exact toolchain
+locally clears the probe:
+
+```
+$ bun --version            # host default
+1.3.3
+$ bun test --help | grep -E 'parallel|path-ignore'
+      --max-concurrency=<val> ...
+
+$ /home/dracon/.local/share/bun-toolchains/bun-1.3.14/bun --version
+1.3.14
+$ ... bun test --help | grep -E 'parallel|path-ignore'
+      --path-ignore-patterns=<val>
+      --parallel=<val> ...
+```
+
+Gate result on the CI-equivalent toolchain, all affected
+display/settings/session/orchestrator files:
+
+```
+ 457 pass
+ 0 fail
+Ran 457 tests across 12 files. [133.66s]
+```
+
+Files: footer-fold, amendment-summary, settings-scope-guard,
+behavioral-orchestrator, recovery-restore-after-restart, lifecycle-recovery,
+settings-editors, display, confirm-draft, settings-menu-complete,
+goal-state-drift, terminal-approval-render.
+
+`npm run check` exit 0 and `npm run check:inventory` exit 0 on the same run.
+
+The negative controls were re-proven on this toolchain too — re-adding the
+`supervisorPausedAt` strip pin still fails
+`supervisor pause paints the fact on the card and clears the duplicated strip`
+(4 pass, 1 fail), then reverted.
+
+No source change was needed for this round: the defect was the environment's
+Bun version, not the code or the checks. The durable fix is to run the gate on
+the version the project already pins rather than to relax the capability
+probe — the probe exists because older Bun silently treats unknown flag values
+as test filters, which would have quietly run the wrong files.
