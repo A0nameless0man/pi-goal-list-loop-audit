@@ -220,6 +220,8 @@ test("propose_task_list aborts an amendment whose target changed during Confirm"
   ctx.ui.confirmImpl = undefined;
   ctx.ui.customImpl = undefined;
   const after = readState(cwd) as { goal?: { revision?: number; taskList?: { tasks?: Array<{ title: string }> } } };
+  console.log("DEBUG tool:", JSON.stringify((res as any)?.content?.[0]?.text));
+  console.log("DEBUG isError:", (res as any)?.isError, "titles:", (after.goal?.taskList?.tasks ?? []).map((t) => t.title).join("|"));
   assert.equal((res as any)?.isError, true, "the amendment is refused as an error, not applied silently");
   assert.match((res as any).content[0].text, /changed during confirmation/i, "the refusal names the race");
   assert.equal(
