@@ -118,3 +118,35 @@ test("negative control: without the guard, a project write is silently discarded
     "confirms the silent-discard path really loses the write — this is what the guard prevents",
   );
 });
+
+test("a legacy alias that migrates to a global-only key is refused too, not silently dropped", () => {
+  // Audit round 4: the guard originally validated the RAW patch, but migration
+  // can CREATE a global-only key from a supported alias —
+  // `auditorModelFallback` migrates to the global-only `auditorModelFallbacks`.
+  // A project-scope write through the alias therefore bypassed the guard,
+  // reached the cleanup loop, and was discarded while saveSettings returned
+  // normally: the exact "looks saved, never applied" defect this guard exists
+  // to prevent, arriving by a different door.
+  const cwd = tmpCwd();
+  const file = projectSettingsPath(cwd);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify({ aggressiveMode: true }));
+
+  assert.throws(
+    () => saveSettings("project", cwd, { auditorModelFallback: "provider/model" } as never),
+    (err: Error) => /auditorModelFallbacks/.test(err.message) && /global-only/i.test(err.message),
+    "the aliased write must refuse, not return successfully after being discarded",
+  );
+  assert.match(
+    String((() => { try { saveSettings("project", cwd, { auditorModelFallback: "provider/model" } as never); } catch (e) { return (e as Error).message; } })()),
+    /migrated from auditorModelFallback/,
+    "the refusal names the alias the caller actually passed, not only the canonical key",
+  );
+  // Nothing was written, and the unrelated project setting survived.
+  const onDisk = JSON.parse(fs.readFileSync(file, "utf-8")) as Record<string, unknown>;
+  assert.equal("auditorModelFallbacks" in onDisk, false, "no phantom value reached the project file");
+  assert.equal(onDisk.aggressiveMode, true, "the existing unrelated setting is untouched");
+  // The same value at global scope is the supported path.
+  saveSettings("global", cwd, { auditorModelFallback: "provider/model" } as never);
+  assert.deepEqual(loadSettings(cwd).auditorModelFallbacks, ["provider/model"], "global scope accepts it");
+});
