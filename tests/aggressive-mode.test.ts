@@ -83,7 +83,11 @@ test("autoResume is global-only in the effective settings and provenance", () =>
   try {
     fs.mkdirSync(path.dirname(globalPath), { recursive: true });
     fs.writeFileSync(globalPath, JSON.stringify({ aggressiveMode: false }));
-    saveSettings("project", dir, { autoResume: true });
+    // v0.39.46: a project-scope write of a global-only key now REFUSES loudly
+    // instead of being silently deleted (a caller must never report a save
+    // that did not land). The invariant is unchanged: a project autoResume
+    // still cannot take effect — it now cannot even be written.
+    assert.throws(() => saveSettings("project", dir, { autoResume: true }), /global-only/i);
     assert.equal(loadSettings(dir).autoResume, undefined, "a project autoResume key is ignored");
     assert.equal(settingsProvenance(dir).autoResume.source, "default");
   } finally {

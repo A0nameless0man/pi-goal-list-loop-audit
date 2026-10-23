@@ -166,7 +166,15 @@ test("stateRoot is typed/global-only and project settings cannot override it", (
     assert.equal(loadSettings(fx.cwd).stateRoot, "sessionDir");
     assert.equal(settingsProvenance(fx.cwd).stateRoot?.source, "global");
     setRuntimeSessionDir(fx.sessionDir);
-    saveSettings("project", fx.cwd, { stateRoot: "workingDir", notifyCmd: "notify-send $1" });
+    // v0.39.46: stateRoot is global-only, so a project write naming it now
+    // refuses loudly rather than being silently dropped. The guarded
+    // invariant is the same — the project can never override the root
+    // selector — and the non-global key in the same patch still behaves.
+    assert.throws(
+      () => saveSettings("project", fx.cwd, { stateRoot: "workingDir", notifyCmd: "notify-send $1" }),
+      /global-only/i,
+    );
+    saveSettings("project", fx.cwd, { notifyCmd: "notify-send $1" });
     const project = JSON.parse(fs.readFileSync(projectSettingsPath(fx.cwd), "utf8")) as Record<string, unknown>;
     assert.equal(project.notifyCmd, "notify-send $1");
     assert.equal("stateRoot" in project, false, "project scope cannot override the root selector");
