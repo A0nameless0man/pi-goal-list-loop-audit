@@ -317,7 +317,7 @@ test("v0.34.54: settings after a fresh session_start — the table opens AND a r
   // that the runtime does NOT trust it: loadSettings strips it, and the global
   // switch is authoritative.
   assert.notEqual(loadSettings(cwd).autoAcceptDrafts, true, "a stale project-scope value cannot enable auto-accept");
-  assert.notEqual(fs.readFileSync(projectSettingsPath(cwd), "utf-8"), original, "the menu still performed a real write");
+  assert.equal(fs.readFileSync(projectSettingsPath(cwd), "utf-8"), JSON.stringify({ autoAcceptDrafts: true }), "the project file was not rewritten by a global-only key edit");
 });
 
 // ────────────────────────────────────────────────────────────────────
