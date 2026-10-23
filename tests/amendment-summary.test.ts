@@ -149,11 +149,11 @@ test("propose_task_list amendment renders the readable summary, not a JSON dump"
   ctx.ui.confirmImpl = async (_t: string, body: string) => { bodies.push(body); return true; };
   ctx.ui.customImpl = async () => "Yes";
   // First proposal commits a plan; the second must AMEND it (replacing branch).
-  await pi.runTool("propose_task_list", {
+  const r1 = await pi.runTool("propose_task_list", {
     tasks: [{ title: "Release/CI hardening" }, { title: "Model-selection parity" }, { title: "Durable projection" }],
   }, ctx);
-  const afterFirst = readState(cwd) as { goal?: { taskList?: { tasks?: unknown[] } } };
-  const committed = afterFirst.goal?.taskList?.tasks?.length ?? 0;
+  const committed1 = ((readState(cwd) as { goal?: { taskList?: { tasks?: unknown[] } } }).goal?.taskList?.tasks?.length) ?? 0;
+  assert.equal(committed1, 3, `first proposal committed a plan; tool said: ${(r1 as any)?.content?.[0]?.text}`);
   await pi.runTool("propose_task_list", {
     tasks: [
       { title: "Release/CI hardening" },
@@ -164,7 +164,6 @@ test("propose_task_list amendment renders the readable summary, not a JSON dump"
   }, ctx);
   ctx.ui.confirmImpl = undefined;
   ctx.ui.customImpl = undefined;
-  assert.equal(committed, 3, "a 3-task plan was committed by the first proposal");
   assert.ok(bodies.length > 0, `amendment dialog rendered (bodies=${bodies.length})`);
   const body = bodies[bodies.length - 1]!;
   assert.ok(!body.includes('"tasks":'), "no JSON task dump in the live dialog");
