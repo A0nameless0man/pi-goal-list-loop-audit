@@ -14,9 +14,12 @@
  *     strip, because there the line IS the only surface naming the state.
  */
 import { test } from "node:test";
+import fs from "node:fs";
+import path from "node:path";
 import assert from "node:assert/strict";
 import { buildStatusText, buildWidgetLines, MAIN_HOST_LABEL } from "../extensions/goal-loop-display.js";
 import { backgroundStatus } from "../extensions/goal-loop-display.js";
+import { tmpCwd } from "./harness/mock-pi.js";
 
 const sanitizeForCompare = (s: string) => s.replace(/\u001b\[[0-9;]*m/g, "");
 /** Terminal cell width of a plain (ANSI-free) string. */
@@ -158,11 +161,18 @@ test("a wrapped fact keeps the tree structure honest (no early closer)", () => {
   const state = { goal: goalOf(), list: [], supervisorPausedAt: NOW - 60_000 } as never;
   const lines = buildWidgetLines(state, null, NOW, undefined, 20, { versionTail: "· v0.39.46" })!;
   const plain = lines.map((l) => sanitizeForCompare(l));
-  // Exactly one row may close the block; a mid-block `└─` would read as "and
-  // then nothing follows", hiding the rows printed after it.
-  assert.equal(plain.filter((l) => l.startsWith("└─")).length, 1, `one closer row: ${plain.join(" | ")}`);
-  // A continuation row is indented, never presented as a new sibling item.
-  assert.ok(plain.some((l) => l.startsWith("│  ")), `wrapped continuation uses the │ indent: ${plain.join(" | ")}`);
+  // The structural requirement: a mid-block `└─` would read as "and then
+  // nothing follows", hiding the rows printed after it. A head-only card has
+  // no detail rows to close, so it must not emit a closer AT ALL (v0.39.49:
+  // emitting one produced the dangling `└─ v0.39.46` from the field report).
+  const closers = plain.filter((l) => l.startsWith("└─"));
+  assert.ok(closers.length <= 1, `at most one closer row: ${plain.join(" | ")}`);
+  if (plain.length > 1) {
+    assert.equal(closers.length, plain.some((l) => /^[├│]/.test(l)) ? 1 : 0,
+      `a closer appears only when detail rows exist: ${plain.join(" | ")}`);
+  }
+  // Every row after the head is indented, never a bare sibling of the head.
+  for (const line of plain.slice(1)) assert.match(line, /^(\s+|[└├│])/, `row is nested: ${line}`);
 });
 
 // ── v0.39.49: the version indicator is a choice, and never a broken line ──

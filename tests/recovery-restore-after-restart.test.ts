@@ -243,3 +243,31 @@ test("supervisor pause paints the fact on the card and clears the duplicated str
   assert.doesNotMatch(status, /supervisor/, `the strip does not restate the supervisor chip: ${status}`);
   assert.doesNotMatch(status, /^glla: /, `the duplicated strip is cleared entirely: ${status}`);
 });
+
+test("versionDisplay=status keeps the version on the strip; =off hides it; default rides the card", async () => {
+  // v0.39.49: the version indicator is a choice with ONE surface. The card is
+  // the default; "status" is the escape hatch for people who preferred the
+  // bottom line; "off" means neither. Painted through a real session_start so
+  // this exercises the same path a user sees, not just the renderer.
+  const render = async (mode: "" | "status" | "off"): Promise<{ widget: string; status: string }> => {
+    const cwd = tmpCwd();
+    fs.mkdirSync(path.dirname(GLOBAL_SETTINGS_PATH), { recursive: true });
+    fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify(mode ? { autoResume: true, versionDisplay: mode } : { autoResume: true }));
+    seedState(cwd, { goal: seedGoal({ objective: `version-mode ${mode || "default"} — done when pinned`, status: "active" }) } as unknown as Parameters<typeof seedState>[1]);
+    const ctx = makeManagerCtx(cwd, hostManager(`vm-${mode || "default"}`, []));
+    await pi.fire("session_start", { reason: "startup" }, ctx);
+    const widget = ((ctx.ui.widgets["pi-glla"] as string[] | undefined) ?? []).join("\n");
+    return { widget, status: ctx.ui.statuses["pi-glla"] ?? "" };
+  };
+  const card = await render("");
+  assert.match(card.widget, /v\d+\.\d+\.\d+|unknown|v0\./, "the default surface is the card");
+  assert.doesNotMatch(card.status, /v\d+\.\d+\.\d+/, `the default does not duplicate onto the strip: ${card.status}`);
+
+  const strip = await render("status");
+  assert.match(strip.status, /^glla:/, `status mode keeps the strip alive: ${strip.status}`);
+  assert.match(strip.status, /v\d+\.\d+\.\d+/, `status mode shows the version there: ${strip.status}`);
+
+  const hidden = await render("off");
+  assert.doesNotMatch(hidden.widget, /v\d+\.\d+\.\d+/, `off hides it on the card: ${hidden.widget}`);
+  assert.doesNotMatch(hidden.status, /v\d+\.\d+\.\d+/, `off hides it on the strip: ${hidden.status}`);
+});
