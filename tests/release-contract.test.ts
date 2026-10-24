@@ -331,3 +331,19 @@ test("release contract: the docs state the supported Pi range and do not contrad
     assert.doesNotMatch(doc, /<0\.100\.0/, "no stale 0.x-only upper bound may remain in the docs");
   }
 });
+
+test("release contract: the compatibility matrix actually exercises 1.x, not just the range", () => {
+  // Declaring `>=0.84.2 <2.0.0` while CI only ever installs 0.x would make the
+  // 1.x claim untested. Pin the matrix so a future range widening cannot ship
+  // without a lane that installs that line.
+  const workflow = fs.readFileSync(".github/workflows/compatibility.yml", "utf-8");
+  assert.match(workflow, /pi:\s*\[[^\]]*"1\.\d+\.\d+"/, "the matrix must include a 1.x Pi version");
+  assert.match(workflow, /pi:\s*\[[^\]]*"0\.84\.2"/, "the oldest supported boundary must stay in the matrix");
+  // Every matrix Pi version needs its own pi-subagents fixture; a missing
+  // include silently falls back to npm's peer resolution and can fail the lane
+  // for a reason unrelated to GLLA.
+  const versions = [...(/pi:\s*\[([^\]]*)\]/.exec(workflow)![1]!.matchAll(/"([^"]+)"/g))].map((m) => m[1]!);
+  for (const v of versions) {
+    assert.match(workflow, new RegExp(`- pi: "${v.replace(/\./g, "\\.")}"\\s*\\n\\s*subagents:`), `matrix pi ${v} must pin a pi-subagents fixture`);
+  }
+});

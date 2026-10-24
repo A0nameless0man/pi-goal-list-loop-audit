@@ -19,7 +19,10 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        pi: ["0.84.2", "0.99.1"]
+        # v0.39.48: the declared peer range covers the 1.x line, so 1.x must be
+        # exercised on real runners — a range the matrix never tests is a claim,
+        # not coverage. 0.84.2 stays the oldest supported boundary.
+        pi: ["0.84.2", "0.99.1", "1.4.0"]
         # This is a dev fixture, not a GLLA runtime dependency. Current
         # pi-subagents requires Pi >=0.86.1; use a compatible fixture at
         # the older supported GLLA boundary without bypassing peer checks.
@@ -28,6 +31,8 @@ jobs:
             subagents: "0.60.0"
           - pi: "0.99.1"
             subagents: "0.75.0"
+          - pi: "1.4.0"
+            subagents: "0.81.0"
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:

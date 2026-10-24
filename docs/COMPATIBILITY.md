@@ -43,8 +43,9 @@ The GLLA tests exercise lifecycle events, persisted status and ownership-fenced
 stop handling, plus the installed companion's role definitions. They do not
 certify every upstream version or replace a real-host upgrade canary.
 
-The compatibility workflow exercises both Pi boundaries (0.84.2 and the current
-development 0.99.1) on actual Linux, macOS, and Windows runners with Node 22.19 and Bun 1.3.14. It checks
+The compatibility workflow exercises three Pi points — the oldest supported
+boundary 0.84.2, the 0.99.x development line, and 1.4.0 — on actual Linux,
+macOS, and Windows runners with Node 22.19 and Bun 1.3.14. It checks
 TypeScript, competing owner processes, child-tree cleanup, persisted receipts,
 archive recovery, and the Node/jiti state singleton. All six lanes passed
 [run 36746020362](https://github.com/DraconDev/pi-goal-list-loop-audit/actions/runs/36746020362).
