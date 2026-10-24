@@ -244,32 +244,42 @@ test("supervisor pause paints the fact on the card and clears the duplicated str
   assert.doesNotMatch(status, /^glla: /, `the duplicated strip is cleared entirely: ${status}`);
 });
 
-test("versionDisplay=status keeps the version on the strip; =off hides it; default rides the card", async () => {
-  // v0.39.49: the version indicator is a choice with ONE surface. The card is
-  // the default; "status" is the escape hatch for people who preferred the
-  // bottom line; "off" means neither. Painted through a real session_start so
-  // this exercises the same path a user sees, not just the renderer.
-  const render = async (mode: "" | "status" | "off"): Promise<{ widget: string; status: string }> => {
-    const cwd = tmpCwd();
-    fs.mkdirSync(path.dirname(GLOBAL_SETTINGS_PATH), { recursive: true });
-    fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify(mode ? { versionDisplay: mode } : {}));
-    seedState(cwd, { goal: seedGoal({ objective: `version-mode ${mode || "default"} — done when pinned`, status: "active" }) } as unknown as Parameters<typeof seedState>[1]);
-    await tick();
-    const ctx = makeManagerCtx(cwd, hostManager(`vm-${mode || "default"}`, []));
-    await pi.fire("session_start", { reason: "startup" }, ctx);
-    await tick();
-    const widget = ((ctx.ui.widgets["pi-glla"] as string[] | undefined) ?? []).join("\n");
-    return { widget, status: ctx.ui.statuses["pi-glla"] ?? "" };
-  };
-  const card = await render("");
-  assert.match(card.widget, /v\d+\.\d+\.\d+|unknown|v0\./, "the default surface is the card");
-  assert.doesNotMatch(card.status, /v\d+\.\d+\.\d+/, `the default does not duplicate onto the strip: ${card.status}`);
+test("versionDisplay chooses exactly one surface for the running version", async () => {
+  // v0.39.49: the version indicator is a choice with ONE surface. Both
+  // renderers read the same extras, so a mode that blanks `versionTail`
+  // outright would hide the version everywhere — the two must be selected,
+  // not disabled. This pins the selection logic at the renderer boundary,
+  // which is where the field defect (a dangling `└─ v0.39.47` on a card with
+  // no tree glyphs) actually lived.
+  const { buildStatusText, buildWidgetLines } = await import("../extensions/goal-loop-display.js");
+  const now = Date.parse("2026-10-24T10:35:00Z");
+  const goal = seedGoal({
+    objective: "version surface objective — done when pinned",
+    status: "active",
+    createdAt: new Date(now - 3600_000).toISOString(),
+    updatedAt: new Date(now).toISOString(),
+  }) as never;
+  const state = { goal, list: [] } as never;
+  const stripOf = (extras: Record<string, unknown>) =>
+    String(buildStatusText(state, null, now, undefined, extras as never, 120)).replace(/\u001b\[[0-9;]*m/g, "");
+  const cardOf = (extras: Record<string, unknown>) =>
+    (buildWidgetLines(state, null, now, undefined, 120, extras as never) ?? []).join("\n").replace(/\u001b\[[0-9;]*m/g, "");
 
-  const strip = await render("status");
-  assert.match(strip.status, /^glla:/, `status mode keeps the strip alive: ${strip.status}`);
-  assert.match(strip.status, /v\d+\.\d+\.\d+/, `status mode shows the version there: ${strip.status}`);
+  // card (default): the fact rides the card, the strip stays clean.
+  const cardMode = { versionTail: "", cardVersionTail: "· v0.39.49" };
+  assert.match(cardOf(cardMode), /v0\.39\.49/, "card mode shows it on the card");
+  assert.doesNotMatch(stripOf({ versionTail: "" }), /v0\.39\.49/, "card mode does not duplicate onto the strip");
 
-  const hidden = await render("off");
-  assert.doesNotMatch(hidden.widget, /v\d+\.\d+\.\d+/, `off hides it on the card: ${hidden.widget}`);
-  assert.doesNotMatch(hidden.status, /v\d+\.\d+\.\d+/, `off hides it on the strip: ${hidden.status}`);
+  // status: the strip carries it, the card does not.
+  const statusMode = { versionTail: "· v0.39.49", cardVersionTail: "" };
+  assert.match(stripOf(statusMode), /^glla:/, "status mode keeps the strip alive");
+  assert.match(stripOf(statusMode), /v0\.39\.49/, "status mode shows the version there");
+  assert.doesNotMatch(cardOf(statusMode), /v0\.39\.49/, "status mode does not duplicate onto the card");
+
+  // off: neither surface, and the card must not invent a dangling closer.
+  const offMode = { versionTail: "", cardVersionTail: "" };
+  assert.doesNotMatch(stripOf(offMode), /v0\.39\.49/, "off hides it on the strip");
+  const offCard = cardOf(offMode);
+  assert.doesNotMatch(offCard, /v0\.39\.49/, "off hides it on the card");
+  assert.doesNotMatch(offCard, /^\s*[└├]─\s*v\d/m, "no dangling version closer");
 });
