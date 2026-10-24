@@ -51,6 +51,19 @@ import { renameWithWindowsRetry } from "../scripts/goal-auditor-launch.mjs";
 import { resolveAuditorAllowedExtensions } from "./auditor-extensions.js";
 
 export type AuditorInfrastructureClass = "no-verdict" | "timeout" | "transport" | "provider";
+
+/** v0.39.50 (issue #61): WHY an auditor attempt was aborted. `"user"` is the
+ * explicit Escape/stop boundary — the one case that may offer the
+ * "complete without audit" affordance. `"transport"` is everything else the
+ * run cannot attribute (host cancellation, provider abort, a signal that
+ * fired without a recorded user stop), and it must never be presented as a
+ * decision the operator made.
+ *
+ * The producing side knows the difference at the moment it aborts: a user
+ * stop arrives through `requestUserAuditorAbort`, whereas every other abort
+ * has no such record. This field carries that fact to the copy instead of
+ * collapsing both into the string "Auditor aborted.". */
+export type AuditorAbortCause = "user" | "transport";
 export type AuditorRecoveryFailureClass = AuditorInfrastructureClass;
 const AUDITOR_INFRASTRUCTURE_CLASSES = new Set<AuditorInfrastructureClass>(["no-verdict", "timeout", "transport", "provider"]);
 export const AUDITOR_CURSOR_PERSISTENCE_FAILURE = "auditor recovery cursor persistence failed";
@@ -69,6 +82,9 @@ export interface GoalAuditorResult {
   thinkingLevel?: string;
   error?: string;
   infrastructureClass?: AuditorInfrastructureClass;
+  /** v0.39.50 (issue #61): set only when this attempt was aborted, naming WHY.
+   * Absent on every non-abort result, so absence stays absence. */
+  abortCause?: AuditorAbortCause;
   /** True when the ordered candidate chain was exhausted after the last
    * candidate's allowed retry. This is orthogonal to infrastructureClass:
    * the final failure still retains its concrete transport/provider/timeout
@@ -868,6 +884,31 @@ const WORKER_FORCE_SETTLE_MS = 250;
 const CHILD_EXIT_RESULT_GRACE_MS = 250;
 const activeChildren = new Map<string, ChildProcess>();
 const workerTermination = new WeakMap<ChildProcess, Promise<void>>();
+
+/**
+ * v0.39.50 (issue #61): an AbortSignal carries no portable reason — pi aborts
+ * the tool controller with a bare `abort()`. So the ONLY reliable moment to
+ * learn that a human pressed Escape is when GLLA itself decides to stop: the
+ * user-stop path registers the attempt id here before aborting, and the abort
+ * handler reads it back. Without this, "a user aborted" and "the transport
+ * died" were indistinguishable, and the pause copy asserted the former.
+ *
+ * Bounded on purpose: entries are keyed by attempt id and removed when the
+ * attempt settles, so a stale id cannot classify a later run as user-stopped.
+ */
+const userAbortAttempts = new Set<string>();
+
+/** Mark an attempt as explicitly stopped by the user (Escape / /glla pause).
+ * Must be called BEFORE the signal is aborted. Idempotent. */
+export function requestUserAuditorAbort(logicalAttemptId: string): void {
+  if (logicalAttemptId) userAbortAttempts.add(logicalAttemptId);
+}
+
+function abortCauseFor(logicalAttemptId: string | undefined): AuditorAbortCause {
+  // A signal that fires without a recorded user stop is, by construction, a
+  // transport/lifecycle cancellation — we must not claim the user chose it.
+  return logicalAttemptId && userAbortAttempts.has(logicalAttemptId) ? "user" : "transport";
+}
 
 /**
  * Give each detached filesystem/child attempt a fresh identity while keeping
