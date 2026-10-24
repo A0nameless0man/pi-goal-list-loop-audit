@@ -252,10 +252,12 @@ test("versionDisplay=status keeps the version on the strip; =off hides it; defau
   const render = async (mode: "" | "status" | "off"): Promise<{ widget: string; status: string }> => {
     const cwd = tmpCwd();
     fs.mkdirSync(path.dirname(GLOBAL_SETTINGS_PATH), { recursive: true });
-    fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify(mode ? { autoResume: true, versionDisplay: mode } : { autoResume: true }));
+    fs.writeFileSync(GLOBAL_SETTINGS_PATH, JSON.stringify(mode ? { versionDisplay: mode } : {}));
     seedState(cwd, { goal: seedGoal({ objective: `version-mode ${mode || "default"} — done when pinned`, status: "active" }) } as unknown as Parameters<typeof seedState>[1]);
+    await tick();
     const ctx = makeManagerCtx(cwd, hostManager(`vm-${mode || "default"}`, []));
     await pi.fire("session_start", { reason: "startup" }, ctx);
+    await tick();
     const widget = ((ctx.ui.widgets["pi-glla"] as string[] | undefined) ?? []).join("\n");
     return { widget, status: ctx.ui.statuses["pi-glla"] ?? "" };
   };
