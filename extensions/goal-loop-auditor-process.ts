@@ -59,10 +59,10 @@ export type AuditorInfrastructureClass = "no-verdict" | "timeout" | "transport" 
  * fired without a recorded user stop), and it must never be presented as a
  * decision the operator made.
  *
- * The producing side knows the difference at the moment it aborts: a user
- * stop arrives through `requestUserAuditorAbort`, whereas every other abort
- * has no such record. This field carries that fact to the copy instead of
- * collapsing both into the string "Auditor aborted.". */
+ * The producing side records the stops IT initiated
+ * (`recordGllaInitiatedAuditorAbort`); an abort with no such record is an
+ * interruption GLLA cannot attribute to the user, so it must never be shown
+ * as a decision they made, and must never offer "complete without audit". */
 export type AuditorAbortCause = "user" | "transport";
 export type AuditorRecoveryFailureClass = AuditorInfrastructureClass;
 const AUDITOR_INFRASTRUCTURE_CLASSES = new Set<AuditorInfrastructureClass>(["no-verdict", "timeout", "transport", "provider"]);

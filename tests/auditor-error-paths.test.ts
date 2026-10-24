@@ -116,3 +116,39 @@ test("audit 2026-09-25: the reverted wall-clock bound leaves no dead classificat
   walk(path.resolve(__dirname, "../scripts"));
   assert.deepEqual(hits, [], `dead wall-bound references remain:\n${hits.join("\n")}`);
 });
+
+// ── v0.39.50 (issue #61): an abort must not be presented as a user decision ──
+test("only a stop GLLA did NOT initiate is presented as the user's Escape", async () => {
+  // The defect: "Auditor aborted." was emitted for EVERY abort path, and the
+  // pause copy keyed off that string alone — so a transport failure became a
+  // durable `audit aborted by user (Esc)` plus a "complete WITHOUT audit"
+  // offer for a run the operator never stopped.
+  const mod = await import("../extensions/goal-loop-auditor-process.js");
+  assert.equal(typeof mod.recordGllaInitiatedAuditorAbort, "function", "the cause recorder is exported");
+
+  // A GLLA-initiated stop records itself, so the abort handler classifies it as
+  // transport (not the user's decision).
+  const gllaAttempt = `glla-stop-${Date.now()}`;
+  mod.recordGllaInitiatedAuditorAbort(gllaAttempt);
+  // Recording is idempotent and must not throw for an empty id.
+  mod.recordGllaInitiatedAuditorAbort(gllaAttempt);
+  mod.recordGllaInitiatedAuditorAbort("");
+});
+
+test("issue #61: the abort result carries the cause and the copy branches on it", () => {
+  // The producer must attach `abortCause`, and the consumer must not key the
+  // Escape presentation off the error STRING alone.
+  assert.match(SRC, /abortCauseFor\(/, "the abort site resolves a cause");
+  assert.match(SRC, /abortCause:\s*abortCause/, "infra() carries the cause onto the result");
+
+  const tools = fs.readFileSync("extensions/loops/goal-tools.ts", "utf-8");
+  // The Escape affordance is gated on a cause of "user".
+  assert.match(tools, /const abortedByUser = [^;]*abortCause === "user"/s, "the Escape path requires abortCause user");
+  assert.match(tools, /result\.error === "Auditor aborted\." && abortedByUser/, "the without-audit offer is gated, not string-only");
+  // And a non-user abort has its own honest branch that offers no affordance.
+  assert.match(tools, /abortedWithoutVerdict/, "a non-user abort takes a distinct branch");
+  const nonUser = tools.slice(tools.indexOf("if (abortedWithoutVerdict)"), tools.indexOf("if (result.error === \"Auditor aborted.\" && abortedByUser)"));
+  assert.match(nonUser, /not a user stop/, "the pause reason says it was not the user's decision");
+  assert.doesNotMatch(nonUser, /COMPLETE WITHOUT AUDIT/, "no without-audit affordance for a run the user did not stop");
+  assert.doesNotMatch(nonUser, /aborted by user \(Esc\)/, "no false user-decision reason");
+});
