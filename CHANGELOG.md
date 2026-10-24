@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+## 0.39.48 — declared Pi 1.x support and a requirements section users can find (2026-10-24)
+
+### Compatibility: the peer range no longer stops at the 0.x line
+
+- The declared Pi peer range was `>=0.84.2 <0.100.0`, which told anyone on Pi
+  1.x that GLLA was unsupported even though the extension API GLLA uses is
+  unchanged. It is now `>=0.84.2 <2.0.0` for `pi-agent-core`, `pi-ai`,
+  `pi-coding-agent` and `pi-tui`, and TypeBox moved to `>=1.3.14 <2.0.0`.
+- Verified against the published Pi 1.4.0 types: `tsc --noEmit` reports zero
+  errors, and the extension loads through the Node host loader. The 3.x
+  `ToolRenderContext` change Pi 1.x introduced (`durationMs`, `outputPad`)
+  touched no GLLA source; only a test fixture that hand-listed the context
+  fields needed to build the object from the host type instead.
+- The compatibility workflow now exercises 1.4.0 alongside 0.84.2 and 0.99.1,
+  so the widened range is tested rather than merely declared.
+
+### Docs: requirements are stated where a user looks
+
+- `README.md` had no requirements section and `docs/COMPATIBILITY.md` described
+  only 0.84.2/0.99.1 as current. Both now state the supported range in one
+  place, distinguish "covered by the range" from "individually tested", and say
+  that a Pi upgrade inside the range needs no GLLA change.
+- A release-contract test pins the range, the matrix lane for 1.x, and the docs
+  so a future narrowing cannot ship silently.
+
 ## 0.39.47 — a timed-out identity probe no longer kills a healthy detached auditor (2026-10-24)
 
 ### Auditor process liveness
