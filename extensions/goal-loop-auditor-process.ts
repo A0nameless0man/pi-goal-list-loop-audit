@@ -1952,8 +1952,22 @@ export function progressSignature(file: AuditorProgressFile): string {
   return `${calls.length}|${lastToolFinishedAt}|${file.recentOutput.join("\u0000")}|${file.currentTool ?? ""}|${file.currentToolStartedAt ?? 0}|${file.reportBytes ?? 0}`;
 }
 
-function infra(model: string, thinkingLevel: string, error: string, output = "", capturedToken?: GoalRevisionToken, infrastructureClass: AuditorInfrastructureClass = "transport"): GoalAuditorResult {
-  return { approved: false, disapproved: false, output, model, thinkingLevel, error, infrastructureClass, ...(capturedToken ? { goalRevision: capturedToken } : {}) };
+function infra(
+  model: string,
+  thinkingLevel: string,
+  error: string,
+  output = "",
+  capturedToken?: GoalRevisionToken,
+  infrastructureClass: AuditorInfrastructureClass = "transport",
+  /** v0.39.50 (issue #61): only abort results carry this; every other infra
+   * failure leaves it absent so absence stays absence. */
+  abortCause?: AuditorAbortCause,
+): GoalAuditorResult {
+  return {
+    approved: false, disapproved: false, output, model, thinkingLevel, error, infrastructureClass,
+    ...(abortCause ? { abortCause } : {}),
+    ...(capturedToken ? { goalRevision: capturedToken } : {}),
+  };
 }
 
 /** 2026-09-26 slow-audit hardening: the worker's own stall brakes
@@ -2573,13 +2587,12 @@ async function runDetachedGoalCompletionAuditorInner(args: {
           // cleanup with a TERM-ignoring worker and leaves its PID alive.
           if (child && childAlive(child)) await terminateWorker(child).catch(() => {});
           else if (abortTermination) await abortTermination;
-          // v0.39.50 (issue #61): carry WHY the run ended. Only a recorded
-          // user stop may be presented to the operator as their own decision;
-          // everything else is an interruption they did not choose.
-          return {
-            ...infra(model, thinkingLevel, "Auditor aborted.", "", capturedRevisionToken, "transport"),
-            abortCause: abortCauseFor(runtime.logicalAttemptId),
-          };
+          // v0.39.50 (issue #61): carry WHY the run ended. Only an abort with
+          // no GLLA-initiated record may be presented to the operator as their
+          // own decision; everything else is an interruption they did not
+          // choose, and must not offer "complete without audit".
+          return infra(model, thinkingLevel, "Auditor aborted.", "", capturedRevisionToken, "transport",
+            abortCauseFor(runtime.logicalAttemptId));
         }
         if (childSpawnError) return infra(model, thinkingLevel, `auditor worker launch failed: ${childSpawnError}`, "", capturedRevisionToken, "transport");
         try {
