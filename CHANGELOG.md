@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+## 0.39.50 — an interrupted audit is no longer reported as your decision (2026-10-24)
+
+### The defect (reported as issue #61)
+
+`"Auditor aborted."` was produced for **every** abort path — user Escape, host
+cancellation, provider abort — and the pause copy keyed off that string alone.
+A transport failure therefore became a durable
+`pauseReason: "audit aborted by user (Esc)"`, and the dialog offered
+*"Yes = mark the goal COMPLETE WITHOUT AUDIT"* as though the operator had
+chosen to skip review. Nothing was retained that could contradict it.
+
+### The fix
+
+- The abort result now carries `abortCause`. `"user"` requires a **positive**
+  record (`recordUserAuditorAbort`); an abort nobody claimed is `"transport"`.
+  Treating "unattributed" as "the user did it" is the bug, so absence of
+  evidence is never evidence of a decision.
+- GLLA's own stops record themselves (`recordGllaInitiatedAuditorAbort`) at
+  every site that aborts an in-flight turn — the stall brake, main-model
+  recovery, and an agent-issued `pause_goal` — so a machine-initiated stop can
+  never be mistaken for a user pressing Escape.
+- The copy states only what is known. A recorded user stop keeps the Escape
+  wording; an unattributed abort says the audit ended before a verdict was
+  recorded and offers "retry complete_goal" instead. The durable `pauseReason`
+  follows the same rule, and the without-audit terminal reason no longer says
+  "user choice" for a run the user never stopped.
+- The without-audit affordance itself is unchanged, so a user who really did
+  press Escape is not stranded.
+
 ## 0.39.49 — the version indicator is a choice, and never a broken line (2026-10-24)
 
 ### Display: no more dangling `└─ v0.39.47`
