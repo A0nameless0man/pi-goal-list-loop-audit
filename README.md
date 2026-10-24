@@ -29,6 +29,17 @@ Pi work. Use `/glla status` to see what it is doing and what needs your attentio
 [Recovery](docs/RECOVERY.md) · [Settings](docs/SETTINGS.md) ·
 [Pi package catalog](https://pi.dev/packages/pi-goal-list-loop-audit)
 
+## Requirements
+
+- **Pi `>=0.84.2 <2.0.0`** — works with the 0.x line and every 1.x release.
+  Keep `pi-agent-core`, `pi-ai`, `pi-coding-agent` and `pi-tui` on the same
+  version. See [compatibility](docs/COMPATIBILITY.md) for what is tested versus
+  merely covered by the range.
+- **Node 22.19 or newer.**
+
+Upgrading Pi inside that range needs no GLLA change; GLLA no longer declares an
+upper bound that stops at the 0.x line.
+
 ## About GLLA
 
 Coding agents are good at taking the next step. Substantial projects need
