@@ -1711,15 +1711,7 @@ function registerAgentTools(pi: any): void {
           pauseReason: abortedByUser
             ? "audit aborted by user (Esc)"
             : "audit ended before a verdict was recorded (interrupted, not a user decision)",
-        }, ctx);      if (result.error === "Auditor aborted.") {
-        // v0.38.37: capture the agent-claimed non-do before the claim is
-        // cleared below — the Esc-complete path renders the same voice.
-        // v0.38.50: same for agent-structured finding groups.
-        const escLeftOut = state.goal.pendingCompletion?.leftOut;
-        const escFindingGroups = state.goal.pendingCompletion?.findingGroups;
-        const escGateRows = state.goal.pendingCompletion?.gateRows;
-        const escShowVerification = state.goal.pendingCompletion?.showVerification;
-        updateGoal({ status: "active", auditHistory: history, pendingCompletion: undefined, pauseReason: "audit aborted by user (Esc)" }, ctx);
+        }, ctx);
         const abortConfirmCtx = freshCtxForGeneration(auditGeneration);
         if (!abortConfirmCtx) return staleToolResult();
         ctx = abortConfirmCtx;
