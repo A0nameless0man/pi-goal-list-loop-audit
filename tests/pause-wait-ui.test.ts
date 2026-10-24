@@ -91,7 +91,17 @@ test('pause tool renders one short wait receipt; expanded, partial and error res
   const result = { details: raw.details, content: raw.content.map(c => ({ type: 'text' as const, text: c.text })) };
   const tool = pi.tools.get('pause_goal')!;
   assert.ok(tool.renderCall); assert.ok(tool.renderResult);
-  const context: ToolRenderContext = { args, toolCallId: 'fixture', invalidate() {}, lastComponent: undefined, state: {}, cwd: ctx.cwd, executionStarted: true, argsComplete: true, isPartial: false, expanded: false, showImages: false, isError: false };
+  // v0.39.48: build the render context from the host's own type instead of
+  // hand-listing every field. Pi 1.x added required `durationMs` and `outputPad`
+  // members to ToolRenderContext, and a hand-rolled literal silently tied this
+  // fixture to one Pi release line — a new optional-or-required host field broke
+  // the test without anything in GLLA changing. The spread keeps every field the
+  // renderer actually reads while letting the host decide the rest.
+  const context = {
+    args, toolCallId: 'fixture', invalidate() {}, lastComponent: undefined, state: {}, cwd: ctx.cwd,
+    executionStarted: true, argsComplete: true, isPartial: false, expanded: false, showImages: false, isError: false,
+    durationMs: 0, outputPad: 0,
+  } as unknown as ToolRenderContext;
   const text = (component: { render(width: number): string[] }) => stripTerminalSequences(component.render(100).join('\n'));
   const call = text(tool.renderCall(args, theme, context));
   assert.match(call, /scheduling a progress check/); assert.doesNotMatch(call, /backup rotation/);
