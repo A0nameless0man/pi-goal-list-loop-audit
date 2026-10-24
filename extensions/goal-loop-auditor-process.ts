@@ -887,30 +887,42 @@ const workerTermination = new WeakMap<ChildProcess, Promise<void>>();
 
 /**
  * v0.39.50 (issue #61): an AbortSignal carries no portable reason — pi aborts
- * the tool controller with a bare `abort()`. So GLLA records the cause it
- * KNOWS about, and every unrecorded abort is treated as unattributed.
+ * the tool controller with a bare `abort()`. GLLA therefore records only the
+ * causes it can PROVE, and everything else is reported as an interruption.
  *
- * Deliberate polarity: the set marks GLLA-INITIATED stops (a zombie/stall
- * abort, a pause_goal turn abort), which are provably not the user pressing
- * Escape. Anything else — host cancellation, provider abort, a wedged
- * transport — arrives with no record and must NOT be presented to the operator
- * as their own decision. Absence of evidence is never evidence of a decision.
+ * Polarity is deliberate and load-bearing: `"user"` requires a positive
+ * record. An abort nobody claimed is NOT evidence that a human pressed
+ * Escape — a provider dropping the stream, a host cancellation and a wedged
+ * transport all arrive here identically. Treating "unattributed" as "the user
+ * did it" is precisely the defect being fixed: it wrote a durable
+ * `audit aborted by user (Esc)` for a run the operator never stopped, and
+ * offered "complete WITHOUT audit" as though they had chosen to skip review.
+ * Absence of evidence is never evidence of a decision.
  *
  * Bounded on purpose: entries are keyed by attempt id and removed when the
  * attempt settles, so a stale id cannot classify a later run.
  */
+const userStoppedAttempts = new Set<string>();
 const gllaInitiatedAborts = new Set<string>();
 
-/** Mark an attempt as stopped by GLLA's own machinery, not by the user. Must be
- * called BEFORE the signal is aborted. Idempotent. */
+/** Positively record that a HUMAN stopped this attempt (the host/UI reported a
+ * user abort for this turn). Must be called BEFORE the signal is aborted.
+ * Only this makes `"user"` reachable; everything else stays `"transport"`. */
+export function recordUserAuditorAbort(logicalAttemptId: string): void {
+  if (logicalAttemptId) userStoppedAttempts.add(logicalAttemptId);
+}
+
+/** Mark an attempt as stopped by GLLA's own machinery (stall brake, recovery,
+ * an agent-issued pause). Always `"transport"` — never the user's decision. */
 export function recordGllaInitiatedAuditorAbort(logicalAttemptId: string): void {
   if (logicalAttemptId) gllaInitiatedAborts.add(logicalAttemptId);
 }
 
 function abortCauseFor(logicalAttemptId: string | undefined): AuditorAbortCause {
   if (!logicalAttemptId) return "transport";
-  // A stop GLLA itself initiated is never a user decision.
-  return gllaInitiatedAborts.has(logicalAttemptId) ? "transport" : "user";
+  // A GLLA-initiated stop outranks (and is the opposite of) a user stop.
+  if (gllaInitiatedAborts.has(logicalAttemptId)) return "transport";
+  return userStoppedAttempts.has(logicalAttemptId) ? "user" : "transport";
 }
 
 /**
@@ -2895,7 +2907,10 @@ async function runDetachedGoalCompletionAuditorInner(args: {
     activeChildren.delete(childKey(args.cwd, attemptId));
     // v0.39.50 (issue #61): the attempt is settled, so its user-stop record
     // must go too — a later run reusing the id must not inherit the cause.
-    if (runtime.logicalAttemptId) gllaInitiatedAborts.delete(runtime.logicalAttemptId);
+    if (runtime.logicalAttemptId) {
+      gllaInitiatedAborts.delete(runtime.logicalAttemptId);
+      userStoppedAttempts.delete(runtime.logicalAttemptId);
+    }
     if (jobDirCreated) {
       if (auditDirHasResult(jobDir)) {
         // v0.38.3: a finished audit's dir is the post-completion transcript.
