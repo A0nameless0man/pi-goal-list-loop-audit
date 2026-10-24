@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+## 0.39.49 — the version indicator is a choice, and never a broken line (2026-10-24)
+
+### Display: no more dangling `└─ v0.39.47`
+
+- Field report (Screenshot_20261024_103546): the active card ended with a lone
+  `└─ v0.39.47` under its head. That card's body indents its rows with plain
+  spaces and uses no tree glyphs at all, so the fold invented a tree closer
+  that closed nothing and read as a truncated card.
+- The fold now matches the body it joins: a glyph-less card gets a plain
+  indented row like its siblings, and a card with detail rows keeps its single
+  closer. A fact is never emitted as a bare `└─` holding only itself.
+
+### Settings: `versionDisplay` picks one surface
+
+- New global-only setting `versionDisplay` (`card` default / `status` / `off`)
+  with a **Version indicator** row in `/glla` settings. `card` folds the
+  version into the active card; `status` keeps the bottom status line alive and
+  shows it there; `off` hides it while `/glla version` still reports it.
+- Exactly one surface is chosen, never two — the duplicated strip removed in
+  v0.39.46 stays removed. `status` is the escape hatch for anyone who preferred
+  that line, and it survives the strip retirement.
+- Global-only because it is a preference about your display, not a property of
+  one repository, so a project-scope copy cannot silently decide it.
+- Two existing pins that required the version to sit on a literal `└─` closer
+  were updated: they protected the broken shape rather than the requirement
+  that the version stays visible.
+
 ## 0.39.48 — declared Pi 1.x support and a requirements section users can find (2026-10-24)
 
 ### Compatibility: the peer range no longer stops at the 0.x line
