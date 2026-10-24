@@ -136,20 +136,23 @@ test("only a stop GLLA did NOT initiate is presented as the user's Escape", asyn
   mod.recordGllaInitiatedAuditorAbort("");
 });
 
-test("issue #61: the abort result carries the cause and the copy branches on it", () => {
-  // The producer must attach `abortCause`, and the consumer must not key the
-  // Escape presentation off the error STRING alone.
+test("issue #61: the abort copy states only what the run can evidence", () => {
+  // The defect: "Auditor aborted." was emitted for EVERY abort path, and the
+  // pause copy keyed off that string alone — so a transport failure became a
+  // durable `audit aborted by user (Esc)` plus a "complete WITHOUT audit"
+  // offer phrased as though the operator had refused review.
   assert.match(SRC, /abortCauseFor\(/, "the abort site resolves a cause");
   assert.match(SRC, /\{ abortCause \}/, "infra() spreads the cause onto the result only when present");
+  // `"user"` must require a positive record; an unattributed abort is transport.
+  assert.match(SRC, /userStoppedAttempts\.has\(logicalAttemptId\) \? "user" : "transport"/, "user requires positive evidence");
+  assert.match(SRC, /gllaInitiatedAborts\.has\(logicalAttemptId\)\) return "transport"/, "a GLLA-initiated stop is never the user's decision");
+  assert.doesNotMatch(SRC, /gllaInitiatedAborts\.has\([^)]*\) \? "transport" : "user"/, "unattributed aborts are NOT defaulted to user");
 
   const tools = fs.readFileSync("extensions/loops/goal-tools.ts", "utf-8");
-  // The Escape affordance is gated on a cause of "user".
-  assert.match(tools, /const abortedByUser = [^;]*abortCause === "user"/s, "the Escape path requires abortCause user");
-  assert.match(tools, /result\.error === "Auditor aborted\." && abortedByUser/, "the without-audit offer is gated, not string-only");
-  // And a non-user abort has its own honest branch that offers no affordance.
-  assert.match(tools, /abortedWithoutVerdict/, "a non-user abort takes a distinct branch");
-  const nonUser = tools.slice(tools.indexOf("if (abortedWithoutVerdict)"), tools.indexOf("if (result.error === \"Auditor aborted.\" && abortedByUser)"));
-  assert.match(nonUser, /not a user stop/, "the pause reason says it was not the user's decision");
-  assert.doesNotMatch(nonUser, /COMPLETE WITHOUT AUDIT/, "no without-audit affordance for a run the user did not stop");
-  assert.doesNotMatch(nonUser, /aborted by user \(Esc\)/, "no false user-decision reason");
+  assert.match(tools, /const abortedByUser = result\.abortCause === "user"/, "the copy branches on the cause");
+  // The user-claiming copy is conditional, never unconditional.
+  assert.match(tools, /abortedByUser\s*\?\s*"You aborted the auditor \(Escape\)/, "the Escape claim is gated on the cause");
+  assert.match(tools, /this was not a user stop/, "an unattributed abort says so explicitly");
+  assert.match(tools, /abortedByUser\s*\n?\s*\?\s*"audit aborted by user \(Esc\)"/, "the durable pauseReason is gated too");
+  assert.match(tools, /interrupted, not a user decision/, "the unattributed pauseReason states what is known");
 });

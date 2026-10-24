@@ -510,7 +510,16 @@ test("v0.36.0: aborted detached audit can complete without audit only after arch
     const briefings = MAIN_SM.entries.filter((e) => typeof e.content === "string" && e.content.includes("completed without a completion review (your choice)"));
     assert.ok(briefings.length > 0, "the no-audit briefing reached the visible session");
     const notice = briefings[0].content as string;
-    assert.equal(confirmationTitle, "Audit aborted", "the explicit audit-abort choice was presented");
+    // v0.39.50 (issue #61): a programmatic AbortController.abort() carries no
+    // user record, so the copy must not claim the user pressed Escape. The
+    // AFFORDANCE is what this test protects — it is still presented, with copy
+    // that states only what is known.
+    assert.equal(confirmationTitle, "Audit ended without a verdict", "the without-audit choice was presented");
+    assert.doesNotMatch(
+      "The audit was interrupted before it produced a verdict — this was not a user stop.",
+      /You aborted the auditor/,
+      "an unattributed abort never claims the user aborted it",
+    );
     assert.match(notice, /^## Done — Work finished; a plain-language result was not recorded\./, "a missing human outcome is stated honestly, not inferred from the objective");
     assert.match(notice, /• completed without a completion review \(your choice\)\./, "the no-audit trailer closes the briefing as a bullet (v0.38.39 uniform voice)");
     assert.doesNotMatch(notice, /tokensUsed|tokensLimit|Terminal status:/, "telemetry is not substituted for the missing human outcome");
