@@ -365,13 +365,7 @@ function appendFactsToCard(
   // Rows carry a `cont` flag: a row that continues the previous fact renders
   // with the `│  ` indent so the tree does not claim a new sibling item.
   const rows: Array<{ text: string; cont: boolean }> = [];
-  // v0.39.49 (field Screenshot_20261024_103546): a `├─` detail row is also a
-  // valid append target. Before this, a card whose last row was `├─ next: …`
-  // got a brand-new `└─ v0.39.47` line underneath — a closer holding nothing
-  // but the version, which reads as a broken/truncated tree tail. Appending to
-  // the open row keeps the fact on an existing line and lets the tail-closer
-  // below turn that row into the card's single closer.
-  const canAppend = prefix === '└─ ' || prefix === '├─ ';
+  const canAppend = prefix === '└─ ';
   let used = canAppend ? tuiVisibleWidth(stripAnsi(lastLine)) + sepWidth : rowPrefixWidth;
   let cur = '';
   let curCont = false;
@@ -433,6 +427,20 @@ function appendFactsToCard(
   if (rows.length === 0) return;
   const emit = (row: { text: string; cont: boolean }, glyph: string) =>
     lines.push(`${paint(theme, 'dim', glyph)}${dim(row.text)}`);
+  // v0.39.49 (field Screenshot_20261024_103546): some card bodies indent their
+  // rows with plain spaces and use NO tree glyphs at all (judgment/plaque rows
+  // on the durable-vs-defer card). Emitting `└─ v0.39.47` after such a body
+  // produced a closer that closes nothing — it read as a broken, truncated
+  // card. Match the body's own style: if no row in the card uses a tree glyph,
+  // the fact becomes a plain indented row like its siblings.
+  const bodyUsesTreeGlyphs = lines.some((line) => /^[│├└]/.test(stripAnsi(line)));
+  if (!bodyUsesTreeGlyphs && !canAppend) {
+    const indent = /^ +\S/.test(stripAnsi(lines[lines.length - 1] ?? ""))
+      ? (stripAnsi(lines[lines.length - 1]!).match(/^( +)/)?.[1] ?? "  ")
+      : "  ";
+    rows.forEach((row) => lines.push(`${indent}${dim(row.text)}`));
+    return;
+  }
   if (canAppend) {
     lines[lastIndex] = `${lastLine}${sep}${dim(rows[0]!.text)}`;
     rows.slice(1).forEach((row, i, rest) => {
