@@ -47,15 +47,16 @@ const goalOf = (over: Record<string, unknown> = {}) => ({
 });
 
 // ── the fold: footer-only facts survive on the card ─────────────────────
-test("version tail moves onto the card closer", () => {
+test("version tail lands on the card and is not lost with the strip", () => {
+  // The requirement is that the version stays VISIBLE once the strip retires,
+  // and that it costs no second surface. It used to be pinned to the literal
+  // `└─` closer, which forced a dangling tree tail on head-only cards (field
+  // Screenshot_20261024_103546) — the pin protected the defect, not the need.
   const state = { goal: goalOf(), list: [] } as never;
   const lines = buildWidgetLines(state, null, NOW, undefined, 100, { versionTail: "· v0.39.46" })!;
   const rendered = lines.join("\n");
   assert.match(rendered, /v0\.39\.46/, "the running version is still visible without the strip");
-  assert.ok(
-    rendered.split("\n").some((l) => l.includes("v0.39.46") && l.includes("└─")),
-    "it rides the closer row, not a resurrected second surface",
-  );
+  assert.ok(!rendered.includes("└─ v"), "it is not a bare closer holding nothing else");
 });
 
 test("supervisor-paused marker moves onto the card closer", () => {
