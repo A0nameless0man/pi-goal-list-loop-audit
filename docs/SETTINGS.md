@@ -69,7 +69,7 @@ copies are ignored (GLLA reads the global file for these policies):
 `compactionTokenThreshold`,
 `auditorModelFallbacks`, `auditorToolTimeoutMs`, `auditorStallMs`,
 `auditJobRetentionMs`, `auditSpotCheckRate`, `auditorStrictChallenge`, `auditorInspection`,
-`autoAcceptDrafts`.
+`autoAcceptDrafts`, `versionDisplay`.
 
 This list is `GLOBAL_ONLY_KEYS` in `extensions/goal-settings.ts`, and a
 project-scope write to any of them is stripped on read. Every other key —
@@ -83,6 +83,20 @@ cannot land is never reported as one that did.
 `autoAcceptDrafts` is global-only because it is system-wide: one switch skips
 draft confirms in every project. The draft dialog's third choice turns it on,
 and **Auto-accept drafts** in `/glla` settings turns it off again.
+
+`versionDisplay` is global-only because it is a preference about your display,
+not a property of one repository. It picks the ONE surface that shows the
+running GLLA version:
+
+| Value | Where the version appears |
+| --- | --- |
+| `card` (default) | a row on the active card |
+| `status` | the bottom status line, which is kept even when a card renders |
+| `off` | nowhere; `/glla version` still reports it |
+
+Set it with **Version indicator** in `/glla` settings. Exactly one surface is
+chosen, never two — the duplicated bottom strip was removed in v0.39.46 and
+this setting does not bring it back.
 
 The root selector distinguishes a missing settings file (normal defaults) from
 an unreadable or invalid existing file. The latter defers mutations and keeps
@@ -135,6 +149,7 @@ This authority boundary applies before settings-value normalization.
 | `decisionPauseBudget` | unset (unlimited) | Budget for unattended decline of promoted suggestions: after N admitted decisions, proceed without executing the suggestion and record the declined command in `autoDefaultLog` and `decision_budget_auto_default` (or `run_to_done_auto_default` for run-to-done). `0` permits that safe decline immediately. It never supplies consent or waives criteria: classified material exceptions remain paused; unclassified human decisions require local classification; known authorized mechanical/reversible work continues without a decision. Run-to-done follows the same consent boundary. |
 | `carryover` | `"pause"` | Stale carryover on new activation: `"pause"` / `"clear"` / `"resume"`. |
 | `autoAcceptDrafts` | `false` | Drafts activate without the Confirm dialog (unattended rigs). |
+| `versionDisplay` | `card` | Where the running version shows: `card`, `status`, or `off`. |
 | `auditCap` | `5` (10 aggressive) | Pause after N consecutive auditor disapprovals (`0` = unlimited). |
 | `auditCapHard` | `8` | Hard ceiling on consecutive disapprovals — pauses with a decision even in aggressive mode (`0` = unlimited). Project-settable. |
 | `mechanicalLoadScale` | `true` | Scale mechanical gate budgets with host load up to 2× (`false` = fixed budgets). Project-settable. |
