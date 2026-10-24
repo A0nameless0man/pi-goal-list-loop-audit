@@ -434,35 +434,6 @@ function appendFactsToCard(
     });
     return;
   }
-  // v0.39.49 (field Screenshot_20261024_103546): a card whose only row is the
-  // head (`● objective … · active · total 17h`) has NO detail rows, so adding
-  // a tree row invented `└─ v0.39.47` — a closer with nothing to close. That
-  // dangling glyph read as a broken/truncated card. With no parent row to
-  // hang a child on, the fact belongs on the head line itself.
-  const headOnly = lines.length === 1 && !/^(?:├─ |└─ |│)/.test(stripAnsi(lastLine));
-  if (headOnly) {
-    const separator = `${paint(theme, 'dim', '·')} `;
-    const headWidth = tuiVisibleWidth(stripAnsi(lastLine));
-    // The head already truncates its objective to fit; appending past the
-    // content width would let the later truncation pass clip the FACT away
-    // (at 80 columns `· v0.39.47` vanished entirely). Reserve the fact's
-    // cells by re-cutting the head to make room — the objective is the only
-    // elastic part of that line, and it is already an ellipsized preview.
-    const factWidth = tuiVisibleWidth(rows.map((r) => r.text).join(sep)) + 1 /* separator space */;
-    if (contentWidth !== Number.MAX_SAFE_INTEGER && headWidth + factWidth > contentWidth) {
-      const room = Math.max(1, contentWidth - factWidth);
-      const plainHead = stripAnsi(lastLine);
-      if (plainHead.length > room) {
-        // Re-truncate the plain head and re-apply no styling: the head is
-        // already styled by its caller, and re-painting a truncated ANSI
-        // string would corrupt the escape boundaries.
-        lines[0] = `${truncateCells(plainHead, room)} ${separator}${dim(rows.map((r) => r.text).join(sep))}`;
-        return;
-      }
-    }
-    lines[0] = `${lastLine} ${separator}${dim(rows.map((r) => r.text).join(sep))}`;
-    return;
-  }
   rows.forEach((row, i) => {
     const last = i === rows.length - 1;
     emit(row, row.cont && i > 0 ? '│  ' : (last ? '└─ ' : '├─ '));
