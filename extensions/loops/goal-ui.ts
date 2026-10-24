@@ -930,7 +930,14 @@ function refreshUI(ctx: ExtensionContext, force = false): void {
       // the status line — package.json running version + update-sidecar
       // latest. Render never touches the network; the sidecar refresh
       // rides the command-contact gate.
-      versionTail: buildVersionTail(runningGllaVersion(), readUpdateCheck(ctx.cwd)?.latest ?? null),
+      // v0.39.49: the version indicator is a user choice with one surface.
+      // "card" folds it into the active card, "status" keeps it on the bottom
+      // status line, "off" hides it (/glla version is the explicit readout).
+      // Previously it could only ever ride the card, and on a card whose body
+      // used no tree glyphs it rendered as a dangling `└─` closer.
+      versionTail: settings.versionDisplay === "status" || settings.versionDisplay === "off"
+        ? ""
+        : buildVersionTail(runningGllaVersion(), readUpdateCheck(ctx.cwd)?.latest ?? null),
     };
     const statusText = buildStatusText(state, latestAuditProgress, now, theme, extras, width);
     const widgetLines = buildWidgetLines(state, latestAuditProgress, now, theme, width, extras);
@@ -961,7 +968,11 @@ function refreshUI(ctx: ExtensionContext, force = false): void {
       || !!backgroundStatus(state)
       || (!state.goal && (state.list?.length ?? 0) > 0)
       || (state.goal?.status === 'active' && !!state.goal.interruptedAt);
-    const effectiveStatus = cardRendered && !pinnedStatusSurface ? undefined : statusText;
+    // v0.39.49: "status" is the option that survives the strip retirement — a
+    // user who chose the status line keeps it even when a card rendered, so the
+    // version cannot become invisible by choosing the surface they preferred.
+    const keepStripForVersion = settings.versionDisplay === "status";
+    const effectiveStatus = cardRendered && !pinnedStatusSurface && !keepStripForVersion ? undefined : statusText;
     const statusChanged = contextChanged || effectiveStatus !== lastUIStatusText;
     const widgetChanged = contextChanged || widgetKey !== lastUIWidgetKey;
     if (!statusChanged && !widgetChanged) return;
