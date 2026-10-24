@@ -4239,7 +4239,7 @@ test("v0.34.119: auditor-approved list completion archives the item and activate
   }
 });
 
-test("v0.36.2: approved standalone completion automatically activates a pre-queued list head", { timeout: scaledBudgetMs(30_000) }, async () => {
+test("v0.36.2: approved standalone completion automatically activates a pre-queued list head", { timeout: scaledBudgetMs(60_000) }, async () => {
   __testOnlyResetStaleFlag();
   const cwd = tmpCwd();
   const previous = process.env.GLLA_PI_BINARY;
@@ -4814,7 +4814,7 @@ test("v0.35.x: stale host replacement session_start auto-recovers the parked aud
 // after 51285ms" and no diagnosis. The frame now covers the sum of the waits
 // it contains (30s + 20s + 30s + 30s), so the wait's own message is what a
 // failure reports, and the frame is only the backstop for a wedged run.
-test("v0.35.x: healthy same-session heartbeat recovers a parked completion audit without manual resume", { timeout: scaledBudgetMs(150_000) }, async () => {
+test("v0.35.x: healthy same-session heartbeat recovers a parked completion audit without manual resume", { timeout: scaledBudgetMs(240_000) }, async () => {
   __testOnlyResetStaleFlag();
   __testOnlyResetOwnerSession();
   __testOnlySetSessionReplacementUntil(0);
@@ -5021,7 +5021,7 @@ test("bounded recovery: initial aggressive completion preserves its horizon and 
 // v0.39.52: the frame was scaledBudgetMs(30_000) while the three waits
 // inside it each ask for 30s. The frame expired before the last wait could
 // report what never happened. It now covers their sum.
-test("v0.35.x: stale host loss releases an in-flight completion audit without a verdict", { timeout: scaledBudgetMs(120_000) }, async () => {
+test("v0.35.x: stale host loss releases an in-flight completion audit without a verdict", { timeout: scaledBudgetMs(180_000) }, async () => {
   __testOnlyResetStaleFlag();
   const cwd = tmpCwd();
   const fakePi = writeFakeAuditorError(cwd, "Auditor stalled — no progress", 100);

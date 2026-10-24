@@ -208,9 +208,15 @@ test("no test's frame expires before the waits inside it", () => {
   // The rule is the SUM of the waits, not the largest one: the waits run in
   // sequence, so the frame has to cover all of them.
   //
-  // Both budgets scale with the same host factor, so the comparison is on the
-  // declared bases: a frame that covers its waits always covers them on a
-  // busy host too.
+  // And the sum is doubled, because the frame and the waits do NOT scale by
+  // the same number. The frame's factor is fixed when the test starts; each
+  // wait re-measures the host as it is when that wait runs. The load term is
+  // capped at 2x, so a host that gets busier mid-test can make the waits
+  // grow by up to 2x past what the frame budgeted for. Doubling the sum
+  // covers that drift, and the frame stays a backstop for a wedged run.
+  //
+  // The CPU term does not drift: the frame uses the monotonic factor and a
+  // wait uses the worst factor seen so far, and those are the same number.
   const FRAME = /test\(.*\{ timeout: (?:scaledBudgetMs|hangDeadlineMs)\((\d[\d_]*)\)/;
   const EXPLICIT_WAIT = /waitUntil\([^)]*?,\s*(\d[\d_]*)\s*\)|waitFor\([^)]*?timeoutMs:\s*(\d[\d_]*)/g;
   const ANY_WAIT = /\bwaitUntil\(|\bwaitFor\(/g;
@@ -220,6 +226,7 @@ test("no test's frame expires before the waits inside it", () => {
   // shared helper's default and reported as a violation it is not.
   const LOCAL_DEFAULT = /function (?:waitUntil|waitFor)\b.*?timeoutMs\s*=\s*(\d[\d_]*)/;
   const SHARED_DEFAULT_WAIT_MS = 30_000;
+  const FRAME_MARGIN = 2;
   const offenders: string[] = [];
   for (const file of walk(path.join(ROOT, "tests"))) {
     if (!file.endsWith(".test.ts")) continue;
@@ -241,8 +248,8 @@ test("no test's frame expires before the waits inside it", () => {
         .filter((n) => Number.isFinite(n) && n > 0);
       const fallback = localDefault ?? SHARED_DEFAULT_WAIT_MS;
       const total = explicit.reduce((sum, n) => sum + n, 0) + (calls - explicit.length) * fallback;
-      if (base < total) {
-        offenders.push(`${path.relative(ROOT, file)}:${i + 1}  frame ${base}ms < waits ${total}ms`);
+      if (base < FRAME_MARGIN * total) {
+        offenders.push(`${path.relative(ROOT, file)}:${i + 1}  frame ${base}ms < ${FRAME_MARGIN}x waits ${total}ms`);
       }
     }
   }

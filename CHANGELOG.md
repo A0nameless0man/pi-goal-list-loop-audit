@@ -41,11 +41,16 @@ have waited for a condition.**
 - **Waits poll for the condition instead of guessing how long it takes.** A
   shared `waitFor` helper replaces the fixed sleeps. A condition that never
   becomes true still fails the test, with the caller's own message.
-- **A frame covers the waits it contains.** The 403-completion and
-  heartbeat-recovery tests now declare frames that cover their own waits, so
-  the wait reports what never happened and the frame stays a backstop for a
-  wedged run. A new policy test fails the build if any test declares a frame
-  shorter than a wait inside it.
+- **A frame covers the waits it contains.** Five tests declared a framework
+  timeout shorter than the waits inside them, so the framework killed the test
+  before the wait could report what never happened — bun's message is a bare
+  `timed out after 51285ms` with no diagnosis, and a missing condition reads
+  as a hang. Their frames now cover their waits with a 2x margin: the frame's
+  factor is fixed when the test starts while each wait re-measures the host as
+  it runs, and the load term is capped at 2x, so a host that gets busier
+  mid-test would otherwise let the waits outgrow the frame. A new policy test
+  fails the build if any test declares a frame shorter than twice the waits
+  inside it.
 
 ### Verification
 

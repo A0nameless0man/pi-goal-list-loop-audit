@@ -54,7 +54,7 @@ emit({type:"agent_settled"});
 // v0.39.52: the frame was scaledBudgetMs(60_000) while the three waits inside
 // it ask for 30s each. The frame expired before the last wait could report
 // what never happened. It now covers their sum.
-test("repair re-claim renders the latest approved recap and archives the original verbatim", { timeout: scaledBudgetMs(120_000) }, async () => {
+test("repair re-claim renders the latest approved recap and archives the original verbatim", { timeout: scaledBudgetMs(180_000) }, async () => {
   __testOnlyResetOwnerSession(); __testOnlyResetStaleFlag(); __testOnlyResetTerminalFlags();
   __testOnlyResetZombieAutoRetry(); __testOnlyResetZombieRunWatchdog();
   const cwd = tmpCwd(); resetContinuationDispatchState(cwd);
