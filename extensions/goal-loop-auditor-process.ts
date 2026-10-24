@@ -959,7 +959,12 @@ async function terminateWorker(child: ChildProcess): Promise<void> {
   return termination;
 }
 
-export function workerProcessMatches(cwd: string, pid: number, dir: string, platform: NodeJS.Platform = process.platform): boolean {
+type WorkerProcessIdentity = "match" | "mismatch" | "unavailable";
+
+/** Inspect whether a PID still owns one exact auditor job. `unavailable` is
+ * deliberately distinct from `mismatch`: a bounded OS probe can time out on
+ * a loaded host, and that timeout is not evidence that the worker exited. */
+function workerProcessIdentity(cwd: string, pid: number, dir: string, platform: NodeJS.Platform = process.platform): WorkerProcessIdentity {
   try {
     const workerDir = path.resolve(dir);
     const lock = JSON.parse(readFileSync(path.join(workerDir, "lock"), "utf8")) as Record<string, unknown>;
@@ -971,23 +976,25 @@ export function workerProcessMatches(cwd: string, pid: number, dir: string, plat
       // macOS has no /proc: read the command line via ps. There is no
       // cheap cwd equivalent (lsof), so identity rests on the cmdline
       // alone — the workerDir carries both attempt nonces, which is
-      // sufficient to rule out PID reuse. Fails closed on any error.
+      // sufficient to rule out PID reuse.
       const inspected = nodeSpawnSync("ps", ["-o", "command=", "-p", String(pid)], {
         encoding: "utf8",
         timeout: 1_000,
       });
-      if (inspected.error || inspected.status !== 0) return false;
+      if (inspected.error || inspected.status !== 0) return "unavailable";
       command = String(inspected.stdout ?? "").trim();
-      if (!command) return false;
+      if (!command) return "mismatch";
       return (command.includes(workerPath) || command.includes(path.basename(workerPath)))
         && command.includes("--job-dir")
-        && command.includes(workerDir);
+        && command.includes(workerDir)
+        ? "match"
+        : "mismatch";
     }
     if (platform === "win32") {
       // Verify the command line before taskkill /T. A stale numeric PID can be
       // reused by an unrelated process between host sessions; PowerShell's
-      // CIM query is available on supported Windows hosts and fails closed if
-      // it is unavailable.
+      // CIM query is available on supported Windows hosts. Keep a failed or
+      // timed-out probe distinct from a successful identity mismatch.
       const query = "$p = Get-CimInstance Win32_Process -Filter 'ProcessId = "
         + String(pid)
         + "' -ErrorAction SilentlyContinue; if ($null -ne $p) { $p.CommandLine }";
@@ -996,12 +1003,15 @@ export function workerProcessMatches(cwd: string, pid: number, dir: string, plat
         timeout: 1_000,
         windowsHide: true,
       });
-      if (inspected.error || inspected.status !== 0) return false;
+      if (inspected.error || inspected.status !== 0) return "unavailable";
       command = String(inspected.stdout ?? "");
+      if (!command.trim()) return "mismatch";
       const lower = command.toLowerCase();
       return (lower.includes(workerPath.toLowerCase()) || lower.includes(path.basename(workerPath).toLowerCase()))
         && lower.includes("--job-dir")
-        && lower.includes(workerDir.toLowerCase());
+        && lower.includes(workerDir.toLowerCase())
+        ? "match"
+        : "mismatch";
     }
     command = readFileSync(`/proc/${pid}/cmdline`, "utf8").replaceAll("\0", " ");
     const cwdPath = readlinkSync(`/proc/${pid}/cwd`);
@@ -1009,11 +1019,18 @@ export function workerProcessMatches(cwd: string, pid: number, dir: string, plat
     return (command.includes(workerPath) || command.includes(path.basename(workerPath)))
       && command.includes("--job-dir")
       && command.includes(workerDir)
-      && (cwdPath === expectedCwd || cwdPath.startsWith(`${expectedCwd}${path.sep}`));
+      && (cwdPath === expectedCwd || cwdPath.startsWith(`${expectedCwd}${path.sep}`))
+      ? "match"
+      : "mismatch";
   } catch {
-    // A dead process or an unreadable process inspection is not safe to signal.
-    return false;
+    return "unavailable";
   }
+}
+
+export function workerProcessMatches(cwd: string, pid: number, dir: string, platform: NodeJS.Platform = process.platform): boolean {
+  // Destructive callers still fail closed: only a proven exact identity is
+  // safe to signal, regardless of why inspection could not prove it.
+  return workerProcessIdentity(cwd, pid, dir, platform) === "match";
 }
 
 function processAlive(pid: number): boolean {
@@ -1058,10 +1075,21 @@ function durableWorkerPids(cwd: string, logicalAttemptId: string): Array<{ pid: 
  * worker — orphan recovery). A finished job (result.json present) is not
  * live: the verdict path owns it, and racing its application is safe
  * (the second apply is a no-op on the cleared claim). */
-export function auditorWorkerLiveForAttempt(cwd: string, logicalAttemptId: string): boolean {
+export function auditorWorkerLiveForAttempt(
+  cwd: string,
+  logicalAttemptId: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
   for (const { pid, dir } of durableWorkerPids(cwd, logicalAttemptId)) {
     if (auditDirHasResult(dir)) continue;
-    if (workerProcessMatches(cwd, pid, dir)) return true;
+    const identity = workerProcessIdentity(cwd, pid, dir, platform);
+    if (identity === "match") return true;
+    // Liveness is non-destructive. If the bounded OS identity probe was
+    // unavailable but the PID is still alive, preserve the in-flight claim
+    // and retry on a later heartbeat rather than inventing a worker crash.
+    // A successful mismatch still returns false, so PID reuse cannot pin a
+    // claim when the host can inspect it.
+    if (identity === "unavailable" && processAlive(pid)) return true;
   }
   return false;
 }

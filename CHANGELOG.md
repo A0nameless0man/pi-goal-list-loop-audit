@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Auditor process liveness
+
+- A bounded Windows PowerShell/CIM identity probe that times out no longer
+  makes the heartbeat declare a still-live detached auditor workerless. Process
+  identity now distinguishes a proven mismatch from unavailable inspection:
+  destructive reap/kill callers still require an exact match, while the
+  read-only liveness path preserves an in-flight claim when its locked PID is
+  alive and retries inspection on a later heartbeat.
+
 ## 0.39.46 — one surface per fact, a readable amendment dialog and a real system-wide auto-accept (2026-10-23)
 
 ### Display: the duplicated bottom status strip is gone

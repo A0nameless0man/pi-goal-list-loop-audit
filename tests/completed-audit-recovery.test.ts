@@ -486,6 +486,23 @@ test("auditorWorkerLiveForAttempt: only a matching live worker counts", async ()
   } finally { stub.cleanup(); }
 });
 
+test("auditorWorkerLiveForAttempt: an unavailable identity probe does not manufacture a worker crash", () => {
+  const cwd = tmpCwd(), g = goal();
+  const saved = job(cwd, g, { result: false });
+  writeWorkerLock(saved.dir, "saved-claim-physical", process.pid);
+  const originalPath = process.env.PATH;
+  try {
+    // A detached Windows heartbeat can observe a live PID while PowerShell/CIM
+    // is temporarily unavailable or exceeds its bounded probe. That is not
+    // evidence that the worker exited.
+    process.env.PATH = "";
+    assert.equal(workerProcessMatches(cwd, process.pid, saved.dir, "win32"), false, "destructive matching still fails closed");
+    assert.equal(auditorWorkerLiveForAttempt(cwd, "saved-claim", "win32"), true, "non-destructive liveness stays conservative");
+  } finally {
+    process.env.PATH = originalPath;
+  }
+});
+
 test("unreadable saved transcript returns null but ledgers the reason", () => {
   const cwd = tmpCwd(), g = goal();
   seedState(cwd, { goal: g });
