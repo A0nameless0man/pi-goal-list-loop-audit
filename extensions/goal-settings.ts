@@ -307,6 +307,12 @@ export interface Settings {
    * interview floor is skipped — the seed carries the intent (unattended
    * rigs). Default off: nothing activates before the user confirms. */
   autoAcceptDrafts?: boolean;
+  /** v0.39.49: where the running GLLA version appears. One surface per fact —
+   * "card" (default) folds it into the active card as a detail row, "status"
+   * keeps it on the bottom status line, "off" hides it (/glla version remains
+   * the explicit readout). Global-only: "how do I see my version" is a
+   * preference about the user's UI, not a property of one repository. */
+  versionDisplay?: "card" | "status" | "off";
   /** Subagent model strategy. Current pi-subagents built-ins inherit the
    * session model by default; explicit per-role pins still use managed agent
    * files. Applies to NEW sessions (the companion registers agents at start). */
@@ -396,6 +402,9 @@ export const GLOBAL_ONLY_KEYS: ReadonlySet<keyof Settings> = new Set([
   // (a project-scope write offered "for this project" and was forgotten in
   // every other tree). Global-only so the single switch truly governs.
   "autoAcceptDrafts",
+  // v0.39.49: a UI preference about the user's own display, not a property of
+  // one repository — setting it per project would silently differ by tree.
+  "versionDisplay",
 ]);
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -790,6 +799,7 @@ export function normalizeLoadedSettings(settings: Settings): Settings {
   if (typeof settings.aggressiveMode !== "boolean") delete settings.aggressiveMode;
   if (typeof settings.autoResume !== "boolean") delete settings.autoResume;
   if (typeof settings.autoAcceptDrafts !== "boolean") delete settings.autoAcceptDrafts;
+  if (settings.versionDisplay !== undefined && !["card", "status", "off"].includes(settings.versionDisplay)) delete settings.versionDisplay;
   if (typeof settings.contextCheckpointProjection !== "boolean") delete settings.contextCheckpointProjection;
   if (typeof settings.notifyCmd !== "string" || settings.notifyCmd.trim().length === 0) {
     delete settings.notifyCmd;
@@ -1084,6 +1094,7 @@ export const SETTINGS_KEYS: Array<keyof Settings> = [
   "decisionPauseBudget",
   "carryover",
   "autoAcceptDrafts",
+  "versionDisplay",
   "auditCap",
   "auditCapHard",
   "mechanicalLoadScale",
