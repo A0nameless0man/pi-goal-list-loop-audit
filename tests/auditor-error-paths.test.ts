@@ -140,7 +140,7 @@ test("issue #61: the abort result carries the cause and the copy branches on it"
   // The producer must attach `abortCause`, and the consumer must not key the
   // Escape presentation off the error STRING alone.
   assert.match(SRC, /abortCauseFor\(/, "the abort site resolves a cause");
-  assert.match(SRC, /abortCause:\s*abortCause/, "infra() carries the cause onto the result");
+  assert.match(SRC, /\{ abortCause \}/, "infra() spreads the cause onto the result only when present");
 
   const tools = fs.readFileSync("extensions/loops/goal-tools.ts", "utf-8");
   // The Escape affordance is gated on a cause of "user".

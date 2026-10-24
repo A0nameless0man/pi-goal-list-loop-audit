@@ -1027,6 +1027,10 @@ export function abortZombieRun(
 
   let abortError: string | undefined;
   try {
+    // v0.39.50 (issue #61): this stop is GLLA's own stall brake, not the
+    // user pressing Escape. Record it so an in-flight auditor is classified
+    // `transport` and is never reported back as "you aborted it".
+    recordGllaInitiatedAuditorAbort(goal?.pendingCompletion?.attemptId ?? "");
     current.abort();
   } catch (error) {
     abortError = error instanceof Error ? error.message : String(error);
