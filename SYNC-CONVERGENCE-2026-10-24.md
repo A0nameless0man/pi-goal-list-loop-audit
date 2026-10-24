@@ -10,3 +10,8 @@ The loaded qualified sync daemon artifact is
 The daemon owns this eligible note's commit/publication. The fleet report must
 identify the exact commit and advertised GitHub/GitLab refs containing it;
 ongoing later source edits do not invalidate that observed publication.
+
+## Qualified runtime refresh — 2026-10-24T10:59:56.072798+00:00
+
+Loaded daemon SHA-256: `59ef460ef335d51aafd09f01d7537589a70712254feb2557751c440f62146cfc`.
+The qualified runtime distinguishes hook/environment failures from policy refusals; native build pools are bounded without bypassing lifecycle or product gates. This operational update is eligible work for autonomous commit/publication verification, not a claim that publication has already happened.
