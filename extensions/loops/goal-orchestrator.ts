@@ -633,6 +633,8 @@ function settlePromptPolicyRejection(ctx: ExtensionContext, failure: MainModelFa
   let abortError: string | undefined;
   if (!mainModelAbortForRecovery) {
     mainModelAbortForRecovery = true;
+    // v0.39.50 (issue #61): GLLA's own recovery stop, never a user decision.
+    recordGllaInitiatedAuditorAbort(activeGoal?.pendingCompletion?.attemptId ?? "");
     try { ctx.abort(); } catch (err) { abortError = err instanceof Error ? err.message : String(err); }
   }
   appendLedger(ctx.cwd, "main_model_prompt_policy_terminal", {
@@ -727,7 +729,12 @@ async function handleMainModelAgentEnd(ctx: ExtensionContext, rawLastA: any, las
         clearContinuationTimer(); clearLoopTimer(); cancelProviderRetry();
         // Abort only the already-failed request, preventing Pi's core retry
         // from racing the idle compact-first admission. No healthy tool is cut.
-        if (!mainModelAbortForRecovery) { mainModelAbortForRecovery = true; try { ctx.abort(); } catch { /* safe boundary will retry admission */ } }
+        if (!mainModelAbortForRecovery) {
+          mainModelAbortForRecovery = true;
+          // v0.39.50 (issue #61): GLLA-initiated, so it is never a user stop.
+          recordGllaInitiatedAuditorAbort(state.goal?.pendingCompletion?.attemptId ?? "");
+          try { ctx.abort(); } catch { /* safe boundary will retry admission */ }
+        }
         return true;
       }
       // The one-shot budget survived compaction or reload. Explicit input
