@@ -3266,8 +3266,13 @@ function registerAgentTools(pi: any): void {
           // v0.39.50 (issue #61): the AGENT called pause_goal — this stop is
           // GLLA-initiated, not the user pressing Escape, so an in-flight
           // auditor must be classified as interrupted rather than reported
-          // back as "you aborted it".
-          recordGllaInitiatedAuditorAbort(state.goal.pendingCompletion?.attemptId ?? "");
+          // back as "you aborted it". Guarded because this branch is also
+          // executed from an isolated sandbox (pause-admission-failure.test)
+          // that provides only the globals it needs; the classification is
+          // an annotation and must never be able to skip the abort itself.
+          try {
+            recordGllaInitiatedAuditorAbort(state.goal.pendingCompletion?.attemptId ?? "");
+          } catch { /* annotation only — the abort below is the contract */ }
           ctx.abort();
           appendLedger(ctx.cwd, "pause_goal_aborted_turn", { goalId: state.goal.id, kind: effectiveKind ?? "blocked" });
         } catch (abortError) {
