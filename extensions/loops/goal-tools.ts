@@ -1717,9 +1717,15 @@ function registerAgentTools(pi: any): void {
         ctx = abortConfirmCtx;
         let completeAnyway = false;
         try {
+          // The copy states only what is known. A recorded user stop is named
+          // as such; an unattributed abort says the run ended early, which is
+          // all the evidence supports (issue #61 — the old text asserted the
+          // user had pressed Escape for a transport failure).
           completeAnyway = await ctx.ui.confirm(
-            "Audit aborted",
-            "You aborted the auditor (Escape).\n\nYes = mark the goal COMPLETE WITHOUT AUDIT (you take responsibility for verification).\nNo = continue working; the auditor will verify on the next complete_goal.",
+            "Audit ended without a verdict",
+            abortedByUser
+              ? "You aborted the auditor (Escape).\n\nYes = mark the goal COMPLETE WITHOUT AUDIT (you take responsibility for verification).\nNo = continue working; the auditor will verify on the next complete_goal."
+              : "The audit was interrupted before it produced a verdict — this was not a user stop.\n\nYes = mark the goal COMPLETE WITHOUT AUDIT (you take responsibility for verification).\nNo = continue working; retry complete_goal to run a fresh audit.",
           );
         } catch {
           completeAnyway = false;
@@ -1736,7 +1742,9 @@ function registerAgentTools(pi: any): void {
           }
           const terminalGoal = state.goal;
           if (!terminalGoal) return staleToolResult();
-          const terminalReason = "completed without audit (user choice after Esc)";
+          const terminalReason = abortedByUser
+            ? "completed without audit (user choice after Esc)"
+            : "completed without audit (interrupted audit, no verdict recorded)";
           const escArchivePath = path.relative(ctx.cwd, archivedGoalPath(ctx.cwd, terminalGoal.id)) || archivedGoalPath(ctx.cwd, terminalGoal.id);
           // v0.38.25: canonical render (same voice as every approval path).
           // Built from the terminalGoal local, which survives the archive
