@@ -288,3 +288,46 @@ test("v0.39.38: every release-check lane uploads its $TMPDIR failure diagnostics
   }
   assert.doesNotMatch(workflow.slice(qualityAt, publishAt), /id-token:\s*write/, "the upload permission does not widen quality OIDC");
 });
+
+test("release contract: the declared Pi peer range covers the 1.x line", () => {
+  // A peer range that stops at `<0.100.0` tells a Pi 1.x user their install is
+  // unsupported, even though the extension API GLLA uses is unchanged — Pi 1.0
+  // added only optional render-context fields. The range is the published
+  // contract a package manager enforces, so it must cover the current line or
+  // it becomes a false compatibility claim in the other direction.
+  const manifest = JSON.parse(fs.readFileSync("package.json", "utf-8")) as {
+    engines?: { node?: string };
+    peerDependencies?: Record<string, string>;
+  };
+  const peers = manifest.peerDependencies ?? {};
+  const piPeers = ["@earendil-works/pi-agent-core", "@earendil-works/pi-ai", "@earendil-works/pi-coding-agent", "@earendil-works/pi-tui"];
+  for (const name of piPeers) {
+    const range = peers[name];
+    assert.ok(range, `${name} must declare a peer range`);
+    // A 1.x release must satisfy the range: an upper bound below 1.0 would
+    // reject every current Pi.
+    assert.match(range, /<(\d+)/, `${name} range must declare an upper bound: ${range}`);
+    const upper = Number(/<(\d+)/.exec(range)![1]);
+    assert.ok(upper >= 2, `${name} peer range must admit Pi 1.x (upper bound ${upper}.x): ${range}`);
+    // The oldest supported boundary must still be declared.
+    assert.match(range, />=0\.84\.2/, `${name} must keep the 0.84.2 floor: ${range}`);
+  }
+  assert.match(peers.typebox ?? "", /<2\.0\.0/, "typebox must admit its 1.4.x line");
+  assert.match(manifest.engines?.node ?? "", /22\.19/, "Node floor stays declared");
+});
+
+test("release contract: the docs state the supported Pi range and do not contradict it", () => {
+  // The complaint that started this: nothing in the user-facing docs said which
+  // Pi versions work, and the only range on disk excluded 1.x. Pin the claim
+  // where a user actually looks, and make sure the compatibility doc agrees.
+  const readme = fs.readFileSync("README.md", "utf-8");
+  const compat = fs.readFileSync("docs/COMPATIBILITY.md", "utf-8");
+  assert.match(readme, /## Requirements/, "the README must state its requirements");
+  assert.match(readme, /Pi `>=0\.84\.2 <2\.0\.0`/, "the README must name the supported Pi range");
+  assert.match(compat, /## Supported Pi versions/, "the compatibility doc must have a discoverable section");
+  assert.match(compat, /`>=0\.84\.2 <2\.0\.0`/, "the compatibility doc must declare the same range");
+  // The two docs must not disagree about the upper bound.
+  for (const doc of [readme, compat]) {
+    assert.doesNotMatch(doc, /<0\.100\.0/, "no stale 0.x-only upper bound may remain in the docs");
+  }
+});
