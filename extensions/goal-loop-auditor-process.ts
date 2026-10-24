@@ -2570,7 +2570,13 @@ async function runDetachedGoalCompletionAuditorInner(args: {
           // cleanup with a TERM-ignoring worker and leaves its PID alive.
           if (child && childAlive(child)) await terminateWorker(child).catch(() => {});
           else if (abortTermination) await abortTermination;
-          return infra(model, thinkingLevel, "Auditor aborted.", "", capturedRevisionToken, "transport");
+          // v0.39.50 (issue #61): carry WHY the run ended. Only a recorded
+          // user stop may be presented to the operator as their own decision;
+          // everything else is an interruption they did not choose.
+          return {
+            ...infra(model, thinkingLevel, "Auditor aborted.", "", capturedRevisionToken, "transport"),
+            abortCause: abortCauseFor(runtime.logicalAttemptId),
+          };
         }
         if (childSpawnError) return infra(model, thinkingLevel, `auditor worker launch failed: ${childSpawnError}`, "", capturedRevisionToken, "transport");
         try {
