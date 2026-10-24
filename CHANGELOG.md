@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.39.47 — a timed-out identity probe no longer kills a healthy detached auditor (2026-10-24)
+
 ### Auditor process liveness
 
 - A bounded Windows PowerShell/CIM identity probe that times out no longer
@@ -10,6 +12,13 @@
   destructive reap/kill callers still require an exact match, while the
   read-only liveness path preserves an in-flight claim when its locked PID is
   alive and retries inspection on a later heartbeat.
+- Reported by @alvpickmans (#59, #60) after a live auditor PID produced six
+  consecutive `ETIMEDOUT` outcomes on a loaded Windows host and the next
+  heartbeat terminated the process tree before `result.json` was written. The
+  previous boolean conflated "inspection proved no match" with "inspection could
+  not complete", turning a probe failure into a worker crash that never happened.
+- A successful command-line mismatch still reports not-live, so a reused PID
+  cannot pin a revoked claim on a host that can inspect it.
 
 ## 0.39.46 — one surface per fact, a readable amendment dialog and a real system-wide auto-accept (2026-10-23)
 
