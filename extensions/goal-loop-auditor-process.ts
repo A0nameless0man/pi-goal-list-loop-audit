@@ -2877,6 +2877,9 @@ async function runDetachedGoalCompletionAuditorInner(args: {
   } finally {
     if (child && childAlive(child)) await terminateWorker(child).catch(() => {});
     activeChildren.delete(childKey(args.cwd, attemptId));
+    // v0.39.50 (issue #61): the attempt is settled, so its user-stop record
+    // must go too — a later run reusing the id must not inherit the cause.
+    if (runtime.logicalAttemptId) userAbortAttempts.delete(runtime.logicalAttemptId);
     if (jobDirCreated) {
       if (auditDirHasResult(jobDir)) {
         // v0.38.3: a finished audit's dir is the post-completion transcript.
