@@ -434,6 +434,18 @@ function appendFactsToCard(
     });
     return;
   }
+  // v0.39.49 (field Screenshot_20261024_103546): a card whose only row is the
+  // head (`● objective … · active · total 17h`) has NO detail rows, so adding
+  // a tree row invented `└─ v0.39.47` — a closer with nothing to close. That
+  // dangling glyph read as a broken/truncated card. With no parent row to
+  // hang a child on, the fact belongs on the head line itself.
+  const headOnly = lines.length === 1 && !/^(?:├─ |└─ |│)/.test(stripAnsi(lastLine));
+  if (headOnly) {
+    const joined = rows.map((row) => row.text).join(sep);
+    const separator = `${paint(theme, 'dim', '·')} `;
+    lines[0] = `${lastLine} ${separator}${dim(joined)}`;
+    return;
+  }
   rows.forEach((row, i) => {
     const last = i === rows.length - 1;
     emit(row, row.cont && i > 0 ? '│  ' : (last ? '└─ ' : '├─ '));
