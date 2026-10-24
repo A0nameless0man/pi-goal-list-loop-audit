@@ -283,6 +283,7 @@ import {
   escalatedAuditorTimeout,
   newDetachedAuditJobAttemptId,
   resolveClaimAuditTier,
+  recordGllaInitiatedAuditorAbort,
   runDetachedGoalCompletionAuditor,
   DEFAULT_AUDITOR_STALL_MS,
   DEFAULT_AUDITOR_TOOL_TIMEOUT_MS,
@@ -3259,6 +3260,11 @@ function registerAgentTools(pi: any): void {
           resumeAt: storedResumeAt,
         });
         try {
+          // v0.39.50 (issue #61): the AGENT called pause_goal — this stop is
+          // GLLA-initiated, not the user pressing Escape, so an in-flight
+          // auditor must be classified as interrupted rather than reported
+          // back as "you aborted it".
+          recordGllaInitiatedAuditorAbort(state.goal.pendingCompletion?.attemptId ?? "");
           ctx.abort();
           appendLedger(ctx.cwd, "pause_goal_aborted_turn", { goalId: state.goal.id, kind: effectiveKind ?? "blocked" });
         } catch (abortError) {
