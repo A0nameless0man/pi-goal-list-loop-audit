@@ -259,6 +259,7 @@ import {
   cleanupDeadAuditJobs,
   inspectAuditJobHealth,
   newDetachedAuditJobAttemptId,
+  recordGllaInitiatedAuditorAbort,
   runDetachedGoalCompletionAuditor,
   type AuditorProgress,
 } from "../goal-loop-auditor-process.js";
