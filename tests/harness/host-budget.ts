@@ -66,3 +66,31 @@ export function hangDeadlineMs(baseMs: number, options: { maxAgeMs?: number; fac
 export function untilMs(baseMs: number, options: { maxAgeMs?: number; factor?: number } = {}): number {
 	return Date.now() + hangDeadlineMs(baseMs, options);
 }
+
+/**
+ * Wait for a CONDITION to hold, instead of sleeping a fixed time and hoping.
+ *
+ * A fixed sleep is a guess about wall time: it asserts that the work finished
+ * within N ms, which is only true on an idle host. On a busy host the work
+ * finishes later and the assertion fails even though nothing is wrong — so
+ * the gate reports a healthy system as broken. That is exactly how the
+ * provider-exhaustion stress test and the retained-loop-bounds test failed on
+ * a host at load 50: both slept a fixed 150–1200 ms and then asserted that
+ * an asynchronous effect had already landed.
+ *
+ * Polling asks the question the test actually means ("did this happen?"). The
+ * budget only decides how long to keep asking, and it comes from `untilMs`,
+ * so it is sized for the host the suite is running on. A condition that never
+ * becomes true still fails the test, with the caller's own message.
+ */
+export async function waitFor(
+	predicate: () => boolean,
+	options: { timeoutMs: number; message: string; intervalMs?: number },
+): Promise<void> {
+	const intervalMs = options.intervalMs ?? 20;
+	const deadline = untilMs(options.timeoutMs);
+	while (!predicate()) {
+		if (Date.now() > deadline) throw new Error(options.message);
+		await new Promise((resolve) => setTimeout(resolve, intervalMs));
+	}
+}

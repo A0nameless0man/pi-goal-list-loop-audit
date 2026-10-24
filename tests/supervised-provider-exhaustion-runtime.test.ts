@@ -3,8 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import type { ExtensionContext } from '@earendil-works/pi-coding-agent';
 import { withPressureSession, providerError } from './harness/context-pressure.js';
-import { tick } from './harness/mock-pi.js';
-import { hangDeadlineMs } from './harness/host-budget.js';
+import { hangDeadlineMs, waitFor } from './harness/host-budget.js';
 import { __testOnlyResetProcessState } from '../extensions/loops/goal.js';
 import { state, persistStateLine } from '../extensions/goal-state.js';
 import { readState } from '../extensions/goal-loop-core.js';
@@ -24,7 +23,18 @@ afterEach(() => __testOnlyResetProcessState());
 // Apply the same measured host budget as other integration waits so a healthy
 // 2101-cycle run is not abandoned mid-fixture on a contended host. All cycles,
 // durable state assertions and the independent no-output watchdog remain.
-const STRESS_TEST_TIMEOUT_MS = 300_000;
+//
+// v0.39.52: the cap was 300s. On a host at load 50 the `goal` mode needs
+// ~334s of wall time, and the budget it was given came out at ~333s — the
+// CPU probe measured this process as barely slowed down (it burns its 25ms
+// probe at full speed even when the machine is saturated), so the budget never
+// grew for the pressure that was actually slowing the test down. The hang
+// guard now takes the worse of the CPU probe and the machine's load, and the
+// base is 600s so a legitimately slow run has ~13x the idle cost of the
+// slowest mode (46.7s) to work with. A genuinely wedged run is still bounded:
+// this test prints a heartbeat every 250 cycles, so the suite-level stall
+// watchdog kills a silent suite long before this cap.
+const STRESS_TEST_TIMEOUT_MS = 600_000;
 
 for (const mode of ['goal', 'list', 'loop'] as const) {
   test(`${mode}: 2101 provider exhaustion failures preserve work then continue`, { timeout: hangDeadlineMs(STRESS_TEST_TIMEOUT_MS) }, async () => {
@@ -81,8 +91,14 @@ for (const mode of ['goal', 'list', 'loop'] as const) {
           assert.equal(saved.loop?.history.length, originalLoop.history.length + 1, 'healthy work appends exactly one measurement');
         }
       } finally { Date.now = realNow; }
-      await tick(1200);
-      assert.ok(pi.sent.length > 0, 'successful recovery delivers the retained work continuation');
+      // v0.39.52: this used to sleep a fixed 1200ms and then assert the
+      // continuation had been sent. On a busy host the send lands later than
+      // that and a healthy recovery was reported as a failure. Wait for the
+      // effect instead of guessing how long it takes.
+      await waitFor(() => pi.sent.length > 0, {
+        timeoutMs: 30_000,
+        message: 'successful recovery delivers the retained work continuation',
+      });
     }, mode);
   });
 }
@@ -118,7 +134,13 @@ for (const bound of ['iterations', 'time', 'tokens'] as const) {
       await probeMainModelRecovery(ctx as unknown as ExtensionContext);
       await pi.fire('tool_call', {}, ctx);
       await pi.fire('agent_end', { messages: [{ role: 'assistant', stopReason: 'end_turn', content: [{ type: 'text', text: 'Verified the retained target with fresh independent evidence after the healthy provider probe.' }] }] }, ctx);
-      await tick();
+      // v0.39.52: this used to sleep a fixed 150ms and then assert the
+      // recovery had settled. Same defect as the fixed 1200ms sleep above —
+      // wait for the condition rather than assuming a wall time.
+      await waitFor(() => readState(cwd).mainModelRecovery === undefined, {
+        timeoutMs: 30_000,
+        message: 'healthy provider settles the recovery',
+      });
       const saved = readState(cwd);
       assert.equal(saved.mainModelRecovery, undefined, 'healthy provider settles the recovery');
       assert.equal(saved.loop?.active, false, 'recovery never removes the original work bound');

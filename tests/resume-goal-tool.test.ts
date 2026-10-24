@@ -25,7 +25,7 @@ import activate, {
 import { __testOnlyResetAuditorSurface } from "../extensions/loops/goal-auditor-surface.js";
 import { readState } from "../extensions/goal-loop-core.js";
 import { MockPi, makeMockCtx, seedGoal, seedLoop, seedState, tick, tmpCwd, type MockCtx } from "./harness/mock-pi.js";
-import { untilMs } from "./harness/host-budget.js";
+import { untilMs, waitFor } from "./harness/host-budget.js";
 
 const GLOBAL_SETTINGS_PATH = process.env.GLLA_GLOBAL_SETTINGS_PATH!;
 
@@ -277,11 +277,15 @@ emit({type:"agent_settled"});
     assert.match(claimed.content[0]!.text, /AUDIT PENDING — nonterminal/);
     assert.equal(readState(cwd).goal?.status, "auditing");
     const claimId = (readState(cwd).goal as { id: string }).id;
-    const until = untilMs(10000);
-    while (readState(cwd).goal !== null) {
-      if (Date.now() > until) throw new Error("settlement timeout");
-      await new Promise((r) => setTimeout(r, 20));
-    }
+    // v0.39.52: the settlement window was 10s, which a detached auditor
+    // spawning its worker on a busy host can exceed. Wait for the goal to
+    // clear instead of a fixed guess, and give it a budget that is sized for
+    // the host — the enclosing test's own budget is larger, so this wait's
+    // own message is what a failure reports.
+    await waitFor(() => readState(cwd).goal === null, {
+      timeoutMs: 30_000,
+      message: "settlement timeout",
+    });
     assert.ok(fs.existsSync(path.join(cwd, ".pi-glla", "archive", `${claimId}.md`)), "the tweaked claim archives after the approving audit");
   } finally {
     if (previous === undefined) delete process.env.GLLA_PI_BINARY;

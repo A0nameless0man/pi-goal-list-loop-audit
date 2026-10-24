@@ -26,6 +26,8 @@
 
 /** CPU time the probe spends. Large enough to clear the kernel's CPU
  * accounting granularity, small enough to be invisible next to a suite. */
+import * as os from "node:os";
+
 export const DEFAULT_PROBE_CPU_MS = 50;
 
 /** A factor below 1 would shrink a deadline below the value the test asked
@@ -82,6 +84,72 @@ export function measureContentionFactor(options = {}) {
 
 let cached = null;
 let stableCached = null;
+let loadCached = null;
+
+/** The ceiling for the load-derived factor. The product scales its own
+ * timeouts by load/cpus with the same 2x ceiling
+ * (extensions/goal-loop-shield.ts MECHANICAL_LOAD_SCALE_MAX), so the gate and
+ * the product size their budgets the same way. */
+export const MAX_LOAD_SCALE_FACTOR = 2;
+
+/** How long a measured load average stays fresh. Contention moves on a scale
+ * of seconds, and a wait that starts now must be sized for the host as it is
+ * now — not as it was when the suite started. */
+export const LOAD_FACTOR_MAX_AGE_MS = 2_000;
+
+/**
+ * The machine-wide CPU pressure, as a slowdown factor.
+ *
+ * The contention probe above measures how much CPU THIS process gets. It
+ * cannot see the pressure that comes from elsewhere on the machine: a host
+ * whose load average is 50 on 16 cores is slow for every process because the
+ * run queue and the disk queues are deep — but a process that is not itself
+ * waiting still burns its 25ms probe at full speed and reports a factor of
+ * 1.0.
+ *
+ * That gap is not academic for this suite. The gate's waits are dominated by
+ * filesystem and subprocess latency rather than arithmetic, so on a busy host
+ * the CPU probe under-reads the slowdown and a healthy wait gets reported as a
+ * hang. That is exactly what the 0.39.5x release gate did: the 2101-cycle
+ * provider-exhaustion stress test needs ~334s of wall time on a host at load
+ * 50, but its CPU-scaled budget came out at ~333s, because the probe never
+ * saw the pressure that was actually slowing the test down.
+ *
+ * The load average IS the machine-wide measure of that pressure, so a hang
+ * bound takes the worse of the two readings.
+ */
+export function hostLoadFactor(options = {}) {
+  const { maxAgeMs = LOAD_FACTOR_MAX_AGE_MS } = options;
+  const stamp = now();
+  if (!options.force && loadCached && stamp - loadCached.at < maxAgeMs) return loadCached.factor;
+  let factor = 1;
+  try {
+    const load = os.loadavg()[0] ?? 0;
+    const cpus = os.cpus()?.length ?? 1;
+    if (Number.isFinite(load) && load > 0 && Number.isFinite(cpus) && cpus > 0) {
+      factor = Math.min(MAX_LOAD_SCALE_FACTOR, Math.max(1, load / cpus));
+    }
+  } catch {
+    // An unreadable load average degrades to no scaling, never to nonsense.
+    factor = 1;
+  }
+  loadCached = { at: stamp, factor };
+  return factor;
+}
+
+/**
+ * The factor a HANG BOUND should use: the worse of this process's measured
+ * CPU slowdown and the machine's load pressure.
+ *
+ * A hang bound is a wait, and a wait is sized for the time the work really
+ * needs. A scenario budget (a number handed to the product that the
+ * assertions then compare against) is a different thing — it must be fixed for
+ * the life of the process so a scenario and its assertion cannot disagree —
+ * so it stays on the CPU-only factor.
+ */
+export function hangFactor(options = {}) {
+  return Math.max(contentionFactor(options), hostLoadFactor(options));
+}
 
 /**
  * The cached factor. `maxAgeMs` bounds staleness; pass 0 to force a fresh
@@ -139,6 +207,7 @@ export function monotonicContentionFactor(options = {}) {
 export function resetContentionFactor() {
   cached = null;
   stableCached = null;
+  loadCached = null;
 }
 
 /**
@@ -155,11 +224,15 @@ export function resetContentionFactor() {
 export function scaledBudgetMs(baseMs, options = {}) {
   if (!Number.isFinite(baseMs) || baseMs <= 0) return baseMs;
   const { stable = true, ...rest } = options;
-  if (stable) return Math.ceil(baseMs * monotonicContentionFactor(rest));
+  // Both branches are HANG BOUNDS in this suite, and a hang bound is sized
+  // for the wall time the work really needs. The load term is what makes that
+  // true on a busy host: the CPU probe cannot see machine-wide pressure, and
+  // the waits here are I/O- and subprocess-bound rather than arithmetic-bound.
+  if (stable) return Math.ceil(baseMs * Math.max(monotonicContentionFactor(rest), hostLoadFactor(rest)));
   // A WAIT gets the worse of "how slow is the host right now" and "how slow
   // has it been at any point in this run". A momentary quiet reading must not
   // hand a wait a budget the host has already shown it cannot meet.
-  const current = contentionFactor(rest);
+  const current = hangFactor(rest);
   const worst = stableCached?.factor ?? current;
   return Math.ceil(baseMs * Math.max(current, worst));
 }

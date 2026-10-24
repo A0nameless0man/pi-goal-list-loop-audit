@@ -41,7 +41,7 @@ import { SLOW_TEST_FILES } from "./slow-files.mjs";
 // used to live under tests/, which the npm package does not ship, so the
 // packaged runner could not be imported at all.
 export { SLOW_TEST_FILES };
-import { contentionFactor } from "./host-contention.mjs";
+import { hangFactor } from "./host-contention.mjs";
 
 /** v0.39.41: the gate's default per-test budget, in wall-clock time.
  *
@@ -109,7 +109,7 @@ export function stallTimeoutMs(env = process.env) {
   // (factor 8) produced a 24-minute window — past the module's own
   // MAX_STALL_TIMEOUT_MS — and the "extend" branch then shrank that
   // already-granted window back to the ceiling while logging "extended".
-  return Math.min(MAX_STALL_TIMEOUT_MS, Math.ceil(DEFAULT_STALL_TIMEOUT_MS * contentionFactor()));
+  return Math.min(MAX_STALL_TIMEOUT_MS, Math.ceil(DEFAULT_STALL_TIMEOUT_MS * hangFactor()));
 }
 
 export function heartbeatMs(env = process.env) {
@@ -224,7 +224,7 @@ function main() {
   // the suite. On an idle host the factor is 1.0 and every bound is exactly
   // what it was before; on a contended host the per-test bound grows in
   // proportion, so a slow-but-progressing test is not reported as a hang.
-  const factor = contentionFactor();
+  const factor = hangFactor();
   const timeoutMs = Math.min(MAX_TEST_TIMEOUT_MS, Math.ceil(DEFAULT_TEST_TIMEOUT_MS * factor));
   const { mode, bunArgs } = buildRunnerArgs(process.argv.slice(2), SLOW_TEST_FILES, undefined, { timeoutMs });
   let stallLimit = stallTimeoutMs();
@@ -295,7 +295,7 @@ function main() {
     if (!stallFired) {
       const decision = stallDecision({
         silentMs, limitMs: stallLimit, extensions: stallExtensions,
-        factor: contentionFactor({ force: true, maxAgeMs: 0 }),
+        factor: hangFactor({ force: true, maxAgeMs: 0 }),
       });
       if (decision.action === "extend") {
         stallExtensions += 1;

@@ -4158,7 +4158,13 @@ test("v0.35.x: bare 403 main recovery sanitizes live surfaces while retaining di
   await pi.fire("session_shutdown", { reason: "quit" }, ctx);
 });
 
-test("v0.35.x: bare 403 completion diagnostics stay durable while completion surfaces remain sanitized", { timeout: scaledBudgetMs(30_000) }, async () => {
+// v0.39.52: the test's own budget was scaledBudgetMs(30_000) — the SAME
+// 30s base as the internal wait below. Both expired at roughly the same
+// moment, so on a busy host the framework killed the test before the wait's
+// own diagnostic could name what never happened. The frame is now twice the
+// wait's base, so the wait reports first and the framework timeout stays a
+// backstop for a wedged run.
+test("v0.35.x: bare 403 completion diagnostics stay durable while completion surfaces remain sanitized", { timeout: scaledBudgetMs(60_000) }, async () => {
   __testOnlyResetStaleFlag();
   const cwd = tmpCwd();
   const raw = '403 {"error":{"message":"upstream denied this request"},"request_id":"auth-sensitive-id"}';
@@ -4802,7 +4808,13 @@ test("v0.35.x: stale host replacement session_start auto-recovers the parked aud
   }
 });
 
-test("v0.35.x: healthy same-session heartbeat recovers a parked completion audit without manual resume", { timeout: scaledBudgetMs(15_000) }, async () => {
+// v0.39.52: the frame was scaledBudgetMs(15_000) while the waits inside it
+// asked for 30s and 4s. The frame therefore expired BEFORE the waits could
+// report what never happened — bun killed the test with a bare "timed out
+// after 51285ms" and no diagnosis. The frame now covers the sum of the waits
+// it contains (30s + 20s + 30s + 30s), so the wait's own message is what a
+// failure reports, and the frame is only the backstop for a wedged run.
+test("v0.35.x: healthy same-session heartbeat recovers a parked completion audit without manual resume", { timeout: scaledBudgetMs(150_000) }, async () => {
   __testOnlyResetStaleFlag();
   __testOnlyResetOwnerSession();
   __testOnlySetSessionReplacementUntil(0);
@@ -4836,7 +4848,7 @@ test("v0.35.x: healthy same-session heartbeat recovers a parked completion audit
     await waitUntil(() => {
       __testOnlyHeartbeatTick();
       return readLedger(cwd).some((entry) => entry.type === "audit_recovery_started");
-    }, 4_000);
+    }, 20_000);
     // The ledger records the dispatch BEFORE the state moves to "auditing",
     // so the state can still read "paused" when the ledger is already there —
     // on a loaded host, reliably. Wait for the state to catch up.
@@ -5006,7 +5018,10 @@ test("bounded recovery: initial aggressive completion preserves its horizon and 
   }
 });
 
-test("v0.35.x: stale host loss releases an in-flight completion audit without a verdict", { timeout: scaledBudgetMs(30_000) }, async () => {
+// v0.39.52: the frame was scaledBudgetMs(30_000) while the three waits
+// inside it each ask for 30s. The frame expired before the last wait could
+// report what never happened. It now covers their sum.
+test("v0.35.x: stale host loss releases an in-flight completion audit without a verdict", { timeout: scaledBudgetMs(120_000) }, async () => {
   __testOnlyResetStaleFlag();
   const cwd = tmpCwd();
   const fakePi = writeFakeAuditorError(cwd, "Auditor stalled — no progress", 100);

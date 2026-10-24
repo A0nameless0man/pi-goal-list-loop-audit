@@ -2,6 +2,72 @@
 
 ## Unreleased
 
+## 0.39.52 — the release gate stops reporting a busy machine as a broken one (2026-10-24)
+
+### The defect
+
+The gate that guards every npm publish reported healthy tests as failures on a
+loaded host. The 0.39.5x cycle hit it five times in one run, and the failing
+subset *moved* between runs — a symptom of timing, not of code. Three distinct
+causes, all the same idea: **the gate guessed at wall time where it should
+have waited for a condition.**
+
+1. **The hang bound could not see machine-wide pressure.** The contention
+   probe measures how much CPU *this process* gets. On a host at load 50 on 16
+   cores, the probe still burns its 25ms at full speed and reports a factor of
+   1.0 — so the budget never grew for the pressure that was actually slowing
+   the test down. The 2101-cycle provider-exhaustion stress test needs ~334s
+   of wall time on such a host; its CPU-scaled budget came out at ~333s. It
+   died one second short of a healthy run.
+2. **Two tests slept a fixed time and then asserted.** The stress test slept
+   1200ms and asserted the continuation had been sent; the retained-loop-bounds
+   test slept 150ms and asserted the recovery had settled. Both are guesses
+   about wall time that only hold on an idle machine.
+3. **A test's frame could expire before the wait inside it.** A test whose
+   framework timeout was shorter than its own internal wait is killed by the
+   framework first — and bun's message is a bare `timed out after 51285ms`
+   with no diagnosis, so a missing condition reads as a hang.
+
+### The fix
+
+- **A hang bound now takes the worse of the CPU probe and the machine's load.**
+  The load average is the machine-wide measure of pressure, and the product
+  already scales its own timeouts by `load/cpus`
+  (`extensions/goal-loop-shield.ts` `loadScaledTimeoutMs`). The gate now uses
+  the same ratio, capped at the same 2x, so both sides size their budgets the
+  same way. The CPU probe is unchanged, and a scenario budget — a number
+  handed to the product that its assertions compare against — stays on the
+  CPU-only factor so a scenario and its assertion cannot disagree.
+- **Waits poll for the condition instead of guessing how long it takes.** A
+  shared `waitFor` helper replaces the fixed sleeps. A condition that never
+  becomes true still fails the test, with the caller's own message.
+- **A frame covers the waits it contains.** The 403-completion and
+  heartbeat-recovery tests now declare frames that cover their own waits, so
+  the wait reports what never happened and the frame stays a backstop for a
+  wedged run. A new policy test fails the build if any test declares a frame
+  shorter than a wait inside it.
+
+### Verification
+
+- `tests/host-contention.test.ts` — 15 pass, 0 fail. New coverage: the load
+  factor is bounded and never shrinks a budget; a hang bound is the worse of
+  the two readings; `waitFor` returns when the condition holds and still fails
+  with the caller's message when it never does; and the frame-vs-wait policy
+  test catches the 0.39.5x inversion. Negative control: reverting the
+  heartbeat test's frame to 15s makes the policy test fail, and restoring it
+  makes the policy test pass.
+- The three files that carried the flake —
+  `tests/supervised-provider-exhaustion-runtime.test.ts`,
+  `tests/resume-goal-tool.test.ts` and
+  `tests/behavioral-orchestrator.test.ts` — pass together on a host at load
+  50, where the same run failed before.
+
+### Unchanged
+
+No product behaviour changed. The fix is entirely in the gate: the
+contention measurement, the runner's bounds and the tests that wait for an
+effect.
+
 ## 0.39.51 — republish with a current runtime inventory (2026-10-24)
 
 - 0.39.50 was tagged before `docs/RUNTIME-INVENTORY.md` was regenerated, so

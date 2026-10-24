@@ -18,13 +18,16 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   MAX_CONTENTION_FACTOR,
+  MAX_LOAD_SCALE_FACTOR,
   MIN_CONTENTION_FACTOR,
   contentionFactor,
+  hangFactor,
+  hostLoadFactor,
   measureContentionFactor,
   resetContentionFactor,
   scaledBudgetMs,
 } from "../scripts/host-contention.mjs";
-import { hangDeadlineMs, untilMs } from "./harness/host-budget.js";
+import { hangDeadlineMs, untilMs, waitFor } from "./harness/host-budget.js";
 import {
   DEFAULT_TEST_TIMEOUT_MS,
   MAX_TEST_TIMEOUT_MS,
@@ -79,6 +82,59 @@ test("the measured factor is cached for its window and can be forced fresh", () 
   const forced = contentionFactor({ force: true });
   assert.ok(forced >= MIN_CONTENTION_FACTOR && forced <= MAX_CONTENTION_FACTOR, "a forced measurement is still bounded");
   resetContentionFactor();
+});
+
+test("the machine's load pressure is bounded and never shrinks a budget", () => {
+  const load = hostLoadFactor();
+  assert.ok(Number.isFinite(load), "the load factor is a finite number");
+  assert.ok(load >= 1, `the load factor ${load} never goes below 1`);
+  assert.ok(load <= MAX_LOAD_SCALE_FACTOR, `the load factor ${load} is at most ${MAX_LOAD_SCALE_FACTOR}`);
+  // The product scales its own timeouts by load/cpus with the same ceiling;
+  // the gate and the product must size their budgets the same way.
+  assert.equal(MAX_LOAD_SCALE_FACTOR, 2, "the load ceiling matches the product's MECHANICAL_LOAD_SCALE_MAX");
+});
+
+test("a hang bound takes the worse of the CPU probe and the machine's load", () => {
+  // The CPU probe cannot see machine-wide pressure: a saturated host still
+  // burns the probe at full speed and reports 1.0. The load term is what
+  // lets a busy host's budget grow for the pressure that is actually slowing
+  // an I/O-bound wait down.
+  const cpu = contentionFactor();
+  const load = hostLoadFactor();
+  assert.equal(hangFactor(), Math.max(cpu, load), "the hang factor is the worse of the two readings");
+  assert.ok(hangFactor() >= cpu, "the hang factor is never below the CPU probe");
+});
+
+test("a budget scaled for a busy host is never smaller than the one asked for", () => {
+  for (const base of [1, 1_000, 10_000, 30_000, 300_000, 600_000]) {
+    assert.ok(scaledBudgetMs(base) >= base, `scaled budget ${base} is not shrunk (got ${scaledBudgetMs(base)})`);
+    assert.ok(hangDeadlineMs(base) >= base, `hang deadline ${base} is not shrunk (got ${hangDeadlineMs(base)})`);
+  }
+});
+
+test("the load factor is cached for its window and can be forced fresh", () => {
+  resetContentionFactor();
+  const first = hostLoadFactor();
+  const second = hostLoadFactor();
+  assert.equal(first, second, "a fresh load factor is reused inside the window");
+  const forced = hostLoadFactor({ force: true });
+  assert.ok(forced >= 1 && forced <= MAX_LOAD_SCALE_FACTOR, "a forced load reading is still bounded");
+  resetContentionFactor();
+});
+
+test("waitFor waits for the condition instead of guessing a wall time", async () => {
+  let ready = false;
+  setTimeout(() => { ready = true; }, 120);
+  await waitFor(() => ready, { timeoutMs: 5_000, message: "the condition never became true" });
+  assert.equal(ready, true, "waitFor returns once the condition holds");
+});
+
+test("waitFor still fails when the condition never becomes true", async () => {
+  await assert.rejects(
+    waitFor(() => false, { timeoutMs: 150, message: "the condition never became true" }),
+    /the condition never became true/,
+    "a condition that never holds still fails the test, with the caller's own message",
+  );
 });
 
 test("the per-test timeout default leaves real headroom over the slowest legitimate test", () => {
@@ -139,6 +195,61 @@ test("no test file hand-rolls a wait deadline any more", () => {
     offenders,
     [],
     "these files size a wait deadline by hand; use untilMs() from ./harness/host-budget.js so the budget follows the host's CPU",
+  );
+});
+
+test("no test's frame expires before the waits inside it", () => {
+  // A test that declares a FRAMEWORK timeout shorter than the waits inside
+  // it is killed by the framework before the wait can report what never
+  // happened. Bun's message is a bare "timed out after 51285ms" with no
+  // diagnosis, so the failure reads as a hang instead of as the missing
+  // condition it actually is.
+  //
+  // The rule is the SUM of the waits, not the largest one: the waits run in
+  // sequence, so the frame has to cover all of them.
+  //
+  // Both budgets scale with the same host factor, so the comparison is on the
+  // declared bases: a frame that covers its waits always covers them on a
+  // busy host too.
+  const FRAME = /test\(.*\{ timeout: (?:scaledBudgetMs|hangDeadlineMs)\((\d[\d_]*)\)/;
+  const EXPLICIT_WAIT = /waitUntil\([^)]*?,\s*(\d[\d_]*)\s*\)|waitFor\([^)]*?timeoutMs:\s*(\d[\d_]*)/g;
+  const ANY_WAIT = /\bwaitUntil\(|\bwaitFor\(/g;
+  // A file may define its OWN wait helper with its own default budget, so
+  // the default is read from the definition rather than assumed — otherwise
+  // a local `waitFor(check, timeout = 30000)` would be measured against the
+  // shared helper's default and reported as a violation it is not.
+  const LOCAL_DEFAULT = /function (?:waitUntil|waitFor)\b.*?timeoutMs\s*=\s*(\d[\d_]*)/;
+  const SHARED_DEFAULT_WAIT_MS = 30_000;
+  const offenders: string[] = [];
+  for (const file of walk(path.join(ROOT, "tests"))) {
+    if (!file.endsWith(".test.ts")) continue;
+    const lines = fs.readFileSync(file, "utf8").split("\n");
+    const source = lines.join("\n");
+    const local = source.match(LOCAL_DEFAULT);
+    const localDefault = local ? Number((local[1] ?? "").replaceAll("_", "")) : undefined;
+    for (let i = 0; i < lines.length; i++) {
+      const frame = lines[i]?.match(FRAME);
+      if (!frame) continue;
+      const base = Number((frame[1] ?? "").replaceAll("_", ""));
+      const body: string[] = [];
+      for (let j = i + 1; j < lines.length && !/^test\(/.test(lines[j] ?? ""); j++) body.push(lines[j] ?? "");
+      const text = body.join("\n");
+      const calls = [...text.matchAll(ANY_WAIT)].length;
+      if (!calls) continue;
+      const explicit = [...text.matchAll(EXPLICIT_WAIT)]
+        .map((m) => Number((m[1] ?? m[2] ?? "").replaceAll("_", "")))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      const fallback = localDefault ?? SHARED_DEFAULT_WAIT_MS;
+      const total = explicit.reduce((sum, n) => sum + n, 0) + (calls - explicit.length) * fallback;
+      if (base < total) {
+        offenders.push(`${path.relative(ROOT, file)}:${i + 1}  frame ${base}ms < waits ${total}ms`);
+      }
+    }
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    "these tests declare a frame shorter than the waits inside them; the frame must cover its waits so the wait's own message is what a failure reports",
   );
 });
 
