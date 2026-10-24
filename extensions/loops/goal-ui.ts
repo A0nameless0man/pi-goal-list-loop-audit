@@ -930,14 +930,16 @@ function refreshUI(ctx: ExtensionContext, force = false): void {
       // the status line — package.json running version + update-sidecar
       // latest. Render never touches the network; the sidecar refresh
       // rides the command-contact gate.
-      // v0.39.49: the version indicator is a user choice with one surface.
-      // "card" folds it into the active card, "status" keeps it on the bottom
-      // status line, "off" hides it (/glla version is the explicit readout).
-      // Previously it could only ever ride the card, and on a card whose body
-      // used no tree glyphs it rendered as a dangling `└─` closer.
-      versionTail: settings.versionDisplay === "status" || settings.versionDisplay === "off"
+      // v0.39.49: the version indicator is a user choice with ONE surface.
+      // `versionTail` below is the STRIP's segment; `cardVersionTail` is the
+      // card's folded fact. Both renderers read `versionTail`, so hiding it
+      // there would hide it everywhere — the two must be chosen, not blanked.
+      versionTail: settings.versionDisplay === "card" || settings.versionDisplay === undefined
         ? ""
         : buildVersionTail(runningGllaVersion(), readUpdateCheck(ctx.cwd)?.latest ?? null),
+      cardVersionTail: settings.versionDisplay === undefined || settings.versionDisplay === "card"
+        ? buildVersionTail(runningGllaVersion(), readUpdateCheck(ctx.cwd)?.latest ?? null)
+        : "",
     };
     const statusText = buildStatusText(state, latestAuditProgress, now, theme, extras, width);
     const widgetLines = buildWidgetLines(state, latestAuditProgress, now, theme, width, extras);

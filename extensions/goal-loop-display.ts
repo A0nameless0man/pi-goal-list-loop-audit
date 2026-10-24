@@ -266,6 +266,11 @@ export interface WidgetExtras {
    * this module keeps zero runtime imports, so the pure compare/nudge
    * logic lives in glla-update-check.ts. */
   versionTail?: string;
+  /** v0.39.49: the CARD's version fact, separate from `versionTail` (which
+   * feeds the bottom strip). `versionDisplay` chooses exactly one surface, so
+   * the two are populated exclusively. Falls back to `versionTail` so a caller
+   * that sets only the strip value still renders on a card as before. */
+  cardVersionTail?: string;
   /** Truthful model-selection provenance for the active goal card/footer. */
   modelProvenance?: ModelProvenanceDisplay;
   /** Deterministic durable-vs-defer decision surface. Kept optional so the
@@ -2499,7 +2504,7 @@ export function buildWidgetLines(state: State, audit?: AuditDisplayProgress | nu
   // they vanish from the screen. Rendered as the dim closer detail so a
   // stale session is still visible at a glance without a second surface.
   if (withAgents && withAgents.length > 0) {
-    const versionTail = extras?.versionTail?.trim();
+    const versionTail = (extras?.cardVersionTail ?? extras?.versionTail)?.trim();
     const supervisorPaused = typeof state.supervisorPausedAt === 'number';
     const foldFacts = [
       supervisorPaused ? 'supervisor paused' : '',
