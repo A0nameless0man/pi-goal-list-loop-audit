@@ -16,8 +16,11 @@ expanding the repository boundary.
 ## dracon-sync daemon: git-history rules for agent loops
 
 This repo is watched by the **dracon-sync daemon**, which auto-commits
-working-tree changes within ~3-10 seconds and pushes them to all
-remotes (github/gitlab/codeberg) immediately after.
+working-tree changes within ~3-10 seconds and pushes them to its configured
+remotes immediately after. Codeberg is currently excluded in
+`.dracon/dracon-sync.toml` (Forgejo rejects pushes with
+`Forgejo: Quota exceeded`), so the live mirrors are **github and gitlab**;
+do not read the missing codeberg remote as a divergence.
 
 **NEVER rewrite history in this repo.** Specifically, never:
 
@@ -34,17 +37,18 @@ next amend drops the merge, and the repo enters a permanent divergence
 loop (observed 2026-07-25 in hegemon and browser-extensions-shared; see
 `dracon-utilities/docs/design/incident-amend-race-and-trust-2026-07-25.md`).
 
-**LIVE INCIDENT (2026-08-09)**: a `git reset` at 10:07:47 discarded the
+**RESOLVED INCIDENT (2026-08-09)**: a `git reset` at 10:07:47 discarded the
 197-file commit `d60ec3a2` from local `main` after the daemon had already
-published the pre-reset history to gitlab/codeberg. The mirrors now hold
-59 commits that github/local don't have, and local has 13 commits the
-mirrors don't have — a genuine fork. The daemon correctly refuses to
-force-push; the repo shows `🛑 STUCK`. The mirrors CANNOT be reconciled
-by the loop: reconciling requires operator authorization
-(`DRACON_ALLOW_REWRITE=1` + forge unprotect, per
-`dracon-utilities/docs/design/junk-runner-history-rewrite-2026-07-28.md`).
-Do NOT attempt to "fix" the divergence by resetting again. Full
-analysis: `dracon-utilities/docs/design/pi-goal-loop-audit-divergence-2026-08-09.md`.
+published the pre-reset history to gitlab/codeberg, forking the mirrors. That
+fork was reconciled afterwards — as of 2026-10-24 local `main`, `origin/main`
+and `gitlab/main` all sit at `0e149aecb` (0 ahead / 0 behind) and the daemon
+reports the repo `OK`. The rule is unchanged and is the part that mattered: the
+loop must never reset or rewrite to reconcile a divergence. Reconciliation
+requires operator authorization (`DRACON_ALLOW_REWRITE=1` + forge unprotect,
+per `dracon-utilities/docs/design/junk-runner-history-rewrite-2026-07-28.md`).
+If a fork ever reappears, do NOT reset again — merge (`git pull --no-rebase`).
+Full analysis:
+`dracon-utilities/docs/design/pi-goal-loop-audit-divergence-2026-08-09.md`.
 
 ### What to do instead
 
