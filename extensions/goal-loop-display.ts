@@ -365,7 +365,13 @@ function appendFactsToCard(
   // Rows carry a `cont` flag: a row that continues the previous fact renders
   // with the `│  ` indent so the tree does not claim a new sibling item.
   const rows: Array<{ text: string; cont: boolean }> = [];
-  const canAppend = prefix === '└─ ';
+  // v0.39.49 (field Screenshot_20261024_103546): a `├─` detail row is also a
+  // valid append target. Before this, a card whose last row was `├─ next: …`
+  // got a brand-new `└─ v0.39.47` line underneath — a closer holding nothing
+  // but the version, which reads as a broken/truncated tree tail. Appending to
+  // the open row keeps the fact on an existing line and lets the tail-closer
+  // below turn that row into the card's single closer.
+  const canAppend = prefix === '└─ ' || prefix === '├─ ';
   let used = canAppend ? tuiVisibleWidth(stripAnsi(lastLine)) + sepWidth : rowPrefixWidth;
   let cur = '';
   let curCont = false;
