@@ -1681,7 +1681,33 @@ function registerAgentTools(pi: any): void {
 
       // Escape hatch: the user aborted the audit (Esc). Offer the explicit
       // choice — complete WITHOUT audit, or keep working. (pi-goal-x parity.)
-      if (result.error === "Auditor aborted.") {
+      // v0.39.50 (issue #61): "Auditor aborted." is produced for EVERY abort —
+      // user Escape, host cancellation, provider abort. Presenting all of them
+      // as "you pressed Escape" wrote a durable pauseReason asserting a
+      // decision the operator never made, and offered "complete WITHOUT audit"
+      // for a run they did not stop. Only a recorded user stop may take the
+      // Escape path; anything else is an interruption with no verdict.
+      const abortedByUser = result.infrastructureClass === "transport"
+        && result.abortCause === "user";
+      const abortedWithoutVerdict = result.error === "Auditor aborted."
+        && result.infrastructureClass === "transport"
+        && result.abortCause !== "user";
+      if (abortedWithoutVerdict) {
+        // No user decision to honour, so no affordance to offer: record an
+        // honest interruption and hand the operator the retry route.
+        updateGoal({
+          status: "active",
+          auditHistory: history,
+          pendingCompletion: undefined,
+          pauseReason: "audit interrupted — the run ended before a verdict was recorded (not a user stop)",
+        }, ctx);
+        return {
+          content: [{ type: "text", text: "The completion audit was interrupted before it produced a verdict — this was a transport/host stop, not your decision. No verdict was recorded and no audit work was marked complete. Retry complete_goal to run a fresh audit." }],
+          details: {},
+          isError: true,
+        };
+      }
+      if (result.error === "Auditor aborted." && abortedByUser) {
         // v0.38.37: capture the agent-claimed non-do before the claim is
         // cleared below — the Esc-complete path renders the same voice.
         // v0.38.50: same for agent-structured finding groups.
