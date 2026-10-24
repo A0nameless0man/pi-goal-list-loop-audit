@@ -163,3 +163,55 @@ test("a wrapped fact keeps the tree structure honest (no early closer)", () => {
   // A continuation row is indented, never presented as a new sibling item.
   assert.ok(plain.some((l) => l.startsWith("│  ")), `wrapped continuation uses the │ indent: ${plain.join(" | ")}`);
 });
+
+// ── v0.39.49: the version indicator is a choice, and never a broken line ──
+test("a head-only card folds the version onto the head instead of a dangling closer", () => {
+  // Field Screenshot_20261024_103546: the card body used plain indentation with
+  // no tree glyphs, so the fold emitted `└─ v0.39.47` — a closer that closed
+  // nothing and read as a truncated card.
+  const state = { goal: goalOf(), list: [] } as never;
+  const lines = buildWidgetLines(state, null, NOW, undefined, 120, { versionTail: "· v0.39.47" })!;
+  const plain = lines.map((l) => sanitizeForCompare(l));
+  assert.ok(plain.some((l) => l.includes("v0.39.47")), `the version survives: ${plain.join(" | ")}`);
+  for (const line of plain) {
+    assert.ok(
+      !/^\s*[└├]─\s*v\d/.test(line),
+      `the version never renders as a bare tree closer: ${line}`,
+    );
+  }
+});
+
+test("a glyph-less card body gets a matching plain-indent version row, not a tree glyph", () => {
+  // The durable-vs-defer card indents its rows with spaces. A `└─` there would
+  // be the only tree glyph on the card, which is exactly the broken look.
+  const state = {
+    goal: goalOf({ durableDeferRecommendation: {
+      durableFix: "Implement the durable fix now",
+      deferRecommendations: ["only when unsafe"],
+    } }),
+    list: [],
+  } as never;
+  const lines = buildWidgetLines(state, null, NOW, undefined, 160, { versionTail: "· v0.39.47" })!;
+  const plain = lines.map((l) => sanitizeForCompare(l));
+  const versionRow = plain.find((l) => l.includes("v0.39.47"))!;
+  assert.ok(versionRow, `the version row exists: ${plain.join(" | ")}`);
+  assert.doesNotMatch(versionRow, /[└├│]/, `no tree glyph on a glyph-less body: ${versionRow}`);
+  assert.match(versionRow, /^\s+\S/, "it is indented like its sibling rows");
+});
+
+test("versionDisplay defaults to the card and never duplicates the surface", async () => {
+  const { DEFAULT_SETTINGS, GLOBAL_ONLY_KEYS, loadSettings } = await import("../extensions/goal-settings.ts");
+  // Unset means "card": the default must not silently hide the version.
+  assert.equal((DEFAULT_SETTINGS as { versionDisplay?: string }).versionDisplay, undefined);
+  assert.ok(GLOBAL_ONLY_KEYS.has("versionDisplay"), "a display preference is one switch, not per project");
+  const cwd = tmpCwd();
+  fs.mkdirSync(path.dirname(projectSettingsPathFor(cwd)), { recursive: true });
+  // A project-scope copy must not shadow the global choice (same rule as
+  // autoAcceptDrafts), so the user's answer sticks across trees.
+  fs.writeFileSync(projectSettingsPathFor(cwd), JSON.stringify({ versionDisplay: "off" }));
+  assert.notEqual(loadSettings(cwd).versionDisplay, "off", "a project copy cannot decide where the version shows");
+});
+
+function projectSettingsPathFor(cwd: string): string {
+  return path.join(cwd, ".pi-glla", "settings.json");
+}
