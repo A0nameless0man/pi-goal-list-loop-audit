@@ -1275,6 +1275,17 @@ export async function handleSettingChoice(id: string, ctx: ExtensionContext): Pr
       if (v) saveSettings("global", ctx, { autoAcceptDrafts: v.startsWith("on") ? true : undefined });
       return;
     }
+    case "versionDisplay": {
+      // v0.39.49: one surface per fact. The version used to be card-only, and
+      // on a card with no tree glyphs it rendered as a dangling `└─` closer.
+      const v = await ctx.ui.select("Version indicator — where the running GLLA version shows", [
+        "card — as a row on the active card (default)",
+        "status — on the bottom status line",
+        "off — hidden; /glla version still reports it",
+      ]);
+      if (v) saveSettings("global", ctx, { versionDisplay: v.startsWith("card") ? undefined : v.startsWith("status") ? "status" : "off" });
+      return;
+    }
     case "decisionPopup": {
       const v = await ctx.ui.select("Decision popup — what a decision-class pause does", [
         "on — a decision pause opens the picker; the widget card is the Escape fallback",
