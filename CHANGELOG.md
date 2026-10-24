@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.39.51 — republish with a current runtime inventory (2026-10-24)
+
+- 0.39.50 was tagged before `docs/RUNTIME-INVENTORY.md` was regenerated, so
+  the release contract's `check:inventory` step failed and npm was never
+  updated. No behavioural change: this release carries 0.39.50's content plus
+  the regenerated inventory.
+
 ## 0.39.50 — an interrupted audit is no longer reported as your decision (2026-10-24)
 
 ### The defect (reported as issue #61)
