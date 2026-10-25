@@ -156,7 +156,7 @@ test("archive write failure never emits a terminal success", async () => {
   assert.equal(fs.existsSync(approvalRenderStorePath(cwd)), false);
 });
 
-test("approval summary does not replace independent next-item continuation", { timeout: scaledBudgetMs(120_000) }, async () => {
+test("approval summary does not replace independent next-item continuation", { timeout: scaledBudgetMs(480_000) }, async () => {
   const { cwd, ctx, entries } = await setup("approved");
   await pi.runTool("list_add", { items: ["first item — done when pinned", "second item — done when pinned"] }, ctx);
   await pi.runTool("complete_goal", { completionSummary: summary, verificationSummary: "pinned" }, ctx);

@@ -79,7 +79,7 @@ async function cleanup(): Promise<void> {
   while (dirs.length) await rm(dirs.pop()!, { recursive: true, force: true });
 }
 
-test("stall: worker that never emits a first event is failed fast, not left for the wall", { timeout: scaledBudgetMs(20_000) }, async () => {
+test("stall: worker that never emits a first event is failed fast, not left for the wall", { timeout: scaledBudgetMs(80_000) }, async () => {
   const wall = scaledBudgetMs(10_000), firstEvent = scaledBudgetMs(5_000);
   const noProgress = scaledBudgetMs(20_000), fresh = scaledBudgetMs(500);
   const silenceFloor = scaledBudgetMs(1_200);
@@ -146,7 +146,7 @@ setInterval(() => {}, 1_000);
   await cleanup();
 });
 
-test("stall: first-event budget starts after successful spawn, not pre-spawn setup", { timeout: scaledBudgetMs(20_000) }, async () => {
+test("stall: first-event budget starts after successful spawn, not pre-spawn setup", { timeout: scaledBudgetMs(80_000) }, async () => {
   const wall = scaledBudgetMs(10_000), firstEvent = scaledBudgetMs(5_000);
   const noProgress = scaledBudgetMs(20_000), fresh = scaledBudgetMs(500);
 

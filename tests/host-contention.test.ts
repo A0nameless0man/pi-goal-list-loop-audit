@@ -208,15 +208,19 @@ test("no test's frame expires before the waits inside it", () => {
   // The rule is the SUM of the waits, not the largest one: the waits run in
   // sequence, so the frame has to cover all of them.
   //
-  // And the sum is doubled, because the frame and the waits do NOT scale by
-  // the same number. The frame's factor is fixed when the test starts; each
-  // wait re-measures the host as it is when that wait runs. The load term is
-  // capped at 2x, so a host that gets busier mid-test can make the waits
-  // grow by up to 2x past what the frame budgeted for. Doubling the sum
-  // covers that drift, and the frame stays a backstop for a wedged run.
+  // And the sum is multiplied by the contention cap, because a wait's budget
+  // is scaled by the host factor and that factor can reach the cap. A frame
+  // of `scaledBudgetMs(base)` is at least `base` — the sampled factor can
+  // only make it larger — so a base of cap x sum guarantees the frame covers
+  // every wait it contains, however busy the host gets while the test runs.
   //
-  // The CPU term does not drift: the frame uses the monotonic factor and a
-  // wait uses the worst factor seen so far, and those are the same number.
+  // This matters because the frame's factor and the waits' factors are NOT
+  // the same number. The frame samples the host when the test FILE loads,
+  // which for an early file can be a quiet moment on an otherwise saturated
+  // machine, while a wait re-measures the host when that wait runs. The
+  // heartbeat-recovery test is exactly that shape: it loads early, it runs
+  // through four sequential detached-auditor cycles, and it was killed at
+  // 241s by a frame that had been sized at 1x on a host running at load 50.
   const FRAME = /test\(.*\{ timeout: (?:scaledBudgetMs|hangDeadlineMs)\((\d[\d_]*)\)/;
   const EXPLICIT_WAIT = /waitUntil\([^)]*?,\s*(\d[\d_]*)\s*\)|waitFor\([^)]*?timeoutMs:\s*(\d[\d_]*)/g;
   const ANY_WAIT = /\bwaitUntil\(|\bwaitFor\(/g;
@@ -226,7 +230,7 @@ test("no test's frame expires before the waits inside it", () => {
   // shared helper's default and reported as a violation it is not.
   const LOCAL_DEFAULT = /function (?:waitUntil|waitFor)\b.*?timeoutMs\s*=\s*(\d[\d_]*)/;
   const SHARED_DEFAULT_WAIT_MS = 30_000;
-  const FRAME_MARGIN = 2;
+  const FRAME_MARGIN = MAX_CONTENTION_FACTOR;
   const offenders: string[] = [];
   for (const file of walk(path.join(ROOT, "tests"))) {
     if (!file.endsWith(".test.ts")) continue;

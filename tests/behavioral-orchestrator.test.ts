@@ -4026,7 +4026,7 @@ test("v0.34.22: complete_goal returns while a detached auditor finishes and arch
 
 // The inner detached-state wait is 30s: the runner must allow that wait
 // plus startup/cleanup, or it can abandon a live worker mid-fixture.
-test("v0.35.x: provider-wall diagnostics stay durable while completion surfaces remain sanitized and deduplicated", { timeout: scaledBudgetMs(60_000) }, async () => {
+test("v0.35.x: provider-wall diagnostics stay durable while completion surfaces remain sanitized and deduplicated", { timeout: scaledBudgetMs(240_000) }, async () => {
   __testOnlyResetStaleFlag();
   const cwd = tmpCwd();
   const raw = '429 {"error":{"message":"Token Plan rate limit reached: upgrade your Token Plan"},"request_id":"abc123"}';
@@ -4164,7 +4164,7 @@ test("v0.35.x: bare 403 main recovery sanitizes live surfaces while retaining di
 // own diagnostic could name what never happened. The frame is now twice the
 // wait's base, so the wait reports first and the framework timeout stays a
 // backstop for a wedged run.
-test("v0.35.x: bare 403 completion diagnostics stay durable while completion surfaces remain sanitized", { timeout: scaledBudgetMs(60_000) }, async () => {
+test("v0.35.x: bare 403 completion diagnostics stay durable while completion surfaces remain sanitized", { timeout: scaledBudgetMs(240_000) }, async () => {
   __testOnlyResetStaleFlag();
   const cwd = tmpCwd();
   const raw = '403 {"error":{"message":"upstream denied this request"},"request_id":"auth-sensitive-id"}';
@@ -4239,7 +4239,7 @@ test("v0.34.119: auditor-approved list completion archives the item and activate
   }
 });
 
-test("v0.36.2: approved standalone completion automatically activates a pre-queued list head", { timeout: scaledBudgetMs(60_000) }, async () => {
+test("v0.36.2: approved standalone completion automatically activates a pre-queued list head", { timeout: scaledBudgetMs(240_000) }, async () => {
   __testOnlyResetStaleFlag();
   const cwd = tmpCwd();
   const previous = process.env.GLLA_PI_BINARY;
@@ -4814,7 +4814,7 @@ test("v0.35.x: stale host replacement session_start auto-recovers the parked aud
 // after 51285ms" and no diagnosis. The frame now covers the sum of the waits
 // it contains (30s + 20s + 30s + 30s), so the wait's own message is what a
 // failure reports, and the frame is only the backstop for a wedged run.
-test("v0.35.x: healthy same-session heartbeat recovers a parked completion audit without manual resume", { timeout: scaledBudgetMs(240_000) }, async () => {
+test("v0.35.x: healthy same-session heartbeat recovers a parked completion audit without manual resume", { timeout: scaledBudgetMs(960_000) }, async () => {
   __testOnlyResetStaleFlag();
   __testOnlyResetOwnerSession();
   __testOnlySetSessionReplacementUntil(0);
@@ -4876,7 +4876,7 @@ test("v0.35.x: healthy same-session heartbeat recovers a parked completion audit
   }
 });
 
-test("v0.36.0: exhausted no-verdict auditor chain enters the shared ladder with an automatic retry timer", { timeout: scaledBudgetMs(60_000) }, async () => {
+test("v0.36.0: exhausted no-verdict auditor chain enters the shared ladder with an automatic retry timer", { timeout: scaledBudgetMs(240_000) }, async () => {
   __testOnlyResetStaleFlag();
   // Unified envelope: no one-shot delay override — exhaustion ladders with
   // the uniform eager-then-hourly schedule, same as the main model.
@@ -4918,7 +4918,7 @@ test("v0.36.0: exhausted no-verdict auditor chain enters the shared ladder with 
   }
 });
 
-test("bounded recovery: initial aggressive completion preserves its horizon and exhausted chain", { timeout: scaledBudgetMs(60_000) }, async () => {
+test("bounded recovery: initial aggressive completion preserves its horizon and exhausted chain", { timeout: scaledBudgetMs(240_000) }, async () => {
   // v0.35.15: budget raised 30s→60s — this real-timer test observed 23s on
   // a busy machine (the auditor's own release:check ran concurrently with
   // an active session) and blew the per-test ceiling, fast-failing the
@@ -5021,7 +5021,7 @@ test("bounded recovery: initial aggressive completion preserves its horizon and 
 // v0.39.52: the frame was scaledBudgetMs(30_000) while the three waits
 // inside it each ask for 30s. The frame expired before the last wait could
 // report what never happened. It now covers their sum.
-test("v0.35.x: stale host loss releases an in-flight completion audit without a verdict", { timeout: scaledBudgetMs(180_000) }, async () => {
+test("v0.35.x: stale host loss releases an in-flight completion audit without a verdict", { timeout: scaledBudgetMs(720_000) }, async () => {
   __testOnlyResetStaleFlag();
   const cwd = tmpCwd();
   const fakePi = writeFakeAuditorError(cwd, "Auditor stalled — no progress", 100);
