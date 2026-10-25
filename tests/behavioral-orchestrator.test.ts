@@ -4852,7 +4852,17 @@ test("v0.35.x: healthy same-session heartbeat recovers a parked completion audit
     // The ledger records the dispatch BEFORE the state moves to "auditing",
     // so the state can still read "paused" when the ledger is already there —
     // on a loaded host, reliably. Wait for the state to catch up.
-    await waitUntil(() => (readState(cwd).goal as { status?: string } | null)?.status === "auditing");
+    {
+      const __until = untilMs(30_000);
+      while ((readState(cwd).goal as { status?: string } | null)?.status !== "auditing") {
+        if (Date.now() > __until) {
+          const g = readState(cwd).goal as any;
+          console.error("[PROBE-TIMEOUT] goal:", JSON.stringify({ status: g?.status, phase: g?.pendingCompletion?.phase, auto: g?.pendingCompletion?.automaticRecoveryAttempted, attempt: g?.pendingCompletion?.attemptId, hist: g?.auditHistory?.length, claims: readLedger(cwd).filter((e) => e.type === "audit_recovery_auto_retry_claimed").length, started: readLedger(cwd).filter((e) => e.type === "audit_recovery_started").length, ledgerTail: readLedger(cwd).slice(-6).map((e) => e.type) }));
+          throw new Error("timed out waiting for detached-auditor state");
+        }
+        await new Promise((r) => setTimeout(r, 20));
+      }
+    }
     const __diag = readState(cwd).goal as any;
     console.error("[PROBE] goal after the auditing wait:", JSON.stringify({ status: __diag?.status, phase: __diag?.pendingCompletion?.phase, auto: __diag?.pendingCompletion?.automaticRecoveryAttempted, attempt: __diag?.pendingCompletion?.attemptId, hist: __diag?.auditHistory?.length, ledgerClaims: readLedger(cwd).filter((e) => e.type === "audit_recovery_auto_retry_claimed").length, ledgerStarted: readLedger(cwd).filter((e) => e.type === "audit_recovery_started").length }));
 
