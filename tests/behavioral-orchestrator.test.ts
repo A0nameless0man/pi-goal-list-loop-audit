@@ -4853,6 +4853,8 @@ test("v0.35.x: healthy same-session heartbeat recovers a parked completion audit
     // so the state can still read "paused" when the ledger is already there —
     // on a loaded host, reliably. Wait for the state to catch up.
     await waitUntil(() => (readState(cwd).goal as { status?: string } | null)?.status === "auditing");
+    const __diag = readState(cwd).goal as any;
+    console.error("[PROBE] goal after the auditing wait:", JSON.stringify({ status: __diag?.status, phase: __diag?.pendingCompletion?.phase, auto: __diag?.pendingCompletion?.automaticRecoveryAttempted, attempt: __diag?.pendingCompletion?.attemptId, hist: __diag?.auditHistory?.length, ledgerClaims: readLedger(cwd).filter((e) => e.type === "audit_recovery_auto_retry_claimed").length, ledgerStarted: readLedger(cwd).filter((e) => e.type === "audit_recovery_started").length }));
 
     const retrying = readState(cwd).goal as { status?: string; pendingCompletion?: { phase?: string; automaticRecoveryAttempted?: boolean } } | null;
     assert.equal(retrying?.status, "auditing", "healthy heartbeat starts the bounded recovery audit");
